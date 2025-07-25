@@ -1,21 +1,32 @@
-//! Code generation library for creating Rust types from FHIR StructureDefinitions
+//! FHIR Code Generation Library
 //!
-//! This crate provides functionality to parse FHIR StructureDefinition JSON files
-//! and generate corresponding Rust type definitions.
+//! This library provides functionality to generate Rust code from FHIR (Fast Healthcare
+//! Interoperability Resources) StructureDefinition files.
 
 pub use common::{CommonError, Config};
 
+mod config;
 pub mod download;
-pub mod generator;
+mod fhir_types;
+mod generator;
+mod rust_types;
+mod token_generator;
+mod type_mapper;
+mod value_sets;
 
-// Re-export main types for convenience
+// Re-export download types for convenience
 pub use download::{
     PackageDist, PackageDownloadConfig, PackageDownloader, PackageManifest, RegistryResponse,
 };
-pub use generator::{
-    CodeGenerator, CodegenConfig, ElementDefinition, ElementType, RustField, RustStruct,
-    StructureDefinition, StructureDefinitionDifferential, StructureDefinitionSnapshot,
-};
+
+// Re-export modular code generation types
+pub use config::CodegenConfig;
+pub use fhir_types::{ElementBinding, ElementDefinition, ElementType, StructureDefinition};
+pub use generator::CodeGenerator;
+pub use rust_types::{RustEnum, RustField, RustModule, RustStruct, RustType};
+pub use token_generator::TokenGenerator;
+pub use type_mapper::TypeMapper;
+pub use value_sets::{ValueSetConcept, ValueSetManager};
 
 /// Errors specific to code generation
 #[derive(thiserror::Error, Debug)]
