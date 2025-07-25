@@ -174,6 +174,33 @@ pub struct ValueSetConcept {
     pub definition: Option<String>,
 }
 
+/// Represents a FHIR ValueSet expansion contains entry
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetExpansionContains {
+    pub code: String,
+    pub display: Option<String>,
+    pub system: Option<String>,
+}
+
+/// Represents a FHIR ValueSet expansion
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetExpansion {
+    pub identifier: Option<String>,
+    pub timestamp: Option<String>,
+    pub total: Option<u32>,
+    pub offset: Option<u32>,
+    pub parameter: Option<Vec<serde_json::Value>>,
+    pub contains: Option<Vec<ValueSetExpansionContains>>,
+}
+
+/// Represents a FHIR ValueSet include filter
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetIncludeFilter {
+    pub property: String,
+    pub op: String,
+    pub value: String,
+}
+
 /// Represents a FHIR ValueSet include
 #[derive(Debug, Deserialize, Clone)]
 pub struct ValueSetInclude {
@@ -181,6 +208,7 @@ pub struct ValueSetInclude {
     pub value_set: Option<Vec<String>>,
     pub system: Option<String>,
     pub concept: Option<Vec<ValueSetConcept>>,
+    pub filter: Option<Vec<ValueSetIncludeFilter>>,
 }
 
 /// Represents a FHIR ValueSet compose
@@ -202,6 +230,7 @@ pub struct ValueSet {
     pub status: Option<String>,
     pub description: Option<String>,
     pub compose: Option<ValueSetCompose>,
+    pub expansion: Option<ValueSetExpansion>,
 }
 
 /// Main code generator struct
@@ -954,8 +983,8 @@ impl CodeGenerator {
         // In a full implementation, you would fetch the actual ValueSet definition
         let variants = self.get_value_set_variants(value_set, &enum_name);
 
-        // If we only got a fallback "Unknown" variant, fall back to String type
-        if variants.len() == 1 && variants[0].value == "unknown" {
+        // If we only got a fallback "Unknown" variant or no variants, fall back to String type
+        if variants.is_empty() || (variants.len() == 1 && variants[0].value == "unknown") {
             return None;
         }
 
@@ -992,12 +1021,48 @@ impl CodeGenerator {
     fn get_value_set_variants(&mut self, value_set: &str, enum_name: &str) -> Vec<RustEnumVariant> {
         // First, try to load the ValueSet from filesystem
         if let Ok(Some(loaded_value_set)) = self.find_value_set(value_set) {
-            let mut variants = Vec::new();
+            // Priority 1: Try to use expansion if available
+            if let Some(expansion) = &loaded_value_set.expansion {
+                if let Some(contains) = &expansion.contains {
+                    let mut variants = Vec::new();
+                    for contain in contains {
+                        let variant_name = self.code_to_variant_name(&contain.code);
+                        let documentation = contain.display.clone()
+                            .or_else(|| Some(format!("{} value", contain.code)));
+                        
+                        variants.push(RustEnumVariant {
+                            name: variant_name,
+                            value: contain.code.clone(),
+                            documentation,
+                        });
+                    }
+                    
+                    if !variants.is_empty() {
+                        return variants;
+                    }
+                }
+            }
             
-            // Extract concepts from the ValueSet
+            // Priority 2: Fall back to compose.include with warnings
             if let Some(compose) = &loaded_value_set.compose {
+                eprintln!("Warning: ValueSet '{}' has no expansion, falling back to compose.include", value_set);
+                
                 if let Some(includes) = &compose.include {
+                    let mut variants = Vec::new();
+                    let mut has_warnings = false;
+                    
                     for include in includes {
+                        // Check for filters - if present, we can't use this include
+                        if let Some(filters) = &include.filter {
+                            if !filters.is_empty() {
+                                eprintln!("Warning: ValueSet '{}' contains filters in compose.include which cannot be processed. Filters found: {:?}", 
+                                    value_set, 
+                                    filters.iter().map(|f| format!("{}:{}", f.property, f.op)).collect::<Vec<_>>());
+                                has_warnings = true;
+                                continue; // Skip this include
+                            }
+                        }
+                        
                         // Handle direct concepts
                         if let Some(concepts) = &include.concept {
                             for concept in concepts {
@@ -1028,139 +1093,21 @@ impl CodeGenerator {
                             }
                         }
                     }
+                    
+                    // If we found variants from compose.include, return them
+                    if !variants.is_empty() {
+                        if has_warnings {
+                            eprintln!("Warning: Some includes in ValueSet '{}' were skipped due to filters", value_set);
+                        }
+                        return variants;
+                    }
                 }
             }
-            
-            // If we found variants from the filesystem, return them
-            if !variants.is_empty() {
-                return variants;
-            }
         }
         
-        // Fallback to hardcoded known value sets if filesystem loading failed
-        // Handle versioned value sets by stripping the version
-        let base_value_set = value_set.split('|').next().unwrap_or(value_set);
-        
-        // For now, provide some common known value sets
-        match base_value_set {
-            "http://hl7.org/fhir/ValueSet/administrative-gender" => vec![
-                RustEnumVariant {
-                    name: "Male".to_string(),
-                    value: "male".to_string(),
-                    documentation: Some("Male gender".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Female".to_string(),
-                    value: "female".to_string(),
-                    documentation: Some("Female gender".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Other".to_string(),
-                    value: "other".to_string(),
-                    documentation: Some("Other gender".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Unknown".to_string(),
-                    value: "unknown".to_string(),
-                    documentation: Some("Unknown gender".to_string()),
-                },
-            ],
-            "http://hl7.org/fhir/ValueSet/publication-status" => vec![
-                RustEnumVariant {
-                    name: "Draft".to_string(),
-                    value: "draft".to_string(),
-                    documentation: Some("Draft status".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Active".to_string(),
-                    value: "active".to_string(),
-                    documentation: Some("Active status".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Retired".to_string(),
-                    value: "retired".to_string(),
-                    documentation: Some("Retired status".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Unknown".to_string(),
-                    value: "unknown".to_string(),
-                    documentation: Some("Unknown status".to_string()),
-                },
-            ],
-            "http://hl7.org/fhir/ValueSet/structure-definition-kind" => vec![
-                RustEnumVariant {
-                    name: "PrimitiveType".to_string(),
-                    value: "primitive-type".to_string(),
-                    documentation: Some("Primitive data type".to_string()),
-                },
-                RustEnumVariant {
-                    name: "ComplexType".to_string(),
-                    value: "complex-type".to_string(),
-                    documentation: Some("Complex data type".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Resource".to_string(),
-                    value: "resource".to_string(),
-                    documentation: Some("Resource definition".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Logical".to_string(),
-                    value: "logical".to_string(),
-                    documentation: Some("Logical model".to_string()),
-                },
-            ],
-            "http://hl7.org/fhir/ValueSet/FHIR-version" => vec![
-                RustEnumVariant {
-                    name: "R4".to_string(),
-                    value: "4.0.1".to_string(),
-                    documentation: Some("FHIR R4".to_string()),
-                },
-                RustEnumVariant {
-                    name: "R5".to_string(),
-                    value: "5.0.0".to_string(),
-                    documentation: Some("FHIR R5".to_string()),
-                },
-            ],
-            "http://hl7.org/fhir/ValueSet/type-derivation-rule" => vec![
-                RustEnumVariant {
-                    name: "Specialization".to_string(),
-                    value: "specialization".to_string(),
-                    documentation: Some("Specialization rule".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Constraint".to_string(),
-                    value: "constraint".to_string(),
-                    documentation: Some("Constraint rule".to_string()),
-                },
-            ],
-            "http://hl7.org/fhir/ValueSet/extension-context-type" => vec![
-                RustEnumVariant {
-                    name: "Fhirpath".to_string(),
-                    value: "fhirpath".to_string(),
-                    documentation: Some("FHIRPath expression".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Element".to_string(),
-                    value: "element".to_string(),
-                    documentation: Some("Element".to_string()),
-                },
-                RustEnumVariant {
-                    name: "Extension".to_string(),
-                    value: "extension".to_string(),
-                    documentation: Some("Extension".to_string()),
-                },
-            ],
-            _ => {
-                // For unknown value sets, create a minimal enum
-                vec![
-                    RustEnumVariant {
-                        name: "Unknown".to_string(),
-                        value: "unknown".to_string(),
-                        documentation: Some(format!("Unknown value for {}", enum_name)),
-                    },
-                ]
-            }
-        }
+        // No ValueSet found or no usable variants - return empty vector
+        // This will cause the enum generation to fail and fall back to String type
+        vec![]
     }
 
     /// Convert a FHIR code to a valid Rust enum variant name
