@@ -128,6 +128,7 @@ pub struct RustField {
     pub is_array: bool,
     pub documentation: Option<String>,
     pub serde_rename: Option<String>,
+    pub serde_flatten: bool,
 }
 
 /// Represents a generated Rust struct
@@ -194,6 +195,22 @@ impl CodeGenerator {
         let mut fields = Vec::new();
         let mut processed_paths = std::collections::HashSet::new();
 
+        // Add base type field if this struct inherits from another
+        if let Some(base_definition_url) = &structure_def.base_definition {
+            if let Some(base_type_name) = self.extract_base_type_from_url(base_definition_url) {
+                let base_field = RustField {
+                    name: "base".to_string(),
+                    rust_type: base_type_name,
+                    is_optional: false,
+                    is_array: false,
+                    documentation: Some("Inherited fields from base type".to_string()),
+                    serde_rename: None,
+                    serde_flatten: true,
+                };
+                fields.push(base_field);
+            }
+        }
+
         for element in &all_elements {
             // Skip the root element (e.g., "Patient")
             if element.path == structure_def.base_type {
@@ -254,97 +271,22 @@ impl CodeGenerator {
 
     /// Collect all elements from this StructureDefinition and its base definitions
     fn collect_all_elements(&mut self, structure_def: &StructureDefinition) -> CodegenResult<Vec<ElementDefinition>> {
-        let mut all_elements = Vec::new();
-        
-        // First, collect elements from base definitions (if any)
-        if let Some(base_definition_url) = &structure_def.base_definition {
-            let base_elements = self.collect_base_elements(base_definition_url, &structure_def.base_type)?;
-            all_elements.extend(base_elements);
-        }
-        
-        // Then, add elements from the current differential (which override base elements)
+        // For inheritance-based generation, we only need the differential elements
+        // The base definition will be handled as a separate field in the struct
         if let Some(differential) = &structure_def.differential {
-            all_elements.extend(differential.element.clone());
+            Ok(differential.element.clone())
         } else {
             return Err(CodegenError::MissingField {
                 field: "differential".to_string(),
             });
         }
-        
-        Ok(all_elements)
     }
     
-    /// Collect elements from base definition URL
-    /// This is a simplified implementation - in a full implementation, you'd need to:
-    /// - Resolve the URL to a file path or load from a registry
-    /// - Handle recursive base definitions
-    /// - Merge element definitions properly
-    fn collect_base_elements(&mut self, _base_definition_url: &str, base_type: &str) -> CodegenResult<Vec<ElementDefinition>> {
-        // For now, return common FHIR base elements that most resources inherit
-        // In a full implementation, this would load and parse the actual base StructureDefinition
-        Ok(self.get_common_base_elements(base_type))
-    }
-    
-    /// Get common elements that most FHIR resources inherit (simplified)
-    fn get_common_base_elements(&self, base_type: &str) -> Vec<ElementDefinition> {
-        vec![
-            ElementDefinition {
-                id: Some(format!("{}.id", base_type)),
-                path: format!("{}.id", base_type),
-                short: Some("Logical id of this artifact".to_string()),
-                definition: Some("The logical id of the resource, as used in the URL for the resource.".to_string()),
-                min: Some(0),
-                max: Some("1".to_string()),
-                element_type: Some(vec![ElementType {
-                    code: "id".to_string(),
-                    target_profile: None,
-                }]),
-                fixed: None,
-                pattern: None,
-            },
-            ElementDefinition {
-                id: Some(format!("{}.meta", base_type)),
-                path: format!("{}.meta", base_type),
-                short: Some("Metadata about the resource".to_string()),
-                definition: Some("The metadata about the resource.".to_string()),
-                min: Some(0),
-                max: Some("1".to_string()),
-                element_type: Some(vec![ElementType {
-                    code: "Meta".to_string(),
-                    target_profile: None,
-                }]),
-                fixed: None,
-                pattern: None,
-            },
-            ElementDefinition {
-                id: Some(format!("{}.implicitRules", base_type)),
-                path: format!("{}.implicitRules", base_type),
-                short: Some("A set of rules under which this content was created".to_string()),
-                definition: Some("A reference to a set of rules that were followed when the resource was constructed.".to_string()),
-                min: Some(0),
-                max: Some("1".to_string()),
-                element_type: Some(vec![ElementType {
-                    code: "uri".to_string(),
-                    target_profile: None,
-                }]),
-                fixed: None,
-                pattern: None,
-            },
-            ElementDefinition {
-                id: Some(format!("{}.language", base_type)),
-                path: format!("{}.language", base_type),
-                short: Some("Language of the resource content".to_string()),
-                definition: Some("The base language in which the resource is written.".to_string()),
-                min: Some(0),
-                max: Some("1".to_string()),
-                element_type: Some(vec![ElementType {
-                    code: "code".to_string(),
-                    target_profile: None,
-                }]),
-                fixed: None,
-                pattern: None,
-            },
-        ]
+    /// Extract the base type name from a base definition URL
+    fn extract_base_type_from_url(&self, base_definition_url: &str) -> Option<String> {
+        // Extract the last part of the URL after the last '/'
+        // e.g., "http://hl7.org/fhir/StructureDefinition/DomainResource" -> "DomainResource"
+        base_definition_url.split('/').last().map(|s| s.to_string())
     }
 
     /// Convert an ElementDefinition to a RustField
@@ -389,6 +331,7 @@ impl CodeGenerator {
             is_array,
             documentation: element.short.clone().or_else(|| element.definition.clone()),
             serde_rename,
+            serde_flatten: false,
         })
     }
 
@@ -433,6 +376,7 @@ impl CodeGenerator {
             is_array,
             documentation: element.short.clone().or_else(|| element.definition.clone()),
             serde_rename,
+            serde_flatten: false,
         })
     }
 
@@ -488,6 +432,11 @@ impl CodeGenerator {
                 let field_type = self.build_field_type(field);
 
                 let mut attrs = Vec::new();
+
+                // Add serde flatten if needed
+                if field.serde_flatten {
+                    attrs.push(quote! { #[serde(flatten)] });
+                }
 
                 // Add serde rename if needed
                 if let Some(rename) = &field.serde_rename {
@@ -777,29 +726,31 @@ mod tests {
         // Generate struct with choice type
         let result = generator.generate_struct(&structure_def).unwrap();
         
-        // Should have base fields plus choice type fields
-        // Base fields: id, meta, implicitRules, language (4 fields)
+        // Should have base field plus choice type fields
+        // Base field: base (1 field) - inherits from DomainResource
         // Choice fields: value_string, value_quantity (2 fields)
-        // Total: 6 fields
-        assert_eq!(result.fields.len(), 6);
+        // Total: 3 fields
+        assert_eq!(result.fields.len(), 3);
         
-        // Check that we have the base fields
+        // Check that we have the base field and choice fields
         let field_names: Vec<_> = result.fields.iter().map(|f| f.name.as_str()).collect();
-        assert!(field_names.contains(&"id"));
-        assert!(field_names.contains(&"meta"));
-        assert!(field_names.contains(&"implicit_rules"));
-        assert!(field_names.contains(&"language"));
-        
-        // Check choice type field names and types
+        assert!(field_names.contains(&"base"));
         assert!(field_names.contains(&"value_string"));
         assert!(field_names.contains(&"value_quantity"));
+        
+        // Check that base field is flattened
+        let base_field = result.fields.iter().find(|f| f.name == "base").unwrap();
+        assert!(base_field.serde_flatten);
+        assert_eq!(base_field.rust_type, "DomainResource");
         
         // Check serde rename attributes for choice fields
         let value_string_field = result.fields.iter().find(|f| f.name == "value_string").unwrap();
         assert_eq!(value_string_field.serde_rename, Some("valueString".to_string()));
+        assert!(!value_string_field.serde_flatten);
         
         let value_quantity_field = result.fields.iter().find(|f| f.name == "value_quantity").unwrap();
         assert_eq!(value_quantity_field.serde_rename, Some("valueQuantity".to_string()));
+        assert!(!value_quantity_field.serde_flatten);
         
         // Check field types
         assert_eq!(value_string_field.rust_type, "String");
