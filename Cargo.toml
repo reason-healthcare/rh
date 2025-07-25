@@ -1,0 +1,42 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*",
+    "apps/*",
+]
+
+# Optional: exclude specific directories if needed
+exclude = [
+    "target",
+    "docs",
+]
+
+# Workspace-wide dependencies that can be shared across all crates
+[workspace.dependencies]
+# Common dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+clap = { version = "3.2", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Code generation dependencies
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
+convert_case = "0.6"
+indexmap = "1.9"
+
+# Development dependencies
+criterion = "0.5"
+
+# Workspace-wide package metadata
+[workspace.package]
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/your-monorepo"
+rust-version = "1.70"

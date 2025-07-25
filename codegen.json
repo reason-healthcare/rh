@@ -1,0 +1,24 @@
+{
+  "output_dir": "src/generated",
+  "module_name": "fhir_types",
+  "with_serde": true,
+  "with_docs": true,
+  "type_mappings": {
+    "url": "String",
+    "string": "String",
+    "time": "String",
+    "uri": "String",
+    "base64Binary": "String",
+    "markdown": "String",
+    "integer": "i32",
+    "decimal": "f64",
+    "instant": "String",
+    "boolean": "bool",
+    "code": "String",
+    "date": "String",
+    "dateTime": "String",
+    "canonical": "String",
+    "oid": "String",
+    "id": "String"
+  }
+}

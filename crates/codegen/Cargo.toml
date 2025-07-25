@@ -1,0 +1,27 @@
+[package]
+name = "codegen"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Code generation library for creating Rust types from FHIR StructureDefinitions"
+
+[dependencies]
+# Workspace dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
+convert_case = { workspace = true }
+indexmap = { workspace = true }
+
+# Local workspace crates
+common = { path = "../common" }
+
+[dev-dependencies]
+tempfile = "3.0"
