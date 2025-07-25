@@ -94,6 +94,7 @@ pub struct StructureDefinition {
     pub resource_type: String,
     pub id: String,
     pub url: String,
+    pub version: Option<String>,
     pub name: String,
     pub title: Option<String>,
     pub status: String,
@@ -396,6 +397,25 @@ impl CodeGenerator {
         }
     }
 
+    /// Add header comment with StructureDefinition information
+    fn add_header_comment(&self, code: &str, structure_def: &StructureDefinition) -> String {
+        let version_info = if let Some(version) = &structure_def.version {
+            format!(" (version {})", version)
+        } else {
+            String::new()
+        };
+
+        let header = format!(
+            "// Generated from FHIR StructureDefinition: {}{}\n// URL: {}\n\n{}",
+            structure_def.name,
+            version_info,
+            structure_def.url,
+            code
+        );
+        
+        header
+    }
+
     /// Generate code and write to file
     pub fn generate_to_file(
         &mut self,
@@ -424,14 +444,20 @@ impl CodeGenerator {
                 .map_err(|e| CodegenError::Generation { message: format!("Failed to parse generated tokens: {}", e) })?;
             
             // Format with prettyplease
-            prettyplease::unparse(&file)
+            let formatted_code = prettyplease::unparse(&file);
+            
+            // Add header comment with StructureDefinition info
+            self.add_header_comment(&formatted_code, structure_def)
         } else {
             // Parse the tokens into a syn::File for formatting
             let file = syn::parse2::<syn::File>(tokens)
                 .map_err(|e| CodegenError::Generation { message: format!("Failed to parse generated tokens: {}", e) })?;
             
             // Format with prettyplease
-            prettyplease::unparse(&file)
+            let formatted_code = prettyplease::unparse(&file);
+            
+            // Add header comment with StructureDefinition info
+            self.add_header_comment(&formatted_code, structure_def)
         };
 
         fs::write(output_path, code)?;
@@ -493,6 +519,7 @@ mod tests {
             resource_type: "StructureDefinition".to_string(),
             id: "test-patient".to_string(),
             url: "http://example.com/Patient".to_string(),
+            version: Some("1.0.0".to_string()),
             name: "Patient".to_string(),
             title: Some("Test Patient".to_string()),
             status: "active".to_string(),
