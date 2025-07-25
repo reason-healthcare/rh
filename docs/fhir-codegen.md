@@ -92,12 +92,12 @@ cargo run -p fhir-codegen -- install <package> <version> [OPTIONS]
 **Example:**
 ```bash
 # Install FHIR R4 core and generate types
-cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 -o ./src/fhir/
+cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 -o ./generated
 
 # Use custom configuration
 cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 \
   -c my-config.json \
-  -o ./src/generated/
+  -o ./generated
 ```
 
 ### How It Works

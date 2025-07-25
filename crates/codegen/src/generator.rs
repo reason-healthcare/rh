@@ -85,7 +85,13 @@ impl CodeGenerator {
         // For now, create a simple struct with basic fields
         let mut rust_struct = RustStruct::new(struct_name.clone());
         rust_struct.doc_comment = structure_def.title.clone();
-        rust_struct.derives = vec!["Debug".to_string(), "Clone".to_string()];
+        
+        // Use config to determine derives
+        let mut derives = vec!["Debug".to_string(), "Clone".to_string()];
+        if self.config.with_serde {
+            derives.extend(vec!["Serialize".to_string(), "Deserialize".to_string()]);
+        }
+        rust_struct.derives = derives;
 
         // Cache the generated struct for future use
         self.type_cache.insert(struct_name, rust_struct.clone());
@@ -112,6 +118,26 @@ impl CodeGenerator {
         Ok(())
     }
 
+    /// Generate an enum for a value set binding
+    pub fn generate_enum_for_value_set(&mut self, value_set_url: &str) -> CodegenResult<Option<RustEnum>> {
+        // Check if we've already generated this enum
+        if let Some(cached_enum) = self.enum_cache.get(value_set_url) {
+            return Ok(Some(cached_enum.clone()));
+        }
+
+        // Generate a placeholder enum using the value set manager
+        let enum_name = self.value_set_manager.generate_placeholder_enum(value_set_url);
+        
+        // Get the generated enum from the value set manager's cache
+        if let Some(rust_enum) = self.value_set_manager.get_cached_enums().get(&enum_name) {
+            // Cache it in our own cache as well
+            self.enum_cache.insert(value_set_url.to_string(), rust_enum.clone());
+            Ok(Some(rust_enum.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Convert a FHIR name to a valid Rust type name
     fn to_rust_name(&self, name: &str) -> String {
         // Convert to PascalCase and handle special characters
@@ -121,6 +147,7 @@ impl CodeGenerator {
             .map(|word| {
                 // Convert each word to PascalCase
                 let mut chars = word.chars();
+                #[allow(clippy::match_single_binding)]
                 match chars.next() {
                     None => String::new(),
                     Some(first) => {
