@@ -314,13 +314,17 @@ impl CodeGenerator {
     fn to_rust_field_name(&self, name: &str) -> String {
         // Handle FHIR choice types like value[x] -> value_x
         let cleaned_name = if name.contains('[') && name.contains(']') {
-            name.replace('[', "_")
-                .replace(']', "")
+            name.replace('[', "_").replace(']', "")
         } else {
             name.to_string()
         };
-        
+
         cleaned_name.to_case(Case::Snake)
+    }
+
+    /// Convert a FHIR resource type name to snake_case filename
+    pub fn to_filename(&self, name: &str) -> String {
+        name.to_case(Case::Snake)
     }
 
     /// Generate TokenStream for a RustStruct

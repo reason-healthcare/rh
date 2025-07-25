@@ -227,7 +227,7 @@ fn generate_single(
         output.to_path_buf()
     } else {
         let output_dir = Path::new(&config.output_dir);
-        let file_name = format!("{}.rs", structure_def.name.to_lowercase());
+        let file_name = format!("{}.rs", generator.to_filename(&structure_def.name));
         output_dir.join(file_name)
     };
 
@@ -318,7 +318,7 @@ fn process_single_file(
         .map_err(|e| anyhow::anyhow!("Failed to load StructureDefinition: {}", e))?;
 
     // Determine output path
-    let file_name = format!("{}.rs", structure_def.name.to_lowercase());
+    let file_name = format!("{}.rs", generator.to_filename(&structure_def.name));
     let output_path = output_dir.join(file_name);
 
     // Generate the code
@@ -345,7 +345,7 @@ fn process_json_files(
 
         if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
             processed_count += 1;
-            
+
             // Only process StructureDefinition files for type generation
             if let Some(filename) = path.file_name().and_then(|name| name.to_str()) {
                 if filename.starts_with("StructureDefinition-") {
@@ -363,7 +363,10 @@ fn process_json_files(
         }
     }
 
-    info!("Processed {} JSON files, generated {} Rust files", processed_count, generated_count);
+    info!(
+        "Processed {} JSON files, generated {} Rust files",
+        processed_count, generated_count
+    );
     Ok(())
 }
 
