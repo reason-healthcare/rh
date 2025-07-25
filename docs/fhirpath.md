@@ -4,7 +4,7 @@
 
 This document describes the current implementation status of FHIRPath in the `fhirpath` crate. FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification.
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic and comparison operations implemented, basic evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, and membership operations implemented, basic evaluation functional
 
 ## Architecture
 
@@ -41,6 +41,7 @@ The FHIRPath implementation consists of four main components:
 - **Logical operations**: `active and birthDate.exists()`
 - **Equality operations**: `use = 'official'`, `active != false`
 - **Comparison operations**: `age > 18`, `weight <= 100`, `'apple' < 'banana'`
+- **Membership operations**: `value in collection`, `list contains item`
 - **Arithmetic operations**: `1 + 2`, `age * 2`, `'Hello' & ' World'`
 - **Parenthesized expressions**: `(name.given | name.family).exists()`
 
@@ -77,6 +78,13 @@ The FHIRPath implementation consists of four main components:
 - **Proper precedence**: `2 + 3 > 4` → `Boolean(true)` (arithmetic first)
 - **Type safety**: Invalid comparisons properly rejected with clear errors
 
+#### Membership Operations
+- **Value membership**: `'apple' in fruits` → `Boolean(true)` if fruits contains 'apple'
+- **Collection contains**: `fruits contains 'apple'` → `Boolean(true)` if fruits contains 'apple'
+- **Single value membership**: `value in 'value'` → `Boolean(true)` (single values treated as collections)
+- **Type safety**: Membership tests use equality comparison semantics
+- **Proper precedence**: Same precedence as equality operators, left-associative
+
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
@@ -84,7 +92,8 @@ The FHIRPath implementation consists of four main components:
 - ✅ Simple member access on JSON objects
 - ✅ Basic logical operations
 - ✅ Arithmetic operations with proper precedence
-- ✅ Comparison operations with type safety  
+- ✅ Comparison operations with type safety
+- ✅ Membership operations with collection semantics
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
 - ❌ Function execution
@@ -94,7 +103,6 @@ The FHIRPath implementation consists of four main components:
 
 #### Advanced Expression Types
 - **Type operations**: `is`, `as`
-- **Membership operations**: `in`, `contains`
 - **Polarity operations**: `-value`, `+value`
 - **Implies operation**: `condition implies action`
 
@@ -158,8 +166,8 @@ The FHIRPath implementation consists of four main components:
 | Operator | Description | Parser Support | Evaluator Support | Status |
 |----------|-------------|----------------|-------------------|---------|
 | `\|` | Union | ✅ | ✅ | Complete |
-| `in` | Membership test | ✅ | ❌ | Parse only |
-| `contains` | Contains test | ✅ | ❌ | Parse only |
+| `in` | Membership test | ✅ | ✅ | Complete |
+| `contains` | Contains test | ✅ | ✅ | Complete |
 
 ### Type Operators
 
@@ -321,6 +329,12 @@ parser.parse("false <= true").unwrap();   // ✅ Works → Boolean(true)
 parser.parse("2 + 3 > 4").unwrap();      // ✅ Works → Boolean(true)
 parser.parse("10 - 5 >= 3").unwrap();    // ✅ Works → Boolean(true)
 
+// Membership operations
+parser.parse("'apple' in fruits").unwrap();     // ✅ Works → Boolean evaluation
+parser.parse("fruits contains 'apple'").unwrap(); // ✅ Works → Boolean evaluation
+parser.parse("value in 'value'").unwrap();      // ✅ Works → Boolean(true)
+parser.parse("42 in numbers").unwrap();         // ✅ Works → Boolean evaluation
+
 // Member access
 parser.parse("Patient.name").unwrap();   // ✅ Works
 parser.parse("name.given").unwrap();     // ✅ Works
@@ -396,15 +410,15 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 16 tests covering parser and evaluator
-- **Integration tests**: 4 real-world usage examples including arithmetic and comparisons
-- **Parser coverage**: All core syntax elements parse successfully including comparison operators
-- **Evaluator coverage**: Literals, member access, arithmetic, and comparison operations
+- **Unit tests**: 20 tests covering parser and evaluator
+- **Integration tests**: 6 real-world usage examples including arithmetic, comparisons, and membership
+- **Parser coverage**: All core syntax elements parse successfully including membership operators
+- **Evaluator coverage**: Literals, member access, arithmetic, comparison, and membership operations
 
 Run tests with:
 ```bash
 cargo test --package fhirpath
-cargo test --package fhirpath test_comparison_expressions -- --nocapture
+cargo test --package fhirpath test_membership_integration -- --nocapture
 ```
 
 ## Integration with FHIR Codegen

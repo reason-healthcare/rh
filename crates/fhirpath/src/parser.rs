@@ -99,26 +99,51 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     })))
 }
 
-// Parse equality expressions
+// Parse equality and membership expressions (same precedence level)
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_inequality_expression(input)?;
     let (input, rest) = many0(tuple((
-        ws(alt((tag("!="), tag("!~"), tag("="), tag("~")))),
+        ws(alt((tag("!="), tag("!~"), tag("="), tag("~"), tag("contains"), tag("in")))),
         parse_inequality_expression,
     )))(input)?;
 
     Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
-        let operator = match op {
-            "=" => EqualityOperator::Equal,
-            "~" => EqualityOperator::Equivalent,
-            "!=" => EqualityOperator::NotEqual,
-            "!~" => EqualityOperator::NotEquivalent,
-            _ => EqualityOperator::Equal,
-        };
-        Expression::Equality {
-            left: Box::new(acc),
-            operator,
-            right: Box::new(expr),
+        match op {
+            "=" => Expression::Equality {
+                left: Box::new(acc),
+                operator: EqualityOperator::Equal,
+                right: Box::new(expr),
+            },
+            "~" => Expression::Equality {
+                left: Box::new(acc),
+                operator: EqualityOperator::Equivalent,
+                right: Box::new(expr),
+            },
+            "!=" => Expression::Equality {
+                left: Box::new(acc),
+                operator: EqualityOperator::NotEqual,
+                right: Box::new(expr),
+            },
+            "!~" => Expression::Equality {
+                left: Box::new(acc),
+                operator: EqualityOperator::NotEquivalent,
+                right: Box::new(expr),
+            },
+            "in" => Expression::Membership {
+                left: Box::new(acc),
+                operator: MembershipOperator::In,
+                right: Box::new(expr),
+            },
+            "contains" => Expression::Membership {
+                left: Box::new(acc),
+                operator: MembershipOperator::Contains,
+                right: Box::new(expr),
+            },
+            _ => Expression::Equality {
+                left: Box::new(acc),
+                operator: EqualityOperator::Equal,
+                right: Box::new(expr),
+            },
         }
     })))
 }
@@ -470,6 +495,62 @@ mod tests {
             assert!(matches!(operator, InequalityOperator::GreaterThan));
         } else {
             panic!("Expected inequality expression");
+        }
+    }
+
+    #[test]
+    fn test_membership_operators() {
+        let parser = FhirPathParser::new();
+        
+        // Test basic membership expressions
+        let expressions = [
+            "value in collection",
+            "name contains 'John'",
+            "item in list",
+            "collection contains element",
+        ];
+
+        for expr_str in expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed membership: {} -> {}", expr_str, expr);
+                    // Verify it's a Membership expression
+                    if let Expression::Membership { .. } = expr.root {
+                        // Success
+                    } else {
+                        panic!("Expected Membership expression for {}", expr_str);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse membership {}: {:?}", expr_str, e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_membership_precedence() {
+        let parser = FhirPathParser::new();
+        
+        // Test that membership has correct precedence (same as equality, left-associative)
+        let result = parser.parse("a = b in collection");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        
+        println!("Parsed expression: {:?}", expr.root);
+        
+        // Should parse as (a = b) in collection due to left-associativity
+        if let Expression::Membership { left, operator, right: _ } = expr.root {
+            // Left side should be an equality expression
+            if let Expression::Equality { .. } = left.as_ref() {
+                // Correct precedence
+            } else {
+                panic!("Expected left side to be equality expression, got: {:?}", left);
+            }
+            assert!(matches!(operator, MembershipOperator::In));
+        } else {
+            panic!("Expected membership expression, got: {:?}", expr.root);
         }
     }
 }

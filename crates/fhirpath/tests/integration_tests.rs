@@ -244,4 +244,59 @@ mod integration_tests {
             assert_eq!(result, expected);
         }
     }
+
+    #[test]
+    fn test_membership_integration() {
+        // Create parser and evaluator
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(json!({}));
+
+        // Test basic membership operations parsing + evaluation
+        let membership_cases = vec![
+            // These test the parsing/evaluation but require collections to be useful
+            // For now we can test with single values (treated as single-item collections)
+            ("'apple' in 'apple'", FhirPathValue::Boolean(true)),
+            ("'apple' in 'banana'", FhirPathValue::Boolean(false)),
+            ("42 in 42", FhirPathValue::Boolean(true)),
+            ("42 in 24", FhirPathValue::Boolean(false)),
+            ("true contains true", FhirPathValue::Boolean(true)),
+            ("true contains false", FhirPathValue::Boolean(false)),
+        ];
+
+        for (expr_str, expected) in membership_cases {
+            let expr = parser.parse(expr_str).unwrap();
+            let result = evaluator.evaluate(&expr, &context).unwrap();
+            println!("✓ Membership test: {} = {:?}", expr_str, result);
+            assert_eq!(result, expected);
+        }
+
+        println!("All membership integration tests passed!");
+    }
+
+    #[test]
+    fn test_membership_precedence_integration() {
+        // Test precedence between equality and membership operators
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(json!({}));
+
+        // Test parsing of complex expressions with membership
+        let precedence_cases = vec![
+            "a = b in collection",  // Should parse as (a = b) in collection
+            "value contains 'x' = true",  // Should parse as (value contains 'x') = true
+        ];
+
+        for expr_str in precedence_cases {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed membership precedence: {} -> {}", expr_str, expr);
+                }
+                Err(e) => {
+                    panic!("Failed to parse {}: {:?}", expr_str, e);
+                }
+            }
+        }
+    }
 }

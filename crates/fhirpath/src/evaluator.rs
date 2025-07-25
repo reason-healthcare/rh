@@ -94,6 +94,11 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 self.evaluate_equality(&left_result, operator, &right_result)
             }
+            Expression::Membership { left, operator, right } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                self.evaluate_membership(&left_result, operator, &right_result)
+            }
             Expression::Inequality { left, operator, right } => {
                 let left_result = self.evaluate_expression(left, context)?;
                 let right_result = self.evaluate_expression(right, context)?;
@@ -310,6 +315,20 @@ impl FhirPathEvaluator {
             InequalityOperator::LessThanOrEqual => self.compare_values(left, right)? <= 0,
             InequalityOperator::GreaterThan => self.compare_values(left, right)? > 0,
             InequalityOperator::GreaterThanOrEqual => self.compare_values(left, right)? >= 0,
+        };
+        Ok(FhirPathValue::Boolean(result))
+    }
+
+    /// Evaluate membership operations (in, contains)
+    fn evaluate_membership(
+        &self,
+        left: &FhirPathValue,
+        operator: &MembershipOperator,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        let result = match operator {
+            MembershipOperator::In => self.is_member(left, right)?,
+            MembershipOperator::Contains => self.is_member(right, left)?,
         };
         Ok(FhirPathValue::Boolean(result))
     }
@@ -685,6 +704,24 @@ impl FhirPathEvaluator {
         }
     }
 
+    /// Check if a value is a member of a collection
+    fn is_member(&self, value: &FhirPathValue, collection: &FhirPathValue) -> FhirPathResult<bool> {
+        match collection {
+            FhirPathValue::Collection(items) => {
+                // Check if value equals any item in the collection
+                for item in items {
+                    if self.values_equal(value, item) {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            }
+            FhirPathValue::Empty => Ok(false),
+            // For non-collection values, treat as single-item collection
+            _ => Ok(self.values_equal(value, collection)),
+        }
+    }
+
     /// Convert JSON value to FHIRPath value
     fn json_to_fhirpath_value(&self, value: &Value) -> FhirPathValue {
         match value {
@@ -990,5 +1027,71 @@ mod tests {
         let right = FhirPathValue::String("test".to_string());
         let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_membership_operations() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Test 'in' operator
+        let value = FhirPathValue::String("apple".to_string());
+        let collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("apple".to_string()),
+            FhirPathValue::String("banana".to_string()),
+            FhirPathValue::String("orange".to_string()),
+        ]);
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &collection).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let value = FhirPathValue::String("grape".to_string());
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &collection).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        // Test 'contains' operator
+        let value = FhirPathValue::String("banana".to_string());
+        let result = evaluator.evaluate_membership(&collection, &MembershipOperator::Contains, &value).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let value = FhirPathValue::String("kiwi".to_string());
+        let result = evaluator.evaluate_membership(&collection, &MembershipOperator::Contains, &value).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        // Test with single values (non-collections)
+        let value = FhirPathValue::Integer(42);
+        let single = FhirPathValue::Integer(42);
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &single).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let value = FhirPathValue::Integer(42);
+        let single = FhirPathValue::Integer(24);
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &single).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+    }
+
+    #[test]
+    fn test_membership_with_numbers() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Test numeric collection membership
+        let value = FhirPathValue::Integer(5);
+        let collection = FhirPathValue::Collection(vec![
+            FhirPathValue::Integer(1),
+            FhirPathValue::Integer(3),
+            FhirPathValue::Integer(5),
+            FhirPathValue::Integer(7),
+        ]);
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &collection).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // Test mixed numeric types (Integer vs Number)
+        let value = FhirPathValue::Integer(5);
+        let collection = FhirPathValue::Collection(vec![
+            FhirPathValue::Number(1.0),
+            FhirPathValue::Number(3.5),
+            FhirPathValue::Number(5.0),
+        ]);
+        // This should be false since Integer(5) != Number(5.0) in our current equality
+        let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &collection).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
     }
 }
