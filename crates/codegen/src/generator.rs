@@ -2,7 +2,7 @@
 //!
 //! This module contains the core logic for generating Rust types from FHIR StructureDefinitions.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -166,6 +166,44 @@ pub struct RustEnum {
     pub value_set: Option<String>,
 }
 
+/// Represents a FHIR ValueSet concept
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetConcept {
+    pub code: String,
+    pub display: Option<String>,
+    pub definition: Option<String>,
+}
+
+/// Represents a FHIR ValueSet include
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetInclude {
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<Vec<String>>,
+    pub system: Option<String>,
+    pub concept: Option<Vec<ValueSetConcept>>,
+}
+
+/// Represents a FHIR ValueSet compose
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSetCompose {
+    pub include: Option<Vec<ValueSetInclude>>,
+}
+
+/// Represents a FHIR ValueSet
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValueSet {
+    #[serde(rename = "resourceType")]
+    pub resource_type: String,
+    pub id: Option<String>,
+    pub url: Option<String>,
+    pub version: Option<String>,
+    pub name: Option<String>,
+    pub title: Option<String>,
+    pub status: Option<String>,
+    pub description: Option<String>,
+    pub compose: Option<ValueSetCompose>,
+}
+
 /// Main code generator struct
 pub struct CodeGenerator {
     config: CodegenConfig,
@@ -173,6 +211,10 @@ pub struct CodeGenerator {
     type_cache: HashMap<String, RustStruct>,
     /// Cache of generated enums for value set bindings
     enum_cache: HashMap<String, RustEnum>,
+    /// Cache of loaded ValueSets indexed by URL
+    value_set_cache: HashMap<String, ValueSet>,
+    /// Directory to scan for ValueSet JSON files
+    value_set_directory: Option<String>,
 }
 
 impl CodeGenerator {
@@ -182,6 +224,19 @@ impl CodeGenerator {
             config,
             type_cache: HashMap::new(),
             enum_cache: HashMap::new(),
+            value_set_cache: HashMap::new(),
+            value_set_directory: None,
+        }
+    }
+
+    /// Create a new code generator with a ValueSet directory for dynamic enum generation
+    pub fn new_with_value_set_directory<P: AsRef<Path>>(config: CodegenConfig, value_set_dir: P) -> Self {
+        Self {
+            config,
+            type_cache: HashMap::new(),
+            enum_cache: HashMap::new(),
+            value_set_cache: HashMap::new(),
+            value_set_directory: Some(value_set_dir.as_ref().to_string_lossy().to_string()),
         }
     }
 
@@ -192,6 +247,76 @@ impl CodeGenerator {
     pub fn clear_cache(&mut self) {
         self.type_cache.clear();
         self.enum_cache.clear();
+        self.value_set_cache.clear();
+    }
+
+    /// Set the ValueSet directory for dynamic enum generation
+    pub fn set_value_set_directory<P: AsRef<Path>>(&mut self, value_set_dir: P) {
+        self.value_set_directory = Some(value_set_dir.as_ref().to_string_lossy().to_string());
+        // Clear the ValueSet cache when directory changes
+        self.value_set_cache.clear();
+    }
+
+    /// Load all ValueSets from the configured directory
+    fn load_value_sets(&mut self) -> CodegenResult<()> {
+        let value_set_dir = match &self.value_set_directory {
+            Some(dir) => dir,
+            None => return Ok(()), // No directory configured, skip loading
+        };
+
+        let dir_path = Path::new(value_set_dir);
+        if !dir_path.exists() || !dir_path.is_dir() {
+            return Ok(()); // Directory doesn't exist, skip loading
+        }
+
+        // Scan directory for JSON files
+        let entries = fs::read_dir(dir_path).map_err(|e| CodegenError::Io(e))?;
+        
+        for entry in entries {
+            let entry = entry.map_err(|e| CodegenError::Io(e))?;
+            let path = entry.path();
+            
+            // Only process JSON files
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    // Try to parse as a FHIR resource
+                    if let Ok(resource) = serde_json::from_str::<serde_json::Value>(&content) {
+                        // Check if it's a ValueSet
+                        if resource.get("resourceType")
+                            .and_then(|rt| rt.as_str()) == Some("ValueSet") {
+                            
+                            // Parse as ValueSet
+                            if let Ok(value_set) = serde_json::from_str::<ValueSet>(&content) {
+                                if let Some(url) = &value_set.url {
+                                    // Cache by URL (without version)
+                                    let base_url = url.split('|').next().unwrap_or(url);
+                                    self.value_set_cache.insert(base_url.to_string(), value_set);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Find a ValueSet by URL, loading from filesystem if necessary
+    fn find_value_set(&mut self, value_set_url: &str) -> CodegenResult<Option<ValueSet>> {
+        // Strip version from URL if present
+        let base_url = value_set_url.split('|').next().unwrap_or(value_set_url);
+        
+        // Check cache first
+        if let Some(value_set) = self.value_set_cache.get(base_url) {
+            return Ok(Some(value_set.clone()));
+        }
+
+        // Load ValueSets from filesystem if not already loaded
+        self.load_value_sets()?;
+        
+        // Check cache again after loading
+        Ok(self.value_set_cache.get(base_url).cloned())
     }
 
     /// Load and parse a FHIR StructureDefinition from a JSON file
@@ -829,6 +954,11 @@ impl CodeGenerator {
         // In a full implementation, you would fetch the actual ValueSet definition
         let variants = self.get_value_set_variants(value_set, &enum_name);
 
+        // If we only got a fallback "Unknown" variant, fall back to String type
+        if variants.len() == 1 && variants[0].value == "unknown" {
+            return None;
+        }
+
         let rust_enum = RustEnum {
             name: enum_name.clone(),
             variants,
@@ -858,13 +988,56 @@ impl CodeGenerator {
         Some(enum_name)
     }
 
-    /// Get variants for a known value set (placeholder implementation)
-    fn get_value_set_variants(&self, value_set: &str, enum_name: &str) -> Vec<RustEnumVariant> {
-        // This is a simplified implementation. In practice, you would:
-        // 1. Fetch the ValueSet definition from a FHIR server
-        // 2. Parse the concepts/codes from the ValueSet
-        // 3. Generate enum variants from those codes
+    /// Get variants for a known value set (with filesystem support)
+    fn get_value_set_variants(&mut self, value_set: &str, enum_name: &str) -> Vec<RustEnumVariant> {
+        // First, try to load the ValueSet from filesystem
+        if let Ok(Some(loaded_value_set)) = self.find_value_set(value_set) {
+            let mut variants = Vec::new();
+            
+            // Extract concepts from the ValueSet
+            if let Some(compose) = &loaded_value_set.compose {
+                if let Some(includes) = &compose.include {
+                    for include in includes {
+                        // Handle direct concepts
+                        if let Some(concepts) = &include.concept {
+                            for concept in concepts {
+                                let variant_name = self.code_to_variant_name(&concept.code);
+                                let documentation = concept.display.clone()
+                                    .or_else(|| concept.definition.clone())
+                                    .or_else(|| Some(format!("{} value", concept.code)));
+                                
+                                variants.push(RustEnumVariant {
+                                    name: variant_name,
+                                    value: concept.code.clone(),
+                                    documentation,
+                                });
+                            }
+                        }
+                        
+                        // Handle included value sets (recursive includes)
+                        if let Some(included_value_sets) = &include.value_set {
+                            for included_vs in included_value_sets {
+                                if let Ok(Some(_included_vs_def)) = self.find_value_set(included_vs) {
+                                    // Recursively get variants from included ValueSet
+                                    let included_variants = self.get_value_set_variants(
+                                        included_vs, 
+                                        &format!("{}Included", enum_name)
+                                    );
+                                    variants.extend(included_variants);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If we found variants from the filesystem, return them
+            if !variants.is_empty() {
+                return variants;
+            }
+        }
         
+        // Fallback to hardcoded known value sets if filesystem loading failed
         // Handle versioned value sets by stripping the version
         let base_value_set = value_set.split('|').next().unwrap_or(value_set);
         
@@ -990,6 +1163,37 @@ impl CodeGenerator {
         }
     }
 
+    /// Convert a FHIR code to a valid Rust enum variant name
+    fn code_to_variant_name(&self, code: &str) -> String {
+        // Handle various FHIR code formats and convert to PascalCase
+        match code {
+            // Handle special cases first
+            "primitive-type" => "PrimitiveType".to_string(),
+            "complex-type" => "ComplexType".to_string(),
+            _ => {
+                // Convert hyphenated codes to PascalCase
+                if code.contains('-') {
+                    code.split('-')
+                        .map(|part| {
+                            let mut chars = part.chars();
+                            match chars.next() {
+                                None => String::new(),
+                                Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+                            }
+                        })
+                        .collect()
+                } else {
+                    // Simple case: capitalize first letter
+                    let mut chars = code.chars();
+                    match chars.next() {
+                        None => "Unknown".to_string(),
+                        Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
+                    }
+                }
+            }
+        }
+    }
+
     /// Generate TokenStream for a RustEnum
     fn generate_enum_tokens(&self, rust_enum: &RustEnum) -> TokenStream {
         let enum_name = format_ident!("{}", rust_enum.name);
@@ -1062,6 +1266,33 @@ impl CodeGenerator {
         header
     }
 
+    /// Collect all enum types that are actually used in the given structs
+    fn collect_used_enum_types(&self, structs: &[RustStruct]) -> HashSet<String> {
+        let mut used_enums = HashSet::new();
+        
+        for rust_struct in structs {
+            for field in &rust_struct.fields {
+                // Check if the field type (without Option wrapper) is an enum we have cached
+                let base_type = field.rust_type
+                    .strip_prefix("Option<")
+                    .and_then(|s| s.strip_suffix(">"))
+                    .unwrap_or(&field.rust_type);
+                
+                // Remove Vec wrapper if present
+                let base_type = base_type
+                    .strip_prefix("Vec<")
+                    .and_then(|s| s.strip_suffix(">"))
+                    .unwrap_or(base_type);
+                
+                if self.enum_cache.contains_key(base_type) {
+                    used_enums.insert(base_type.to_string());
+                }
+            }
+        }
+        
+        used_enums
+    }
+
     /// Generate code and write to file
     pub fn generate_to_file(
         &mut self,
@@ -1069,15 +1300,6 @@ impl CodeGenerator {
         output_path: &Path,
     ) -> CodegenResult<()> {
         let main_struct = self.generate_struct(structure_def)?;
-        
-        // Generate tokens for the main struct and all nested structs
-        let mut all_tokens = Vec::new();
-        
-        // First, generate tokens for all enums
-        for rust_enum in self.enum_cache.values() {
-            let enum_tokens = self.generate_enum_tokens(rust_enum);
-            all_tokens.push(enum_tokens);
-        }
         
         // Collect all structs that were generated (including nested ones)
         let mut structs_to_generate = Vec::new();
@@ -1088,6 +1310,20 @@ impl CodeGenerator {
         for (type_name, rust_struct) in &self.type_cache {
             if type_name.starts_with(&main_struct_name) && type_name != &main_struct_name {
                 structs_to_generate.push(rust_struct.clone());
+            }
+        }
+        
+        // Collect only the enums that are actually used by these structs
+        let used_enum_types = self.collect_used_enum_types(&structs_to_generate);
+        
+        // Generate tokens for the main struct and all nested structs
+        let mut all_tokens = Vec::new();
+        
+        // First, generate tokens only for used enums
+        for enum_name in &used_enum_types {
+            if let Some(rust_enum) = self.enum_cache.get(enum_name) {
+                let enum_tokens = self.generate_enum_tokens(rust_enum);
+                all_tokens.push(enum_tokens);
             }
         }
         

@@ -45,6 +45,10 @@ enum Commands {
         /// Path to the configuration file
         #[clap(short, long, default_value = "codegen.json")]
         config: PathBuf,
+
+        /// Directory containing ValueSet JSON files for dynamic enum generation
+        #[clap(long)]
+        value_set_dir: Option<PathBuf>,
     },
     /// Generate Rust types from multiple FHIR StructureDefinitions
     Batch {
@@ -63,6 +67,10 @@ enum Commands {
         /// File pattern to match (e.g., "*.json")
         #[clap(short, long, default_value = "*.json")]
         pattern: String,
+
+        /// Directory containing ValueSet JSON files for dynamic enum generation
+        #[clap(long)]
+        value_set_dir: Option<PathBuf>,
     },
     /// Download FHIR package from registry
     Download {
@@ -99,6 +107,10 @@ enum Commands {
         /// Path to the configuration file
         #[clap(short, long, default_value = "codegen.json")]
         config: PathBuf,
+
+        /// Directory containing ValueSet JSON files for enum generation
+        #[clap(long)]
+        value_set_dir: Option<PathBuf>,
 
         /// Registry URL
         #[clap(long, default_value = "https://packages.fhir.org")]
@@ -137,16 +149,18 @@ async fn async_main() -> Result<()> {
             input,
             output,
             config,
+            value_set_dir,
         } => {
-            generate_single(&input, output.as_deref(), &config)?;
+            generate_single(&input, output.as_deref(), &config, value_set_dir.as_deref())?;
         }
         Commands::Batch {
             input_dir,
             output_dir,
             config,
             pattern,
+            value_set_dir,
         } => {
-            generate_batch(&input_dir, &output_dir, &config, &pattern)?;
+            generate_batch(&input_dir, &output_dir, &config, &pattern, value_set_dir.as_deref())?;
         }
         Commands::Download {
             package,
@@ -162,6 +176,7 @@ async fn async_main() -> Result<()> {
             version,
             output,
             config,
+            value_set_dir,
             registry,
             token,
         } => {
@@ -170,6 +185,7 @@ async fn async_main() -> Result<()> {
                 &version,
                 &output,
                 &config,
+                value_set_dir.as_deref(),
                 &registry,
                 token.as_deref(),
             )
@@ -202,6 +218,7 @@ fn generate_single(
     input_path: &Path,
     output_path: Option<&Path>,
     config_path: &Path,
+    value_set_dir: Option<&Path>,
 ) -> Result<()> {
     info!("Loading configuration from: {}", config_path.display());
 
@@ -210,7 +227,12 @@ fn generate_single(
 
     info!("Generating Rust types from: {}", input_path.display());
 
-    let mut generator = CodeGenerator::new(config.clone());
+    let mut generator = if let Some(vs_dir) = value_set_dir {
+        info!("Using ValueSet directory: {}", vs_dir.display());
+        CodeGenerator::new_with_value_set_directory(config.clone(), vs_dir)
+    } else {
+        CodeGenerator::new(config.clone())
+    };
 
     // Load the StructureDefinition
     let structure_def = generator
@@ -247,6 +269,7 @@ fn generate_batch(
     output_dir: &Path,
     config_path: &Path,
     pattern: &str,
+    value_set_dir: Option<&Path>,
 ) -> Result<()> {
     info!("Loading configuration from: {}", config_path.display());
 
@@ -260,7 +283,12 @@ fn generate_batch(
     info!("Output directory: {}", output_dir.display());
     info!("File pattern: {}", pattern);
 
-    let mut generator = CodeGenerator::new(config);
+    let mut generator = if let Some(vs_dir) = value_set_dir {
+        info!("Using ValueSet directory: {}", vs_dir.display());
+        CodeGenerator::new_with_value_set_directory(config, vs_dir)
+    } else {
+        CodeGenerator::new(config)
+    };
 
     // Create output directory if it doesn't exist
     fs::create_dir_all(output_dir)?;
@@ -423,6 +451,7 @@ async fn install_package(
     version: &str,
     output: &Path,
     config_path: &Path,
+    value_set_dir: Option<&Path>,
     registry: &str,
     token: Option<&str>,
 ) -> Result<()> {
@@ -445,7 +474,11 @@ async fn install_package(
     };
 
     // Create the generator
-    let mut generator = CodeGenerator::new(config);
+    let mut generator = if let Some(value_set_dir) = value_set_dir {
+        CodeGenerator::new_with_value_set_directory(config, value_set_dir)
+    } else {
+        CodeGenerator::new(config)
+    };
 
     // Create output directory
     fs::create_dir_all(output)?;
