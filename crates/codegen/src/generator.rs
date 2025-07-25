@@ -353,7 +353,8 @@ impl CodeGenerator {
 
                 // Add documentation
                 if let Some(doc) = &field.documentation {
-                    attrs.push(quote! { #[doc = #doc] });
+                    let formatted_doc = format!(" {}", doc);
+                    attrs.push(quote! { #[doc = #formatted_doc] });
                 }
 
                 quote! {
@@ -364,7 +365,8 @@ impl CodeGenerator {
             .collect();
 
         let doc_attr = if let Some(doc) = &rust_struct.documentation {
-            quote! { #[doc = #doc] }
+            let formatted_doc = format!(" {}", doc);
+            quote! { #[doc = #formatted_doc] }
         } else {
             quote! {}
         };
@@ -406,7 +408,7 @@ impl CodeGenerator {
         };
 
         let header = format!(
-            "// Generated from FHIR StructureDefinition: {}{}\n// URL: {}\n\n{}",
+            "// Generated from: {}{}\n// URL: {}\n\n{}",
             structure_def.name,
             version_info,
             structure_def.url,
