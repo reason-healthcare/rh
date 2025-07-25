@@ -412,12 +412,26 @@ impl CodeGenerator {
 
         // Write the generated code
         let code = if self.config.with_serde {
-            format!(
-                "use serde::{{Deserialize, Serialize}};\n\n{}",
-                tokens.to_string()
-            )
+            let serde_import = quote! { use serde::{Deserialize, Serialize}; };
+            let combined_tokens = quote! {
+                #serde_import
+                
+                #tokens
+            };
+            
+            // Parse the tokens into a syn::File for formatting
+            let file = syn::parse2::<syn::File>(combined_tokens)
+                .map_err(|e| CodegenError::Generation { message: format!("Failed to parse generated tokens: {}", e) })?;
+            
+            // Format with prettyplease
+            prettyplease::unparse(&file)
         } else {
-            tokens.to_string()
+            // Parse the tokens into a syn::File for formatting
+            let file = syn::parse2::<syn::File>(tokens)
+                .map_err(|e| CodegenError::Generation { message: format!("Failed to parse generated tokens: {}", e) })?;
+            
+            // Format with prettyplease
+            prettyplease::unparse(&file)
         };
 
         fs::write(output_path, code)?;
