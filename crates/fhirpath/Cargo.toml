@@ -1,0 +1,18 @@
+[package]
+name = "fhirpath"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "FHIRPath expression parser and evaluator for FHIR resources"
+authors = ["Reason Healthcare"]
+repository = "https://github.com/reason-healthcare/rh"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+nom = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
