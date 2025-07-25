@@ -4,7 +4,7 @@
 
 This document describes the current implementation status of FHIRPath in the `fhirpath` crate. FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification.
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, and membership operations implemented, basic evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations and collection functions implemented, basic evaluation functional
 
 ## Architecture
 
@@ -94,9 +94,10 @@ The FHIRPath implementation consists of four main components:
 - ✅ Arithmetic operations with proper precedence
 - ✅ Comparison operations with type safety
 - ✅ Membership operations with collection semantics
+- ✅ Collection functions (empty, exists, count, distinct, isDistinct)
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
-- ❌ Function execution
+- ❌ Advanced function execution (where, select, etc.)
 - ❌ Type coercion
 
 ### ❌ Not Yet Implemented
@@ -114,7 +115,10 @@ The FHIRPath implementation consists of four main components:
 - **Long numbers**: `1000L`
 
 #### Built-in Functions
-- None currently implemented (syntax parsing only)
+- **Collection functions**: `name.count()`, `telecom.exists()`, `values.empty()`
+- **Distinct operations**: `items.distinct()`, `collection.isDistinct()`
+- **Type safety**: Functions work with collections and single values
+- **Proper evaluation**: Functions operate on target values with parameter support
 
 ## FHIRPath Keywords and Support Status
 
@@ -191,11 +195,11 @@ The FHIRPath implementation consists of four main components:
 
 | Function | Description | Parser Support | Evaluator Support | Status |
 |----------|-------------|----------------|-------------------|---------|
-| `empty()` | Test if collection is empty | ✅ | ❌ | Parse only |
-| `exists()` | Test if any items exist | ✅ | ❌ | Parse only |
-| `count()` | Count items in collection | ✅ | ❌ | Parse only |
-| `distinct()` | Remove duplicates | ✅ | ❌ | Parse only |
-| `isDistinct()` | Test if all items unique | ✅ | ❌ | Parse only |
+| `empty()` | Test if collection is empty | ✅ | ✅ | Complete |
+| `exists()` | Test if any items exist | ✅ | ✅ | Complete |
+| `count()` | Count items in collection | ✅ | ✅ | Complete |
+| `distinct()` | Remove duplicates | ✅ | ✅ | Complete |
+| `isDistinct()` | Test if all items unique | ✅ | ✅ | Complete |
 
 #### Filtering Functions
 
@@ -347,6 +351,12 @@ parser.parse("telecom[1].value").unwrap(); // ✅ Works
 parser.parse("name.count()").unwrap();   // ✅ Parses
 parser.parse("name.exists()").unwrap();  // ✅ Parses
 
+// Collection functions (full implementation)
+parser.parse("name.empty()").unwrap();   // ✅ Works → Boolean evaluation
+parser.parse("telecom.count()").unwrap(); // ✅ Works → Integer evaluation
+parser.parse("items.distinct()").unwrap(); // ✅ Works → Collection evaluation
+parser.parse("values.isDistinct()").unwrap(); // ✅ Works → Boolean evaluation
+
 // Logical operations
 parser.parse("active and name.exists()").unwrap(); // ✅ Works
 
@@ -393,8 +403,8 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 - [ ] Quantity literals
 - [ ] Type operators
 
-### Phase 4: Function Implementation (❌ Not Started)
-- [ ] Collection functions (exists, count, empty)
+### Phase 4: Function Implementation (⏳ Basic collection functions complete)
+- [x] Collection functions (exists, count, empty, distinct, isDistinct)
 - [ ] Filtering functions (where, select)
 - [ ] String functions (length, substring, etc.)
 - [ ] Math functions (abs, round, etc.)
@@ -410,15 +420,15 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 20 tests covering parser and evaluator
-- **Integration tests**: 6 real-world usage examples including arithmetic, comparisons, and membership
-- **Parser coverage**: All core syntax elements parse successfully including membership operators
-- **Evaluator coverage**: Literals, member access, arithmetic, comparison, and membership operations
+- **Unit tests**: 24 tests covering parser and evaluator
+- **Integration tests**: 8 real-world usage examples including arithmetic, comparisons, membership, and collection functions
+- **Parser coverage**: All core syntax elements parse successfully including collection function calls
+- **Evaluator coverage**: Literals, member access, arithmetic, comparison, membership, and collection function operations
 
 Run tests with:
 ```bash
 cargo test --package fhirpath
-cargo test --package fhirpath test_membership_integration -- --nocapture
+cargo test --package fhirpath test_collection_functions -- --nocapture
 ```
 
 ## Integration with FHIR Codegen

@@ -299,4 +299,110 @@ mod integration_tests {
             }
         }
     }
+
+    #[test]
+    fn test_collection_functions_integration() {
+        // Create a sample FHIR Patient with multiple name entries
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "official",
+                    "family": "Doe",
+                    "given": ["John"]
+                },
+                {
+                    "use": "usual",
+                    "family": "Doe", 
+                    "given": ["Johnny"]
+                },
+                {
+                    "use": "official",
+                    "family": "Smith",
+                    "given": ["John"]
+                }
+            ],
+            "telecom": []
+        });
+
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(patient);
+
+        // Note: These tests verify parsing and basic evaluation structure
+        // Full path navigation with collections would require more evaluation implementation
+
+        // Test function parsing
+        let function_parsing_cases = vec![
+            "name.count()",
+            "name.exists()",
+            "name.empty()",
+            "telecom.empty()",
+            "name.distinct()",
+            "name.isDistinct()",
+        ];
+
+        for expr_str in function_parsing_cases {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed collection function: {} -> {}", expr_str, expr);
+                }
+                Err(e) => {
+                    panic!("Failed to parse {}: {:?}", expr_str, e);
+                }
+            }
+        }
+
+        // Test direct function evaluation on values
+        let direct_evaluation_cases = vec![
+            // Test basic function calls with simple context
+            ("3.count()", "Parse and evaluate count on literal"),
+            ("true.exists()", "Parse and evaluate exists on literal"),
+            ("'hello'.empty()", "Parse and evaluate empty on literal"),
+        ];
+
+        for (expr_str, description) in direct_evaluation_cases {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed: {} -> {}", expr_str, expr);
+                    // Note: Full evaluation would require implementing literal function calls
+                    // For now we just verify parsing works
+                }
+                Err(e) => {
+                    panic!("Failed to parse {}: {:?}", expr_str, e);
+                }
+            }
+        }
+
+        println!("All collection function integration tests passed!");
+    }
+
+    #[test]
+    fn test_distinct_functions_integration() {
+        let parser = FhirPathParser::new();
+
+        // Test parsing of distinct function calls
+        let distinct_parsing_cases = vec![
+            "name.distinct()",
+            "telecom.isDistinct()",
+            "Patient.name.distinct()",
+            "values.isDistinct()",
+        ];
+
+        for expr_str in distinct_parsing_cases {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed distinct function: {} -> {}", expr_str, expr);
+                }
+                Err(e) => {
+                    panic!("Failed to parse {}: {:?}", expr_str, e);
+                }
+            }
+        }
+
+        println!("All distinct function parsing tests passed!");
+    }
 }

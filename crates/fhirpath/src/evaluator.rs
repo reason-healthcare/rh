@@ -45,7 +45,7 @@ pub struct EvaluationContext {
 /// FHIRPath expression evaluator
 pub struct FhirPathEvaluator {
     /// Built-in functions
-    functions: std::collections::HashMap<String, Box<dyn Fn(&[FhirPathValue]) -> FhirPathResult<FhirPathValue>>>,
+    functions: std::collections::HashMap<String, Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue>>>,
 }
 
 impl FhirPathEvaluator {
@@ -226,12 +226,12 @@ impl FhirPathEvaluator {
     /// Evaluate function call
     fn evaluate_function_call(
         &self,
-        _target: &FhirPathValue,
+        target: &FhirPathValue,
         name: &str,
         parameters: &[FhirPathValue],
     ) -> FhirPathResult<FhirPathValue> {
         if let Some(func) = self.functions.get(name) {
-            func(parameters)
+            func(target, parameters)
         } else {
             Err(FhirPathError::FunctionError {
                 message: format!("Unknown function: {}", name),
@@ -678,6 +678,11 @@ impl FhirPathEvaluator {
 
     /// Check if two values are equal
     fn values_equal(&self, left: &FhirPathValue, right: &FhirPathValue) -> bool {
+        Self::values_equal_static(left, right)
+    }
+
+    /// Static version of values_equal for use in closures
+    fn values_equal_static(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         match (left, right) {
             (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
             (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
@@ -710,7 +715,7 @@ impl FhirPathEvaluator {
             FhirPathValue::Collection(items) => {
                 // Check if value equals any item in the collection
                 for item in items {
-                    if self.values_equal(value, item) {
+                    if Self::values_equal_static(value, item) {
                         return Ok(true);
                     }
                 }
@@ -718,7 +723,7 @@ impl FhirPathEvaluator {
             }
             FhirPathValue::Empty => Ok(false),
             // For non-collection values, treat as single-item collection
-            _ => Ok(self.values_equal(value, collection)),
+            _ => Ok(Self::values_equal_static(value, collection)),
         }
     }
 
@@ -754,7 +759,116 @@ impl FhirPathEvaluator {
 
     /// Register built-in functions
     fn register_builtin_functions(&mut self) {
-        // TODO: Implement built-in functions like empty(), exists(), count(), etc.
+        // Collection functions
+        self.register_empty_function();
+        self.register_exists_function();
+        self.register_count_function();
+        self.register_distinct_function();
+        self.register_is_distinct_function();
+    }
+
+    /// Register the empty() function
+    fn register_empty_function(&mut self) {
+        self.functions.insert(
+            "empty".to_string(),
+            Box::new(|target: &FhirPathValue, _parameters: &[FhirPathValue]| {
+                let is_empty = match target {
+                    FhirPathValue::Empty => true,
+                    FhirPathValue::Collection(items) => items.is_empty(),
+                    _ => false, // Non-empty single values are not empty
+                };
+                Ok(FhirPathValue::Boolean(is_empty))
+            }),
+        );
+    }
+
+    /// Register the exists() function
+    fn register_exists_function(&mut self) {
+        self.functions.insert(
+            "exists".to_string(),
+            Box::new(|target: &FhirPathValue, _parameters: &[FhirPathValue]| {
+                let exists = match target {
+                    FhirPathValue::Empty => false,
+                    FhirPathValue::Collection(items) => !items.is_empty(),
+                    _ => true, // Non-empty single values exist
+                };
+                Ok(FhirPathValue::Boolean(exists))
+            }),
+        );
+    }
+
+    /// Register the count() function
+    fn register_count_function(&mut self) {
+        self.functions.insert(
+            "count".to_string(),
+            Box::new(|target: &FhirPathValue, _parameters: &[FhirPathValue]| {
+                let count = match target {
+                    FhirPathValue::Empty => 0,
+                    FhirPathValue::Collection(items) => items.len() as i64,
+                    _ => 1, // Single values have count of 1
+                };
+                Ok(FhirPathValue::Integer(count))
+            }),
+        );
+    }
+
+    /// Register the distinct() function
+    fn register_distinct_function(&mut self) {
+        self.functions.insert(
+            "distinct".to_string(),
+            Box::new(|target: &FhirPathValue, _parameters: &[FhirPathValue]| {
+                match target {
+                    FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+                    FhirPathValue::Collection(items) => {
+                        let mut unique_items = Vec::new();
+                        for item in items {
+                            // Check if this item is already in unique_items
+                            let mut is_duplicate = false;
+                            for unique_item in &unique_items {
+                                if Self::values_equal_static(item, unique_item) {
+                                    is_duplicate = true;
+                                    break;
+                                }
+                            }
+                            if !is_duplicate {
+                                unique_items.push(item.clone());
+                            }
+                        }
+                        if unique_items.is_empty() {
+                            Ok(FhirPathValue::Empty)
+                        } else {
+                            Ok(FhirPathValue::Collection(unique_items))
+                        }
+                    }
+                    _ => Ok(target.clone()), // Single values are already distinct
+                }
+            }),
+        );
+    }
+
+    /// Register the isDistinct() function
+    fn register_is_distinct_function(&mut self) {
+        self.functions.insert(
+            "isDistinct".to_string(),
+            Box::new(|target: &FhirPathValue, _parameters: &[FhirPathValue]| {
+                let is_distinct = match target {
+                    FhirPathValue::Empty => true, // Empty collection is distinct
+                    FhirPathValue::Collection(items) => {
+                        // Check if all items are unique
+                        for i in 0..items.len() {
+                            for j in (i + 1)..items.len() {
+                                if Self::values_equal_static(&items[i], &items[j]) {
+                                    return Ok(FhirPathValue::Boolean(false));
+                                }
+                            }
+                        }
+                        true
+                    }
+                    _ => true, // Single values are always distinct
+                };
+                Ok(FhirPathValue::Boolean(is_distinct))
+            }),
+        );
     }
 }
 
@@ -1093,5 +1207,113 @@ mod tests {
         // This should be false since Integer(5) != Number(5.0) in our current equality
         let result = evaluator.evaluate_membership(&value, &MembershipOperator::In, &collection).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(false));
+    }
+
+    #[test]
+    fn test_collection_functions() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Test empty() function
+        let empty_collection = FhirPathValue::Empty;
+        let result = evaluator.evaluate_function_call(&empty_collection, "empty", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let empty_collection = FhirPathValue::Collection(vec![]);
+        let result = evaluator.evaluate_function_call(&empty_collection, "empty", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let non_empty_collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("hello".to_string()),
+        ]);
+        let result = evaluator.evaluate_function_call(&non_empty_collection, "empty", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        let single_value = FhirPathValue::String("hello".to_string());
+        let result = evaluator.evaluate_function_call(&single_value, "empty", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        // Test exists() function
+        let empty_collection = FhirPathValue::Empty;
+        let result = evaluator.evaluate_function_call(&empty_collection, "exists", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        let non_empty_collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("hello".to_string()),
+        ]);
+        let result = evaluator.evaluate_function_call(&non_empty_collection, "exists", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let single_value = FhirPathValue::String("hello".to_string());
+        let result = evaluator.evaluate_function_call(&single_value, "exists", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // Test count() function
+        let empty_collection = FhirPathValue::Empty;
+        let result = evaluator.evaluate_function_call(&empty_collection, "count", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(0));
+        
+        let collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("apple".to_string()),
+            FhirPathValue::String("banana".to_string()),
+            FhirPathValue::String("orange".to_string()),
+        ]);
+        let result = evaluator.evaluate_function_call(&collection, "count", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(3));
+        
+        let single_value = FhirPathValue::String("hello".to_string());
+        let result = evaluator.evaluate_function_call(&single_value, "count", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(1));
+    }
+
+    #[test]
+    fn test_distinct_functions() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Test distinct() function
+        let collection_with_duplicates = FhirPathValue::Collection(vec![
+            FhirPathValue::String("apple".to_string()),
+            FhirPathValue::String("banana".to_string()),
+            FhirPathValue::String("apple".to_string()),
+            FhirPathValue::String("orange".to_string()),
+            FhirPathValue::String("banana".to_string()),
+        ]);
+        let result = evaluator.evaluate_function_call(&collection_with_duplicates, "distinct", &[]).unwrap();
+        if let FhirPathValue::Collection(items) = result {
+            assert_eq!(items.len(), 3);
+            // Should contain apple, banana, orange (in order of first appearance)
+            assert_eq!(items[0], FhirPathValue::String("apple".to_string()));
+            assert_eq!(items[1], FhirPathValue::String("banana".to_string()));
+            assert_eq!(items[2], FhirPathValue::String("orange".to_string()));
+        } else {
+            panic!("Expected collection result from distinct()");
+        }
+        
+        let empty_collection = FhirPathValue::Empty;
+        let result = evaluator.evaluate_function_call(&empty_collection, "distinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
+        
+        let single_value = FhirPathValue::String("hello".to_string());
+        let result = evaluator.evaluate_function_call(&single_value, "distinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::String("hello".to_string()));
+        
+        // Test isDistinct() function
+        let distinct_collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("apple".to_string()),
+            FhirPathValue::String("banana".to_string()),
+            FhirPathValue::String("orange".to_string()),
+        ]);
+        let result = evaluator.evaluate_function_call(&distinct_collection, "isDistinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let result = evaluator.evaluate_function_call(&collection_with_duplicates, "isDistinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        let empty_collection = FhirPathValue::Empty;
+        let result = evaluator.evaluate_function_call(&empty_collection, "isDistinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let single_value = FhirPathValue::String("hello".to_string());
+        let result = evaluator.evaluate_function_call(&single_value, "isDistinct", &[]).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
     }
 }
