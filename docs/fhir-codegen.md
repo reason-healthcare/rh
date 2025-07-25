@@ -150,8 +150,9 @@ use serde::{Deserialize, Serialize};
 /// FHIR Patient resource
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Patient {
-    /// Logical id of this artifact
-    pub id: Option<String>,
+    #[serde(flatten)]
+    /// Inherited fields from base type
+    pub base: DomainResource,
     
     /// A name associated with the individual
     pub name: Option<Vec<HumanName>>,
@@ -162,6 +163,167 @@ pub struct Patient {
     
     /// Administrative Gender
     pub gender: Option<String>,
+    
+    /// Contact details for the individual
+    pub telecom: Option<Vec<ContactPoint>>,
+}
+```
+
+## Using Generated Types
+
+The generated types are designed to work seamlessly with serde for JSON serialization and deserialization:
+
+### Creating Patient Resources
+
+```rust
+use serde_json;
+
+// Create a new patient
+let patient = Patient {
+    base: DomainResource::default(),
+    name: Some(vec![HumanName {
+        family: Some("Doe".to_string()),
+        given: Some(vec!["John".to_string()]),
+        ..Default::default()
+    }]),
+    birth_date: Some("1990-01-15".to_string()),
+    gender: Some("male".to_string()),
+    telecom: Some(vec![ContactPoint {
+        system: Some("email".to_string()),
+        value: Some("john.doe@example.com".to_string()),
+        ..Default::default()
+    }]),
+};
+
+// Serialize to JSON
+let json = serde_json::to_string_pretty(&patient)?;
+println!("Patient JSON:\n{}", json);
+```
+
+### Parsing Patient Resources
+
+```rust
+use serde_json;
+
+// Parse from FHIR JSON
+let json_data = r#"
+{
+  "resourceType": "Patient",
+  "id": "example",
+  "name": [{
+    "family": "Smith",
+    "given": ["Jane"]
+  }],
+  "birthDate": "1985-06-23",
+  "gender": "female"
+}
+"#;
+
+let patient: Patient = serde_json::from_str(json_data)?;
+println!("Patient name: {:?}", patient.name);
+println!("Birth date: {:?}", patient.birth_date);
+```
+
+### Working with Nested Structures
+
+The generator creates properly typed nested structures for complex FHIR elements:
+
+```rust
+// Working with StructureMap nested types
+let structure_map = StructureMap {
+    base: DomainResource::default(),
+    url: "http://example.org/fhir/StructureMap/example".to_string(),
+    status: "active".to_string(),
+    structure: Some(vec![StructureMapStructure {
+        url: "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+        mode: "source".to_string(),
+        alias: Some("Patient".to_string()),
+        documentation: Some("Source patient resource".to_string()),
+    }]),
+    group: vec![StructureMapGroup {
+        name: "PatientTransform".to_string(),
+        type_mode: "none".to_string(),
+        documentation: Some("Transform patient data".to_string()),
+        input: vec![StructureMapGroupInput {
+            name: "source".to_string(),
+            type_: Some("Patient".to_string()),
+            mode: "source".to_string(),
+            documentation: Some("Source patient".to_string()),
+        }],
+        rule: vec![],
+    }],
+};
+```
+
+### Choice Types (value[x])
+
+FHIR choice types are expanded into multiple typed fields:
+
+```rust
+// For an Observation with value[x], you get:
+let observation = Observation {
+    base: DomainResource::default(),
+    status: "final".to_string(),
+    code: CodeableConcept::default(),
+    
+    // Choice type fields - use the appropriate one
+    value_quantity: Some(Quantity {
+        value: Some(98.6),
+        unit: Some("F".to_string()),
+        system: Some("http://unitsofmeasure.org".to_string()),
+        ..Default::default()
+    }),
+    value_string: None,
+    value_boolean: None,
+    // ... other choice type variants
+};
+```
+
+### Reserved Keyword Handling
+
+Field names that conflict with Rust keywords are automatically renamed:
+
+```rust
+// FHIR 'type' field becomes 'type_' with serde rename
+let structure_def = StructureDefinition {
+    base: DomainResource::default(),
+    url: "http://example.org/StructureDefinition/Example".to_string(),
+    name: "Example".to_string(),
+    status: "active".to_string(),
+    kind: "resource".to_string(),
+    abstract_: false,  // 'abstract' field renamed to 'abstract_'
+    type_: "Example".to_string(),  // 'type' field renamed to 'type_'
+    // ... other fields
+};
+
+// JSON serialization automatically uses correct field names
+assert_eq!(
+    serde_json::to_value(&structure_def)["abstract"],
+    serde_json::Value::Bool(false)
+);
+assert_eq!(
+    serde_json::to_value(&structure_def)["type"], 
+    serde_json::Value::String("Example".to_string())
+);
+```
+
+### Error Handling
+
+The generated types integrate with standard Rust error handling:
+
+```rust
+use anyhow::Result;
+
+fn process_patient_data(json: &str) -> Result<String> {
+    let patient: Patient = serde_json::from_str(json)
+        .context("Failed to parse patient JSON")?;
+    
+    let name = patient.name
+        .and_then(|names| names.first().cloned())
+        .and_then(|name| name.family)
+        .ok_or_else(|| anyhow::anyhow!("Patient has no family name"))?;
+    
+    Ok(format!("Patient: {}", name))
 }
 ```
 
