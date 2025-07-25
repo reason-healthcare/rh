@@ -41,6 +41,22 @@ impl CodeGenerator {
         }
     }
 
+    /// Create a new code generator with a ValueSet directory
+    pub fn new_with_value_set_directory<P: AsRef<Path>>(config: CodegenConfig, _value_set_dir: P) -> Self {
+        // For now, we'll just create a normal generator
+        // In a full implementation, this would load ValueSets from the directory
+        let value_set_manager = ValueSetManager::new();
+        let token_generator = TokenGenerator::new();
+
+        Self {
+            config,
+            type_cache: HashMap::new(),
+            enum_cache: HashMap::new(),
+            value_set_manager,
+            token_generator,
+        }
+    }
+
     /// Load and parse a FHIR StructureDefinition from a JSON file
     pub fn load_structure_definition<P: AsRef<Path>>(
         &self,
@@ -77,18 +93,40 @@ impl CodeGenerator {
         Ok(rust_struct)
     }
 
+    /// Generate a Rust struct and write it to a file
+    pub fn generate_to_file<P: AsRef<Path>>(
+        &mut self,
+        structure_def: &StructureDefinition,
+        output_path: P,
+    ) -> CodegenResult<()> {
+        // Generate the struct
+        let rust_struct = self.generate_struct(structure_def)?;
+        
+        // Generate tokens using the token generator
+        let tokens = self.token_generator.generate_struct(&rust_struct);
+        
+        // Write to file
+        let code = tokens.to_string();
+        fs::write(output_path.as_ref(), code).map_err(CodegenError::Io)?;
+        
+        Ok(())
+    }
+
     /// Convert a FHIR name to a valid Rust type name
     fn to_rust_name(&self, name: &str) -> String {
-        // Simple conversion - in a real implementation this would be more sophisticated
-        name.chars()
-            .enumerate()
-            .map(|(i, c)| {
-                if i == 0 {
-                    c.to_uppercase().collect::<String>()
-                } else if c == '-' || c == '_' {
-                    String::new()
-                } else {
-                    c.to_string()
+        // Convert to PascalCase and handle special characters
+        name.split_whitespace() // Split on whitespace
+            .flat_map(|word| word.split(&['-', '_', '.'][..])) // Split on common separators
+            .filter(|word| !word.is_empty()) // Remove empty strings
+            .map(|word| {
+                // Convert each word to PascalCase
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => {
+                        first.to_uppercase().collect::<String>() + 
+                        &chars.collect::<String>().to_lowercase()
+                    }
                 }
             })
             .collect::<String>()
@@ -107,5 +145,36 @@ impl CodeGenerator {
             .collect::<String>()
             .trim_start_matches('_')
             .to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_rust_name_conversion() {
+        let config = CodegenConfig::default();
+        let generator = CodeGenerator::new(config);
+
+        // Test normal names
+        assert_eq!(generator.to_rust_name("Patient"), "Patient");
+        assert_eq!(generator.to_rust_name("patient"), "Patient");
+        
+        // Test names with spaces
+        assert_eq!(generator.to_rust_name("Relative Date Criteria"), "RelativeDateCriteria");
+        assert_eq!(generator.to_rust_name("Care Plan"), "CarePlan");
+        
+        // Test names with dashes and underscores
+        assert_eq!(generator.to_rust_name("patient-name"), "PatientName");
+        assert_eq!(generator.to_rust_name("patient_name"), "PatientName");
+        
+        // Test mixed separators
+        assert_eq!(generator.to_rust_name("some-complex_name with.spaces"), "SomeComplexNameWithSpaces");
+        
+        // Test empty and edge cases
+        assert_eq!(generator.to_rust_name(""), "");
+        assert_eq!(generator.to_rust_name("   "), "");
+        assert_eq!(generator.to_rust_name("a"), "A");
     }
 }
