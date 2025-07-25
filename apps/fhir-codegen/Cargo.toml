@@ -13,10 +13,12 @@ description = "CLI tool for generating Rust types from FHIR StructureDefinitions
 [dependencies]
 # Workspace dependencies
 serde = { workspace = true }
+serde_json = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
 
 # Local workspace crates
 common = { path = "../../crates/common" }

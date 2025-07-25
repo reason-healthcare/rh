@@ -114,6 +114,34 @@ This monorepo includes a specialized code generation library for creating Rust t
    cargo run -p fhir-codegen -- batch -i fhir-definitions/ -o src/generated/
    ```
 
+### FHIR Package Management
+
+The codegen tool supports downloading FHIR packages from npm-style registries, following FHIR package conventions:
+
+4. **Download a FHIR package:**
+   ```bash
+   cargo run -p fhir-codegen -- download hl7.fhir.r4.core 4.0.1 -o ./packages/
+   ```
+
+5. **Install and generate types from a FHIR package:**
+   ```bash
+   cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 -o ./generated/
+   ```
+
+6. **Use custom registry or authentication:**
+   ```bash
+   cargo run -p fhir-codegen -- download my.custom.package 1.0.0 \
+     --registry https://my-fhir-registry.com \
+     --token your-auth-token
+   ```
+
+The package management system:
+- Downloads packages as compressed tarballs from npm-style registries
+- Extracts StructureDefinition JSON files automatically
+- Supports authentication for private registries
+- Uses the default FHIR package registry at https://packages.fhir.org
+- Generates Rust types for all StructureDefinitions in the package
+
 See `docs/fhir-codegen.md` for detailed documentation.
 
 ## Workspace Dependencies

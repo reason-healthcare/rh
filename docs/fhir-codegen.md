@@ -10,11 +10,14 @@ The codegen library (`crates/codegen`) provides functionality to:
 - Handle FHIR primitive type mappings
 - Support optional fields and arrays
 - Generate serde annotations for JSON serialization/deserialization
+- **Download FHIR packages from npm-style registries**
+- **Extract and process StructureDefinitions from package tarballs**
 
 The CLI tool (`apps/fhir-codegen`) provides a command-line interface to:
 - Generate single files or batch process directories
 - Configure type mappings and output settings
 - Customize generated code style
+- **Download and install FHIR packages with automatic code generation**
 
 ## Quick Start
 
@@ -32,6 +35,83 @@ The CLI tool (`apps/fhir-codegen`) provides a command-line interface to:
    ```bash
    cargo run -p fhir-codegen -- batch -i fhir-definitions/ -o src/generated/
    ```
+
+4. **Download a FHIR package:**
+   ```bash
+   cargo run -p fhir-codegen -- download hl7.fhir.r4.core 4.0.1 -o ./packages/
+   ```
+
+5. **Install and generate types from a FHIR package:**
+   ```bash
+   cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 -o ./generated/
+   ```
+
+## FHIR Package Management
+
+The codegen tool now supports downloading FHIR packages from npm-style registries, following the FHIR package distribution conventions used by the FHIR community.
+
+### Download Command
+
+Downloads a FHIR package to a local directory:
+
+```bash
+cargo run -p fhir-codegen -- download <package> <version> [OPTIONS]
+```
+
+**Options:**
+- `-o, --output <OUTPUT>`: Output directory (default: `./packages`)
+- `--registry <REGISTRY>`: Registry URL (default: `https://packages.fhir.org`)
+- `--token <TOKEN>`: Authentication token for private registries
+
+**Example:**
+```bash
+# Download FHIR R4 core package
+cargo run -p fhir-codegen -- download hl7.fhir.r4.core 4.0.1
+
+# Download from custom registry with authentication
+cargo run -p fhir-codegen -- download my.custom.package 1.0.0 \
+  --registry https://my-fhir-registry.com \
+  --token your-auth-token
+```
+
+### Install Command
+
+Downloads a FHIR package and automatically generates Rust types for all StructureDefinitions:
+
+```bash
+cargo run -p fhir-codegen -- install <package> <version> [OPTIONS]
+```
+
+**Options:**
+- `-o, --output <OUTPUT>`: Output directory for generated Rust files (default: `./generated`)
+- `-c, --config <CONFIG>`: Configuration file path (default: `codegen.json`)
+- `--registry <REGISTRY>`: Registry URL (default: `https://packages.fhir.org`)
+- `--token <TOKEN>`: Authentication token for private registries
+
+**Example:**
+```bash
+# Install FHIR R4 core and generate types
+cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 -o ./src/fhir/
+
+# Use custom configuration
+cargo run -p fhir-codegen -- install hl7.fhir.r4.core 4.0.1 \
+  -c my-config.json \
+  -o ./src/generated/
+```
+
+### How It Works
+
+1. **Registry Interaction**: Fetches package metadata from npm-style registries using HTTP
+2. **Package Download**: Downloads the package as a compressed tarball (.tgz)
+3. **Extraction**: Extracts JSON files from the tarball
+4. **Processing**: Identifies StructureDefinition files and generates Rust types
+5. **Code Generation**: Uses the same generation pipeline as file-based processing
+
+### Supported Registries
+
+- **FHIR Package Registry**: https://packages.fhir.org (default)
+- **Custom npm-style registries**: Any registry following npm package conventions
+- **Private registries**: With authentication token support
 
 ## Configuration
 
@@ -130,6 +210,10 @@ generator.generate_to_file(&structure_def, Path::new("patient.rs"))?;
 - ✅ serde rename for snake_case fields
 - ✅ Documentation generation
 - ✅ CLI tool for batch processing
+- ✅ **FHIR package downloading from npm-style registries**
+- ✅ **Automatic extraction and processing of package tarballs**
+- ✅ **Authentication support for private registries**
+- ✅ **Install command for download + generation workflow**
 - 🔄 Complex type references (in progress)
 - 🔄 Enum generation for coded values
 - 🔄 Extension handling

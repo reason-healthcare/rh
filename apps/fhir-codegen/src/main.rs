@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing::{error, info, warn};
 
-use codegen::{CodeGenerator, CodegenConfig};
+use codegen::{CodeGenerator, CodegenConfig, PackageDownloader, PackageDownloadConfig};
 use common::utils;
 
 /// FHIR Code Generation CLI
@@ -64,9 +64,57 @@ enum Commands {
         #[clap(short, long, default_value = "*.json")]
         pattern: String,
     },
+    /// Download FHIR package from registry
+    Download {
+        /// Package name (e.g., "hl7.fhir.r4.core")
+        package: String,
+
+        /// Package version (e.g., "4.0.1")
+        version: String,
+
+        /// Output directory for downloaded package
+        #[clap(short, long, default_value = "./packages")]
+        output: PathBuf,
+        
+        /// Registry URL
+        #[clap(long, default_value = "https://packages.fhir.org")]
+        registry: String,
+        
+        /// Authentication token for private registries
+        #[clap(long)]
+        token: Option<String>,
+    },
+    /// Install FHIR package and generate types
+    Install {
+        /// Package name (e.g., "hl7.fhir.r4.core")
+        package: String,
+
+        /// Package version (e.g., "4.0.1")
+        version: String,
+
+        /// Output directory for generated Rust files
+        #[clap(short, long, default_value = "./generated")]
+        output: PathBuf,
+
+        /// Path to the configuration file
+        #[clap(short, long, default_value = "codegen.json")]
+        config: PathBuf,
+        
+        /// Registry URL
+        #[clap(long, default_value = "https://packages.fhir.org")]
+        registry: String,
+        
+        /// Authentication token for private registries
+        #[clap(long)]
+        token: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
+    tokio::runtime::Runtime::new()?.block_on(async_main())
+}
+
+async fn async_main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize tracing
@@ -99,6 +147,25 @@ fn main() -> Result<()> {
             pattern,
         } => {
             generate_batch(&input_dir, &output_dir, &config, &pattern)?;
+        }
+        Commands::Download {
+            package,
+            version,
+            output,
+            registry,
+            token,
+        } => {
+            download_package(&package, &version, &output, &registry, token.as_deref()).await?;
+        }
+        Commands::Install {
+            package,
+            version,
+            output,
+            config,
+            registry,
+            token,
+        } => {
+            install_package(&package, &version, &output, &config, &registry, token.as_deref()).await?;
         }
     }
 
@@ -271,4 +338,81 @@ fn matches_pattern(filename: &str, pattern: &str) -> bool {
     }
 
     filename == pattern
+}
+
+/// Download FHIR package from registry
+async fn download_package(
+    package: &str,
+    version: &str,
+    output: &Path,
+    registry: &str,
+    token: Option<&str>,
+) -> Result<()> {
+    info!("Downloading package {}@{} from {}", package, version, registry);
+
+    let download_config = PackageDownloadConfig {
+        registry_url: registry.to_string(),
+        auth_token: token.map(|t| t.to_string()),
+        timeout_seconds: 30,
+    };
+
+    let downloader = PackageDownloader::new(download_config)?;
+    downloader.download_package(package, version, output).await?;
+
+    info!("Successfully downloaded package to {:?}", output);
+    Ok(())
+}
+
+/// Install FHIR package and generate types  
+async fn install_package(
+    package: &str,
+    version: &str,
+    output: &Path,
+    config_path: &Path,
+    registry: &str,
+    token: Option<&str>,
+) -> Result<()> {
+    info!("Installing package {}@{} and generating types", package, version);
+
+    // First download the package to a temporary directory
+    let temp_dir = std::env::temp_dir().join(format!("fhir-package-{}-{}", package, version));
+    download_package(package, version, &temp_dir, registry, token).await?;
+
+    // Load the codegen configuration
+    let config = if config_path.exists() {
+        let config_content = fs::read_to_string(config_path)?;
+        serde_json::from_str(&config_content)?
+    } else {
+        warn!("Configuration file not found, using default settings");
+        CodegenConfig::default()
+    };
+
+    // Create the generator
+    let mut generator = CodeGenerator::new(config);
+
+    // Find all JSON files in the downloaded package
+    let entries = fs::read_dir(&temp_dir)?;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            match process_single_file(&mut generator, &path, output) {
+                Ok(output_path) => {
+                    info!("Generated: {:?}", output_path);
+                }
+                Err(e) => {
+                    warn!("Failed to process {:?}: {}", path, e);
+                }
+            }
+        }
+    }
+
+    // Clean up temporary directory
+    if temp_dir.exists() {
+        fs::remove_dir_all(&temp_dir)?;
+    }
+
+    info!("Successfully installed package and generated types");
+    Ok(())
 }

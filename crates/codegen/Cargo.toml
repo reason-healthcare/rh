@@ -19,9 +19,16 @@ quote = { workspace = true }
 syn = { workspace = true }
 convert_case = { workspace = true }
 indexmap = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+tracing = { workspace = true }
 
 # Local workspace crates
 common = { path = "../common" }
 
 [dev-dependencies]
 tempfile = "3.0"
+tokio-test = "0.4"
