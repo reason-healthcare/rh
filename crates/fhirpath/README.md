@@ -79,7 +79,7 @@ println!("Result: {:?}", result);
 This implementation is based on the official FHIRPath grammar from:
 https://build.fhir.org/ig/HL7/FHIRPath/fhirpath.g4
 
-The parser supports most of the core FHIRPath syntax including:
+The parser is implemented using the `nom` parser combinator library, providing a pure Rust implementation without requiring build-time code generation. The parser supports most of the core FHIRPath syntax including:
 
 - Path expressions
 - Literal values

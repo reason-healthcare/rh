@@ -14,6 +14,7 @@ The FHIRPath implementation consists of four main components:
 - **Technology**: nom parser combinators
 - **Status**: ✅ Complete for core syntax
 - **Features**: Converts FHIRPath string expressions into type-safe AST
+- **Dependencies**: Uses the `nom` crate for parsing without build-time code generation
 
 ### 2. Abstract Syntax Tree (`src/ast.rs`)
 - **Status**: ✅ Complete
