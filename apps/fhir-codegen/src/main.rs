@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing::{error, info, warn};
 
-use codegen::{CodeGenerator, CodegenConfig, PackageDownloader, PackageDownloadConfig};
+use codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
 use common::utils;
 
 /// FHIR Code Generation CLI
@@ -75,11 +75,11 @@ enum Commands {
         /// Output directory for downloaded package
         #[clap(short, long, default_value = "./packages")]
         output: PathBuf,
-        
+
         /// Registry URL
         #[clap(long, default_value = "https://packages.fhir.org")]
         registry: String,
-        
+
         /// Authentication token for private registries
         #[clap(long)]
         token: Option<String>,
@@ -99,11 +99,11 @@ enum Commands {
         /// Path to the configuration file
         #[clap(short, long, default_value = "codegen.json")]
         config: PathBuf,
-        
+
         /// Registry URL
         #[clap(long, default_value = "https://packages.fhir.org")]
         registry: String,
-        
+
         /// Authentication token for private registries
         #[clap(long)]
         token: Option<String>,
@@ -165,7 +165,15 @@ async fn async_main() -> Result<()> {
             registry,
             token,
         } => {
-            install_package(&package, &version, &output, &config, &registry, token.as_deref()).await?;
+            install_package(
+                &package,
+                &version,
+                &output,
+                &config,
+                &registry,
+                token.as_deref(),
+            )
+            .await?;
         }
     }
 
@@ -348,7 +356,10 @@ async fn download_package(
     registry: &str,
     token: Option<&str>,
 ) -> Result<()> {
-    info!("Downloading package {}@{} from {}", package, version, registry);
+    info!(
+        "Downloading package {}@{} from {}",
+        package, version, registry
+    );
 
     let download_config = PackageDownloadConfig {
         registry_url: registry.to_string(),
@@ -357,7 +368,9 @@ async fn download_package(
     };
 
     let downloader = PackageDownloader::new(download_config)?;
-    downloader.download_package(package, version, output).await?;
+    downloader
+        .download_package(package, version, output)
+        .await?;
 
     info!("Successfully downloaded package to {:?}", output);
     Ok(())
@@ -372,7 +385,10 @@ async fn install_package(
     registry: &str,
     token: Option<&str>,
 ) -> Result<()> {
-    info!("Installing package {}@{} and generating types", package, version);
+    info!(
+        "Installing package {}@{} and generating types",
+        package, version
+    );
 
     // First download the package to a temporary directory
     let temp_dir = std::env::temp_dir().join(format!("fhir-package-{}-{}", package, version));
@@ -395,7 +411,7 @@ async fn install_package(
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
             match process_single_file(&mut generator, &path, output) {
                 Ok(output_path) => {

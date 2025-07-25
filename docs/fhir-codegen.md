@@ -183,7 +183,29 @@ The generator includes default mappings for FHIR primitive types:
 
 Complex FHIR types (starting with uppercase) are converted to PascalCase Rust struct names.
 
-## Usage in Code
+## Library Architecture
+
+The codegen library is organized into modular components:
+
+- **`generator.rs`**: Core type generation functionality
+  - `CodeGenerator`: Main struct for generating Rust types with built-in caching
+  - `CodegenConfig`: Configuration for type generation
+  - FHIR structure definitions and element parsing
+  - Token generation and file output
+  - Type caching to avoid regenerating identical structs
+
+- **`download.rs`**: Package downloading functionality  
+  - `PackageDownloader`: HTTP client for registry interaction
+  - `PackageDownloadConfig`: Configuration for registry access
+  - Tarball download and extraction
+  - Registry response parsing
+
+- **`lib.rs`**: Public API and error definitions
+  - Re-exports from modules for convenience
+  - Centralized error types (`CodegenError`)
+  - Common result type (`CodegenResult<T>`)
+
+This modular design separates concerns and makes the codebase easier to maintain and extend.
 
 ```rust
 use codegen::{CodeGenerator, CodegenConfig};
