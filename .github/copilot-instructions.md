@@ -204,6 +204,8 @@ cargo clippy --all-targets --all-features
 
 ## Git Commit Guidelines
 
+Always propose a commit message that follows the project's conventions. Use the following format:
+
 ### Commit Message Format
 
 Use conventional commits format:

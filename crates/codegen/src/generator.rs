@@ -194,6 +194,7 @@ impl CodeGenerator {
 
         let mut fields = Vec::new();
         let mut processed_paths = std::collections::HashSet::new();
+        let mut nested_elements: HashMap<String, Vec<ElementDefinition>> = HashMap::new();
 
         // Add base type field if this struct inherits from another
         if let Some(base_definition_url) = &structure_def.base_definition {
@@ -211,40 +212,110 @@ impl CodeGenerator {
             }
         }
 
+        // First pass: separate direct fields from nested structure elements
         for element in &all_elements {
             // Skip the root element (e.g., "Patient")
             if element.path == structure_def.base_type {
                 continue;
             }
 
-            // Extract field name from path (e.g., "Patient.name" -> "name")
             let field_parts: Vec<&str> = element.path.split('.').collect();
             if field_parts.len() < 2 {
                 continue;
             }
 
-            let field_name = field_parts[1];
-            let field_path = format!("{}.{}", structure_def.base_type, field_name);
+            if field_parts.len() == 2 {
+                // Direct field (e.g., "ValueSet.url")
+                let field_name = field_parts[1];
+                let field_path = format!("{}.{}", structure_def.base_type, field_name);
 
-            // Skip if we've already processed this field
-            if processed_paths.contains(&field_path) {
-                continue;
-            }
-            processed_paths.insert(field_path);
-
-            // Check if this is a choice type (ends with [x])
-            if field_name.ends_with("[x]") {
-                // Handle choice type - generate multiple fields for each possible type
-                if let Some(element_types) = &element.element_type {
-                    for element_type in element_types {
-                        let choice_field = self.element_to_choice_field(element, field_name, &element_type.code)?;
-                        fields.push(choice_field);
-                    }
+                // Skip if we've already processed this field
+                if processed_paths.contains(&field_path) {
+                    continue;
                 }
-            } else {
-                // Handle regular field
-                let rust_field = self.element_to_rust_field(element, field_name)?;
-                fields.push(rust_field);
+                processed_paths.insert(field_path);
+
+                // Check if this field has nested elements (skip generating it as a simple field)
+                let has_nested_elements = all_elements.iter().any(|e| {
+                    let parts: Vec<&str> = e.path.split('.').collect();
+                    parts.len() > 2 && parts[1] == field_name
+                });
+
+                if has_nested_elements {
+                    // This field will be handled as a nested structure, skip generating it as a simple field
+                    continue;
+                }
+
+                // Check if this is a choice type (ends with [x])
+                if field_name.ends_with("[x]") {
+                    // Handle choice type - generate multiple fields for each possible type
+                    if let Some(element_types) = &element.element_type {
+                        for element_type in element_types {
+                            let choice_field = self.element_to_choice_field(element, field_name, &element_type.code)?;
+                            fields.push(choice_field);
+                        }
+                    }
+                } else {
+                    // Handle regular field
+                    let rust_field = self.element_to_rust_field(element, field_name)?;
+                    fields.push(rust_field);
+                }
+            } else if field_parts.len() > 2 {
+                // Nested structure element (e.g., "ValueSet.compose.include")
+                let nested_structure_name = field_parts[1];
+                nested_elements.entry(nested_structure_name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(element.clone());
+            }
+        }
+
+        // Second pass: generate nested structures and add them as fields
+        for (nested_name, nested_element_list) in nested_elements {
+            let nested_struct_name = format!("{}{}", struct_name, self.to_rust_type_name(&nested_name));
+            
+            // Generate the nested structure
+            let nested_struct = self.generate_nested_struct(
+                &nested_struct_name,
+                &nested_element_list,
+                &format!("{}.{}", structure_def.base_type, nested_name),
+            )?;
+
+            // Add the nested struct to our type cache
+            self.type_cache.insert(nested_struct_name.clone(), nested_struct);
+
+            // Check if there's already a field with this name (avoid duplicates)
+            let rust_field_name = self.to_rust_field_name(&nested_name);
+            let field_exists = fields.iter().any(|f| f.name == rust_field_name);
+            
+            if !field_exists {
+                // Find the element definition for this nested field to get proper info
+                let nested_element = all_elements.iter()
+                    .find(|e| e.path == format!("{}.{}", structure_def.base_type, nested_name));
+                
+                let is_optional = nested_element.map(|e| e.min.unwrap_or(0) == 0).unwrap_or(true);
+                let is_array = nested_element.map(|e| 
+                    e.max.as_deref() == Some("*") || 
+                    e.max.as_deref().unwrap_or("1").parse::<u32>().unwrap_or(1) > 1
+                ).unwrap_or(false);
+                
+                let documentation = nested_element
+                    .and_then(|e| e.short.clone().or_else(|| e.definition.clone()));
+
+                // Add a field to the main struct that references the nested struct
+                let nested_field = RustField {
+                    name: rust_field_name,
+                    rust_type: nested_struct_name,
+                    is_optional,
+                    is_array,
+                    documentation,
+                    serde_rename: if self.to_rust_field_name(&nested_name) != nested_name {
+                        Some(nested_name)
+                    } else {
+                        None
+                    },
+                    serde_flatten: false,
+                };
+                fields.push(nested_field);
             }
         }
 
@@ -265,6 +336,134 @@ impl CodeGenerator {
 
         // Cache the generated struct for future use
         self.type_cache.insert(struct_name, rust_struct.clone());
+
+        Ok(rust_struct)
+    }
+
+    /// Generate a nested structure from elements that belong to a sub-path
+    fn generate_nested_struct(
+        &mut self,
+        struct_name: &str,
+        elements: &[ElementDefinition],
+        base_path: &str,
+    ) -> CodegenResult<RustStruct> {
+        let mut fields = Vec::new();
+        let mut processed_paths = std::collections::HashSet::new();
+        let mut deeper_nested_elements: HashMap<String, Vec<ElementDefinition>> = HashMap::new();
+
+        for element in elements {
+            // Extract the sub-field name relative to the base path
+            // e.g., "ValueSet.compose.include" with base_path "ValueSet.compose" -> "include"
+            let relative_path = element.path.strip_prefix(&format!("{}.", base_path));
+            if let Some(relative_path) = relative_path {
+                let field_parts: Vec<&str> = relative_path.split('.').collect();
+                if !field_parts.is_empty() {
+                    let field_name = field_parts[0];
+                    let field_path = format!("{}.{}", base_path, field_name);
+
+                    if field_parts.len() == 1 {
+                        // Direct field at this level
+                        // Skip if we've already processed this field
+                        if processed_paths.contains(&field_path) {
+                            continue;
+                        }
+                        processed_paths.insert(field_path);
+
+                        // Check if this field has deeper nested elements (skip generating it as a simple field)
+                        let has_deeper_nested_elements = elements.iter().any(|e| {
+                            if let Some(rel_path) = e.path.strip_prefix(&format!("{}.", base_path)) {
+                                let parts: Vec<&str> = rel_path.split('.').collect();
+                                parts.len() > 1 && parts[0] == field_name
+                            } else {
+                                false
+                            }
+                        });
+
+                        if has_deeper_nested_elements {
+                            // This field will be handled as a nested structure, skip generating it as a simple field
+                            continue;
+                        }
+
+                        // Check if this is a choice type (ends with [x])
+                        if field_name.ends_with("[x]") {
+                            // Handle choice type - generate multiple fields for each possible type
+                            if let Some(element_types) = &element.element_type {
+                                for element_type in element_types {
+                                    let choice_field = self.element_to_choice_field(element, field_name, &element_type.code)?;
+                                    fields.push(choice_field);
+                                }
+                            }
+                        } else {
+                            // Handle regular field
+                            let rust_field = self.element_to_rust_field(element, field_name)?;
+                            fields.push(rust_field);
+                        }
+                    } else if field_parts.len() > 1 {
+                        // Deeper nested structure element (e.g., "include.system" when base_path is "ValueSet.compose")
+                        let nested_structure_name = field_parts[0];
+                        deeper_nested_elements.entry(nested_structure_name.to_string())
+                            .or_insert_with(Vec::new)
+                            .push(element.clone());
+                    }
+                }
+            }
+        }
+
+        // Handle deeper nested structures
+        for (nested_name, nested_element_list) in deeper_nested_elements {
+            let nested_struct_name = format!("{}{}", struct_name, self.to_rust_type_name(&nested_name));
+            
+            // Generate the deeper nested structure
+            let nested_struct = self.generate_nested_struct(
+                &nested_struct_name,
+                &nested_element_list,
+                &format!("{}.{}", base_path, nested_name),
+            )?;
+
+            // Add the nested struct to our type cache
+            self.type_cache.insert(nested_struct_name.clone(), nested_struct);
+
+            // Find the element definition for this nested field to get proper info
+            let nested_element = elements.iter()
+                .find(|e| e.path == format!("{}.{}", base_path, nested_name));
+            
+            let is_optional = nested_element.map(|e| e.min.unwrap_or(0) == 0).unwrap_or(true);
+            let is_array = nested_element.map(|e| 
+                e.max.as_deref() == Some("*") || 
+                e.max.as_deref().unwrap_or("1").parse::<u32>().unwrap_or(1) > 1
+            ).unwrap_or(false);
+            
+            let documentation = nested_element
+                .and_then(|e| e.short.clone().or_else(|| e.definition.clone()));
+
+            // Add a field to this struct that references the deeper nested struct
+            let nested_field = RustField {
+                name: self.to_rust_field_name(&nested_name),
+                rust_type: nested_struct_name,
+                is_optional,
+                is_array,
+                documentation,
+                serde_rename: if self.to_rust_field_name(&nested_name) != nested_name {
+                    Some(nested_name)
+                } else {
+                    None
+                },
+                serde_flatten: false,
+            };
+            fields.push(nested_field);
+        }
+
+        let mut derives = vec!["Debug".to_string(), "Clone".to_string()];
+        if self.config.with_serde {
+            derives.extend_from_slice(&["Serialize".to_string(), "Deserialize".to_string()]);
+        }
+
+        let rust_struct = RustStruct {
+            name: struct_name.to_string(),
+            fields,
+            documentation: Some(format!("Nested structure for {}", struct_name)),
+            derives,
+        };
 
         Ok(rust_struct)
     }
@@ -516,13 +715,38 @@ impl CodeGenerator {
         structure_def: &StructureDefinition,
         output_path: &Path,
     ) -> CodegenResult<()> {
-        let rust_struct = self.generate_struct(structure_def)?;
-        let tokens = self.generate_tokens(&rust_struct);
+        let main_struct = self.generate_struct(structure_def)?;
+        
+        // Generate tokens for the main struct and all nested structs
+        let mut all_tokens = Vec::new();
+        
+        // Collect all structs that were generated (including nested ones)
+        let mut structs_to_generate = Vec::new();
+        structs_to_generate.push(main_struct);
+        
+        // Add any nested structs from the type cache that start with the main struct name
+        let main_struct_name = self.to_rust_type_name(&structure_def.name);
+        for (type_name, rust_struct) in &self.type_cache {
+            if type_name.starts_with(&main_struct_name) && type_name != &main_struct_name {
+                structs_to_generate.push(rust_struct.clone());
+            }
+        }
+        
+        // Generate tokens for all structs
+        for rust_struct in structs_to_generate {
+            let struct_tokens = self.generate_tokens(&rust_struct);
+            all_tokens.push(struct_tokens);
+        }
 
         // Create output directory if it doesn't exist
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)?;
         }
+
+        // Combine all tokens
+        let combined_struct_tokens = quote! {
+            #(#all_tokens)*
+        };
 
         // Write the generated code
         let code = if self.config.with_serde {
@@ -530,7 +754,7 @@ impl CodeGenerator {
             let combined_tokens = quote! {
                 #serde_import
                 
-                #tokens
+                #combined_struct_tokens
             };
             
             // Parse the tokens into a syn::File for formatting
@@ -544,7 +768,7 @@ impl CodeGenerator {
             self.add_header_comment(&formatted_code, structure_def)
         } else {
             // Parse the tokens into a syn::File for formatting
-            let file = syn::parse2::<syn::File>(tokens)
+            let file = syn::parse2::<syn::File>(combined_struct_tokens)
                 .map_err(|e| CodegenError::Generation { message: format!("Failed to parse generated tokens: {}", e) })?;
             
             // Format with prettyplease
