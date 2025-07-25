@@ -101,10 +101,10 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse equality expressions
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_union_expression(input)?;
+    let (input, first) = parse_additive_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("!="), tag("!~"), tag("="), tag("~")))),
-        parse_union_expression,
+        parse_additive_expression,
     )))(input)?;
 
     Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
@@ -116,6 +116,53 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
             _ => EqualityOperator::Equal,
         };
         Expression::Equality {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })))
+}
+
+// Parse additive expressions (+, -, &)
+fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_multiplicative_expression(input)?;
+    let (input, rest) = many0(tuple((
+        ws(alt((tag("+"), tag("-"), tag("&")))),
+        parse_multiplicative_expression,
+    )))(input)?;
+
+    Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
+        let operator = match op {
+            "+" => AdditiveOperator::Add,
+            "-" => AdditiveOperator::Subtract,
+            "&" => AdditiveOperator::Concatenate,
+            _ => AdditiveOperator::Add,
+        };
+        Expression::Additive {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })))
+}
+
+// Parse multiplicative expressions (*, /, div, mod)
+fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_union_expression(input)?;
+    let (input, rest) = many0(tuple((
+        ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
+        parse_union_expression,
+    )))(input)?;
+
+    Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
+        let operator = match op {
+            "*" => MultiplicativeOperator::Multiply,
+            "/" => MultiplicativeOperator::Divide,
+            "div" => MultiplicativeOperator::Div,
+            "mod" => MultiplicativeOperator::Mod,
+            _ => MultiplicativeOperator::Multiply,
+        };
+        Expression::Multiplicative {
             left: Box::new(acc),
             operator,
             right: Box::new(expr),
@@ -241,10 +288,20 @@ fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
         opt(tuple((char('.'), digit1))),
     )))(input)?;
     
-    if let Ok(num) = number_str.parse::<f64>() {
-        Ok((input, Literal::Number(num)))
+    if number_str.contains('.') {
+        // Parse as float
+        if let Ok(num) = number_str.parse::<f64>() {
+            Ok((input, Literal::Number(num)))
+        } else {
+            Ok((input, Literal::Number(0.0)))
+        }
     } else {
-        Ok((input, Literal::Number(0.0)))
+        // Parse as integer
+        if let Ok(num) = number_str.parse::<i64>() {
+            Ok((input, Literal::LongNumber(num)))
+        } else {
+            Ok((input, Literal::LongNumber(0)))
+        }
     }
 }
 

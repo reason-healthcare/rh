@@ -4,7 +4,7 @@
 
 This document describes the current implementation status of FHIRPath in the `fhirpath` crate. FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification.
 
-**Implementation Status**: 🚧 **Early Development** - Core parsing complete, basic evaluation implemented
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic operations implemented, basic evaluation functional
 
 ## Architecture
 
@@ -40,11 +40,13 @@ The FHIRPath implementation consists of four main components:
 - **Union operations**: `name.given | name.family`
 - **Logical operations**: `active and birthDate.exists()`
 - **Equality operations**: `use = 'official'`, `active != false`
+- **Arithmetic operations**: `1 + 2`, `age * 2`, `'Hello' & ' World'`
 - **Parenthesized expressions**: `(name.given | name.family).exists()`
 
 #### Literal Values
 - **Boolean**: `true`, `false`
-- **Numbers**: `42`, `3.14`
+- **Integers**: `42`, `-10` (distinct from decimals)
+- **Numbers**: `3.14`, `-0.5` (floating-point)
 - **Strings**: `'hello world'`, `'patient name'`
 - **Null**: `{}`
 
@@ -58,12 +60,22 @@ The FHIRPath implementation consists of four main components:
 - **Function calls**: `name.count()`, `telecom.exists()`
 - **Parameterized functions**: `name.where(use = 'official')`
 
+#### Arithmetic Operations
+- **Integer operations**: `1 + 2` → `Integer(3)`, `5 * 6` → `Integer(30)`
+- **Mixed type operations**: `2.5 + 3` → `Number(5.5)`, `10 / 4` → `Number(2.5)`
+- **String concatenation**: `'Hello' & ' World'` → `"Hello World"`
+- **Proper precedence**: `2 + 3 * 4` → `Integer(14)` (multiplication first)
+- **Division semantics**: `/` always returns Number, `div` returns Integer
+- **Error handling**: Division by zero, invalid type combinations
+
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
 - ✅ Literal evaluation
 - ✅ Simple member access on JSON objects
 - ✅ Basic logical operations
+- ✅ Arithmetic operations with proper precedence
+- ✅ String concatenation and type conversion
 - ❌ Complex path navigation
 - ❌ Function execution
 - ❌ Type coercion
@@ -71,12 +83,10 @@ The FHIRPath implementation consists of four main components:
 ### ❌ Not Yet Implemented
 
 #### Advanced Expression Types
-- **Mathematical operations**: `+`, `-`, `*`, `/`, `div`, `mod`
 - **Comparison operations**: `<`, `<=`, `>`, `>=`
 - **Type operations**: `is`, `as`
 - **Membership operations**: `in`, `contains`
 - **Polarity operations**: `-value`, `+value`
-- **String concatenation**: `given & ' ' & family`
 - **Implies operation**: `condition implies action`
 
 #### Advanced Literals
@@ -104,13 +114,13 @@ The FHIRPath implementation consists of four main components:
 
 | Operator | Description | Parser Support | Evaluator Support | Status |
 |----------|-------------|----------------|-------------------|---------|
-| `+` | Addition | ❌ | ❌ | Not implemented |
-| `-` | Subtraction | ❌ | ❌ | Not implemented |
-| `*` | Multiplication | ❌ | ❌ | Not implemented |
-| `/` | Division | ❌ | ❌ | Not implemented |
-| `div` | Integer division | ❌ | ❌ | Not implemented |
-| `mod` | Modulo | ❌ | ❌ | Not implemented |
-| `&` | String concatenation | ❌ | ❌ | Not implemented |
+| `+` | Addition | ✅ | ✅ | Complete |
+| `-` | Subtraction | ✅ | ✅ | Complete |
+| `*` | Multiplication | ✅ | ✅ | Complete |
+| `/` | Division | ✅ | ✅ | Complete |
+| `div` | Integer division | ✅ | ✅ | Complete |
+| `mod` | Modulo | ✅ | ✅ | Complete |
+| `&` | String concatenation | ✅ | ✅ | Complete |
 
 ### Comparison Operators
 
@@ -274,8 +284,23 @@ let evaluator = FhirPathEvaluator::new();
 
 // Simple literals
 parser.parse("true").unwrap();           // ✅ Works
-parser.parse("42").unwrap();             // ✅ Works  
+parser.parse("42").unwrap();             // ✅ Works (Integer)
+parser.parse("3.14").unwrap();           // ✅ Works (Number)
 parser.parse("'hello'").unwrap();        // ✅ Works
+
+// Arithmetic operations
+parser.parse("1 + 2").unwrap();          // ✅ Works → Integer(3)
+parser.parse("10 - 3").unwrap();         // ✅ Works → Integer(7)
+parser.parse("4 * 5").unwrap();          // ✅ Works → Integer(20)
+parser.parse("15 / 3").unwrap();         // ✅ Works → Number(5.0)
+parser.parse("17 div 5").unwrap();       // ✅ Works → Integer(3)
+parser.parse("17 mod 5").unwrap();       // ✅ Works → Integer(2)
+parser.parse("2.5 + 3").unwrap();        // ✅ Works → Number(5.5)
+parser.parse("'Hello' & ' World'").unwrap(); // ✅ Works → "Hello World"
+
+// Operator precedence
+parser.parse("2 + 3 * 4").unwrap();      // ✅ Works → Integer(14)
+parser.parse("20 - 12 / 3").unwrap();    // ✅ Works → Number(16.0)
 
 // Member access
 parser.parse("Patient.name").unwrap();   // ✅ Works
@@ -305,9 +330,6 @@ parser.parse("name.where(use = 'official').given").unwrap(); // ✅ Parses
 // Comparison operators
 parser.parse("birthDate >= @1980-01-01"); // ❌ Fails
 
-// Mathematical operations  
-parser.parse("age + 1");                  // ❌ Fails
-
 // Date literals
 parser.parse("@2023-01-01");              // ❌ Fails
 
@@ -327,17 +349,18 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 - [x] Literal values
 - [x] Error handling
 
-### Phase 2: Basic Evaluation (⏳ In Progress)
+### Phase 2: Basic Evaluation (✅ Complete)
 - [x] Literal evaluation
 - [x] Simple member access
 - [x] Basic logical operations
+- [x] Arithmetic operations with proper precedence
+- [x] String concatenation and type conversion
 - [ ] Array indexing evaluation
 - [ ] Union operation evaluation
 
 ### Phase 3: Advanced Parsing (❌ Not Started)
 - [ ] Date/time literals
 - [ ] Quantity literals
-- [ ] Mathematical operators
 - [ ] Comparison operators
 - [ ] Type operators
 
@@ -358,15 +381,15 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 10 tests covering parser and evaluator
-- **Integration tests**: Real-world usage examples
-- **Parser coverage**: 19/20 test expressions parse successfully
-- **Evaluator coverage**: Basic literal and member access
+- **Unit tests**: 12 tests covering parser and evaluator
+- **Integration tests**: 3 real-world usage examples including arithmetic
+- **Parser coverage**: All core syntax elements parse successfully
+- **Evaluator coverage**: Literals, member access, and arithmetic operations
 
 Run tests with:
 ```bash
 cargo test --package fhirpath
-cargo test --package fhirpath test_parser_examples -- --nocapture
+cargo test --package fhirpath test_arithmetic_expressions -- --nocapture
 ```
 
 ## Integration with FHIR Codegen

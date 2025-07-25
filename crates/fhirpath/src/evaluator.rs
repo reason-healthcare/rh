@@ -94,6 +94,16 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 self.evaluate_equality(&left_result, operator, &right_result)
             }
+            Expression::Additive { left, operator, right } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                self.evaluate_additive(&left_result, operator, &right_result)
+            }
+            Expression::Multiplicative { left, operator, right } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                self.evaluate_multiplicative(&left_result, operator, &right_result)
+            }
             Expression::And { left, right } => {
                 let left_result = self.evaluate_expression(left, context)?;
                 let right_result = self.evaluate_expression(right, context)?;
@@ -294,6 +304,282 @@ impl FhirPathEvaluator {
         Ok(FhirPathValue::Boolean(left_bool && right_bool))
     }
 
+    /// Evaluate additive operation (+, -, &)
+    fn evaluate_additive(
+        &self,
+        left: &FhirPathValue,
+        operator: &AdditiveOperator,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match operator {
+            AdditiveOperator::Add => self.add_values(left, right),
+            AdditiveOperator::Subtract => self.subtract_values(left, right),
+            AdditiveOperator::Concatenate => self.concatenate_values(left, right),
+        }
+    }
+
+    /// Evaluate multiplicative operation (*, /, div, mod)
+    fn evaluate_multiplicative(
+        &self,
+        left: &FhirPathValue,
+        operator: &MultiplicativeOperator,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match operator {
+            MultiplicativeOperator::Multiply => self.multiply_values(left, right),
+            MultiplicativeOperator::Divide => self.divide_values(left, right),
+            MultiplicativeOperator::Div => self.div_values(left, right),
+            MultiplicativeOperator::Mod => self.mod_values(left, right),
+        }
+    }
+
+    /// Add two values
+    fn add_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number(a + b))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Integer(a + b))
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Number(a + (*b as f64)))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number((*a as f64) + b))
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Addition not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Subtract two values
+    fn subtract_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number(a - b))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Integer(a - b))
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Number(a - (*b as f64)))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number((*a as f64) - b))
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Subtraction not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Multiply two values
+    fn multiply_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number(a * b))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Integer(a * b))
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                Ok(FhirPathValue::Number(a * (*b as f64)))
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                Ok(FhirPathValue::Number((*a as f64) * b))
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Multiplication not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Divide two values
+    fn divide_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number(a / b))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number((*a as f64) / (*b as f64)))
+                }
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number(a / (*b as f64)))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number((*a as f64) / b))
+                }
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Division not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Integer division (div)
+    fn div_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Integer((a / b).floor() as i64))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Integer(a / b))
+                }
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Integer((a / (*b as f64)).floor() as i64))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Division by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Integer(((*a as f64) / b).floor() as i64))
+                }
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Integer division not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Modulo operation
+    fn mod_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match (left, right) {
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Modulo by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number(a % b))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Modulo by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Integer(a % b))
+                }
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                if *b == 0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Modulo by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number(a % (*b as f64)))
+                }
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                if *b == 0.0 {
+                    Err(FhirPathError::InvalidOperation {
+                        message: "Modulo by zero".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number((*a as f64) % b))
+                }
+            }
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Modulo not supported for these types".to_string(),
+            }),
+        }
+    }
+
+    /// Concatenate values (string concatenation)
+    fn concatenate_values(
+        &self,
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        let left_str = self.to_string_value(left)?;
+        let right_str = self.to_string_value(right)?;
+        Ok(FhirPathValue::String(format!("{}{}", left_str, right_str)))
+    }
+
+    /// Convert a value to string for concatenation
+    fn to_string_value(&self, value: &FhirPathValue) -> FhirPathResult<String> {
+        match value {
+            FhirPathValue::String(s) => Ok(s.clone()),
+            FhirPathValue::Number(n) => Ok(n.to_string()),
+            FhirPathValue::Integer(i) => Ok(i.to_string()),
+            FhirPathValue::Boolean(b) => Ok(b.to_string()),
+            FhirPathValue::Empty => Ok("".to_string()),
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "Cannot convert value to string".to_string(),
+            }),
+        }
+    }
+
     /// Check if two values are equal
     fn values_equal(&self, left: &FhirPathValue, right: &FhirPathValue) -> bool {
         match (left, right) {
@@ -435,5 +721,120 @@ mod tests {
         let right = FhirPathValue::Number(24.0);
         let result = evaluator.evaluate_equality(&left, &EqualityOperator::NotEqual, &right).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
+    }
+
+    #[test]
+    fn test_arithmetic_operations() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Addition tests
+        let left = FhirPathValue::Integer(1);
+        let right = FhirPathValue::Integer(2);
+        let result = evaluator.add_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(3));
+        
+        let left = FhirPathValue::Number(1.5);
+        let right = FhirPathValue::Number(2.3);
+        let result = evaluator.add_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(3.8));
+        
+        let left = FhirPathValue::Integer(1);
+        let right = FhirPathValue::Number(2.5);
+        let result = evaluator.add_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(3.5));
+        
+        // Subtraction tests
+        let left = FhirPathValue::Integer(5);
+        let right = FhirPathValue::Integer(3);
+        let result = evaluator.subtract_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(2));
+        
+        let left = FhirPathValue::Number(5.5);
+        let right = FhirPathValue::Number(2.3);
+        let result = evaluator.subtract_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(3.2));
+        
+        // Multiplication tests
+        let left = FhirPathValue::Integer(3);
+        let right = FhirPathValue::Integer(4);
+        let result = evaluator.multiply_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(12));
+        
+        let left = FhirPathValue::Number(2.5);
+        let right = FhirPathValue::Integer(3);
+        let result = evaluator.multiply_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(7.5));
+        
+        // Division tests
+        let left = FhirPathValue::Integer(8);
+        let right = FhirPathValue::Integer(2);
+        let result = evaluator.divide_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(4.0));
+        
+        let left = FhirPathValue::Number(7.5);
+        let right = FhirPathValue::Number(2.5);
+        let result = evaluator.divide_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(3.0));
+        
+        // Integer division tests
+        let left = FhirPathValue::Integer(7);
+        let right = FhirPathValue::Integer(2);
+        let result = evaluator.div_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(3));
+        
+        let left = FhirPathValue::Number(7.5);
+        let right = FhirPathValue::Integer(2);
+        let result = evaluator.div_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(3));
+        
+        // Modulo tests
+        let left = FhirPathValue::Integer(7);
+        let right = FhirPathValue::Integer(3);
+        let result = evaluator.mod_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(1));
+        
+        let left = FhirPathValue::Number(7.5);
+        let right = FhirPathValue::Number(2.5);
+        let result = evaluator.mod_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Number(0.0));
+        
+        // String concatenation tests
+        let left = FhirPathValue::String("Hello".to_string());
+        let right = FhirPathValue::String(" World".to_string());
+        let result = evaluator.concatenate_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::String("Hello World".to_string()));
+        
+        let left = FhirPathValue::String("Value: ".to_string());
+        let right = FhirPathValue::Integer(42);
+        let result = evaluator.concatenate_values(&left, &right).unwrap();
+        assert_eq!(result, FhirPathValue::String("Value: 42".to_string()));
+    }
+
+    #[test]
+    fn test_arithmetic_error_cases() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Division by zero
+        let left = FhirPathValue::Integer(5);
+        let right = FhirPathValue::Integer(0);
+        let result = evaluator.divide_values(&left, &right);
+        assert!(result.is_err());
+        
+        let result = evaluator.div_values(&left, &right);
+        assert!(result.is_err());
+        
+        let result = evaluator.mod_values(&left, &right);
+        assert!(result.is_err());
+        
+        // Invalid type operations
+        let left = FhirPathValue::String("hello".to_string());
+        let right = FhirPathValue::Integer(5);
+        let result = evaluator.add_values(&left, &right);
+        assert!(result.is_err());
+        
+        let left = FhirPathValue::Boolean(true);
+        let right = FhirPathValue::Boolean(false);
+        let result = evaluator.multiply_values(&left, &right);
+        assert!(result.is_err());
     }
 }
