@@ -312,7 +312,15 @@ impl CodeGenerator {
 
     /// Convert a name to Rust field name (snake_case)
     fn to_rust_field_name(&self, name: &str) -> String {
-        name.to_case(Case::Snake)
+        // Handle FHIR choice types like value[x] -> value_x
+        let cleaned_name = if name.contains('[') && name.contains(']') {
+            name.replace('[', "_")
+                .replace(']', "")
+        } else {
+            name.to_string()
+        };
+        
+        cleaned_name.to_case(Case::Snake)
     }
 
     /// Generate TokenStream for a RustStruct
@@ -433,6 +441,7 @@ mod tests {
         assert_eq!(generator.to_rust_type_name("Patient"), "Patient");
         assert_eq!(generator.to_rust_type_name("humanName"), "HumanName");
         assert_eq!(generator.to_rust_field_name("birthDate"), "birth_date");
+        assert_eq!(generator.to_rust_field_name("value[x]"), "value_x");
         assert_eq!(
             generator.to_rust_field_name("resourceType"),
             "resource_type"

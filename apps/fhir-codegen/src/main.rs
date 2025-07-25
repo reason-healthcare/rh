@@ -329,6 +329,44 @@ fn process_single_file(
     Ok(output_path)
 }
 
+/// Process all JSON files in a directory for FHIR StructureDefinitions
+fn process_json_files(
+    generator: &mut CodeGenerator,
+    scan_dir: &Path,
+    output_dir: &Path,
+) -> Result<()> {
+    let entries = fs::read_dir(scan_dir)?;
+    let mut processed_count = 0;
+    let mut generated_count = 0;
+
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            processed_count += 1;
+            
+            // Only process StructureDefinition files for type generation
+            if let Some(filename) = path.file_name().and_then(|name| name.to_str()) {
+                if filename.starts_with("StructureDefinition-") {
+                    match process_single_file(generator, &path, output_dir) {
+                        Ok(output_path) => {
+                            generated_count += 1;
+                            info!("Generated: {:?} from {:?}", output_path, filename);
+                        }
+                        Err(e) => {
+                            warn!("Failed to process {:?}: {}", filename, e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    info!("Processed {} JSON files, generated {} Rust files", processed_count, generated_count);
+    Ok(())
+}
+
 /// Simple pattern matching (supports * wildcard)
 fn matches_pattern(filename: &str, pattern: &str) -> bool {
     if pattern == "*" {
@@ -406,22 +444,16 @@ async fn install_package(
     // Create the generator
     let mut generator = CodeGenerator::new(config);
 
-    // Find all JSON files in the downloaded package
-    let entries = fs::read_dir(&temp_dir)?;
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
+    // Create output directory
+    fs::create_dir_all(output)?;
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-            match process_single_file(&mut generator, &path, output) {
-                Ok(output_path) => {
-                    info!("Generated: {:?}", output_path);
-                }
-                Err(e) => {
-                    warn!("Failed to process {:?}: {}", path, e);
-                }
-            }
-        }
+    // Find all StructureDefinition JSON files in the package directory
+    let package_dir = temp_dir.join("package");
+    if !package_dir.exists() {
+        warn!("Package directory not found, scanning temp directory directly");
+        process_json_files(&mut generator, &temp_dir, output)?;
+    } else {
+        process_json_files(&mut generator, &package_dir, output)?;
     }
 
     // Clean up temporary directory
