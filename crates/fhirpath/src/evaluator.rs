@@ -94,6 +94,11 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 self.evaluate_equality(&left_result, operator, &right_result)
             }
+            Expression::Inequality { left, operator, right } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                self.evaluate_inequality(&left_result, operator, &right_result)
+            }
             Expression::Additive { left, operator, right } => {
                 let left_result = self.evaluate_expression(left, context)?;
                 let right_result = self.evaluate_expression(right, context)?;
@@ -289,6 +294,22 @@ impl FhirPathEvaluator {
             EqualityOperator::NotEqual => !self.values_equal(left, right),
             EqualityOperator::Equivalent => self.values_equivalent(left, right),
             EqualityOperator::NotEquivalent => !self.values_equivalent(left, right),
+        };
+        Ok(FhirPathValue::Boolean(result))
+    }
+
+    /// Evaluate inequality operations (<, <=, >, >=)
+    fn evaluate_inequality(
+        &self,
+        left: &FhirPathValue,
+        operator: &InequalityOperator,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        let result = match operator {
+            InequalityOperator::LessThan => self.compare_values(left, right)? < 0,
+            InequalityOperator::LessThanOrEqual => self.compare_values(left, right)? <= 0,
+            InequalityOperator::GreaterThan => self.compare_values(left, right)? > 0,
+            InequalityOperator::GreaterThanOrEqual => self.compare_values(left, right)? >= 0,
         };
         Ok(FhirPathValue::Boolean(result))
     }
@@ -580,6 +601,62 @@ impl FhirPathEvaluator {
         }
     }
 
+    /// Compare two values for ordering (-1, 0, 1)
+    fn compare_values(&self, left: &FhirPathValue, right: &FhirPathValue) -> FhirPathResult<i32> {
+        match (left, right) {
+            // Numeric comparisons
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
+                Ok(if a < b { -1 } else if a > b { 1 } else { 0 })
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
+                Ok(if a < b { -1 } else if a > b { 1 } else { 0 })
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                let b_float = *b as f64;
+                Ok(if *a < b_float { -1 } else if *a > b_float { 1 } else { 0 })
+            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                let a_float = *a as f64;
+                Ok(if a_float < *b { -1 } else if a_float > *b { 1 } else { 0 })
+            }
+            // String comparisons
+            (FhirPathValue::String(a), FhirPathValue::String(b)) => {
+                Ok(match a.cmp(b) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                })
+            }
+            // Date/DateTime comparisons (for future implementation)
+            (FhirPathValue::Date(a), FhirPathValue::Date(b)) => {
+                Ok(match a.cmp(b) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                })
+            }
+            (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => {
+                Ok(match a.cmp(b) {
+                    std::cmp::Ordering::Less => -1,
+                    std::cmp::Ordering::Equal => 0,
+                    std::cmp::Ordering::Greater => 1,
+                })
+            }
+            // Boolean comparisons (false < true)
+            (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => {
+                Ok(match (a, b) {
+                    (false, true) => -1,
+                    (true, false) => 1,
+                    _ => 0,
+                })
+            }
+            // Unsupported comparisons
+            _ => Err(FhirPathError::InvalidOperation {
+                message: format!("Cannot compare {:?} with {:?}", left, right),
+            }),
+        }
+    }
+
     /// Check if two values are equal
     fn values_equal(&self, left: &FhirPathValue, right: &FhirPathValue) -> bool {
         match (left, right) {
@@ -835,6 +912,83 @@ mod tests {
         let left = FhirPathValue::Boolean(true);
         let right = FhirPathValue::Boolean(false);
         let result = evaluator.multiply_values(&left, &right);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_inequality_operations() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Integer comparisons
+        let left = FhirPathValue::Integer(5);
+        let right = FhirPathValue::Integer(3);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+        
+        let left = FhirPathValue::Integer(3);
+        let right = FhirPathValue::Integer(3);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThanOrEqual, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThanOrEqual, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // Number comparisons
+        let left = FhirPathValue::Number(3.14);
+        let right = FhirPathValue::Number(2.71);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // Mixed type comparisons
+        let left = FhirPathValue::Integer(5);
+        let right = FhirPathValue::Number(4.9);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let left = FhirPathValue::Number(4.9);
+        let right = FhirPathValue::Integer(5);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // String comparisons
+        let left = FhirPathValue::String("apple".to_string());
+        let right = FhirPathValue::String("banana".to_string());
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let left = FhirPathValue::String("zebra".to_string());
+        let right = FhirPathValue::String("apple".to_string());
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        // Boolean comparisons (false < true)
+        let left = FhirPathValue::Boolean(false);
+        let right = FhirPathValue::Boolean(true);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+        
+        let left = FhirPathValue::Boolean(true);
+        let right = FhirPathValue::Boolean(false);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+    }
+
+    #[test]
+    fn test_inequality_error_cases() {
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Invalid type comparisons
+        let left = FhirPathValue::String("hello".to_string());
+        let right = FhirPathValue::Integer(5);
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::LessThan, &right);
+        assert!(result.is_err());
+        
+        let left = FhirPathValue::Boolean(true);
+        let right = FhirPathValue::String("test".to_string());
+        let result = evaluator.evaluate_inequality(&left, &InequalityOperator::GreaterThan, &right);
         assert!(result.is_err());
     }
 }

@@ -4,7 +4,7 @@
 
 This document describes the current implementation status of FHIRPath in the `fhirpath` crate. FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification.
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic operations implemented, basic evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic and comparison operations implemented, basic evaluation functional
 
 ## Architecture
 
@@ -40,6 +40,7 @@ The FHIRPath implementation consists of four main components:
 - **Union operations**: `name.given | name.family`
 - **Logical operations**: `active and birthDate.exists()`
 - **Equality operations**: `use = 'official'`, `active != false`
+- **Comparison operations**: `age > 18`, `weight <= 100`, `'apple' < 'banana'`
 - **Arithmetic operations**: `1 + 2`, `age * 2`, `'Hello' & ' World'`
 - **Parenthesized expressions**: `(name.given | name.family).exists()`
 
@@ -68,6 +69,14 @@ The FHIRPath implementation consists of four main components:
 - **Division semantics**: `/` always returns Number, `div` returns Integer
 - **Error handling**: Division by zero, invalid type combinations
 
+#### Comparison Operations
+- **Numeric comparisons**: `5 > 3` → `Boolean(true)`, `age >= 18` → evaluation
+- **String comparisons**: `'apple' < 'banana'` → `Boolean(true)` (lexicographic)
+- **Boolean comparisons**: `false < true` → `Boolean(true)` (false < true)
+- **Mixed numeric types**: `5 > 4.9` → `Boolean(true)`, `4.99 <= 5` → `Boolean(true)`
+- **Proper precedence**: `2 + 3 > 4` → `Boolean(true)` (arithmetic first)
+- **Type safety**: Invalid comparisons properly rejected with clear errors
+
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
@@ -75,6 +84,7 @@ The FHIRPath implementation consists of four main components:
 - ✅ Simple member access on JSON objects
 - ✅ Basic logical operations
 - ✅ Arithmetic operations with proper precedence
+- ✅ Comparison operations with type safety  
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
 - ❌ Function execution
@@ -83,7 +93,6 @@ The FHIRPath implementation consists of four main components:
 ### ❌ Not Yet Implemented
 
 #### Advanced Expression Types
-- **Comparison operations**: `<`, `<=`, `>`, `>=`
 - **Type operations**: `is`, `as`
 - **Membership operations**: `in`, `contains`
 - **Polarity operations**: `-value`, `+value`
@@ -130,10 +139,10 @@ The FHIRPath implementation consists of four main components:
 | `!=` | Inequality | ✅ | ✅ | Complete |
 | `~` | Equivalence | ✅ | ✅ | Complete |
 | `!~` | Non-equivalence | ✅ | ✅ | Complete |
-| `<` | Less than | ❌ | ❌ | Not implemented |
-| `<=` | Less than or equal | ❌ | ❌ | Not implemented |
-| `>` | Greater than | ❌ | ❌ | Not implemented |
-| `>=` | Greater than or equal | ❌ | ❌ | Not implemented |
+| `<` | Less than | ✅ | ✅ | Complete |
+| `<=` | Less than or equal | ✅ | ✅ | Complete |
+| `>` | Greater than | ✅ | ✅ | Complete |
+| `>=` | Greater than or equal | ✅ | ✅ | Complete |
 
 ### Logical Operators
 
@@ -302,6 +311,16 @@ parser.parse("'Hello' & ' World'").unwrap(); // ✅ Works → "Hello World"
 parser.parse("2 + 3 * 4").unwrap();      // ✅ Works → Integer(14)
 parser.parse("20 - 12 / 3").unwrap();    // ✅ Works → Number(16.0)
 
+// Comparison operations
+parser.parse("5 > 3").unwrap();          // ✅ Works → Boolean(true)
+parser.parse("age >= 18").unwrap();       // ✅ Works → Boolean evaluation
+parser.parse("'apple' < 'banana'").unwrap(); // ✅ Works → Boolean(true)
+parser.parse("false <= true").unwrap();   // ✅ Works → Boolean(true)
+
+// Comparison with arithmetic precedence
+parser.parse("2 + 3 > 4").unwrap();      // ✅ Works → Boolean(true)
+parser.parse("10 - 5 >= 3").unwrap();    // ✅ Works → Boolean(true)
+
 // Member access
 parser.parse("Patient.name").unwrap();   // ✅ Works
 parser.parse("name.given").unwrap();     // ✅ Works
@@ -327,9 +346,6 @@ parser.parse("name.where(use = 'official').given").unwrap(); // ✅ Parses
 ### Examples That Don't Work Yet
 
 ```rust
-// Comparison operators
-parser.parse("birthDate >= @1980-01-01"); // ❌ Fails
-
 // Date literals
 parser.parse("@2023-01-01");              // ❌ Fails
 
@@ -361,7 +377,6 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 ### Phase 3: Advanced Parsing (❌ Not Started)
 - [ ] Date/time literals
 - [ ] Quantity literals
-- [ ] Comparison operators
 - [ ] Type operators
 
 ### Phase 4: Function Implementation (❌ Not Started)
@@ -381,15 +396,15 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 12 tests covering parser and evaluator
-- **Integration tests**: 3 real-world usage examples including arithmetic
-- **Parser coverage**: All core syntax elements parse successfully
-- **Evaluator coverage**: Literals, member access, and arithmetic operations
+- **Unit tests**: 16 tests covering parser and evaluator
+- **Integration tests**: 4 real-world usage examples including arithmetic and comparisons
+- **Parser coverage**: All core syntax elements parse successfully including comparison operators
+- **Evaluator coverage**: Literals, member access, arithmetic, and comparison operations
 
 Run tests with:
 ```bash
 cargo test --package fhirpath
-cargo test --package fhirpath test_arithmetic_expressions -- --nocapture
+cargo test --package fhirpath test_comparison_expressions -- --nocapture
 ```
 
 ## Integration with FHIR Codegen
@@ -416,11 +431,10 @@ The `fhirpath` crate is part of the larger Rust FHIR monorepo and shares:
 Areas where contributions are most needed:
 
 1. **Function Implementation**: Implementing built-in FHIRPath functions
-2. **Advanced Operators**: Mathematical and comparison operators
-3. **Date/Time Support**: Parsing and evaluation of temporal literals
-4. **Performance**: Optimization of parser and evaluator
-5. **Error Messages**: Better error reporting with suggestions
-6. **FHIR Integration**: Better integration with generated FHIR types
+2. **Date/Time Support**: Parsing and evaluation of temporal literals
+3. **Performance**: Optimization of parser and evaluator
+4. **Error Messages**: Better error reporting with suggestions
+5. **FHIR Integration**: Better integration with generated FHIR types
 
 ### Development Guidelines
 

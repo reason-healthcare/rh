@@ -101,10 +101,10 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse equality expressions
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_additive_expression(input)?;
+    let (input, first) = parse_inequality_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("!="), tag("!~"), tag("="), tag("~")))),
-        parse_additive_expression,
+        parse_inequality_expression,
     )))(input)?;
 
     Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
@@ -116,6 +116,30 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
             _ => EqualityOperator::Equal,
         };
         Expression::Equality {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })))
+}
+
+// Parse inequality expressions (<, <=, >, >=)
+fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_additive_expression(input)?;
+    let (input, rest) = many0(tuple((
+        ws(alt((tag("<="), tag(">="), tag("<"), tag(">")))),
+        parse_additive_expression,
+    )))(input)?;
+
+    Ok((input, rest.into_iter().fold(first, |acc, (op, expr)| {
+        let operator = match op {
+            "<" => InequalityOperator::LessThan,
+            "<=" => InequalityOperator::LessThanOrEqual,
+            ">" => InequalityOperator::GreaterThan,
+            ">=" => InequalityOperator::GreaterThanOrEqual,
+            _ => InequalityOperator::LessThan,
+        };
+        Expression::Inequality {
             left: Box::new(acc),
             operator,
             right: Box::new(expr),
@@ -391,5 +415,61 @@ mod tests {
         let parser = FhirPathParser::new();
         let result = parser.parse("name.use = 'official'");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_comparison_expressions() {
+        let parser = FhirPathParser::new();
+        
+        // Test all comparison operators
+        let expressions = vec![
+            "5 > 3",
+            "age >= 18",
+            "weight < 100",
+            "height <= 200",
+            "'apple' < 'banana'",
+            "score >= average",
+        ];
+
+        for expr_str in expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed comparison: {} -> {}", expr_str, expr);
+                    // Verify it's an Inequality expression
+                    if let Expression::Inequality { .. } = expr.root {
+                        // Success
+                    } else {
+                        panic!("Expected Inequality expression for {}", expr_str);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse comparison {}: {:?}", expr_str, e);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_comparison_precedence() {
+        let parser = FhirPathParser::new();
+        
+        // Test that arithmetic operators bind tighter than comparison operators
+        let result = parser.parse("2 + 3 > 4");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        
+        // Should parse as (2 + 3) > 4, not 2 + (3 > 4)
+        if let Expression::Inequality { left, operator, right: _ } = expr.root {
+            // Left side should be an additive expression
+            if let Expression::Additive { .. } = left.as_ref() {
+                // Correct precedence
+            } else {
+                panic!("Expected left side to be additive expression");
+            }
+            assert!(matches!(operator, InequalityOperator::GreaterThan));
+        } else {
+            panic!("Expected inequality expression");
+        }
     }
 }

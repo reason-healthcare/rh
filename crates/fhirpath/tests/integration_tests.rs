@@ -162,4 +162,86 @@ mod integration_tests {
             assert_eq!(result, expected);
         }
     }
+
+    #[test]
+    fn test_comparison_expressions() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(json!({
+            "resourceType": "Patient",
+            "age": 30,
+            "weight": 70.5,
+            "name": "John"
+        }));
+
+        // Test comparison parsing and evaluation
+        let test_cases = vec![
+            // Numeric comparisons
+            ("5 > 3", FhirPathValue::Boolean(true)),
+            ("3 > 5", FhirPathValue::Boolean(false)),
+            ("5 >= 5", FhirPathValue::Boolean(true)),
+            ("5 >= 3", FhirPathValue::Boolean(true)),
+            ("3 >= 5", FhirPathValue::Boolean(false)),
+            ("3 < 5", FhirPathValue::Boolean(true)),
+            ("5 < 3", FhirPathValue::Boolean(false)),
+            ("3 <= 3", FhirPathValue::Boolean(true)),
+            ("3 <= 5", FhirPathValue::Boolean(true)),
+            ("5 <= 3", FhirPathValue::Boolean(false)),
+            
+            // Mixed numeric types
+            ("5 > 4.9", FhirPathValue::Boolean(true)),
+            ("4.9 < 5", FhirPathValue::Boolean(true)),
+            ("5.0 >= 5", FhirPathValue::Boolean(true)),
+            ("4.99 <= 5", FhirPathValue::Boolean(true)),
+            
+            // String comparisons
+            ("'apple' < 'banana'", FhirPathValue::Boolean(true)),
+            ("'zebra' > 'apple'", FhirPathValue::Boolean(true)),
+            ("'test' >= 'test'", FhirPathValue::Boolean(true)),
+            ("'test' <= 'test'", FhirPathValue::Boolean(true)),
+            
+            // Boolean comparisons
+            ("false < true", FhirPathValue::Boolean(true)),
+            ("true > false", FhirPathValue::Boolean(true)),
+            ("true >= true", FhirPathValue::Boolean(true)),
+            ("false <= false", FhirPathValue::Boolean(true)),
+        ];
+
+        for (expr_str, expected) in test_cases {
+            match parser.parse(expr_str) {
+                Ok(expr) => {
+                    println!("✓ Parsed comparison: {} -> {}", expr_str, expr);
+                    match evaluator.evaluate(&expr, &context) {
+                        Ok(result) => {
+                            println!("✓ Evaluated: {} = {:?}", expr_str, result);
+                            assert_eq!(result, expected);
+                        }
+                        Err(e) => {
+                            println!("✗ Failed to evaluate: {} -> {:?}", expr_str, e);
+                            panic!("Evaluation failed for {}", expr_str);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("✗ Failed to parse comparison: {} -> {:?}", expr_str, e);
+                    panic!("Parsing failed for {}", expr_str);
+                }
+            }
+        }
+
+        // Test operator precedence with comparison operators
+        let precedence_cases = vec![
+            ("2 + 3 > 4", FhirPathValue::Boolean(true)),     // Should be (2 + 3) > 4 = 5 > 4 = true
+            ("10 - 5 < 8", FhirPathValue::Boolean(true)),    // Should be (10 - 5) < 8 = 5 < 8 = true
+            ("3 * 2 >= 6", FhirPathValue::Boolean(true)),    // Should be (3 * 2) >= 6 = 6 >= 6 = true
+            ("15 / 3 <= 5", FhirPathValue::Boolean(true)),   // Should be (15 / 3) <= 5 = 5.0 <= 5 = true
+        ];
+
+        for (expr_str, expected) in precedence_cases {
+            let expr = parser.parse(expr_str).unwrap();
+            let result = evaluator.evaluate(&expr, &context).unwrap();
+            println!("✓ Comparison precedence test: {} = {:?}", expr_str, result);
+            assert_eq!(result, expected);
+        }
+    }
 }
