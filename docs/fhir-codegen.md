@@ -10,6 +10,7 @@ The codegen library (`crates/codegen`) provides functionality to:
 - Handle FHIR primitive type mappings
 - Support optional fields and arrays
 - Generate serde annotations for JSON serialization/deserialization
+- **Generate type-safe enums for required value set bindings**
 - **Download FHIR packages from npm-style registries**
 - **Extract and process StructureDefinitions from package tarballs**
 
@@ -339,11 +340,108 @@ The generator includes default mappings for FHIR primitive types:
 | decimal | f64 | |
 | uri, url, canonical | String | Could use custom URI types |
 | date, dateTime, instant | String | Could use chrono types |
-| code, id, oid | String | |
+| code | String | Becomes enum for required value set bindings |
+| id, oid | String | |
 | base64Binary | String | Could use Vec<u8> |
 | markdown | String | |
 
 Complex FHIR types (starting with uppercase) are converted to PascalCase Rust struct names.
+
+## Enum Generation for Value Sets
+
+The generator automatically creates Rust enums for `code` fields that have **required** value set bindings. This provides compile-time type safety for fields that must only contain specific values.
+
+### Example: Patient Gender
+
+For the FHIR Patient resource, the `gender` field has a required binding to the `administrative-gender` value set:
+
+```rust
+/// The gender of a person used for administrative purposes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AdministrativeGender {
+    /// Male gender
+    #[serde(rename = "male")]
+    Male,
+    /// Female gender  
+    #[serde(rename = "female")]
+    Female,
+    /// Other gender
+    #[serde(rename = "other")]
+    Other,
+    /// Unknown gender
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+pub struct Patient {
+    // ... other fields
+    pub gender: Option<AdministrativeGender>,
+    // ... other fields  
+}
+```
+
+### Usage with Type Safety
+
+```rust
+use serde_json;
+
+// Create a patient with type-safe gender
+let patient = Patient {
+    base: DomainResource::default(),
+    gender: Some(AdministrativeGender::Female),
+    // ... other fields
+};
+
+// Serialization works correctly
+let json = serde_json::to_string(&patient)?;
+// Results in: {"gender": "female", ...}
+
+// Deserialization validates the value
+let json_str = r#"{"gender": "male"}"#;  
+let parsed: Patient = serde_json::from_str(json_str)?; // ✅ Works
+
+let invalid_json = r#"{"gender": "invalid"}"#;
+let result: Result<Patient, _> = serde_json::from_str(invalid_json); // ❌ Fails
+```
+
+### Binding Strength Requirements
+
+Only `code` fields with **required** binding strength generate enums:
+
+- **Required**: ✅ Generates enum (e.g., `Patient.gender`)
+- **Extensible**: ❌ Uses `String` (allows additional values)
+- **Preferred**: ❌ Uses `String` (non-binding recommendation)
+- **Example**: ❌ Uses `String` (for demonstration only)
+
+### Known Value Sets
+
+The generator includes built-in enum variants for common FHIR value sets:
+
+- `administrative-gender`: Male, Female, Other, Unknown
+- `publication-status`: Draft, Active, Retired, Unknown  
+- `structure-definition-kind`: PrimitiveType, ComplexType, Resource, Logical
+- `type-derivation-rule`: Specialization, Constraint
+- `extension-context-type`: Fhirpath, Element, Extension
+- `FHIR-version`: R4, R5
+
+For unknown value sets, a minimal enum with an `Unknown` variant is generated. In a production implementation, the generator could be extended to fetch actual ValueSet definitions from a FHIR server.
+
+### Benefits
+
+1. **Compile-time Safety**: Invalid values are caught at compile time
+2. **IntelliSense**: IDEs can provide autocomplete for valid values
+3. **Documentation**: Enum variants serve as inline documentation
+4. **Serialization**: Automatic conversion between Rust enums and JSON strings
+5. **Pattern Matching**: Use Rust's powerful pattern matching on enum values
+
+```rust
+match patient.gender {
+    Some(AdministrativeGender::Male) => println!("Male patient"),
+    Some(AdministrativeGender::Female) => println!("Female patient"), 
+    Some(AdministrativeGender::Other) => println!("Other gender"),
+    Some(AdministrativeGender::Unknown) | None => println!("Gender not specified"),
+}
+```
 
 ## Library Architecture
 
@@ -391,6 +489,7 @@ generator.generate_to_file(&structure_def, Path::new("patient.rs"))?;
 - ✅ Handle optional fields (min: 0)
 - ✅ Handle array fields (max: "*" or > 1)
 - ✅ FHIR primitive type mappings
+- ✅ **Enum generation for required value set bindings**
 - ✅ serde rename for snake_case fields
 - ✅ Documentation generation
 - ✅ CLI tool for batch processing
@@ -399,7 +498,7 @@ generator.generate_to_file(&structure_def, Path::new("patient.rs"))?;
 - ✅ **Authentication support for private registries**
 - ✅ **Install command for download + generation workflow**
 - 🔄 Complex type references (in progress)
-- 🔄 Enum generation for coded values
+- 🔄 Dynamic ValueSet fetching from FHIR servers
 - 🔄 Extension handling
 - 🔄 Profile validation
 

@@ -64,7 +64,7 @@ impl Default for CodegenConfig {
 
 impl Config for CodegenConfig {}
 
-/// Represents a FHIR StructureDefinition element
+/// Represents a FHIR element definition
 #[derive(Debug, Deserialize, Clone)]
 pub struct ElementDefinition {
     pub id: Option<String>,
@@ -77,9 +77,17 @@ pub struct ElementDefinition {
     pub element_type: Option<Vec<ElementType>>,
     pub fixed: Option<serde_json::Value>,
     pub pattern: Option<serde_json::Value>,
+    pub binding: Option<ElementBinding>,
 }
 
-/// Represents a FHIR element type
+/// Represents a FHIR element binding to a value set
+#[derive(Debug, Deserialize, Clone)]
+pub struct ElementBinding {
+    pub strength: String,
+    pub description: Option<String>,
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<String>,
+}/// Represents a FHIR element type
 #[derive(Debug, Deserialize, Clone)]
 pub struct ElementType {
     pub code: String,
@@ -140,11 +148,31 @@ pub struct RustStruct {
     pub derives: Vec<String>,
 }
 
+/// Represents a generated Rust enum variant
+#[derive(Debug, Clone)]
+pub struct RustEnumVariant {
+    pub name: String,
+    pub value: String,
+    pub documentation: Option<String>,
+}
+
+/// Represents a generated Rust enum
+#[derive(Debug, Clone)]
+pub struct RustEnum {
+    pub name: String,
+    pub variants: Vec<RustEnumVariant>,
+    pub documentation: Option<String>,
+    pub derives: Vec<String>,
+    pub value_set: Option<String>,
+}
+
 /// Main code generator struct
 pub struct CodeGenerator {
     config: CodegenConfig,
     /// Cache of previously generated types to avoid regenerating the same struct
     type_cache: HashMap<String, RustStruct>,
+    /// Cache of generated enums for value set bindings
+    enum_cache: HashMap<String, RustEnum>,
 }
 
 impl CodeGenerator {
@@ -153,6 +181,7 @@ impl CodeGenerator {
         Self {
             config,
             type_cache: HashMap::new(),
+            enum_cache: HashMap::new(),
         }
     }
 
@@ -162,6 +191,7 @@ impl CodeGenerator {
     /// have conflicting type definitions.
     pub fn clear_cache(&mut self) {
         self.type_cache.clear();
+        self.enum_cache.clear();
     }
 
     /// Load and parse a FHIR StructureDefinition from a JSON file
@@ -490,7 +520,7 @@ impl CodeGenerator {
 
     /// Convert an ElementDefinition to a RustField
     fn element_to_rust_field(
-        &self,
+        &mut self,
         element: &ElementDefinition,
         field_name: &str,
     ) -> CodegenResult<RustField> {
@@ -507,7 +537,18 @@ impl CodeGenerator {
 
         let rust_type = if let Some(element_types) = &element.element_type {
             if element_types.len() == 1 {
-                self.fhir_type_to_rust_type(&element_types[0].code)?
+                let type_code = &element_types[0].code;
+                
+                // Check if this should be an enum
+                if self.should_generate_enum(element, type_code) {
+                    if let Some(enum_name) = self.generate_enum_for_binding(element) {
+                        enum_name
+                    } else {
+                        self.fhir_type_to_rust_type(type_code)?
+                    }
+                } else {
+                    self.fhir_type_to_rust_type(type_code)?
+                }
             } else {
                 // Multiple types - use an enum or serde_json::Value for now
                 "serde_json::Value".to_string()
@@ -536,7 +577,7 @@ impl CodeGenerator {
 
     /// Convert an ElementDefinition with a specific type to a RustField for choice types
     fn element_to_choice_field(
-        &self,
+        &mut self,
         element: &ElementDefinition,
         field_name: &str,
         type_code: &str,
@@ -557,7 +598,16 @@ impl CodeGenerator {
                 .unwrap_or(1)
                 > 1;
 
-        let rust_type = self.fhir_type_to_rust_type(type_code)?;
+        // Check if this should be an enum
+        let rust_type = if self.should_generate_enum(element, type_code) {
+            if let Some(enum_name) = self.generate_enum_for_binding(element) {
+                enum_name
+            } else {
+                self.fhir_type_to_rust_type(type_code)?
+            }
+        } else {
+            self.fhir_type_to_rust_type(type_code)?
+        };
         
         // For choice types, the serde rename should use the original field name with the type
         let serde_rename = if self.config.with_serde {
@@ -727,6 +777,272 @@ impl CodeGenerator {
         }
     }
 
+    /// Check if a code field should become an enum based on its binding
+    fn should_generate_enum(&self, element: &ElementDefinition, type_code: &str) -> bool {
+        type_code == "code" && 
+        element.binding.as_ref()
+            .map(|b| b.strength == "required")
+            .unwrap_or(false)
+    }
+
+    /// Generate an enum name from a value set URL
+    fn value_set_to_enum_name(&self, value_set: &str) -> String {
+        // Extract the last part of the value set URL and convert to PascalCase
+        // e.g., "http://hl7.org/fhir/ValueSet/administrative-gender" -> "AdministrativeGender"
+        // Also handle versioned URLs like "http://hl7.org/fhir/ValueSet/publication-status|4.0.1"
+        let enum_name = value_set
+            .split('|')  // Remove version if present
+            .next()
+            .unwrap_or(value_set)
+            .split('/')
+            .last()
+            .unwrap_or("UnknownValueSet")
+            .replace('-', " ")
+            .to_case(Case::Pascal);
+        
+        // Ensure it doesn't conflict with standard types
+        if enum_name.is_empty() || enum_name == "ValueSet" {
+            "UnknownValueSet".to_string()
+        } else {
+            enum_name
+        }
+    }
+
+    /// Generate a Rust enum from a value set binding
+    fn generate_enum_for_binding(&mut self, element: &ElementDefinition) -> Option<String> {
+        let binding = element.binding.as_ref()?;
+        let value_set = binding.value_set.as_ref()?;
+        
+        if binding.strength != "required" {
+            return None;
+        }
+
+        // Generate enum name from value set
+        let enum_name = self.value_set_to_enum_name(value_set);
+        
+        // Check if we already generated this enum
+        if self.enum_cache.contains_key(&enum_name) {
+            return Some(enum_name);
+        }
+
+        // For now, generate a placeholder enum with common values
+        // In a full implementation, you would fetch the actual ValueSet definition
+        let variants = self.get_value_set_variants(value_set, &enum_name);
+
+        let rust_enum = RustEnum {
+            name: enum_name.clone(),
+            variants,
+            documentation: binding.description.clone(),
+            derives: vec![
+                "Debug".to_string(),
+                "Clone".to_string(),
+                "PartialEq".to_string(),
+                "Eq".to_string(),
+                "Hash".to_string(),
+            ],
+            value_set: Some(value_set.clone()),
+        };
+
+        // Add serde derives if enabled
+        if self.config.with_serde {
+            let mut enum_with_serde = rust_enum.clone();
+            enum_with_serde.derives.extend(vec![
+                "Serialize".to_string(),
+                "Deserialize".to_string(),
+            ]);
+            self.enum_cache.insert(enum_name.clone(), enum_with_serde);
+        } else {
+            self.enum_cache.insert(enum_name.clone(), rust_enum);
+        }
+
+        Some(enum_name)
+    }
+
+    /// Get variants for a known value set (placeholder implementation)
+    fn get_value_set_variants(&self, value_set: &str, enum_name: &str) -> Vec<RustEnumVariant> {
+        // This is a simplified implementation. In practice, you would:
+        // 1. Fetch the ValueSet definition from a FHIR server
+        // 2. Parse the concepts/codes from the ValueSet
+        // 3. Generate enum variants from those codes
+        
+        // Handle versioned value sets by stripping the version
+        let base_value_set = value_set.split('|').next().unwrap_or(value_set);
+        
+        // For now, provide some common known value sets
+        match base_value_set {
+            "http://hl7.org/fhir/ValueSet/administrative-gender" => vec![
+                RustEnumVariant {
+                    name: "Male".to_string(),
+                    value: "male".to_string(),
+                    documentation: Some("Male gender".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Female".to_string(),
+                    value: "female".to_string(),
+                    documentation: Some("Female gender".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Other".to_string(),
+                    value: "other".to_string(),
+                    documentation: Some("Other gender".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Unknown".to_string(),
+                    value: "unknown".to_string(),
+                    documentation: Some("Unknown gender".to_string()),
+                },
+            ],
+            "http://hl7.org/fhir/ValueSet/publication-status" => vec![
+                RustEnumVariant {
+                    name: "Draft".to_string(),
+                    value: "draft".to_string(),
+                    documentation: Some("Draft status".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Active".to_string(),
+                    value: "active".to_string(),
+                    documentation: Some("Active status".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Retired".to_string(),
+                    value: "retired".to_string(),
+                    documentation: Some("Retired status".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Unknown".to_string(),
+                    value: "unknown".to_string(),
+                    documentation: Some("Unknown status".to_string()),
+                },
+            ],
+            "http://hl7.org/fhir/ValueSet/structure-definition-kind" => vec![
+                RustEnumVariant {
+                    name: "PrimitiveType".to_string(),
+                    value: "primitive-type".to_string(),
+                    documentation: Some("Primitive data type".to_string()),
+                },
+                RustEnumVariant {
+                    name: "ComplexType".to_string(),
+                    value: "complex-type".to_string(),
+                    documentation: Some("Complex data type".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Resource".to_string(),
+                    value: "resource".to_string(),
+                    documentation: Some("Resource definition".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Logical".to_string(),
+                    value: "logical".to_string(),
+                    documentation: Some("Logical model".to_string()),
+                },
+            ],
+            "http://hl7.org/fhir/ValueSet/FHIR-version" => vec![
+                RustEnumVariant {
+                    name: "R4".to_string(),
+                    value: "4.0.1".to_string(),
+                    documentation: Some("FHIR R4".to_string()),
+                },
+                RustEnumVariant {
+                    name: "R5".to_string(),
+                    value: "5.0.0".to_string(),
+                    documentation: Some("FHIR R5".to_string()),
+                },
+            ],
+            "http://hl7.org/fhir/ValueSet/type-derivation-rule" => vec![
+                RustEnumVariant {
+                    name: "Specialization".to_string(),
+                    value: "specialization".to_string(),
+                    documentation: Some("Specialization rule".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Constraint".to_string(),
+                    value: "constraint".to_string(),
+                    documentation: Some("Constraint rule".to_string()),
+                },
+            ],
+            "http://hl7.org/fhir/ValueSet/extension-context-type" => vec![
+                RustEnumVariant {
+                    name: "Fhirpath".to_string(),
+                    value: "fhirpath".to_string(),
+                    documentation: Some("FHIRPath expression".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Element".to_string(),
+                    value: "element".to_string(),
+                    documentation: Some("Element".to_string()),
+                },
+                RustEnumVariant {
+                    name: "Extension".to_string(),
+                    value: "extension".to_string(),
+                    documentation: Some("Extension".to_string()),
+                },
+            ],
+            _ => {
+                // For unknown value sets, create a minimal enum
+                vec![
+                    RustEnumVariant {
+                        name: "Unknown".to_string(),
+                        value: "unknown".to_string(),
+                        documentation: Some(format!("Unknown value for {}", enum_name)),
+                    },
+                ]
+            }
+        }
+    }
+
+    /// Generate TokenStream for a RustEnum
+    fn generate_enum_tokens(&self, rust_enum: &RustEnum) -> TokenStream {
+        let enum_name = format_ident!("{}", rust_enum.name);
+        let derives: Vec<_> = rust_enum
+            .derives
+            .iter()
+            .map(|d| format_ident!("{}", d))
+            .collect();
+
+        let variants: Vec<_> = rust_enum
+            .variants
+            .iter()
+            .map(|variant| {
+                let variant_name = format_ident!("{}", variant.name);
+                let variant_value = &variant.value;
+
+                let doc_attr = if let Some(doc) = &variant.documentation {
+                    let formatted_doc = format!(" {}", doc);
+                    quote! { #[doc = #formatted_doc] }
+                } else {
+                    quote! {}
+                };
+
+                let serde_attr = if self.config.with_serde {
+                    quote! { #[serde(rename = #variant_value)] }
+                } else {
+                    quote! {}
+                };
+
+                quote! {
+                    #doc_attr
+                    #serde_attr
+                    #variant_name
+                }
+            })
+            .collect();
+
+        let doc_attr = if let Some(doc) = &rust_enum.documentation {
+            let formatted_doc = format!(" {}", doc);
+            quote! { #[doc = #formatted_doc] }
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            #doc_attr
+            #[derive(#(#derives),*)]
+            pub enum #enum_name {
+                #(#variants,)*
+            }
+        }
+    }
+
     /// Add header comment with StructureDefinition information
     fn add_header_comment(&self, code: &str, structure_def: &StructureDefinition) -> String {
         let version_info = if let Some(version) = &structure_def.version {
@@ -756,6 +1072,12 @@ impl CodeGenerator {
         
         // Generate tokens for the main struct and all nested structs
         let mut all_tokens = Vec::new();
+        
+        // First, generate tokens for all enums
+        for rust_enum in self.enum_cache.values() {
+            let enum_tokens = self.generate_enum_tokens(rust_enum);
+            all_tokens.push(enum_tokens);
+        }
         
         // Collect all structs that were generated (including nested ones)
         let mut structs_to_generate = Vec::new();
@@ -894,6 +1216,7 @@ mod tests {
                         element_type: None,
                         fixed: None,
                         pattern: None,
+                        binding: None,
                     },
                     ElementDefinition {
                         id: Some("Patient.name".to_string()),
@@ -908,6 +1231,7 @@ mod tests {
                         }]),
                         fixed: None,
                         pattern: None,
+                        binding: None,
                     },
                 ],
             }),
@@ -958,6 +1282,7 @@ mod tests {
                         element_type: None,
                         fixed: None,
                         pattern: None,
+                        binding: None,
                     },
                     ElementDefinition {
                         id: Some("Observation.value[x]".to_string()),
@@ -978,6 +1303,7 @@ mod tests {
                         ]),
                         fixed: None,
                         pattern: None,
+                        binding: None,
                     },
                 ],
             }),
@@ -1020,5 +1346,127 @@ mod tests {
         // Choice fields should be optional
         assert!(value_string_field.is_optional);
         assert!(value_quantity_field.is_optional);
+    }
+
+    #[test]
+    fn test_enum_generation_for_required_binding() {
+        let config = CodegenConfig::default();
+        let mut generator = CodeGenerator::new(config);
+
+        // Create a StructureDefinition with a code field that has a required binding
+        let structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "TestPatient".to_string(),
+            url: "http://example.org/StructureDefinition/TestPatient".to_string(),
+            version: Some("1.0.0".to_string()),
+            name: "TestPatient".to_string(),
+            title: Some("Test Patient".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "Patient".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            differential: Some(StructureDefinitionDifferential {
+                element: vec![
+                    ElementDefinition {
+                        id: Some("Patient.gender".to_string()),
+                        path: "Patient.gender".to_string(),
+                        short: Some("male | female | other | unknown".to_string()),
+                        definition: Some("Administrative Gender".to_string()),
+                        min: Some(0),
+                        max: Some("1".to_string()),
+                        element_type: Some(vec![ElementType {
+                            code: "code".to_string(),
+                            target_profile: None,
+                        }]),
+                        fixed: None,
+                        pattern: None,
+                        binding: Some(ElementBinding {
+                            strength: "required".to_string(),
+                            description: Some("Administrative gender".to_string()),
+                            value_set: Some("http://hl7.org/fhir/ValueSet/administrative-gender".to_string()),
+                        }),
+                    },
+                ],
+            }),
+            snapshot: None,
+        };
+
+        // Generate struct
+        let result = generator.generate_struct(&structure_def).unwrap();
+        
+        // Should have gender field with enum type
+        let gender_field = result.fields.iter().find(|f| f.name == "gender").unwrap();
+        assert_eq!(gender_field.rust_type, "AdministrativeGender");
+        assert!(gender_field.is_optional);
+        
+        // Should have generated the enum in the cache
+        assert!(generator.enum_cache.contains_key("AdministrativeGender"));
+        
+        let enum_def = &generator.enum_cache["AdministrativeGender"];
+        assert_eq!(enum_def.name, "AdministrativeGender");
+        assert_eq!(enum_def.variants.len(), 4); // male, female, other, unknown
+        
+        // Check variant names and values
+        let male_variant = enum_def.variants.iter().find(|v| v.name == "Male").unwrap();
+        assert_eq!(male_variant.value, "male");
+        
+        let female_variant = enum_def.variants.iter().find(|v| v.name == "Female").unwrap();
+        assert_eq!(female_variant.value, "female");
+    }
+
+    #[test]
+    fn test_no_enum_generation_for_non_required_binding() {
+        let config = CodegenConfig::default();
+        let mut generator = CodeGenerator::new(config);
+
+        // Create a StructureDefinition with a code field that has a preferred binding
+        let structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "TestPatient2".to_string(),
+            url: "http://example.org/StructureDefinition/TestPatient".to_string(),
+            version: Some("1.0.0".to_string()),
+            name: "TestPatient".to_string(),
+            title: Some("Test Patient".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "Patient".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            differential: Some(StructureDefinitionDifferential {
+                element: vec![
+                    ElementDefinition {
+                        id: Some("Patient.language".to_string()),
+                        path: "Patient.language".to_string(),
+                        short: Some("Language of the patient".to_string()),
+                        definition: Some("Preferred language".to_string()),
+                        min: Some(0),
+                        max: Some("1".to_string()),
+                        element_type: Some(vec![ElementType {
+                            code: "code".to_string(),
+                            target_profile: None,
+                        }]),
+                        fixed: None,
+                        pattern: None,
+                        binding: Some(ElementBinding {
+                            strength: "preferred".to_string(), // Not required
+                            description: Some("Language".to_string()),
+                            value_set: Some("http://hl7.org/fhir/ValueSet/languages".to_string()),
+                        }),
+                    },
+                ],
+            }),
+            snapshot: None,
+        };
+
+        // Generate struct
+        let result = generator.generate_struct(&structure_def).unwrap();
+        
+        // Should have language field with String type (not enum)
+        let language_field = result.fields.iter().find(|f| f.name == "language").unwrap();
+        assert_eq!(language_field.rust_type, "String");
+        
+        // Should not have generated any enum for this
+        assert!(generator.enum_cache.is_empty());
     }
 }
