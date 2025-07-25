@@ -1,5 +1,5 @@
 //! Code generation library for creating Rust types from FHIR StructureDefinitions
-//! 
+//!
 //! This crate provides functionality to parse FHIR StructureDefinition JSON files
 //! and generate corresponding Rust type definitions.
 
@@ -20,19 +20,19 @@ pub use common::{CommonError, Config};
 pub enum CodegenError {
     #[error("Invalid FHIR type: {fhir_type}")]
     InvalidFhirType { fhir_type: String },
-    
+
     #[error("Missing required field: {field}")]
     MissingField { field: String },
-    
+
     #[error("Code generation failed: {message}")]
     Generation { message: String },
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("JSON parsing error: {0}")]
     Json(#[from] serde_json::Error),
-    
+
     #[error("Common error: {0}")]
     Common(#[from] CommonError),
 }
@@ -58,7 +58,7 @@ pub struct CodegenConfig {
 impl Default for CodegenConfig {
     fn default() -> Self {
         let mut type_mappings = HashMap::new();
-        
+
         // Common FHIR to Rust type mappings
         type_mappings.insert("string".to_string(), "String".to_string());
         type_mappings.insert("integer".to_string(), "i32".to_string());
@@ -73,10 +73,10 @@ impl Default for CodegenConfig {
         type_mappings.insert("markdown".to_string(), "String".to_string());
         type_mappings.insert("base64Binary".to_string(), "String".to_string());
         type_mappings.insert("instant".to_string(), "String".to_string()); // Could be chrono::DateTime
-        type_mappings.insert("date".to_string(), "String".to_string());     // Could be chrono::NaiveDate
+        type_mappings.insert("date".to_string(), "String".to_string()); // Could be chrono::NaiveDate
         type_mappings.insert("dateTime".to_string(), "String".to_string()); // Could be chrono::DateTime
-        type_mappings.insert("time".to_string(), "String".to_string());     // Could be chrono::NaiveTime
-        
+        type_mappings.insert("time".to_string(), "String".to_string()); // Could be chrono::NaiveTime
+
         Self {
             output_dir: "src/generated".to_string(),
             module_name: "fhir_types".to_string(),
@@ -183,19 +183,21 @@ impl CodeGenerator {
         &self,
         path: P,
     ) -> CodegenResult<StructureDefinition> {
-        let content = fs::read_to_string(&path)
-            .map_err(|e| CodegenError::Io(e))?;
-        
-        let structure_def: StructureDefinition = serde_json::from_str(&content)
-            .map_err(|e| CodegenError::Json(e))?;
-        
+        let content = fs::read_to_string(&path).map_err(|e| CodegenError::Io(e))?;
+
+        let structure_def: StructureDefinition =
+            serde_json::from_str(&content).map_err(|e| CodegenError::Json(e))?;
+
         Ok(structure_def)
     }
 
     /// Generate a Rust struct from a FHIR StructureDefinition
-    pub fn generate_struct(&mut self, structure_def: &StructureDefinition) -> CodegenResult<RustStruct> {
+    pub fn generate_struct(
+        &mut self,
+        structure_def: &StructureDefinition,
+    ) -> CodegenResult<RustStruct> {
         let struct_name = self.to_rust_type_name(&structure_def.name);
-        
+
         // Get elements from snapshot or differential
         let elements = if let Some(snapshot) = &structure_def.snapshot {
             &snapshot.element
@@ -243,9 +245,10 @@ impl CodeGenerator {
         let rust_struct = RustStruct {
             name: struct_name,
             fields,
-            documentation: structure_def.title.clone().or_else(|| {
-                Some(format!("FHIR {} resource", structure_def.name))
-            }),
+            documentation: structure_def
+                .title
+                .clone()
+                .or_else(|| Some(format!("FHIR {} resource", structure_def.name))),
             derives,
         };
 
@@ -253,11 +256,21 @@ impl CodeGenerator {
     }
 
     /// Convert an ElementDefinition to a RustField
-    fn element_to_rust_field(&self, element: &ElementDefinition, field_name: &str) -> CodegenResult<RustField> {
+    fn element_to_rust_field(
+        &self,
+        element: &ElementDefinition,
+        field_name: &str,
+    ) -> CodegenResult<RustField> {
         let rust_name = self.to_rust_field_name(field_name);
         let is_optional = element.min.unwrap_or(0) == 0;
-        let is_array = element.max.as_deref() == Some("*") || 
-                      element.max.as_deref().unwrap_or("1").parse::<u32>().unwrap_or(1) > 1;
+        let is_array = element.max.as_deref() == Some("*")
+            || element
+                .max
+                .as_deref()
+                .unwrap_or("1")
+                .parse::<u32>()
+                .unwrap_or(1)
+                > 1;
 
         let rust_type = if let Some(element_types) = &element.element_type {
             if element_types.len() == 1 {
@@ -313,31 +326,37 @@ impl CodeGenerator {
     /// Generate TokenStream for a RustStruct
     pub fn generate_tokens(&self, rust_struct: &RustStruct) -> TokenStream {
         let struct_name = format_ident!("{}", rust_struct.name);
-        let derives: Vec<_> = rust_struct.derives.iter()
+        let derives: Vec<_> = rust_struct
+            .derives
+            .iter()
             .map(|d| format_ident!("{}", d))
             .collect();
 
-        let fields: Vec<_> = rust_struct.fields.iter().map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            let field_type = self.build_field_type(field);
-            
-            let mut attrs = Vec::new();
-            
-            // Add serde rename if needed
-            if let Some(rename) = &field.serde_rename {
-                attrs.push(quote! { #[serde(rename = #rename)] });
-            }
+        let fields: Vec<_> = rust_struct
+            .fields
+            .iter()
+            .map(|field| {
+                let field_name = format_ident!("{}", field.name);
+                let field_type = self.build_field_type(field);
 
-            // Add documentation
-            if let Some(doc) = &field.documentation {
-                attrs.push(quote! { #[doc = #doc] });
-            }
+                let mut attrs = Vec::new();
 
-            quote! {
-                #(#attrs)*
-                pub #field_name: #field_type
-            }
-        }).collect();
+                // Add serde rename if needed
+                if let Some(rename) = &field.serde_rename {
+                    attrs.push(quote! { #[serde(rename = #rename)] });
+                }
+
+                // Add documentation
+                if let Some(doc) = &field.documentation {
+                    attrs.push(quote! { #[doc = #doc] });
+                }
+
+                quote! {
+                    #(#attrs)*
+                    pub #field_name: #field_type
+                }
+            })
+            .collect();
 
         let doc_attr = if let Some(doc) = &rust_struct.documentation {
             quote! { #[doc = #doc] }
@@ -374,10 +393,14 @@ impl CodeGenerator {
     }
 
     /// Generate code and write to file
-    pub fn generate_to_file(&mut self, structure_def: &StructureDefinition, output_path: &Path) -> CodegenResult<()> {
+    pub fn generate_to_file(
+        &mut self,
+        structure_def: &StructureDefinition,
+        output_path: &Path,
+    ) -> CodegenResult<()> {
         let rust_struct = self.generate_struct(structure_def)?;
         let tokens = self.generate_tokens(&rust_struct);
-        
+
         // Create output directory if it doesn't exist
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)?;
@@ -414,21 +437,30 @@ mod tests {
     fn test_rust_name_conversion() {
         let config = CodegenConfig::default();
         let generator = CodeGenerator::new(config);
-        
+
         assert_eq!(generator.to_rust_type_name("Patient"), "Patient");
         assert_eq!(generator.to_rust_type_name("humanName"), "HumanName");
         assert_eq!(generator.to_rust_field_name("birthDate"), "birth_date");
-        assert_eq!(generator.to_rust_field_name("resourceType"), "resource_type");
+        assert_eq!(
+            generator.to_rust_field_name("resourceType"),
+            "resource_type"
+        );
     }
 
     #[test]
     fn test_fhir_type_mapping() {
         let config = CodegenConfig::default();
         let generator = CodeGenerator::new(config);
-        
-        assert_eq!(generator.fhir_type_to_rust_type("string").unwrap(), "String");
+
+        assert_eq!(
+            generator.fhir_type_to_rust_type("string").unwrap(),
+            "String"
+        );
         assert_eq!(generator.fhir_type_to_rust_type("integer").unwrap(), "i32");
         assert_eq!(generator.fhir_type_to_rust_type("boolean").unwrap(), "bool");
-        assert_eq!(generator.fhir_type_to_rust_type("Patient").unwrap(), "Patient");
+        assert_eq!(
+            generator.fhir_type_to_rust_type("Patient").unwrap(),
+            "Patient"
+        );
     }
 }
