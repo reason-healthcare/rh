@@ -223,8 +223,20 @@ impl CodeGenerator {
             }
             processed_paths.insert(field_path);
 
-            let rust_field = self.element_to_rust_field(element, field_name)?;
-            fields.push(rust_field);
+            // Check if this is a choice type (ends with [x])
+            if field_name.ends_with("[x]") {
+                // Handle choice type - generate multiple fields for each possible type
+                if let Some(element_types) = &element.element_type {
+                    for element_type in element_types {
+                        let choice_field = self.element_to_choice_field(element, field_name, &element_type.code)?;
+                        fields.push(choice_field);
+                    }
+                }
+            } else {
+                // Handle regular field
+                let rust_field = self.element_to_rust_field(element, field_name)?;
+                fields.push(rust_field);
+            }
         }
 
         let mut derives = vec!["Debug".to_string(), "Clone".to_string()];
@@ -279,6 +291,50 @@ impl CodeGenerator {
 
         let serde_rename = if rust_name != field_name && self.config.with_serde {
             Some(field_name.to_string())
+        } else {
+            None
+        };
+
+        Ok(RustField {
+            name: rust_name,
+            rust_type,
+            is_optional,
+            is_array,
+            documentation: element.short.clone().or_else(|| element.definition.clone()),
+            serde_rename,
+        })
+    }
+
+    /// Convert an ElementDefinition with a specific type to a RustField for choice types
+    fn element_to_choice_field(
+        &self,
+        element: &ElementDefinition,
+        field_name: &str,
+        type_code: &str,
+    ) -> CodegenResult<RustField> {
+        // Remove [x] from field name and add the specific type
+        let base_name = field_name.trim_end_matches("[x]");
+        let type_suffix = self.to_rust_field_name(type_code);
+        let choice_field_name = format!("{}_{}", base_name, type_suffix);
+        
+        let rust_name = self.to_rust_field_name(&choice_field_name);
+        let is_optional = element.min.unwrap_or(0) == 0; // Choice fields are typically optional
+        let is_array = element.max.as_deref() == Some("*")
+            || element
+                .max
+                .as_deref()
+                .unwrap_or("1")
+                .parse::<u32>()
+                .unwrap_or(1)
+                > 1;
+
+        let rust_type = self.fhir_type_to_rust_type(type_code)?;
+        
+        // For choice types, the serde rename should use the original field name with the type
+        let serde_rename = if self.config.with_serde {
+            // FHIR choice fields are named like "valueString", "valueQuantity", etc.
+            let capitalized_type = type_code.chars().next().unwrap_or('a').to_uppercase().collect::<String>() + &type_code[1..];
+            Some(format!("{}{}", base_name, capitalized_type))
         } else {
             None
         };
@@ -573,5 +629,88 @@ mod tests {
 
         // Cache should still contain one entry
         assert_eq!(generator.type_cache.len(), 1);
+    }
+
+    #[test]
+    fn test_choice_type_generation() {
+        let config = CodegenConfig::default();
+        let mut generator = CodeGenerator::new(config);
+
+        // Create a test StructureDefinition with a choice type
+        let structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "test-observation".to_string(),
+            url: "http://example.com/Observation".to_string(),
+            version: Some("1.0.0".to_string()),
+            name: "TestObservation".to_string(),
+            title: Some("Test Observation".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "Observation".to_string(),
+            base_definition: None,
+            differential: None,
+            snapshot: Some(StructureDefinitionSnapshot {
+                element: vec![
+                    ElementDefinition {
+                        id: Some("Observation".to_string()),
+                        path: "Observation".to_string(),
+                        short: None,
+                        definition: None,
+                        min: Some(1),
+                        max: Some("1".to_string()),
+                        element_type: None,
+                        fixed: None,
+                        pattern: None,
+                    },
+                    ElementDefinition {
+                        id: Some("Observation.value[x]".to_string()),
+                        path: "Observation.value[x]".to_string(),
+                        short: Some("Actual result".to_string()),
+                        definition: None,
+                        min: Some(0),
+                        max: Some("1".to_string()),
+                        element_type: Some(vec![
+                            ElementType {
+                                code: "string".to_string(),
+                                target_profile: None,
+                            },
+                            ElementType {
+                                code: "Quantity".to_string(),
+                                target_profile: None,
+                            },
+                        ]),
+                        fixed: None,
+                        pattern: None,
+                    },
+                ],
+            }),
+        };
+
+        // Generate struct with choice type
+        let result = generator.generate_struct(&structure_def).unwrap();
+        
+        // Should have 2 fields: value_string and value_quantity
+        assert_eq!(result.fields.len(), 2);
+        
+        // Check field names and types
+        let field_names: Vec<_> = result.fields.iter().map(|f| f.name.as_str()).collect();
+        assert!(field_names.contains(&"value_string"));
+        assert!(field_names.contains(&"value_quantity"));
+        
+        // Check serde rename attributes
+        let value_string_field = result.fields.iter().find(|f| f.name == "value_string").unwrap();
+        assert_eq!(value_string_field.serde_rename, Some("valueString".to_string()));
+        
+        let value_quantity_field = result.fields.iter().find(|f| f.name == "value_quantity").unwrap();
+        assert_eq!(value_quantity_field.serde_rename, Some("valueQuantity".to_string()));
+        
+        // Check field types
+        assert_eq!(value_string_field.rust_type, "String");
+        assert_eq!(value_quantity_field.rust_type, "Quantity");
+        
+        // Choice fields should be optional
+        assert!(value_string_field.is_optional);
+        assert!(value_quantity_field.is_optional);
     }
 }
