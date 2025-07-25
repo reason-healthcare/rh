@@ -606,7 +606,44 @@ impl CodeGenerator {
             name.to_string()
         };
 
-        cleaned_name.to_case(Case::Snake)
+        let snake_case_name = cleaned_name.to_case(Case::Snake);
+        
+        // Handle Rust reserved keywords by appending underscore
+        match snake_case_name.as_str() {
+            "abstract" => "abstract_".to_string(),
+            "type" => "type_".to_string(),
+            "match" => "match_".to_string(),
+            "use" => "use_".to_string(),
+            "mod" => "mod_".to_string(),
+            "fn" => "fn_".to_string(),
+            "struct" => "struct_".to_string(),
+            "enum" => "enum_".to_string(),
+            "trait" => "trait_".to_string(),
+            "impl" => "impl_".to_string(),
+            "self" => "self_".to_string(),
+            "Self" => "self_type".to_string(),
+            "super" => "super_".to_string(),
+            "crate" => "crate_".to_string(),
+            "where" => "where_".to_string(),
+            "for" => "for_".to_string(),
+            "if" => "if_".to_string(),
+            "else" => "else_".to_string(),
+            "while" => "while_".to_string(),
+            "loop" => "loop_".to_string(),
+            "return" => "return_".to_string(),
+            "break" => "break_".to_string(),
+            "continue" => "continue_".to_string(),
+            "let" => "let_".to_string(),
+            "mut" => "mut_".to_string(),
+            "const" => "const_".to_string(),
+            "static" => "static_".to_string(),
+            "ref" => "ref_".to_string(),
+            "move" => "move_".to_string(),
+            "box" => "box_".to_string(),
+            "async" => "async_".to_string(),
+            "await" => "await_".to_string(),
+            _ => snake_case_name,
+        }
     }
 
     /// Convert a FHIR resource type name to snake_case filename
