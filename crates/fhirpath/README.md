@@ -16,7 +16,18 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
 - **AST**: Type-safe representation of FHIRPath expressions with full serialization support
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, and string functions implemented, comprehensive evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, and **array indexing with full nested support** implemented, comprehensive evaluation functional
+
+## Recent Updates
+
+### Array Indexing Implementation (Latest)
+- ✅ **Complete array indexing support**: `name[0]`, `telecom[1].value`, `name[0].given[1]`
+- ✅ **Nested indexing**: Full support for deep indexing like `name[0].given[0]`
+- ✅ **Bounds checking**: Out-of-bounds access returns `Empty` instead of errors
+- ✅ **Collection preservation**: Fixed critical bug where single-element arrays were being flattened
+- ✅ **Primitive collections**: Indexing works on all collection types (strings, integers, objects)
+- ✅ **Edge case handling**: Empty collection indexing, mixed-type collections
+- ✅ **Comprehensive testing**: 15+ test scenarios covering all indexing patterns
 
 ## Architecture
 
@@ -48,7 +59,7 @@ The FHIRPath implementation consists of four main components:
 #### Expression Types
 - **Term expressions**: Simple literals and identifiers
 - **Member invocation**: `Patient.name`, `name.given`
-- **Array indexing**: `Patient.name[0]`, `telecom[1].value`
+- **Array indexing**: `Patient.name[0]`, `telecom[1].value`, `name[0].given[0]` (with full nested indexing support)
 - **Union operations**: `name.given | name.family`
 - **Logical operations**: `active and birthDate.exists()`
 - **Equality operations**: `use = 'official'`, `active != false`
@@ -127,6 +138,7 @@ The FHIRPath implementation consists of four main components:
 #### Basic Evaluation
 - ✅ Literal evaluation
 - ✅ Simple member access on JSON objects
+- ✅ Array indexing with bounds checking and nested indexing support
 - ✅ Basic logical operations
 - ✅ Arithmetic operations with proper precedence
 - ✅ Comparison operations with type safety
@@ -232,7 +244,11 @@ let patient = json!({
     "active": true,
     "name": [{
         "use": "official",
-        "given": ["John"],
+        "given": ["John", "James"],
+        "family": "Doe"
+    }, {
+        "use": "usual",
+        "given": ["Johnny"],
         "family": "Doe"
     }],
     "birthDate": "1974-12-25"
@@ -247,20 +263,38 @@ let expr = parser.parse("resourceType").unwrap();
 let result = evaluator.evaluate(&expr, &context).unwrap();
 // result: FhirPathValue::String("Patient")
 
+// Array indexing
+let expr = parser.parse("name[0].family").unwrap();
+let result = evaluator.evaluate(&expr, &context).unwrap();
+// result: FhirPathValue::String("Doe")
+
+// Nested array indexing
+let expr = parser.parse("name[0].given[1]").unwrap();
+let result = evaluator.evaluate(&expr, &context).unwrap();
+// result: FhirPathValue::String("James")
+
 // Collection operations
 let expr = parser.parse("name.count()").unwrap();
 let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::Integer(1)
+// result: FhirPathValue::Integer(2)
 
-// Filtering
-let expr = parser.parse("name.where(use = 'official').given").unwrap();
+// Filtering with indexing
+let expr = parser.parse("name.where(use = 'official')[0].given[0]").unwrap();
 let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::Collection([FhirPathValue::String("John")])
+// result: FhirPathValue::String("John")
 ```
 
 ### Working Examples
 
 ```rust
+// Array indexing operations
+parser.parse("name[0]").unwrap();             // ✅ → First name object
+parser.parse("name[1].family").unwrap();      // ✅ → Second name's family
+parser.parse("name[0].given[0]").unwrap();    // ✅ → First given name
+parser.parse("name[0].given[1]").unwrap();    // ✅ → Second given name
+parser.parse("name[10]").unwrap();            // ✅ → Empty (out of bounds)
+parser.parse("(10 | 20 | 30)[1]").unwrap();  // ✅ → Integer(20)
+
 // Arithmetic operations
 parser.parse("1 + 2").unwrap();              // ✅ → Integer(3)
 parser.parse("10 - 3").unwrap();             // ✅ → Integer(7)
@@ -305,6 +339,12 @@ parser.parse("active and name.exists()").unwrap(); // ✅ Works
 
 // Union operations
 parser.parse("name.given | name.family").unwrap(); // ✅ Works
+
+// Complex indexing with filtering
+parser.parse("name.where(use = 'official')[0].given[0]").unwrap(); // ✅ Works
+
+// Empty collection indexing
+parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
 ```
 
 ## Grammar Support
@@ -341,9 +381,10 @@ The parser is built with operator precedence in mind:
 The implementation includes comprehensive tests:
 
 - **Unit tests**: 27 tests covering parser and evaluator
-- **Integration tests**: 15+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, and string manipulation
-- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, and string function calls
-- **Evaluator coverage**: Literals, member access, arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
+- **Integration tests**: 20+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, and array indexing
+- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, and array indexing
+- **Evaluator coverage**: Literals, member access, array indexing (including nested indexing), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
+- **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation
 
 ### Run Tests
 
@@ -354,6 +395,7 @@ cargo test --package fhirpath
 # Run specific test categories
 cargo test --package fhirpath test_collection_functions -- --nocapture
 cargo test --package fhirpath test_filtering_functions_integration -- --nocapture
+cargo test --package fhirpath test_array_indexing -- --nocapture
 cargo test --package fhirpath strings -- --nocapture
 cargo test --package fhirpath --test string_integration_test
 cargo test --package fhirpath --test comprehensive_string_test
@@ -374,10 +416,10 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 ### Phase 2: Basic Evaluation (✅ Complete)
 - [x] Literal evaluation
 - [x] Simple member access
+- [x] Array indexing evaluation with bounds checking and nested support
 - [x] Basic logical operations
 - [x] Arithmetic operations with proper precedence
 - [x] String concatenation and type conversion
-- [ ] Array indexing evaluation
 - [ ] Union operation evaluation
 
 ### Phase 3: Advanced Parsing (❌ Not Started)
