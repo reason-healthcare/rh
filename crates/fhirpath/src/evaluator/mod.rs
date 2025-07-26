@@ -6,6 +6,7 @@ mod comparison;
 mod context;
 mod core;
 mod functions;
+mod math;
 mod strings;
 mod values;
 
@@ -19,4 +20,5 @@ pub use arithmetic::ArithmeticEvaluator;
 pub use collection::CollectionEvaluator;
 pub use comparison::ComparisonEvaluator;
 pub use functions::FunctionRegistry;
+pub use math::MathEvaluator;
 pub use strings::StringEvaluator;

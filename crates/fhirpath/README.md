@@ -17,7 +17,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
 - **AST**: Type-safe representation of FHIRPath expressions with full serialization support
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, **array indexing with full nested support**, and **union operations** implemented, comprehensive evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, **math functions**, **array indexing with full nested support**, and **union operations** implemented, comprehensive evaluation functional
 
 ## Architecture
 
@@ -36,7 +36,7 @@ The FHIRPath implementation consists of four main components:
 
 ### 3. Evaluator (`src/evaluator.rs`)
 - **Status**: ⏳ Expanding implementation
-- **Features**: Evaluates expressions against JSON FHIR resources including arithmetic, comparisons, membership, collection functions, filtering functions, and string manipulation functions
+- **Features**: Evaluates expressions against JSON FHIR resources including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation functions, and mathematical functions
 
 ### 4. Error Handling (`src/error.rs`)
 - **Status**: ✅ Complete
@@ -136,6 +136,18 @@ The FHIRPath implementation consists of four main components:
 - **join(delimiter)**: Join collection with delimiter
 - **matches(pattern)**: Test if string matches pattern
 
+#### Math Functions
+- **abs()**: Absolute value of number
+- **ceiling()**: Round up to nearest integer
+- **exp()**: e raised to the power of number (e^x)
+- **floor()**: Round down to nearest integer
+- **ln()**: Natural logarithm (base e)
+- **log(base)**: Logarithm with specified base
+- **power(exponent)**: Raise number to specified power
+- **round(precision?)**: Round to specified decimal places (default 0)
+- **sqrt()**: Square root of number
+- **truncate()**: Remove fractional part (toward zero)
+
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
@@ -150,6 +162,8 @@ The FHIRPath implementation consists of four main components:
 - ✅ Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
 - ✅ Filtering functions (where, select)
 - ✅ String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
+- ✅ Math functions (abs, ceiling, exp, floor, ln, log, power, round, sqrt, truncate)
+- ✅ Polarity operations (-, +)
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
 - ❌ Advanced function execution (repeat, etc.)
@@ -159,7 +173,6 @@ The FHIRPath implementation consists of four main components:
 
 #### Advanced Expression Types
 - **Type operations**: `is`, `as`
-- **Polarity operations**: `-value`, `+value`
 - **Implies operation**: `condition implies action`
 
 #### Advanced Literals
@@ -335,6 +348,17 @@ parser.parse("name.select(family)").unwrap(); // ✅ → Projected collection
 parser.parse("'hello'.length()").unwrap();   // ✅ → Integer(5)
 parser.parse("'HELLO'.lower()").unwrap();    // ✅ → "hello"
 parser.parse("'  text  '.trim()").unwrap();  // ✅ → "text"
+
+// Math functions
+parser.parse("(-5).abs()").unwrap();         // ✅ → Integer(5)
+parser.parse("3.7.ceiling()").unwrap();      // ✅ → Integer(4)
+parser.parse("3.2.floor()").unwrap();       // ✅ → Integer(3)
+parser.parse("16.sqrt()").unwrap();          // ✅ → Number(4.0)
+parser.parse("2.power(3)").unwrap();         // ✅ → Number(8.0)
+parser.parse("3.14159.round(2)").unwrap();   // ✅ → Number(3.14)
+parser.parse("8.log(2)").unwrap();           // ✅ → Number(3.0)
+parser.parse("2.718281828.ln()").unwrap();   // ✅ → Number(~1.0)
+parser.parse("(-3.7).abs().ceiling()").unwrap(); // ✅ → Integer(4)
 parser.parse("'hello world'.substring(6)").unwrap(); // ✅ → "world"
 parser.parse("'hello'.startsWith('he')").unwrap(); // ✅ → Boolean(true)
 parser.parse("'a,b,c'.split(',')").unwrap(); // ✅ → Collection(["a", "b", "c"])
@@ -403,7 +427,7 @@ The parser is built with operator precedence in mind:
 The implementation includes comprehensive tests:
 
 - **Unit tests**: 28 tests covering parser and evaluator including temporal literals
-- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, array indexing, union operations, and temporal literals
+- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, math functions, array indexing, union operations, and temporal literals
 - **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, array indexing, union operations, and temporal literals
 - **Evaluator coverage**: Literals (including temporal), member access, array indexing (including nested indexing), union operations (including mixed types and nested unions), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
 - **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation, union with empty values, temporal literal parsing validation
@@ -455,7 +479,7 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
 - [x] Filtering functions (where, select)
 - [x] String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
-- [ ] Math functions (abs, round, etc.)
+- [x] Math functions (abs, round, etc.)
 - [ ] Date/time functions (now, today, etc.)
 
 ### Phase 5: Advanced Features (❌ Not Started)

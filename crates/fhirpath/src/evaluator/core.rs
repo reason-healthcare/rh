@@ -103,6 +103,10 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 ArithmeticEvaluator::evaluate_multiplicative(&left_result, operator, &right_result)
             }
+            Expression::Polarity { operator, operand } => {
+                let operand_result = self.evaluate_expression(operand, context)?;
+                ArithmeticEvaluator::evaluate_polarity(operator, &operand_result)
+            }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Unsupported expression type: {expression:?}"),
             }),

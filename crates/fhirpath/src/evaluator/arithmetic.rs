@@ -35,6 +35,17 @@ impl ArithmeticEvaluator {
         }
     }
 
+    /// Evaluate polarity operation (+ or -)
+    pub fn evaluate_polarity(
+        operator: &PolarityOperator,
+        operand: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match operator {
+            PolarityOperator::Plus => Ok(operand.clone()),
+            PolarityOperator::Minus => Self::negate_value(operand),
+        }
+    }
+
     /// Add two values
     pub fn add_values(
         left: &FhirPathValue,
@@ -263,5 +274,16 @@ impl ArithmeticEvaluator {
         let left_str = left.to_string_value()?;
         let right_str = right.to_string_value()?;
         Ok(FhirPathValue::String(format!("{left_str}{right_str}")))
+    }
+
+    /// Negate a value
+    pub fn negate_value(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(-n)),
+            FhirPathValue::Number(n) => Ok(FhirPathValue::Number(-n)),
+            _ => Err(FhirPathError::EvaluationError {
+                message: format!("Cannot negate {value:?}"),
+            }),
+        }
     }
 }

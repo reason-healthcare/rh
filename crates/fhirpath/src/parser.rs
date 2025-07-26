@@ -215,10 +215,10 @@ fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_union_expression(input)?;
+    let (input, first) = parse_unary_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
-        parse_union_expression,
+        parse_unary_expression,
     )))(input)?;
 
     Ok((
@@ -238,6 +238,19 @@ fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
             }
         }),
     ))
+}
+
+// Parse unary expressions (-, not)
+fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
+    alt((
+        map(preceded(ws(char('-')), parse_unary_expression), |expr| {
+            Expression::Polarity {
+                operator: PolarityOperator::Minus,
+                operand: Box::new(expr),
+            }
+        }),
+        parse_union_expression,
+    ))(input)
 }
 
 // Parse union expressions

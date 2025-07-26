@@ -2,6 +2,7 @@
 
 use crate::error::*;
 use crate::evaluator::collection::CollectionEvaluator;
+use crate::evaluator::math::MathEvaluator;
 use crate::evaluator::strings::StringEvaluator;
 use crate::evaluator::values::FhirPathValue;
 use std::collections::HashMap;
@@ -44,6 +45,9 @@ impl FunctionRegistry {
 
         // String functions
         self.register_string_functions();
+
+        // Math functions
+        self.register_math_functions();
     }
 
     /// Register the empty() function
@@ -353,6 +357,103 @@ impl FunctionRegistry {
 
         // Note: The contains() function above provides string containment checking.
         // This is distinct from FHIRPath collection contains operations.
+    }
+
+    /// Register all math functions
+    fn register_math_functions(&mut self) {
+        // abs() function
+        self.functions.insert(
+            "abs".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::abs(target)
+            }),
+        );
+
+        // ceiling() function
+        self.functions.insert(
+            "ceiling".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::ceiling(target)
+            }),
+        );
+
+        // exp() function
+        self.functions.insert(
+            "exp".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::exp(target)
+            }),
+        );
+
+        // floor() function
+        self.functions.insert(
+            "floor".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::floor(target)
+            }),
+        );
+
+        // ln() function
+        self.functions.insert(
+            "ln".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::ln(target)),
+        );
+
+        // log() function - requires base parameter
+        self.functions.insert(
+            "log".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "log() requires exactly one parameter (base)".to_string(),
+                    });
+                }
+                MathEvaluator::log(target, &params[0])
+            }),
+        );
+
+        // power() function - requires exponent parameter
+        self.functions.insert(
+            "power".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "power() requires exactly one parameter (exponent)".to_string(),
+                    });
+                }
+                MathEvaluator::power(target, &params[0])
+            }),
+        );
+
+        // round() function - optional precision parameter
+        self.functions.insert(
+            "round".to_string(),
+            Box::new(
+                |target: &FhirPathValue, params: &[FhirPathValue]| match params.len() {
+                    0 => MathEvaluator::round(target, None),
+                    1 => MathEvaluator::round(target, Some(&params[0])),
+                    _ => Err(FhirPathError::InvalidOperation {
+                        message: "round() accepts at most one parameter (precision)".to_string(),
+                    }),
+                },
+            ),
+        );
+
+        // sqrt() function
+        self.functions.insert(
+            "sqrt".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::sqrt(target)
+            }),
+        );
+
+        // truncate() function
+        self.functions.insert(
+            "truncate".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                MathEvaluator::truncate(target)
+            }),
+        );
     }
 }
 
