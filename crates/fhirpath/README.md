@@ -348,20 +348,20 @@ parser.parse("name.select(family)").unwrap(); // ✅ → Projected collection
 parser.parse("'hello'.length()").unwrap();   // ✅ → Integer(5)
 parser.parse("'HELLO'.lower()").unwrap();    // ✅ → "hello"
 parser.parse("'  text  '.trim()").unwrap();  // ✅ → "text"
-
-// Math functions
-parser.parse("(-5).abs()").unwrap();         // ✅ → Integer(5)
-parser.parse("3.7.ceiling()").unwrap();      // ✅ → Integer(4)
-parser.parse("3.2.floor()").unwrap();       // ✅ → Integer(3)
-parser.parse("16.sqrt()").unwrap();          // ✅ → Number(4.0)
-parser.parse("2.power(3)").unwrap();         // ✅ → Number(8.0)
-parser.parse("3.14159.round(2)").unwrap();   // ✅ → Number(3.14)
-parser.parse("8.log(2)").unwrap();           // ✅ → Number(3.0)
-parser.parse("2.718281828.ln()").unwrap();   // ✅ → Number(~1.0)
-parser.parse("(-3.7).abs().ceiling()").unwrap(); // ✅ → Integer(4)
 parser.parse("'hello world'.substring(6)").unwrap(); // ✅ → "world"
 parser.parse("'hello'.startsWith('he')").unwrap(); // ✅ → Boolean(true)
 parser.parse("'a,b,c'.split(',')").unwrap(); // ✅ → Collection(["a", "b", "c"])
+
+// Math functions
+parser.parse("(-5).abs()").unwrap();         // ✅ → Integer(5) - absolute value
+parser.parse("3.7.ceiling()").unwrap();      // ✅ → Integer(4) - round up
+parser.parse("3.2.floor()").unwrap();        // ✅ → Integer(3) - round down
+parser.parse("16.sqrt()").unwrap();          // ✅ → Number(4.0) - square root
+parser.parse("2.power(3)").unwrap();         // ✅ → Number(8.0) - 2³
+parser.parse("3.14159.round(2)").unwrap();   // ✅ → Number(3.14) - round to 2 decimals
+parser.parse("8.log(2)").unwrap();           // ✅ → Number(3.0) - log₂(8)
+parser.parse("1.exp()").unwrap();            // ✅ → Number(2.718...) - e¹
+parser.parse("(-3.7).abs().ceiling()").unwrap(); // ✅ → Integer(4) - function chaining
 
 // Function chaining
 parser.parse("'  HELLO  '.trim().lower()").unwrap(); // ✅ → "hello"
@@ -426,8 +426,8 @@ The parser is built with operator precedence in mind:
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 28 tests covering parser and evaluator including temporal literals
-- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, math functions, array indexing, union operations, and temporal literals
+- **Unit tests**: tests covering parser and evaluator including temporal literals
+- **Integration tests**: real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, math functions, array indexing, union operations, and temporal literals
 - **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, array indexing, union operations, and temporal literals
 - **Evaluator coverage**: Literals (including temporal), member access, array indexing (including nested indexing), union operations (including mixed types and nested unions), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
 - **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation, union with empty values, temporal literal parsing validation

@@ -49,6 +49,33 @@ cargo run --example arithmetic_operations
 cargo run --example string_functions
 ```
 
+#### [`math_functions.rs`](math_functions.rs)
+**Mathematical functions for healthcare calculations**
+- Basic math: abs(), ceiling(), floor(), round(), truncate()
+- Power and roots: power(), sqrt()
+- Logarithms: ln(), log(), exp()
+- Function chaining for complex calculations
+- Healthcare examples: BMI, temperature conversion, dosage calculations
+- Statistical analysis components
+- Error handling for invalid mathematical operations
+
+**Run with:**
+```bash
+cargo run --example math_functions
+```
+
+#### [`simple_math.rs`](simple_math.rs)
+**Quick demonstration of basic math functions**
+- Essential mathematical operations with clear examples
+- Function chaining demonstrations
+- Clean, readable output format
+- Perfect for learning the basics
+
+**Run with:**
+```bash
+cargo run --example simple_math
+```
+
 #### [`collection_operations.rs`](collection_operations.rs)
 **Collection operations and array handling**
 - Basic collection access
