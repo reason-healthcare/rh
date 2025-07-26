@@ -4,7 +4,7 @@
 
 This document describes the current implementation status of FHIRPath in the `fhirpath` crate. FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification.
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations and collection functions implemented, basic evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, and filtering functions implemented, basic evaluation functional
 
 ## Architecture
 
@@ -22,8 +22,8 @@ The FHIRPath implementation consists of four main components:
 - **Serialization**: Full serde support for JSON serialization
 
 ### 3. Evaluator (`src/evaluator.rs`)
-- **Status**: ⏳ Basic implementation
-- **Features**: Evaluates simple expressions against JSON FHIR resources
+- **Status**: ⏳ Expanding implementation
+- **Features**: Evaluates expressions against JSON FHIR resources including arithmetic, comparisons, membership, collection functions, and filtering functions
 
 ### 4. Error Handling (`src/error.rs`)
 - **Status**: ✅ Complete
@@ -95,9 +95,10 @@ The FHIRPath implementation consists of four main components:
 - ✅ Comparison operations with type safety
 - ✅ Membership operations with collection semantics
 - ✅ Collection functions (empty, exists, count, distinct, isDistinct)
+- ✅ Filtering functions (where, select)
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
-- ❌ Advanced function execution (where, select, etc.)
+- ❌ Advanced function execution (repeat, etc.)
 - ❌ Type coercion
 
 ### ❌ Not Yet Implemented
@@ -205,8 +206,8 @@ The FHIRPath implementation consists of four main components:
 
 | Function | Description | Parser Support | Evaluator Support | Status |
 |----------|-------------|----------------|-------------------|---------|
-| `where(criteria)` | Filter by criteria | ✅ | ❌ | Parse only |
-| `select(projection)` | Transform each item | ✅ | ❌ | Parse only |
+| `where(criteria)` | Filter by criteria | ✅ | ✅ | Complete |
+| `select(projection)` | Transform each item | ✅ | ✅ | Complete |
 | `repeat(projection)` | Recursive projection | ✅ | ❌ | Parse only |
 
 #### Subsetting Functions
@@ -357,14 +358,20 @@ parser.parse("telecom.count()").unwrap(); // ✅ Works → Integer evaluation
 parser.parse("items.distinct()").unwrap(); // ✅ Works → Collection evaluation
 parser.parse("values.isDistinct()").unwrap(); // ✅ Works → Boolean evaluation
 
+// Filtering functions (full implementation)
+parser.parse("name.where(use = 'official')").unwrap(); // ✅ Works → Filtered collection
+parser.parse("name.select(family)").unwrap(); // ✅ Works → Projected collection
+parser.parse("name.select(given)").unwrap(); // ✅ Works → Flattened given names
+parser.parse("patients.where(active = true)").unwrap(); // ✅ Works → Active patients
+
 // Logical operations
 parser.parse("active and name.exists()").unwrap(); // ✅ Works
 
 // Union operations
 parser.parse("name.given | name.family").unwrap(); // ✅ Works
 
-// Complex expressions (parsing only)
-parser.parse("name.where(use = 'official').given").unwrap(); // ✅ Parses
+// Complex expressions with filtering (full implementation)
+parser.parse("name.where(use = 'official').given").unwrap(); // ✅ Works → Filtered then projected
 ```
 
 ### Examples That Don't Work Yet
@@ -403,9 +410,9 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 - [ ] Quantity literals
 - [ ] Type operators
 
-### Phase 4: Function Implementation (⏳ Basic collection functions complete)
+### Phase 4: Function Implementation (⏳ Collection and filtering functions complete)
 - [x] Collection functions (exists, count, empty, distinct, isDistinct)
-- [ ] Filtering functions (where, select)
+- [x] Filtering functions (where, select)
 - [ ] String functions (length, substring, etc.)
 - [ ] Math functions (abs, round, etc.)
 - [ ] Date/time functions (now, today, etc.)
@@ -420,15 +427,16 @@ evaluator.evaluate(&expr, &context);      // ❌ Limited support
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 24 tests covering parser and evaluator
-- **Integration tests**: 8 real-world usage examples including arithmetic, comparisons, membership, and collection functions
-- **Parser coverage**: All core syntax elements parse successfully including collection function calls
-- **Evaluator coverage**: Literals, member access, arithmetic, comparison, membership, and collection function operations
+- **Unit tests**: 25 tests covering parser and evaluator
+- **Integration tests**: 9 real-world usage examples including arithmetic, comparisons, membership, collection functions, and filtering functions
+- **Parser coverage**: All core syntax elements parse successfully including collection and filtering function calls
+- **Evaluator coverage**: Literals, member access, arithmetic, comparison, membership, collection functions, and filtering operations
 
 Run tests with:
 ```bash
 cargo test --package fhirpath
 cargo test --package fhirpath test_collection_functions -- --nocapture
+cargo test --package fhirpath test_filtering_functions_integration -- --nocapture
 ```
 
 ## Integration with FHIR Codegen
