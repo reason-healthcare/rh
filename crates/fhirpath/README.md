@@ -139,7 +139,7 @@ The FHIRPath implementation consists of four main components:
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
-- ✅ Literal evaluation
+- ✅ Literal evaluation (including temporal literals)
 - ✅ Simple member access on JSON objects
 - ✅ Array indexing with bounds checking and nested indexing support
 - ✅ Basic logical operations
@@ -163,9 +163,6 @@ The FHIRPath implementation consists of four main components:
 - **Implies operation**: `condition implies action`
 
 #### Advanced Literals
-- **Date literals**: `@2023-01-01`
-- **DateTime literals**: `@2023-01-01T12:00:00Z`
-- **Time literals**: `@T12:00:00`
 - **Quantity literals**: `5 'mg'`, `10 'cm'`
 - **Long numbers**: `1000L`
 
@@ -361,6 +358,13 @@ parser.parse("(10 | 20 | 30)[1]").unwrap();     // ✅ → Integer(20) (union + 
 // Complex indexing with filtering
 parser.parse("name.where(use = 'official')[0].given[0]").unwrap(); // ✅ Works
 
+// Temporal literals
+parser.parse("@2023-01-01").unwrap();                // ✅ → Date literal
+parser.parse("@2023-01-01T12:30:45").unwrap();       // ✅ → DateTime literal
+parser.parse("@2023-01-01T00:00:00Z").unwrap();      // ✅ → DateTime with UTC timezone
+parser.parse("@2023-01-01T12:30:45+05:30").unwrap(); // ✅ → DateTime with timezone offset
+parser.parse("@T12:30:45").unwrap();                 // ✅ → Time literal
+
 // Empty collection indexing
 parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
 ```
@@ -398,11 +402,11 @@ The parser is built with operator precedence in mind:
 
 The implementation includes comprehensive tests:
 
-- **Unit tests**: 27 tests covering parser and evaluator
-- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, array indexing, and union operations
-- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, array indexing, and union operations
-- **Evaluator coverage**: Literals, member access, array indexing (including nested indexing), union operations (including mixed types and nested unions), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
-- **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation, union with empty values
+- **Unit tests**: 28 tests covering parser and evaluator including temporal literals
+- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, array indexing, union operations, and temporal literals
+- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, array indexing, union operations, and temporal literals
+- **Evaluator coverage**: Literals (including temporal), member access, array indexing (including nested indexing), union operations (including mixed types and nested unions), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
+- **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation, union with empty values, temporal literal parsing validation
 
 ### Run Tests
 
@@ -441,8 +445,8 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] String concatenation and type conversion
 - [x] Union operation evaluation
 
-### Phase 3: Advanced Parsing (❌ Not Started)
-- [ ] Date/time literals
+### Phase 3: Advanced Parsing (⏳ Temporal literals complete)
+- [x] Date/time literals
 - [ ] Quantity literals
 - [ ] Type operators
 
@@ -485,10 +489,10 @@ This implementation covers the core FHIRPath functionality but there are areas w
 ### Priority Areas
 
 1. **Function Implementation**: Math and date/time functions
-2. **Date/Time Support**: Parsing and evaluation of temporal literals
-3. **Performance**: Optimization of parser and evaluator
-4. **Error Messages**: Better error reporting with suggestions
-5. **FHIR Integration**: Better integration with generated FHIR types
+2. **Performance**: Optimization of parser and evaluator
+3. **Error Messages**: Better error reporting with suggestions
+4. **FHIR Integration**: Better integration with generated FHIR types
+5. **Quantity Literals**: Support for unit-based quantities like `5 'mg'`
 
 ### Development Guidelines
 
