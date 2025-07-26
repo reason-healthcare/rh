@@ -27,14 +27,14 @@ For detailed usage examples and comprehensive documentation, see:
 .
 ├── Cargo.toml              # Workspace root configuration
 ├── crates/                 # Library crates
-│   ├── codegen/           # 🔧 FHIR code generation library
-│   ├── common/            # 📦 Shared utilities and error handling  
-│   ├── core/              # 🏗️ Core functionality
-│   └── fhirpath/          # 🔍 FHIRPath expression parser and evaluator
-├── apps/                  # Executable applications
-│   └── rh/                # 🎯 Unified CLI with codegen and fhirpath subcommands
-├── setup.sh              # 🔨 Development setup script
-└── build.sh              # 🏭 Build script for CI/CD
+│   ├── codegen/              # 🔧 FHIR code generation library
+│   ├── common/               # 📦 Shared utilities and error handling  
+│   ├── core/                 # 🏗️ Core functionality
+│   └── fhirpath/             # 🔍 FHIRPath expression parser and evaluator
+├── apps/                   # Executable applications
+│   └── rh/                 # 🎯 Unified cross-platform CLI for FHIR
+├── setup.sh                # 🔨 Development setup script
+└── build.sh                # 🏭 Build script for CI/CD
 ```
 
 ## Libraries
