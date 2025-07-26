@@ -169,9 +169,7 @@ impl ArithmeticEvaluator {
                     Self::add_precision_to_datetime(datetime_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
-                        message: format!(
-                            "Cannot add quantity with unit '{unit_str}' to datetime"
-                        ),
+                        message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
                     })
                 }
             }
@@ -186,9 +184,7 @@ impl ArithmeticEvaluator {
                     Self::add_precision_to_datetime(datetime_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
-                        message: format!(
-                            "Cannot add quantity with unit '{unit_str}' to datetime"
-                        ),
+                        message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
                     })
                 }
             }
@@ -892,27 +888,30 @@ impl ArithmeticEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         // Parse datetime - handle timezone
         let datetime = if let Some(base_str) = datetime_str.strip_suffix('Z') {
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S").map_err(|_| {
-                FhirPathError::EvaluationError {
+            // Try parsing with milliseconds first, then fall back to seconds only
+            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
+                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
+                .map_err(|_| FhirPathError::EvaluationError {
                     message: format!("Invalid datetime format: {datetime_str}"),
-                }
-            })?
+                })?
         } else if datetime_str.contains('+')
             || datetime_str.len() > 19 && datetime_str.chars().nth(19) == Some('-')
         {
-            // Has timezone offset
+            // Has timezone offset - extract base datetime part
             let base_str = &datetime_str[..19];
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S").map_err(|_| {
-                FhirPathError::EvaluationError {
+            // Try parsing with milliseconds first, then fall back to seconds only
+            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
+                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
+                .map_err(|_| FhirPathError::EvaluationError {
                     message: format!("Invalid datetime format: {datetime_str}"),
-                }
-            })?
+                })?
         } else {
-            NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S").map_err(|_| {
-                FhirPathError::EvaluationError {
+            // No timezone - try parsing with milliseconds first, then fall back
+            NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S%.3f")
+                .or_else(|_| NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S"))
+                .map_err(|_| FhirPathError::EvaluationError {
                     message: format!("Invalid datetime format: {datetime_str}"),
-                }
-            })?
+                })?
         };
 
         let new_datetime = match precision {
