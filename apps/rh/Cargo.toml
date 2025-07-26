@@ -1,22 +1,26 @@
 [package]
-name = "example-cli"
+name = "rh"
 version = "0.1.0"
-edition = "2021"
 authors.workspace = true
+edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-description = "Example CLI application demonstrating workspace usage"
+description = "Unified CLI for FHIR processing tools"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 # Workspace dependencies
 serde = { workspace = true }
+serde_json = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
 
 # Local workspace crates
 common = { path = "../../crates/common" }
+codegen = { path = "../../crates/codegen" }
+fhirpath = { path = "../../crates/fhirpath" }

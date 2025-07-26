@@ -2,30 +2,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::Subcommand;
 use tracing::{error, info, warn};
 
 use codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
 use common::utils;
 
-/// FHIR Code Generation CLI
-///
-/// Generate Rust types from FHIR StructureDefinition JSON files
-#[derive(Parser)]
-#[clap(name = "fhir-codegen")]
-#[clap(about = "Generate Rust types from FHIR StructureDefinitions")]
-#[clap(version)]
-struct Cli {
-    /// Enable verbose logging
-    #[clap(short, long)]
-    verbose: bool,
-
-    #[clap(subcommand)]
-    command: Commands,
-}
-
 #[derive(Subcommand)]
-enum Commands {
+pub enum CodegenCommands {
     /// Initialize a new codegen configuration file
     Init {
         /// Path to the configuration file
@@ -122,30 +106,12 @@ enum Commands {
     },
 }
 
-fn main() -> Result<()> {
-    tokio::runtime::Runtime::new()?.block_on(async_main())
-}
-
-async fn async_main() -> Result<()> {
-    let cli = Cli::parse();
-
-    // Initialize tracing
-    let subscriber = if cli.verbose {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .finish()
-    } else {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::INFO)
-            .finish()
-    };
-    tracing::subscriber::set_global_default(subscriber)?;
-
-    match cli.command {
-        Commands::Init { config } => {
+pub async fn handle_command(cmd: CodegenCommands) -> Result<()> {
+    match cmd {
+        CodegenCommands::Init { config } => {
             init_config(&config)?;
         }
-        Commands::Generate {
+        CodegenCommands::Generate {
             input,
             output,
             config,
@@ -153,7 +119,7 @@ async fn async_main() -> Result<()> {
         } => {
             generate_single(&input, output.as_deref(), &config, value_set_dir.as_deref())?;
         }
-        Commands::Batch {
+        CodegenCommands::Batch {
             input_dir,
             output_dir,
             config,
@@ -168,7 +134,7 @@ async fn async_main() -> Result<()> {
                 value_set_dir.as_deref(),
             )?;
         }
-        Commands::Download {
+        CodegenCommands::Download {
             package,
             version,
             output,
@@ -177,7 +143,7 @@ async fn async_main() -> Result<()> {
         } => {
             download_package(&package, &version, &output, &registry, token.as_deref()).await?;
         }
-        Commands::Install {
+        CodegenCommands::Install {
             package,
             version,
             output,
