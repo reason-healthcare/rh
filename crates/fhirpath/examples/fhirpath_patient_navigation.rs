@@ -3,7 +3,7 @@
 /// This example demonstrates how to use FHIRPath expressions to navigate
 /// and extract data from real FHIR resources.
 use anyhow::Result;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<()> {
@@ -122,7 +122,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 2: Working with names
@@ -138,10 +138,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -158,10 +158,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -178,10 +178,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -196,10 +196,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -214,10 +214,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -231,10 +231,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -250,10 +250,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 

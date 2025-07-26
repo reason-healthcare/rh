@@ -135,7 +135,7 @@ impl TokenGenerator {
             .serde_attributes
             .iter()
             .map(|attr| {
-                let attr_tokens: TokenStream = format!("serde({})", attr)
+                let attr_tokens: TokenStream = format!("serde({attr})")
                     .parse()
                     .expect("Invalid serde attribute");
                 quote! { #[#attr_tokens] }
@@ -240,6 +240,7 @@ impl TokenGenerator {
     }
 
     /// Generate tokens for a Rust type
+    #[allow(clippy::only_used_in_recursion)]
     fn generate_type(&self, rust_type: &RustType, wrap_optional: bool) -> TokenStream {
         let base_type = match rust_type {
             RustType::String => quote! { String },
@@ -312,7 +313,7 @@ mod tests {
         let code = tokens.to_string();
 
         // Print the actual generated code for debugging
-        println!("Generated enum code: {}", code);
+        println!("Generated enum code: {code}");
 
         assert!(code.contains("enum TestEnum"));
         assert!(code.contains("Variant1"));

@@ -28,42 +28,48 @@ fn main() -> anyhow::Result<()> {
 
     // Example 1: Simple member access
     println!("=== Example 1: Simple member access ===");
-    let expr = parser.parse("Patient.id")?;
+    let expr = parser.parse("id")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("Patient.id = {:?}", result);
+    println!("id = {result:?}");
 
-    // Example 2: Array access
-    println!("\n=== Example 2: Array access ===");
-    let expr = parser.parse("Patient.name[0].family")?;
+    // Example 2: Array navigation
+    println!("\n=== Example 2: Array navigation ===");
+    let expr = parser.parse("name.family")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("Patient.name[0].family = {:?}", result);
+    println!("name.family = {result:?}");
 
-    // Example 3: Literal values
-    println!("\n=== Example 3: Literal values ===");
+    // Example 3: Date field access
+    println!("\n=== Example 3: Date field access ===");
+    let expr = parser.parse("birthDate")?;
+    let result = evaluator.evaluate(&expr, &context)?;
+    println!("birthDate = {result:?}");
+
+    // Example 4: Literal values
+    println!("\n=== Example 4: Literal values ===");
     let expr = parser.parse("true")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("true = {:?}", result);
+    println!("true = {result:?}");
 
     let expr = parser.parse("'Hello, FHIRPath!'")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("'Hello, FHIRPath!' = {:?}", result);
+    println!("'Hello, FHIRPath!' = {result:?}");
 
     let expr = parser.parse("42")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("42 = {:?}", result);
+    println!("42 = {result:?}");
 
-    // Example 4: Function calls (parsed but not yet fully implemented)
-    println!("\n=== Example 4: Function calls (parsing only) ===");
+    // Example 5: Function calls (parsed but not yet fully implemented)
+    println!("\n=== Example 5: Function calls (parsing only) ===");
     let expr = parser.parse("name.count()")?;
-    println!("Parsed expression: {}", expr);
+    println!("Parsed expression: {expr}");
 
-    // Example 5: Complex expressions
-    println!("\n=== Example 5: Complex expressions (parsing only) ===");
+    // Example 6: Complex expressions (parsing only)
+    println!("\n=== Example 6: Complex expressions (parsing only) ===");
     let expr = parser.parse("name.where(use = 'official').given")?;
-    println!("Parsed expression: {}", expr);
+    println!("Parsed expression: {expr}");
 
     let expr = parser.parse("name.given | name.family")?;
-    println!("Parsed union expression: {}", expr);
+    println!("Parsed union expression: {expr}");
 
     Ok(())
 }

@@ -1,7 +1,6 @@
 # FHIR Rust
 
 [![CI](https://github.com/reason-healthcare/rh/workflows/CI/badge.svg)](https://github.com/reason-healthcare/rh/actions)
-[![Security Audit](https://github.com/reason-healthcare/rh/workflows/CI/badge.svg?event=schedule)](https://github.com/reason-healthcare/rh/actions)
 [![codecov](https://codecov.io/gh/reason-healthcare/rh/branch/main/graph/badge.svg)](https://codecov.io/gh/reason-healthcare/rh)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)

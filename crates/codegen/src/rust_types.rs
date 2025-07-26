@@ -68,7 +68,7 @@ impl RustField {
     }
 
     pub fn with_serde_rename(mut self, name: String) -> Self {
-        self.serde_attributes.push(format!("rename = \"{}\"", name));
+        self.serde_attributes.push(format!("rename = \"{name}\""));
         self
     }
 }
@@ -87,6 +87,7 @@ pub enum RustType {
 }
 
 impl RustType {
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match self {
             RustType::String => "String".to_string(),
@@ -96,7 +97,7 @@ impl RustType {
             RustType::Option(inner) => format!("Option<{}>", inner.to_string()),
             RustType::Vec(inner) => format!("Vec<{}>", inner.to_string()),
             RustType::Custom(name) => name.clone(),
-            RustType::Reference(name) => format!("&{}", name),
+            RustType::Reference(name) => format!("&{name}"),
         }
     }
 }

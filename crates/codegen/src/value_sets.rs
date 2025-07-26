@@ -28,7 +28,7 @@ impl ValueSetManager {
         // Extract the last part of the URL and convert to PascalCase
         let name = value_set_url
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("UnknownValueSet")
             .split('-')
             .map(|part| {
@@ -42,7 +42,7 @@ impl ValueSetManager {
 
         // Ensure it's a valid Rust identifier
         if name.chars().next().unwrap_or('0').is_ascii_digit() {
-            format!("ValueSet{}", name)
+            format!("ValueSet{name}")
         } else {
             name
         }
@@ -81,7 +81,7 @@ impl ValueSetManager {
 
         if !self.is_cached(value_set_url) {
             let mut rust_enum = RustEnum::new(enum_name.clone());
-            rust_enum.doc_comment = Some(format!("Generated enum for ValueSet: {}", value_set_url));
+            rust_enum.doc_comment = Some(format!("Generated enum for ValueSet: {value_set_url}"));
 
             // Add a placeholder variant
             rust_enum.add_variant(RustEnumVariant::new("Unknown".to_string()));
@@ -135,7 +135,7 @@ impl ValueSetConcept {
 
         // Ensure it starts with a letter
         if name.chars().next().unwrap_or('0').is_ascii_digit() {
-            format!("Code{}", name)
+            format!("Code{name}")
         } else if name.is_empty() {
             "Unknown".to_string()
         } else {

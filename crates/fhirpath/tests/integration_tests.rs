@@ -50,7 +50,7 @@ mod tests {
         if let FhirPathValue::String(resource_type) = result {
             assert_eq!(resource_type, "Patient");
         } else {
-            panic!("Expected string value for resourceType, got {:?}", result);
+            panic!("Expected string value for resourceType, got {result:?}");
         }
 
         // Test boolean literals
@@ -244,7 +244,7 @@ mod tests {
         if let FhirPathValue::String(id) = result {
             assert_eq!(id, "example");
         } else {
-            panic!("Expected string value for id, got {:?}", result);
+            panic!("Expected string value for id, got {result:?}");
         }
 
         // Test array access
@@ -260,10 +260,7 @@ mod tests {
                 println!("✓ Got object for name property");
             }
             _ => {
-                panic!(
-                    "Expected collection or object for name property, got {:?}",
-                    result
-                );
+                panic!("Expected collection or object for name property, got {result:?}");
             }
         }
     }

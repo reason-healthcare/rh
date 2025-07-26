@@ -2,7 +2,7 @@
 ///
 /// This example demonstrates string manipulation functions in FHIRPath expressions.
 use anyhow::Result;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<()> {
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 2: Case conversion
@@ -40,7 +40,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 3: Substring operations
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 4: String searching
@@ -71,7 +71,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 5: String replacement and trimming
@@ -86,7 +86,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 6: String concatenation
@@ -101,7 +101,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     // Example 7: Working with FHIR data
@@ -146,10 +146,10 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         match parser.parse(expr_str) {
             Ok(expr) => match evaluator.evaluate(&expr, &fhir_context) {
-                Ok(result) => println!("   {} = {:?}", expr_str, result),
-                Err(e) => println!("   {} = Error: {}", expr_str, e),
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Error: {e}"),
             },
-            Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
         }
     }
 
@@ -166,7 +166,7 @@ fn main() -> Result<()> {
     for expr_str in expressions {
         let expr = parser.parse(expr_str)?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("   {} = {:?}", expr_str, result);
+        println!("   {expr_str} = {result:?}");
     }
 
     println!("\n✅ All string function examples completed successfully!");

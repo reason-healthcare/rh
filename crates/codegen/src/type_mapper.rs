@@ -110,7 +110,7 @@ impl<'a> TypeMapper<'a> {
             if target_profiles.len() == 1 {
                 // Single target profile - create a typed reference
                 let target = self.extract_resource_name(&target_profiles[0]);
-                return RustType::Custom(format!("Reference<{}>", target));
+                return RustType::Custom(format!("Reference<{target}>"));
             } else if target_profiles.len() > 1 {
                 // Multiple target profiles - use generic reference
                 return RustType::Custom("Reference".to_string());
@@ -125,7 +125,7 @@ impl<'a> TypeMapper<'a> {
     fn extract_resource_name(&self, profile_url: &str) -> String {
         profile_url
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("Resource")
             .to_string()
     }
@@ -134,11 +134,12 @@ impl<'a> TypeMapper<'a> {
     fn is_resource_type(&self, type_name: &str) -> bool {
         // This is a simplified check - in a real implementation, you might want
         // to maintain a comprehensive list of FHIR resource types
-        type_name.chars().next().map_or(false, |c| c.is_uppercase())
+        type_name.chars().next().is_some_and(|c| c.is_uppercase())
             && !matches!(type_name, "String" | "Boolean" | "Integer" | "Float")
     }
 
     /// Parse a Rust type string from configuration
+    #[allow(clippy::only_used_in_recursion)]
     fn parse_rust_type_string(&self, type_str: &str) -> RustType {
         match type_str {
             "String" => RustType::String,

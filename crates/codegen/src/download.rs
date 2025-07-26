@@ -70,10 +70,10 @@ impl PackageDownloader {
 
         // Add authentication header if token is provided
         if let Some(token) = &config.auth_token {
-            let auth_value = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token))
+            let auth_value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
                 .map_err(|e| CodegenError::Generation {
-                message: format!("Invalid auth token: {}", e),
-            })?;
+                    message: format!("Invalid auth token: {e}"),
+                })?;
             headers.insert(reqwest::header::AUTHORIZATION, auth_value);
         }
 
@@ -120,7 +120,7 @@ impl PackageDownloader {
         version: &str,
     ) -> CodegenResult<PackageManifest> {
         let registry_url = Url::parse(&self.config.registry_url)?;
-        let package_url = registry_url.join(&format!("{}", package_name))?;
+        let package_url = registry_url.join(package_name)?;
 
         tracing::debug!("Fetching package manifest from: {}", package_url);
 
@@ -182,7 +182,7 @@ impl PackageDownloader {
         archive
             .unpack(extract_to)
             .map_err(|e| CodegenError::ArchiveError {
-                message: format!("Failed to extract tarball: {}", e),
+                message: format!("Failed to extract tarball: {e}"),
             })?;
 
         Ok(())

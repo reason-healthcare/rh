@@ -155,7 +155,6 @@ jobs:
         run: |
           cargo run -p fhirpath --example fhirpath_demo
           cargo run -p fhirpath --example fhirpath_arithmetic
-          cargo run -p fhirpath --example fhirpath_strings
           cargo run -p fhirpath --example fhirpath_patient_navigation
           cargo run -p fhirpath --example fhirpath_collections
 

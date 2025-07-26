@@ -122,14 +122,18 @@ fn parse_expression(expression: &str, format: &str) -> Result<()> {
         Ok(ast) => match format {
             "json" => {
                 let json = serde_json::to_string_pretty(&ast)?;
-                println!("{}", json);
+                println!("{json}");
             }
             "debug" => {
-                println!("{:#?}", ast);
+                println!("{ast:#?}");
             }
-            "pretty" | _ => {
-                println!("✅ Successfully parsed: {}", expression);
-                println!("AST: {}", ast);
+            "pretty" => {
+                println!("✅ Successfully parsed: {expression}");
+                println!("AST: {ast}");
+            }
+            _ => {
+                println!("✅ Successfully parsed: {expression}");
+                println!("AST: {ast}");
             }
         },
         Err(e) => {
@@ -179,14 +183,18 @@ fn eval_expression(
                     // Convert FhirPathValue to JSON-compatible format
                     let json_value = fhirpath_value_to_json(&result);
                     let json = serde_json::to_string_pretty(&json_value)?;
-                    println!("{}", json);
+                    println!("{json}");
                 }
                 "debug" => {
-                    println!("{:#?}", result);
+                    println!("{result:#?}");
                 }
-                "pretty" | _ => {
-                    println!("✅ Expression: {}", expression);
-                    println!("Result: {:?}", result);
+                "pretty" => {
+                    println!("✅ Expression: {expression}");
+                    println!("Result: {result:?}");
+                }
+                _ => {
+                    println!("✅ Expression: {expression}");
+                    println!("Result: {result:?}");
                 }
             }
         }
@@ -252,19 +260,16 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
                 match load_data_file(path) {
                     Ok(new_data) => {
                         data = new_data;
-                        println!("✅ Loaded data from: {}", path);
+                        println!("✅ Loaded data from: {path}");
                     }
                     Err(e) => {
-                        println!("❌ Failed to load data: {}", e);
+                        println!("❌ Failed to load data: {e}");
                     }
                 }
                 continue;
             }
             cmd if cmd.starts_with(".") => {
-                println!(
-                    "❌ Unknown command: {}. Type .help for available commands.",
-                    cmd
-                );
+                println!("❌ Unknown command: {cmd}. Type .help for available commands.");
                 continue;
             }
             _ => {}
@@ -276,15 +281,15 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
                 let context = EvaluationContext::new(data.clone());
                 match evaluator.evaluate(&ast, &context) {
                     Ok(result) => {
-                        println!("=> {:?}", result);
+                        println!("=> {result:?}");
                     }
                     Err(e) => {
-                        println!("❌ Evaluation error: {}", e);
+                        println!("❌ Evaluation error: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("❌ Parse error: {}", e);
+                println!("❌ Parse error: {e}");
             }
         }
     }
@@ -370,7 +375,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
                         passed += 1;
                     } else {
                         println!("❌ FAIL (evaluation error)");
-                        println!("  Error: {}", e);
+                        println!("  Error: {e}");
                         failed += 1;
                     }
                 }
@@ -381,7 +386,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
                     passed += 1;
                 } else {
                     println!("❌ FAIL (parse error)");
-                    println!("  Error: {}", e);
+                    println!("  Error: {e}");
                     failed += 1;
                 }
             }
@@ -389,7 +394,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
     }
 
     println!();
-    println!("Test Results: {} passed, {} failed", passed, failed);
+    println!("Test Results: {passed} passed, {failed} failed");
 
     if failed > 0 {
         std::process::exit(1);

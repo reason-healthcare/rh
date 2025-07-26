@@ -343,7 +343,7 @@ fn process_json_files(
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
             processed_count += 1;
 
             // Only process StructureDefinition files for type generation
@@ -376,13 +376,11 @@ fn matches_pattern(filename: &str, pattern: &str) -> bool {
         return true;
     }
 
-    if pattern.starts_with("*.") {
-        let extension = &pattern[2..];
+    if let Some(extension) = pattern.strip_prefix("*.") {
         return filename.ends_with(extension);
     }
 
-    if pattern.ends_with("*") {
-        let prefix = &pattern[..pattern.len() - 1];
+    if let Some(prefix) = pattern.strip_suffix("*") {
         return filename.starts_with(prefix);
     }
 
@@ -433,7 +431,7 @@ async fn install_package(
     );
 
     // First download the package to a temporary directory
-    let temp_dir = std::env::temp_dir().join(format!("fhir-package-{}-{}", package, version));
+    let temp_dir = std::env::temp_dir().join(format!("fhir-package-{package}-{version}"));
     download_package(package, version, &temp_dir, registry, token).await?;
 
     // Load the codegen configuration

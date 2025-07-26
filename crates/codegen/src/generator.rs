@@ -65,10 +65,10 @@ impl CodeGenerator {
         &self,
         path: P,
     ) -> CodegenResult<StructureDefinition> {
-        let content = fs::read_to_string(&path).map_err(|e| CodegenError::Io(e))?;
+        let content = fs::read_to_string(&path).map_err(CodegenError::Io)?;
 
         let structure_def: StructureDefinition =
-            serde_json::from_str(&content).map_err(|e| CodegenError::Json(e))?;
+            serde_json::from_str(&content).map_err(CodegenError::Json)?;
 
         Ok(structure_def)
     }
