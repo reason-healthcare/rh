@@ -1,5 +1,5 @@
-use crate::evaluator::values::FhirPathValue;
 use crate::error::FhirPathError;
+use crate::evaluator::values::FhirPathValue;
 
 /// Evaluator for string manipulation functions in FHIRPath expressions
 pub struct StringEvaluator;
@@ -184,7 +184,9 @@ impl StringEvaluator {
             }
         };
 
-        Ok(FhirPathValue::String(string.replace(pattern_str, replacement_str)))
+        Ok(FhirPathValue::String(
+            string.replace(pattern_str, replacement_str),
+        ))
     }
 
     /// Convert a string to uppercase
@@ -281,7 +283,8 @@ impl StringEvaluator {
             .map(|item| match item {
                 FhirPathValue::String(s) => Ok(s.clone()),
                 _ => Err(FhirPathError::TypeError {
-                    message: "join() can only be called on collections of String values".to_string(),
+                    message: "join() can only be called on collections of String values"
+                        .to_string(),
                 }),
             })
             .collect();
@@ -459,7 +462,7 @@ mod tests {
         let input = FhirPathValue::String("a,b,c".to_string());
         let delimiter = FhirPathValue::String(",".to_string());
         let result = StringEvaluator::split(&input, &delimiter).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 3);

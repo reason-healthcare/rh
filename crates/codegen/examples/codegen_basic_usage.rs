@@ -1,8 +1,7 @@
 /// FHIR Code Generation - Basic Usage Example
-/// 
+///
 /// This example demonstrates how to use the codegen library to generate
 /// Rust types from FHIR StructureDefinitions.
-
 use codegen::{CodeGenerator, CodegenConfig, StructureDefinition};
 use std::collections::HashMap;
 

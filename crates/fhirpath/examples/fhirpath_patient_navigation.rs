@@ -1,11 +1,10 @@
 /// FHIRPath - Working with FHIR Resources Example
-/// 
+///
 /// This example demonstrates how to use FHIRPath expressions to navigate
 /// and extract data from real FHIR resources.
-
 use anyhow::Result;
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
 
 fn main() -> Result<()> {
     let parser = FhirPathParser::new();
@@ -113,11 +112,11 @@ fn main() -> Result<()> {
     // Example 1: Basic resource navigation
     println!("1️⃣ Basic Resource Navigation:");
     let expressions = vec![
-        "resourceType",                    // Get resource type
-        "id",                             // Get resource ID
-        "active",                         // Get active status
-        "gender",                         // Get gender
-        "birthDate",                      // Get birth date
+        "resourceType", // Get resource type
+        "id",           // Get resource ID
+        "active",       // Get active status
+        "gender",       // Get gender
+        "birthDate",    // Get birth date
     ];
 
     for expr_str in expressions {
@@ -129,21 +128,19 @@ fn main() -> Result<()> {
     // Example 2: Working with names
     println!("\n2️⃣ Name Operations:");
     let expressions = vec![
-        "name.family",                    // Get all family names
-        "name.given",                     // Get all given names
-        "name.where(use = 'official').family",  // Official family name
-        "name.where(use = 'official').given",   // Official given names
-        "name.prefix",                    // Get prefixes
+        "name.family",                         // Get all family names
+        "name.given",                          // Get all given names
+        "name.where(use = 'official').family", // Official family name
+        "name.where(use = 'official').given",  // Official given names
+        "name.prefix",                         // Get prefixes
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -151,7 +148,7 @@ fn main() -> Result<()> {
     // Example 3: Contact information
     println!("\n3️⃣ Contact Information:");
     let expressions = vec![
-        "telecom.value",                          // All contact values
+        "telecom.value",                         // All contact values
         "telecom.where(system = 'email').value", // Email addresses
         "telecom.where(system = 'phone').value", // Phone numbers
         "telecom.where(use = 'home').value",     // Home contacts
@@ -160,12 +157,10 @@ fn main() -> Result<()> {
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -173,21 +168,19 @@ fn main() -> Result<()> {
     // Example 4: Address information
     println!("\n4️⃣ Address Information:");
     let expressions = vec![
-        "address.line",                   // Street address lines
-        "address.city",                   // City
-        "address.state",                  // State
-        "address.postalCode",            // Postal code
-        "address.country",               // Country
+        "address.line",       // Street address lines
+        "address.city",       // City
+        "address.state",      // State
+        "address.postalCode", // Postal code
+        "address.country",    // Country
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -195,19 +188,17 @@ fn main() -> Result<()> {
     // Example 5: Identifiers
     println!("\n5️⃣ Identifiers:");
     let expressions = vec![
-        "identifier.value",              // All identifier values
-        "identifier.system",             // All identifier systems
-        "identifier.where(use = 'usual').value",  // Usual identifier
+        "identifier.value",                      // All identifier values
+        "identifier.system",                     // All identifier systems
+        "identifier.where(use = 'usual').value", // Usual identifier
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -215,19 +206,17 @@ fn main() -> Result<()> {
     // Example 6: Emergency contacts
     println!("\n6️⃣ Emergency Contacts:");
     let expressions = vec![
-        "contact.name.family",           // Contact family names
-        "contact.name.given",            // Contact given names
-        "contact.telecom.value",         // Contact phone numbers
+        "contact.name.family",   // Contact family names
+        "contact.name.given",    // Contact given names
+        "contact.telecom.value", // Contact phone numbers
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -235,18 +224,16 @@ fn main() -> Result<()> {
     // Example 7: Metadata operations
     println!("\n7️⃣ Metadata Operations:");
     let expressions = vec![
-        "meta.versionId",               // Version ID
-        "meta.lastUpdated",            // Last updated timestamp
+        "meta.versionId",   // Version ID
+        "meta.lastUpdated", // Last updated timestamp
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
@@ -254,20 +241,18 @@ fn main() -> Result<()> {
     // Example 8: Conditional expressions
     println!("\n8️⃣ Conditional Expressions:");
     let expressions = vec![
-        "gender = 'male'",              // Check if male
-        "active = true",                // Check if active
-        "name.exists()",                // Check if names exist
-        "telecom.where(system = 'email').exists()",  // Check if email exists
+        "gender = 'male'",                          // Check if male
+        "active = true",                            // Check if active
+        "name.exists()",                            // Check if names exist
+        "telecom.where(system = 'email').exists()", // Check if email exists
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }

@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod comprehensive_string_tests {
-    use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
+    use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
     use serde_json::json;
 
     #[test]
@@ -24,7 +24,9 @@ mod comprehensive_string_tests {
         let context = EvaluationContext::new(json!({}));
 
         // Test replace function
-        let expr = parser.parse("'hello world'.replace('world', 'universe')").unwrap();
+        let expr = parser
+            .parse("'hello world'.replace('world', 'universe')")
+            .unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         assert_eq!(result, FhirPathValue::String("hello universe".to_string()));
     }
@@ -77,7 +79,7 @@ mod comprehensive_string_tests {
         // Test split function
         let expr = parser.parse("'a,b,c'.split(',')").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 3);

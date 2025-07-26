@@ -12,7 +12,7 @@
 //!
 //! let parser = FhirPathParser::new();
 //! let expression = parser.parse("Patient.name.given").unwrap();
-//! 
+//!
 //! let evaluator = FhirPathEvaluator::new();
 //! let context = EvaluationContext::new(json!({"name": [{"given": ["John"]}]}));
 //! let result = evaluator.evaluate(&expression, &context).unwrap();
@@ -25,11 +25,10 @@ pub mod parser;
 
 // Re-export the main public types users need
 pub use ast::{
-    FhirPathExpression, Expression, Term, Literal, Invocation,
-    EqualityOperator, InequalityOperator, MembershipOperator,
-    AdditiveOperator, MultiplicativeOperator, PolarityOperator,
-    TypeSpecifier
+    AdditiveOperator, EqualityOperator, Expression, FhirPathExpression, InequalityOperator,
+    Invocation, Literal, MembershipOperator, MultiplicativeOperator, PolarityOperator, Term,
+    TypeSpecifier,
 };
 pub use error::{FhirPathError, FhirPathResult};
-pub use evaluator::{FhirPathEvaluator, EvaluationContext, FhirPathValue};
+pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue};
 pub use parser::FhirPathParser;

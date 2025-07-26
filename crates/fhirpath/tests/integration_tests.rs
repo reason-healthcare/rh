@@ -8,7 +8,7 @@
 
 #[cfg(test)]
 mod tests {
-    use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
+    use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
     use serde_json::json;
 
     fn sample_patient() -> serde_json::Value {
@@ -23,13 +23,13 @@ mod tests {
             }],
             "telecom": [
                 {
-                    "system": "phone", 
+                    "system": "phone",
                     "value": "555-1234",
                     "use": "home"
                 },
                 {
                     "system": "email",
-                    "value": "john.doe@example.com", 
+                    "value": "john.doe@example.com",
                     "use": "work"
                 }
             ],
@@ -215,8 +215,8 @@ mod tests {
         let precedence_cases = vec![
             "a = b in collection",       // Should parse as (a = b) in collection
             "value contains 'x' = true", // Should parse as (value contains 'x') = true
-            "2 + 3 * 4",                // Should parse as 2 + (3 * 4)
-            "10 - 5 < 8",               // Should parse as (10 - 5) < 8
+            "2 + 3 * 4",                 // Should parse as 2 + (3 * 4)
+            "10 - 5 < 8",                // Should parse as (10 - 5) < 8
         ];
 
         for expr_str in precedence_cases {
@@ -260,7 +260,10 @@ mod tests {
                 println!("✓ Got object for name property");
             }
             _ => {
-                panic!("Expected collection or object for name property, got {:?}", result);
+                panic!(
+                    "Expected collection or object for name property, got {:?}",
+                    result
+                );
             }
         }
     }

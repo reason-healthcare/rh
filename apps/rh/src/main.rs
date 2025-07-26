@@ -13,11 +13,13 @@ mod fhirpath;
 #[clap(name = "rh")]
 #[clap(about = "Unified CLI for FHIR processing tools")]
 #[clap(version)]
-#[clap(long_about = "A comprehensive toolkit for working with FHIR resources, including:\n\
+#[clap(
+    long_about = "A comprehensive toolkit for working with FHIR resources, including:\n\
     • Code generation from FHIR StructureDefinitions\n\
     • FHIRPath expression parsing and evaluation\n\
     • FHIR package management\n\
-    • Type-safe Rust code generation")]
+    • Type-safe Rust code generation"
+)]
 struct Cli {
     /// Enable verbose logging
     #[clap(short, long, global = true)]
@@ -32,7 +34,7 @@ enum Commands {
     /// Generate Rust types from FHIR StructureDefinitions
     #[clap(subcommand)]
     Codegen(codegen::CodegenCommands),
-    
+
     /// Parse and evaluate FHIRPath expressions
     #[clap(subcommand)]
     Fhirpath(fhirpath::FhirpathCommands),

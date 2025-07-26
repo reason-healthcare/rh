@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod quick_string_tests {
-    use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
+    use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
     use serde_json::json;
 
     #[test]

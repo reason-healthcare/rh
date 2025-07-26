@@ -1,5 +1,5 @@
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
 
 fn main() -> anyhow::Result<()> {
     // Create a sample FHIR Patient resource
@@ -13,7 +13,7 @@ fn main() -> anyhow::Result<()> {
                 "given": ["John", "James"]
             },
             {
-                "use": "usual", 
+                "use": "usual",
                 "family": "Doe",
                 "given": ["Johnny"]
             }

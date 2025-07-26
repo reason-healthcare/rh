@@ -1,30 +1,29 @@
 /// FHIR Code Generation - Working with Generated Types
-/// 
+///
 /// This example shows how to generate Rust types from FHIR StructureDefinitions
 /// and demonstrates what the generated code workflow looks like.
-
 use codegen::{CodeGenerator, CodegenConfig, StructureDefinition};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🏗️  FHIR Code Generation - Generated Types Example");
-    
+
     // Example 1: Set up code generation with Serde support
     println!("\n📋 Setting up code generation with Serde support...");
-    
+
     let config = CodegenConfig {
         output_dir: "generated".to_string(),
         module_name: "fhir_types".to_string(),
-        with_serde: true,  // Enable Serialize/Deserialize
-        with_docs: true,   // Include documentation comments
+        with_serde: true, // Enable Serialize/Deserialize
+        with_docs: true,  // Include documentation comments
         type_mappings: HashMap::new(),
     };
-    
+
     let mut generator = CodeGenerator::new(config);
-    
+
     // Example 2: Create StructureDefinitions for common FHIR types
     println!("🏥 Creating StructureDefinitions for FHIR resources...");
-    
+
     // Patient resource
     let patient_def = StructureDefinition {
         resource_type: "StructureDefinition".to_string(),
@@ -41,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         differential: None,
         snapshot: None,
     };
-    
+
     // Observation resource
     let observation_def = StructureDefinition {
         resource_type: "StructureDefinition".to_string(),
@@ -61,25 +60,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 3: Generate Rust structs
     println!("⚙️  Generating Rust structs from StructureDefinitions...");
-    
+
     let patient_struct = generator.generate_struct(&patient_def)?;
     let observation_struct = generator.generate_struct(&observation_def)?;
-    
+
     println!("✅ Generated struct: {}", patient_struct.name);
-    println!("   - With Serde: {}", patient_struct.derives.contains(&"Serialize".to_string()));
+    println!(
+        "   - With Serde: {}",
+        patient_struct.derives.contains(&"Serialize".to_string())
+    );
     println!("   - Documentation: {:?}", patient_struct.doc_comment);
-    
+
     println!("✅ Generated struct: {}", observation_struct.name);
-    println!("   - With Serde: {}", observation_struct.derives.contains(&"Serialize".to_string()));
+    println!(
+        "   - With Serde: {}",
+        observation_struct
+            .derives
+            .contains(&"Serialize".to_string())
+    );
     println!("   - Documentation: {:?}", observation_struct.doc_comment);
 
     // Example 4: Generate to files
     println!("\n📁 Writing generated types to files...");
-    
+
     std::fs::create_dir_all("generated")?;
     generator.generate_to_file(&patient_def, "generated/patient.rs")?;
     generator.generate_to_file(&observation_def, "generated/observation.rs")?;
-    
+
     println!("✅ Generated files:");
     println!("   - generated/patient.rs");
     println!("   - generated/observation.rs");

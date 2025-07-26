@@ -38,7 +38,7 @@ impl FunctionRegistry {
         self.register_count_function();
         self.register_distinct_function();
         self.register_is_distinct_function();
-        
+
         // String functions
         self.register_string_functions();
     }
@@ -133,7 +133,8 @@ impl FunctionRegistry {
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
                 if params.is_empty() {
                     return Err(FhirPathError::InvalidOperation {
-                        message: "substring() requires at least one parameter (start index)".to_string(),
+                        message: "substring() requires at least one parameter (start index)"
+                            .to_string(),
                     });
                 }
                 let start = &params[0];
@@ -187,7 +188,8 @@ impl FunctionRegistry {
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
                 if params.len() != 2 {
                     return Err(FhirPathError::InvalidOperation {
-                        message: "replace() requires exactly two parameters (pattern, replacement)".to_string(),
+                        message: "replace() requires exactly two parameters (pattern, replacement)"
+                            .to_string(),
                     });
                 }
                 StringEvaluator::replace(target, &params[0], &params[1])

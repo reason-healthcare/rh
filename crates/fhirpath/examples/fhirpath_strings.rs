@@ -1,10 +1,9 @@
 /// FHIRPath - String Functions Example
-/// 
+///
 /// This example demonstrates string manipulation functions in FHIRPath expressions.
-
 use anyhow::Result;
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
 
 fn main() -> Result<()> {
     let parser = FhirPathParser::new();
@@ -47,10 +46,10 @@ fn main() -> Result<()> {
     // Example 3: Substring operations
     println!("\n3️⃣ Substring Operations:");
     let expressions = vec![
-        "'hello world'.substring(0, 5)",      // Extract first 5 characters
-        "'FHIRPath'.substring(4)",            // From index 4 to end
-        "'programming'.substring(3, 7)",      // Extract middle part
-        "'test'.substring(0, 2)",             // First 2 characters
+        "'hello world'.substring(0, 5)", // Extract first 5 characters
+        "'FHIRPath'.substring(4)",       // From index 4 to end
+        "'programming'.substring(3, 7)", // Extract middle part
+        "'test'.substring(0, 2)",        // First 2 characters
     ];
 
     for expr_str in expressions {
@@ -63,10 +62,10 @@ fn main() -> Result<()> {
     println!("\n4️⃣ String Search Functions:");
     let expressions = vec![
         "'hello world'.contains('world')",
-        "'FHIRPath'.contains('PATH')",        // Case sensitive
+        "'FHIRPath'.contains('PATH')", // Case sensitive
         "'programming'.startsWith('prog')",
         "'testing'.endsWith('ing')",
-        "'hello world'.indexOf('o')",         // Find first occurrence
+        "'hello world'.indexOf('o')", // Find first occurrence
     ];
 
     for expr_str in expressions {
@@ -107,14 +106,14 @@ fn main() -> Result<()> {
 
     // Example 7: Working with FHIR data
     println!("\n7️⃣ String Functions with FHIR Data:");
-    
+
     let patient_data = json!({
         "resourceType": "Patient",
         "id": "patient-123",
         "name": [
             {
                 "use": "official",
-                "family": "Doe", 
+                "family": "Doe",
                 "given": ["John", "James"]
             },
             {
@@ -128,42 +127,40 @@ fn main() -> Result<()> {
                 "value": "john.doe@example.com"
             },
             {
-                "system": "phone", 
+                "system": "phone",
                 "value": "+1-555-123-4567"
             }
         ]
     });
-    
+
     let fhir_context = EvaluationContext::new(patient_data);
-    
+
     let expressions = vec![
-        "id.upper()",                              // Convert ID to uppercase
-        "name.family.upper()",                     // Convert family name to uppercase  
-        "name.given.lower()",                      // Convert given names to lowercase
-        // Note: These expressions may need adjustment based on actual FHIRPath implementation
-        // for handling collections and nested fields
+        "id.upper()",          // Convert ID to uppercase
+        "name.family.upper()", // Convert family name to uppercase
+        "name.given.lower()",  // Convert given names to lowercase
+                               // Note: These expressions may need adjustment based on actual FHIRPath implementation
+                               // for handling collections and nested fields
     ];
 
     for expr_str in expressions {
         match parser.parse(expr_str) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &fhir_context) {
-                    Ok(result) => println!("   {} = {:?}", expr_str, result),
-                    Err(e) => println!("   {} = Error: {}", expr_str, e),
-                }
-            }
+            Ok(expr) => match evaluator.evaluate(&expr, &fhir_context) {
+                Ok(result) => println!("   {} = {:?}", expr_str, result),
+                Err(e) => println!("   {} = Error: {}", expr_str, e),
+            },
             Err(e) => println!("   {} = Parse Error: {}", expr_str, e),
         }
     }
 
     // Example 8: Practical string validation patterns
     println!("\n8️⃣ String Validation Patterns:");
-    
+
     let expressions = vec![
-        "'john.doe@example.com'.contains('@')",    // Simple email check
-        "'Patient-123'.startsWith('Patient')",     // ID prefix validation
-        "'4.0.1'.contains('.')",                   // Version format check
-        "'US'.length() = 2",                       // Country code length
+        "'john.doe@example.com'.contains('@')", // Simple email check
+        "'Patient-123'.startsWith('Patient')",  // ID prefix validation
+        "'4.0.1'.contains('.')",                // Version format check
+        "'US'.length() = 2",                    // Country code length
     ];
 
     for expr_str in expressions {
