@@ -156,6 +156,11 @@ The FHIRPath implementation consists of four main components:
 - **sqrt()**: Square root of number
 - **truncate()**: Remove fractional part (toward zero)
 
+#### Date/Time Functions
+- **now()**: Returns current date and time in UTC (ISO 8601: YYYY-MM-DDTHH:mm:ss.sssZ)
+- **today()**: Returns current date in local timezone (ISO 8601: YYYY-MM-DD)
+- **timeOfDay()**: Returns current time in local timezone (ISO 8601: HH:mm:ss.sss)
+
 ### ⏳ Partially Implemented
 
 #### Basic Evaluation
@@ -171,6 +176,7 @@ The FHIRPath implementation consists of four main components:
 - ✅ Filtering functions (where, select)
 - ✅ String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - ✅ Math functions (abs, ceiling, exp, floor, ln, log, power, round, sqrt, truncate)
+- ✅ Date/time functions (now, today, timeOfDay)
 - ✅ Polarity operations (-, +)
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
@@ -370,6 +376,13 @@ parser.parse("3.14159.round(2)").unwrap();   // ✅ → Number(3.14) - round to 
 parser.parse("8.log(2)").unwrap();           // ✅ → Number(3.0) - log₂(8)
 parser.parse("1.exp()").unwrap();            // ✅ → Number(2.718...) - e¹
 parser.parse("(-3.7).abs().ceiling()").unwrap(); // ✅ → Integer(4) - function chaining
+
+// Date/time functions
+parser.parse("now()").unwrap();              // ✅ → DateTime("2025-07-26T14:26:23.320Z") - current UTC datetime
+parser.parse("today()").unwrap();            // ✅ → Date("2025-07-26") - current local date
+parser.parse("timeOfDay()").unwrap();        // ✅ → Time("10:26:23.320") - current local time
+parser.parse("now().exists()").unwrap();     // ✅ → Boolean(true) - datetime functions in expressions
+parser.parse("(now() | today()).count()").unwrap(); // ✅ → Integer(2) - datetime functions in collections
 
 // Function chaining
 parser.parse("'  HELLO  '.trim().lower()").unwrap(); // ✅ → "hello"
@@ -644,7 +657,7 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] Filtering functions (where, select)
 - [x] String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - [x] Math functions (abs, round, etc.)
-- [ ] Date/time functions (now, today, etc.)
+- [x] Date/time functions (now, today, timeOfDay)
 
 ### Phase 5: Advanced Features (❌ Not Started)
 - [ ] Type system and coercion
@@ -676,10 +689,9 @@ This implementation covers the core FHIRPath functionality but there are areas w
 
 ### Priority Areas
 
-1. **Function Implementation**: Math and date/time functions
-2. **Performance**: Optimization of parser and evaluator
-3. **Error Messages**: Better error reporting with suggestions
-4. **FHIR Integration**: Better integration with generated FHIR types
+1. **Performance**: Optimization of parser and evaluator
+2. **Error Messages**: Better error reporting with suggestions
+3. **FHIR Integration**: Better integration with generated FHIR types
 
 ### Development Guidelines
 
@@ -689,6 +701,34 @@ Follow the workspace conventions:
 - Write comprehensive tests for new features
 - Update documentation for API changes
 - Follow conventional commit message format
+
+## Examples
+
+The FHIRPath crate includes several comprehensive examples demonstrating different aspects of the functionality:
+
+### Available Examples
+
+- **`unit_conversion_example.rs`**: Demonstrates linear unit conversions (mass, length, volume, time, pressure)
+- **`temperature_conversion_example.rs`**: Shows temperature unit conversions with offset-based calculations  
+- **`datetime_functions_example.rs`**: Illustrates date/time functions (now, today, timeOfDay)
+
+### Running Examples
+
+```bash
+# Run all examples
+cargo run --example unit_conversion_example --package fhirpath
+cargo run --example temperature_conversion_example --package fhirpath  
+cargo run --example datetime_functions_example --package fhirpath
+
+# Examples demonstrate:
+# - Unit conversion system with automatic conversions
+# - Temperature handling with proper offset calculations
+# - Date/time functions returning current system time
+# - Error handling for invalid operations
+# - Function usage in complex expressions
+```
+
+See the `examples/` directory for complete, runnable examples with detailed output and explanations.
 
 ## References
 

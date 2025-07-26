@@ -2,6 +2,7 @@
 
 use crate::error::*;
 use crate::evaluator::collection::CollectionEvaluator;
+use crate::evaluator::datetime::DateTimeEvaluator;
 use crate::evaluator::math::MathEvaluator;
 use crate::evaluator::strings::StringEvaluator;
 use crate::evaluator::values::FhirPathValue;
@@ -48,6 +49,9 @@ impl FunctionRegistry {
 
         // Math functions
         self.register_math_functions();
+
+        // Date/time functions
+        self.register_datetime_functions();
     }
 
     /// Register the empty() function
@@ -452,6 +456,48 @@ impl FunctionRegistry {
             "truncate".to_string(),
             Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
                 MathEvaluator::truncate(target)
+            }),
+        );
+    }
+
+    /// Register all date/time functions  
+    fn register_datetime_functions(&mut self) {
+        // now() function - returns current date and time
+        self.functions.insert(
+            "now".to_string(),
+            Box::new(|_target: &FhirPathValue, params: &[FhirPathValue]| {
+                if !params.is_empty() {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "now() function takes no parameters".to_string(),
+                    });
+                }
+                DateTimeEvaluator::now()
+            }),
+        );
+
+        // today() function - returns current date
+        self.functions.insert(
+            "today".to_string(),
+            Box::new(|_target: &FhirPathValue, params: &[FhirPathValue]| {
+                if !params.is_empty() {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "today() function takes no parameters".to_string(),
+                    });
+                }
+                DateTimeEvaluator::today()
+            }),
+        );
+
+        // timeOfDay() function - returns current time
+        self.functions.insert(
+            "timeOfDay".to_string(),
+            Box::new(|_target: &FhirPathValue, params: &[FhirPathValue]| {
+                if !params.is_empty() {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "timeOfDay() function takes no parameters".to_string(),
+                    });
+                }
+                DateTimeEvaluator::time_of_day()
             }),
         );
     }
