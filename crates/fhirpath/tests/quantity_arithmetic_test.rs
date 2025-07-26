@@ -36,9 +36,7 @@ mod quantity_tests {
                 assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
                 assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
             } else {
-                panic!(
-                    "Expected Quantity value for {expr_str}, got: {result:?}"
-                );
+                panic!("Expected Quantity value for {expr_str}, got: {result:?}");
             }
         }
     }
@@ -66,9 +64,7 @@ mod quantity_tests {
             assert_eq!(value, 3000005.0); // 5mg + 3,000,000mg = 3,000,005mg
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!(
-                "Expected Quantity result with unit conversion, got: {result:?}"
-            );
+            panic!("Expected Quantity result with unit conversion, got: {result:?}");
         }
 
         // Incompatible units - should error
@@ -113,9 +109,7 @@ mod quantity_tests {
             assert!((value - 9.999997).abs() < 0.000001); // 10kg - 0.000003kg = 9.999997kg
             assert_eq!(unit, Some("kg".to_string()));
         } else {
-            panic!(
-                "Expected Quantity result with unit conversion, got: {result:?}"
-            );
+            panic!("Expected Quantity result with unit conversion, got: {result:?}");
         }
 
         // Incompatible units - should error

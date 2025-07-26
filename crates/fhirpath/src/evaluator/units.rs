@@ -296,6 +296,36 @@ impl UnitConverter {
             },
         );
 
+        // Temperature units (base: Celsius)
+        // Note: Temperature conversion requires offset handling, implemented in special methods
+        unit_mappings.insert(
+            "Cel".to_string(),
+            UnitMapping {
+                quantity_type: QuantityType::Temperature,
+                base_unit: "Cel".to_string(),
+                to_base_factor: 1.0,
+                from_base_factor: 1.0,
+            },
+        );
+        unit_mappings.insert(
+            "K".to_string(),
+            UnitMapping {
+                quantity_type: QuantityType::Temperature,
+                base_unit: "Cel".to_string(),
+                to_base_factor: 1.0, // Same scale as Celsius
+                from_base_factor: 1.0,
+            },
+        );
+        unit_mappings.insert(
+            "[degF]".to_string(),
+            UnitMapping {
+                quantity_type: QuantityType::Temperature,
+                base_unit: "Cel".to_string(),
+                to_base_factor: 5.0 / 9.0, // Fahrenheit scale factor
+                from_base_factor: 9.0 / 5.0,
+            },
+        );
+
         Self { unit_mappings }
     }
 
@@ -330,8 +360,14 @@ impl UnitConverter {
             None => Ok((value, None)), // Dimensionless
             Some(unit_str) => {
                 if let Some(mapping) = self.unit_mappings.get(unit_str) {
-                    let base_value = value * mapping.to_base_factor;
-                    Ok((base_value, Some(mapping.base_unit.clone())))
+                    // Special handling for temperature units (require offset conversion)
+                    if mapping.quantity_type == QuantityType::Temperature {
+                        let base_value = self.temperature_to_celsius(value, unit_str)?;
+                        Ok((base_value, Some(mapping.base_unit.clone())))
+                    } else {
+                        let base_value = value * mapping.to_base_factor;
+                        Ok((base_value, Some(mapping.base_unit.clone())))
+                    }
                 } else {
                     // Unknown unit, return as-is
                     Ok((value, unit.clone()))
@@ -361,7 +397,12 @@ impl UnitConverter {
                 }
                 if let Some(target_mapping) = self.unit_mappings.get(target) {
                     if target_mapping.base_unit == *base {
-                        Ok(base_value * target_mapping.from_base_factor)
+                        // Special handling for temperature units
+                        if target_mapping.quantity_type == QuantityType::Temperature {
+                            self.celsius_to_temperature(base_value, target)
+                        } else {
+                            Ok(base_value * target_mapping.from_base_factor)
+                        }
                     } else {
                         Err(FhirPathError::EvaluationError {
                             message: format!(
@@ -375,6 +416,30 @@ impl UnitConverter {
                     })
                 }
             }
+        }
+    }
+
+    /// Convert temperature value to Celsius (base unit for temperature)
+    fn temperature_to_celsius(&self, value: f64, unit: &str) -> FhirPathResult<f64> {
+        match unit {
+            "Cel" => Ok(value),
+            "K" => Ok(value - 273.15),
+            "[degF]" => Ok((value - 32.0) * 5.0 / 9.0),
+            _ => Err(FhirPathError::EvaluationError {
+                message: format!("Unknown temperature unit: {unit}"),
+            }),
+        }
+    }
+
+    /// Convert Celsius temperature to target temperature unit
+    fn celsius_to_temperature(&self, celsius_value: f64, target_unit: &str) -> FhirPathResult<f64> {
+        match target_unit {
+            "Cel" => Ok(celsius_value),
+            "K" => Ok(celsius_value + 273.15),
+            "[degF]" => Ok(celsius_value * 9.0 / 5.0 + 32.0),
+            _ => Err(FhirPathError::EvaluationError {
+                message: format!("Unknown temperature unit: {target_unit}"),
+            }),
         }
     }
 
@@ -586,5 +651,92 @@ mod tests {
         } else {
             panic!("Expected Quantity result");
         }
+    }
+
+    #[test]
+    fn test_temperature_conversion() {
+        let converter = UnitConverter::new();
+
+        // Test Celsius to Kelvin conversion: 0°C + 0K = -273.15°C
+        let result = converter
+            .add_quantities(0.0, &Some("Cel".to_string()), 0.0, &Some("K".to_string()))
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            // 0°C + 0K: 0°C + (-273.15°C) = -273.15°C
+            assert!((value - (-273.15)).abs() < 0.01);
+            assert_eq!(unit, Some("Cel".to_string()));
+        } else {
+            panic!("Expected Quantity result");
+        }
+
+        // Test same unit temperature addition
+        let result = converter
+            .add_quantities(
+                20.0,
+                &Some("Cel".to_string()),
+                5.0,
+                &Some("Cel".to_string()),
+            )
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            // Note: Now with Celsius as base unit, this is simply 20°C + 5°C = 25°C
+            assert!((value - 25.0).abs() < 0.01);
+            assert_eq!(unit, Some("Cel".to_string()));
+        } else {
+            panic!("Expected Quantity result");
+        }
+
+        // Test temperature subtraction
+        let result = converter
+            .subtract_quantities(
+                100.0,
+                &Some("Cel".to_string()),
+                0.0,
+                &Some("Cel".to_string()),
+            )
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            // 100°C - 0°C = 100°C
+            assert!((value - 100.0).abs() < 0.01);
+            assert_eq!(unit, Some("Cel".to_string()));
+        } else {
+            panic!("Expected Quantity result");
+        }
+    }
+
+    #[test]
+    fn test_temperature_specific_conversions() {
+        let converter = UnitConverter::new();
+
+        // Test freezing point of water: 0°C = 32°F = 273.15K
+        // Test 0°C to Celsius (base unit)
+        let (celsius_val, _) = converter
+            .to_base_unit(0.0, &Some("Cel".to_string()))
+            .unwrap();
+        assert!((celsius_val - 0.0).abs() < 0.01);
+
+        // Test 32°F to Celsius
+        let (celsius_val, _) = converter
+            .to_base_unit(32.0, &Some("[degF]".to_string()))
+            .unwrap();
+        assert!((celsius_val - 0.0).abs() < 0.01);
+
+        // Test 273.15K to Celsius
+        let (celsius_val, _) = converter
+            .to_base_unit(273.15, &Some("K".to_string()))
+            .unwrap();
+        assert!((celsius_val - 0.0).abs() < 0.01);
+
+        // Test Celsius to Kelvin
+        let kelvin_val = converter
+            .convert_from_base_unit(0.0, &Some("Cel".to_string()), &Some("K".to_string()))
+            .unwrap();
+        assert!((kelvin_val - 273.15).abs() < 0.01);
+
+        // Test Celsius to Fahrenheit
+        let fahrenheit_val = converter
+            .convert_from_base_unit(0.0, &Some("Cel".to_string()), &Some("[degF]".to_string()))
+            .unwrap();
+        assert!((fahrenheit_val - 32.0).abs() < 0.01);
     }
 }

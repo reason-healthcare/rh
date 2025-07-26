@@ -222,9 +222,7 @@ fn demo_quantity(
                     println!("  {description}: {expression} = {value}{unit_str}");
                 }
                 _ => {
-                    println!(
-                        "  {description}: {expression} = {result:?} (unexpected type)"
-                    );
+                    println!("  {description}: {expression} = {result:?} (unexpected type)");
                 }
             },
             Err(e) => {
@@ -278,14 +276,10 @@ fn demo_error(
     match parser.parse(expression) {
         Ok(expr) => match evaluator.evaluate(&expr, &empty_context) {
             Ok(result) => {
-                println!(
-                    "  {description}: {expression} = {result:?} (unexpected success)"
-                );
+                println!("  {description}: {expression} = {result:?} (unexpected success)");
             }
             Err(e) => {
-                println!(
-                    "  {description}: {expression} → ✓ Correctly handled error: {e}"
-                );
+                println!("  {description}: {expression} → ✓ Correctly handled error: {e}");
             }
         },
         Err(e) => {

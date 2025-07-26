@@ -398,6 +398,8 @@ parser.parse("@T12:30:45").unwrap();                 // ✅ → Time literal
 // Quantity literals and arithmetic
 parser.parse("5'mg'").unwrap();                       // ✅ → Quantity with UCUM unit
 parser.parse("37.2'Cel'").unwrap();                   // ✅ → Temperature quantity
+parser.parse("98.6'[degF]'").unwrap();                // ✅ → Fahrenheit temperature
+parser.parse("273.15'K'").unwrap();                   // ✅ → Kelvin temperature
 parser.parse("2'wk'").unwrap();                       // ✅ → Calendar duration
 parser.parse("5'mg' + 3'mg'").unwrap();               // ✅ → 8mg (same units)
 parser.parse("10'kg' * 2").unwrap();                  // ✅ → 20kg (scalar multiplication)
@@ -407,6 +409,11 @@ parser.parse("120'mm[Hg]' / 60'mm[Hg]'").unwrap();   // ✅ → 2.0 (dimensionle
 parser.parse("1.0'kg' + 500.0'g'").unwrap();         // ✅ → 1.5kg (automatic conversion)
 parser.parse("2.0'L' + 250.0'mL'").unwrap();         // ✅ → 2.25L (mL→L conversion)
 parser.parse("1.0'h' + 30.0'min'").unwrap();         // ✅ → 1.5h (min→h conversion)
+
+// Temperature conversion examples
+parser.parse("0.0'Cel' + 273.15'K'").unwrap();       // ✅ → 273.15Cel (K→Cel conversion)
+parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap();    // ✅ → 32.0[degF] (Cel→degF conversion)
+parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();       // ✅ → 25.0Cel (now intuitive!)
 
 // Empty collection indexing
 parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
@@ -454,6 +461,11 @@ The FHIRPath library includes a comprehensive unit conversion system that automa
 - `mm[Hg]` (millimeter of mercury) = 133.322 Pa
 - `bar` (bar) = 100000 Pa
 
+#### Temperature Units
+- `Cel` (celsius) - base unit
+- `K` (kelvin) - offset conversion: Cel = K - 273.15
+- `[degF]` (fahrenheit) - offset conversion: Cel = (°F - 32) × 5/9
+
 ### Unit Conversion Examples
 
 ```rust
@@ -462,6 +474,11 @@ parser.parse("1.0'kg' + 500.0'g'").unwrap();      // → 1.5 kg (500g → 0.5kg)
 parser.parse("2.0'L' + 250.0'mL'").unwrap();      // → 2.25 L (250mL → 0.25L)
 parser.parse("1.0'h' + 30.0'min'").unwrap();      // → 1.5 h (30min → 0.5h)
 parser.parse("1.5'm' + 50.0'cm'").unwrap();       // → 2.0 m (50cm → 0.5m)
+
+// Temperature conversions with offset handling
+parser.parse("0.0'Cel' + 273.15'K'").unwrap();    // → 273.15 Cel (273.15K → 273.15°C)
+parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap(); // → 32.0 [degF] (0°C → 32°F)
+parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();    // → 25.0 Cel (now intuitive!)
 
 // Multiplication and Division by scalars
 parser.parse("5.0'mg' * 3.0").unwrap();           // → 15.0 mg
@@ -490,6 +507,7 @@ The unit conversion system follows this process:
 - **Volume**: liter (L)
 - **Time**: second (s)
 - **Pressure**: pascal (Pa)
+- **Temperature**: celsius (Cel)
 
 ### Error Handling
 
@@ -498,7 +516,7 @@ The system provides clear error messages for:
 - **Division by zero**: `Division by zero`
 - **Unknown units**: `Unknown target unit: xyz`
 
-See `examples/unit_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
+See `examples/unit_conversion_example.rs` and `examples/temperature_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 
 ## Grammar Support
 
