@@ -160,7 +160,13 @@ async fn async_main() -> Result<()> {
             pattern,
             value_set_dir,
         } => {
-            generate_batch(&input_dir, &output_dir, &config, &pattern, value_set_dir.as_deref())?;
+            generate_batch(
+                &input_dir,
+                &output_dir,
+                &config,
+                &pattern,
+                value_set_dir.as_deref(),
+            )?;
         }
         Commands::Download {
             package,

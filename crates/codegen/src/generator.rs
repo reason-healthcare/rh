@@ -42,7 +42,10 @@ impl CodeGenerator {
     }
 
     /// Create a new code generator with a ValueSet directory
-    pub fn new_with_value_set_directory<P: AsRef<Path>>(config: CodegenConfig, _value_set_dir: P) -> Self {
+    pub fn new_with_value_set_directory<P: AsRef<Path>>(
+        config: CodegenConfig,
+        _value_set_dir: P,
+    ) -> Self {
         // For now, we'll just create a normal generator
         // In a full implementation, this would load ValueSets from the directory
         let value_set_manager = ValueSetManager::new();
@@ -85,7 +88,7 @@ impl CodeGenerator {
         // For now, create a simple struct with basic fields
         let mut rust_struct = RustStruct::new(struct_name.clone());
         rust_struct.doc_comment = structure_def.title.clone();
-        
+
         // Use config to determine derives
         let mut derives = vec!["Debug".to_string(), "Clone".to_string()];
         if self.config.with_serde {
@@ -107,31 +110,37 @@ impl CodeGenerator {
     ) -> CodegenResult<()> {
         // Generate the struct
         let rust_struct = self.generate_struct(structure_def)?;
-        
+
         // Generate tokens using the token generator
         let tokens = self.token_generator.generate_struct(&rust_struct);
-        
+
         // Write to file
         let code = tokens.to_string();
         fs::write(output_path.as_ref(), code).map_err(CodegenError::Io)?;
-        
+
         Ok(())
     }
 
     /// Generate an enum for a value set binding
-    pub fn generate_enum_for_value_set(&mut self, value_set_url: &str) -> CodegenResult<Option<RustEnum>> {
+    pub fn generate_enum_for_value_set(
+        &mut self,
+        value_set_url: &str,
+    ) -> CodegenResult<Option<RustEnum>> {
         // Check if we've already generated this enum
         if let Some(cached_enum) = self.enum_cache.get(value_set_url) {
             return Ok(Some(cached_enum.clone()));
         }
 
         // Generate a placeholder enum using the value set manager
-        let enum_name = self.value_set_manager.generate_placeholder_enum(value_set_url);
-        
+        let enum_name = self
+            .value_set_manager
+            .generate_placeholder_enum(value_set_url);
+
         // Get the generated enum from the value set manager's cache
         if let Some(rust_enum) = self.value_set_manager.get_cached_enums().get(&enum_name) {
             // Cache it in our own cache as well
-            self.enum_cache.insert(value_set_url.to_string(), rust_enum.clone());
+            self.enum_cache
+                .insert(value_set_url.to_string(), rust_enum.clone());
             Ok(Some(rust_enum.clone()))
         } else {
             Ok(None)
@@ -151,8 +160,8 @@ impl CodeGenerator {
                 match chars.next() {
                     None => String::new(),
                     Some(first) => {
-                        first.to_uppercase().collect::<String>() + 
-                        &chars.collect::<String>().to_lowercase()
+                        first.to_uppercase().collect::<String>()
+                            + &chars.collect::<String>().to_lowercase()
                     }
                 }
             })
@@ -187,18 +196,24 @@ mod tests {
         // Test normal names
         assert_eq!(generator.to_rust_name("Patient"), "Patient");
         assert_eq!(generator.to_rust_name("patient"), "Patient");
-        
+
         // Test names with spaces
-        assert_eq!(generator.to_rust_name("Relative Date Criteria"), "RelativeDateCriteria");
+        assert_eq!(
+            generator.to_rust_name("Relative Date Criteria"),
+            "RelativeDateCriteria"
+        );
         assert_eq!(generator.to_rust_name("Care Plan"), "CarePlan");
-        
+
         // Test names with dashes and underscores
         assert_eq!(generator.to_rust_name("patient-name"), "PatientName");
         assert_eq!(generator.to_rust_name("patient_name"), "PatientName");
-        
+
         // Test mixed separators
-        assert_eq!(generator.to_rust_name("some-complex_name with.spaces"), "SomeComplexNameWithSpaces");
-        
+        assert_eq!(
+            generator.to_rust_name("some-complex_name with.spaces"),
+            "SomeComplexNameWithSpaces"
+        );
+
         // Test empty and edge cases
         assert_eq!(generator.to_rust_name(""), "");
         assert_eq!(generator.to_rust_name("   "), "");

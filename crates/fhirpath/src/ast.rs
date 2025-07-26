@@ -213,52 +213,52 @@ impl fmt::Display for FhirPathExpression {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expression::Term(term) => write!(f, "{}", term),
+            Expression::Term(term) => write!(f, "{term}"),
             Expression::Invocation { left, invocation } => {
-                write!(f, "{}.{}", left, invocation)
+                write!(f, "{left}.{invocation}")
             }
-            Expression::Indexer { left, index } => write!(f, "{}[{}]", left, index),
+            Expression::Indexer { left, index } => write!(f, "{left}[{index}]"),
             Expression::Polarity { operator, operand } => {
-                write!(f, "{}{}", operator, operand)
+                write!(f, "{operator}{operand}")
             }
             Expression::Multiplicative {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
+            } => write!(f, "{left} {operator} {right}"),
             Expression::Additive {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
+            } => write!(f, "{left} {operator} {right}"),
             Expression::Type {
                 left,
                 operator,
                 type_specifier,
-            } => write!(f, "{} {} {}", left, operator, type_specifier),
-            Expression::Union { left, right } => write!(f, "{} | {}", left, right),
+            } => write!(f, "{left} {operator} {type_specifier}"),
+            Expression::Union { left, right } => write!(f, "{left} | {right}"),
             Expression::Inequality {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
+            } => write!(f, "{left} {operator} {right}"),
             Expression::Equality {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
+            } => write!(f, "{left} {operator} {right}"),
             Expression::Membership {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
-            Expression::And { left, right } => write!(f, "{} and {}", left, right),
+            } => write!(f, "{left} {operator} {right}"),
+            Expression::And { left, right } => write!(f, "{left} and {right}"),
             Expression::Or {
                 left,
                 operator,
                 right,
-            } => write!(f, "{} {} {}", left, operator, right),
-            Expression::Implies { left, right } => write!(f, "{} implies {}", left, right),
+            } => write!(f, "{left} {operator} {right}"),
+            Expression::Implies { left, right } => write!(f, "{left} implies {right}"),
         }
     }
 }
@@ -266,10 +266,10 @@ impl fmt::Display for Expression {
 impl fmt::Display for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Term::Invocation(inv) => write!(f, "{}", inv),
-            Term::Literal(lit) => write!(f, "{}", lit),
-            Term::ExternalConstant(name) => write!(f, "%{}", name),
-            Term::Parenthesized(expr) => write!(f, "({})", expr),
+            Term::Invocation(inv) => write!(f, "{inv}"),
+            Term::Literal(lit) => write!(f, "{lit}"),
+            Term::ExternalConstant(name) => write!(f, "%{name}"),
+            Term::Parenthesized(expr) => write!(f, "({expr})"),
         }
     }
 }
@@ -278,18 +278,18 @@ impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Literal::Null => write!(f, "{{}}"),
-            Literal::Boolean(b) => write!(f, "{}", b),
-            Literal::String(s) => write!(f, "'{}'", s),
-            Literal::Number(n) => write!(f, "{}", n),
-            Literal::LongNumber(n) => write!(f, "{}", n),
-            Literal::Date(d) => write!(f, "{}", d),
-            Literal::DateTime(dt) => write!(f, "{}", dt),
-            Literal::Time(t) => write!(f, "{}", t),
+            Literal::Boolean(b) => write!(f, "{b}"),
+            Literal::String(s) => write!(f, "'{s}'"),
+            Literal::Number(n) => write!(f, "{n}"),
+            Literal::LongNumber(n) => write!(f, "{n}"),
+            Literal::Date(d) => write!(f, "{d}"),
+            Literal::DateTime(dt) => write!(f, "{dt}"),
+            Literal::Time(t) => write!(f, "{t}"),
             Literal::Quantity { value, unit } => {
                 if let Some(unit) = unit {
-                    write!(f, "{} {}", value, unit)
+                    write!(f, "{value} {unit}")
                 } else {
-                    write!(f, "{}", value)
+                    write!(f, "{value}")
                 }
             }
         }
@@ -299,14 +299,14 @@ impl fmt::Display for Literal {
 impl fmt::Display for Invocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Invocation::Member(name) => write!(f, "{}", name),
+            Invocation::Member(name) => write!(f, "{name}"),
             Invocation::Function { name, parameters } => {
-                write!(f, "{}(", name)?;
+                write!(f, "{name}(")?;
                 for (i, param) in parameters.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", param)?;
+                    write!(f, "{param}")?;
                 }
                 write!(f, ")")
             }

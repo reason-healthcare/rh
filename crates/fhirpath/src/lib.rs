@@ -7,11 +7,15 @@
 //! ## Example
 //!
 //! ```rust
-//! use fhirpath::{FhirPathParser, FhirPathExpression};
+//! use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
+//! use serde_json::json;
 //!
 //! let parser = FhirPathParser::new();
 //! let expression = parser.parse("Patient.name.given").unwrap();
-//! // Use the expression to evaluate against FHIR resources
+//! 
+//! let evaluator = FhirPathEvaluator::new();
+//! let context = EvaluationContext::new(json!({"name": [{"given": ["John"]}]}));
+//! let result = evaluator.evaluate(&expression, &context).unwrap();
 //! ```
 
 pub mod ast;
@@ -19,7 +23,13 @@ pub mod error;
 pub mod evaluator;
 pub mod parser;
 
-pub use ast::*;
-pub use error::*;
-pub use evaluator::*;
-pub use parser::*;
+// Re-export the main public types users need
+pub use ast::{
+    FhirPathExpression, Expression, Term, Literal, Invocation,
+    EqualityOperator, InequalityOperator, MembershipOperator,
+    AdditiveOperator, MultiplicativeOperator, PolarityOperator,
+    TypeSpecifier
+};
+pub use error::{FhirPathError, FhirPathResult};
+pub use evaluator::{FhirPathEvaluator, EvaluationContext, FhirPathValue};
+pub use parser::FhirPathParser;
