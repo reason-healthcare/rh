@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in test_cases {
-        println!("🔍 {}: {}", description, expression);
+        println!("🔍 {description}: {expression}");
         match parser.parse(expression) {
             Ok(expr) => match evaluator.evaluate(&expr, &context) {
                 Ok(result) => println!("   ✅ {result:?}\n"),

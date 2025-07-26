@@ -153,10 +153,12 @@ jobs:
 
       - name: Test FHIRPath examples
         run: |
-          cargo run -p fhirpath --example fhirpath_demo
-          cargo run -p fhirpath --example fhirpath_arithmetic
-          cargo run -p fhirpath --example fhirpath_patient_navigation
-          cargo run -p fhirpath --example fhirpath_collections
+          cargo run -p fhirpath --example basic_demo
+          cargo run -p fhirpath --example arithmetic_operations
+          cargo run -p fhirpath --example fhir_patient_navigation
+          cargo run -p fhirpath --example collection_operations
+          cargo run -p fhirpath --example union_operations
+          cargo run -p fhirpath --example indexing_operations
 
   cli:
     name: Test CLI

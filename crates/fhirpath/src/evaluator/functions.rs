@@ -39,6 +39,9 @@ impl FunctionRegistry {
         self.register_distinct_function();
         self.register_is_distinct_function();
 
+        // Subsetting functions
+        self.register_subsetting_functions();
+
         // String functions
         self.register_string_functions();
     }
@@ -89,6 +92,103 @@ impl FunctionRegistry {
             "isDistinct".to_string(),
             Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
                 CollectionEvaluator::is_distinct(target)
+            }),
+        );
+    }
+
+    /// Register all subsetting functions
+    fn register_subsetting_functions(&mut self) {
+        // single() function
+        self.functions.insert(
+            "single".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::single(target)
+            }),
+        );
+
+        // first() function
+        self.functions.insert(
+            "first".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::first(target)
+            }),
+        );
+
+        // last() function
+        self.functions.insert(
+            "last".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::last(target)
+            }),
+        );
+
+        // tail() function
+        self.functions.insert(
+            "tail".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::tail(target)
+            }),
+        );
+
+        // skip() function
+        self.functions.insert(
+            "skip".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "skip() requires exactly one parameter (count)".to_string(),
+                    });
+                }
+                match &params[0] {
+                    FhirPathValue::Integer(count) => CollectionEvaluator::skip(target, *count),
+                    _ => Err(FhirPathError::InvalidOperation {
+                        message: "skip() count parameter must be an integer".to_string(),
+                    }),
+                }
+            }),
+        );
+
+        // take() function
+        self.functions.insert(
+            "take".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "take() requires exactly one parameter (count)".to_string(),
+                    });
+                }
+                match &params[0] {
+                    FhirPathValue::Integer(count) => CollectionEvaluator::take(target, *count),
+                    _ => Err(FhirPathError::InvalidOperation {
+                        message: "take() count parameter must be an integer".to_string(),
+                    }),
+                }
+            }),
+        );
+
+        // intersect() function
+        self.functions.insert(
+            "intersect".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "intersect() requires exactly one parameter (other collection)".to_string(),
+                    });
+                }
+                CollectionEvaluator::intersect(target, &params[0])
+            }),
+        );
+
+        // exclude() function
+        self.functions.insert(
+            "exclude".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "exclude() requires exactly one parameter (other collection)".to_string(),
+                    });
+                }
+                CollectionEvaluator::exclude(target, &params[0])
             }),
         );
     }

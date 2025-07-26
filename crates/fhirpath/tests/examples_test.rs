@@ -61,8 +61,7 @@ fn test_all_examples_build() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
         panic!(
-            "Failed to build FHIRPath examples!\n\nSTDOUT:\n{}\n\nSTDERR:\n{}",
-            stdout, stderr
+            "Failed to build FHIRPath examples!\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
         );
     }
 
@@ -83,7 +82,7 @@ fn test_all_examples_run_without_error() {
     let mut known_issue_failures = Vec::new();
 
     for example in FHIRPATH_EXAMPLES {
-        println!("  🧪 Testing example: {}", example);
+        println!("  🧪 Testing example: {example}");
 
         let output = Command::new("cargo")
             .arg("run")
@@ -93,7 +92,7 @@ fn test_all_examples_run_without_error() {
             .arg(example)
             .current_dir(workspace_root)
             .output()
-            .expect(&format!("Failed to execute example: {}", example));
+            .unwrap_or_else(|_| panic!("Failed to execute example: {example}"));
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -102,35 +101,32 @@ fn test_all_examples_run_without_error() {
             // Check if this is a known issue
             if EXAMPLES_WITH_KNOWN_ISSUES.contains(example) {
                 println!(
-                    "    ⚠️  {} - Known issue (runtime failure expected)",
-                    example
+                    "    ⚠️  {example} - Known issue (runtime failure expected)"
                 );
                 known_issue_failures.push(example);
             } else {
-                eprintln!("❌ Example '{}' failed to run:", example);
-                eprintln!("STDOUT:\n{}", stdout);
-                eprintln!("STDERR:\n{}", stderr);
+                eprintln!("❌ Example '{example}' failed to run:");
+                eprintln!("STDOUT:\n{stdout}");
+                eprintln!("STDERR:\n{stderr}");
                 failed_examples.push(example);
             }
         } else {
-            println!("    ✅ {} - PASSED", example);
+            println!("    ✅ {example} - PASSED");
         }
     }
 
     // Report known issues but don't fail the test
     if !known_issue_failures.is_empty() {
         println!(
-            "⚠️  Examples with known issues that failed (expected): {:?}",
-            known_issue_failures
+            "⚠️  Examples with known issues that failed (expected): {known_issue_failures:?}"
         );
     }
 
     // Only fail the test for unexpected failures
     if !failed_examples.is_empty() {
         panic!(
-            "The following FHIRPath examples failed unexpectedly: {:?}\n\
-             This indicates that the examples have runtime errors and need to be fixed.",
-            failed_examples
+            "The following FHIRPath examples failed unexpectedly: {failed_examples:?}\n\
+             This indicates that the examples have runtime errors and need to be fixed."
         );
     }
 
@@ -198,7 +194,7 @@ fn test_example_output_contains_expected_patterns() {
     let mut failed_patterns = Vec::new();
 
     for (example, expected_patterns) in example_patterns.iter() {
-        println!("  🔍 Checking output patterns for: {}", example);
+        println!("  🔍 Checking output patterns for: {example}");
 
         let output = Command::new("cargo")
             .arg("run")
@@ -208,7 +204,7 @@ fn test_example_output_contains_expected_patterns() {
             .arg(example)
             .current_dir(workspace_root)
             .output()
-            .expect(&format!("Failed to execute example: {}", example));
+            .unwrap_or_else(|_| panic!("Failed to execute example: {example}"));
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -223,17 +219,15 @@ fn test_example_output_contains_expected_patterns() {
 
             if !missing_patterns.is_empty() {
                 println!(
-                    "    ⚠️  {} - Missing expected patterns: {:?}",
-                    example, missing_patterns
+                    "    ⚠️  {example} - Missing expected patterns: {missing_patterns:?}"
                 );
                 failed_patterns.push((example, missing_patterns));
             } else {
-                println!("    ✅ {} - All expected patterns found", example);
+                println!("    ✅ {example} - All expected patterns found");
             }
         } else {
             println!(
-                "    ❌ {} - Failed to run (skipping pattern check)",
-                example
+                "    ❌ {example} - Failed to run (skipping pattern check)"
             );
         }
     }
@@ -241,7 +235,7 @@ fn test_example_output_contains_expected_patterns() {
     if !failed_patterns.is_empty() {
         eprintln!("⚠️  Some examples are missing expected output patterns:");
         for (example, patterns) in failed_patterns {
-            eprintln!("  - {}: {:?}", example, patterns);
+            eprintln!("  - {example}: {patterns:?}");
         }
         eprintln!("This might indicate that examples have changed output format or are not working as expected.");
         // Note: We don't panic here as this is more of a warning than a hard failure
@@ -275,7 +269,7 @@ mod example_validation {
             let entry = entry.unwrap();
             let path = entry.path();
 
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
                 let filename = path.file_stem().unwrap().to_str().unwrap();
                 actual_examples.push(filename.to_string());
             }
@@ -288,8 +282,8 @@ mod example_validation {
 
         if actual_examples != expected_examples {
             eprintln!("❌ Example list mismatch!");
-            eprintln!("Actual examples found: {:?}", actual_examples);
-            eprintln!("Expected examples in test: {:?}", expected_examples);
+            eprintln!("Actual examples found: {actual_examples:?}");
+            eprintln!("Expected examples in test: {expected_examples:?}");
 
             let missing_from_test: Vec<_> = actual_examples
                 .iter()
@@ -302,11 +296,11 @@ mod example_validation {
                 .collect();
 
             if !missing_from_test.is_empty() {
-                eprintln!("Examples missing from test list: {:?}", missing_from_test);
+                eprintln!("Examples missing from test list: {missing_from_test:?}");
             }
 
             if !extra_in_test.is_empty() {
-                eprintln!("Examples in test list but not found: {:?}", extra_in_test);
+                eprintln!("Examples in test list but not found: {extra_in_test:?}");
             }
 
             panic!(

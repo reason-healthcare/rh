@@ -18,26 +18,6 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 **Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, **array indexing with full nested support**, and **union operations** implemented, comprehensive evaluation functional
 
-## Recent Updates
-
-### Array Indexing Implementation (Latest)
-- ✅ **Complete array indexing support**: `name[0]`, `telecom[1].value`, `name[0].given[1]`
-- ✅ **Nested indexing**: Full support for deep indexing like `name[0].given[0]`
-- ✅ **Bounds checking**: Out-of-bounds access returns `Empty` instead of errors
-- ✅ **Collection preservation**: Fixed critical bug where single-element arrays were being flattened
-- ✅ **Primitive collections**: Indexing works on all collection types (strings, integers, objects)
-- ✅ **Edge case handling**: Empty collection indexing, mixed-type collections
-- ✅ **Comprehensive testing**: 15+ test scenarios covering all indexing patterns
-
-### Union Operations Implementation
-- ✅ **Complete union support**: `name.given | name.family`, `(1 | 2 | 3)`
-- ✅ **Mixed type unions**: `(42 | 'hello' | true)` works seamlessly
-- ✅ **Nested unions**: `((1 | 2) | (3 | 4))` properly flattens to single collection
-- ✅ **Empty value handling**: `(1 | {} | 3)` correctly excludes empty values
-- ✅ **Union with indexing**: `(10 | 20 | 30)[1]` returns proper indexed value
-- ✅ **FHIR data unions**: Combining collections from different FHIR properties
-- ✅ **Comprehensive testing**: 8+ test scenarios covering all union patterns
-
 ## Architecture
 
 The FHIRPath implementation consists of four main components:
@@ -124,6 +104,16 @@ The FHIRPath implementation consists of four main components:
 - **distinct()**: Remove duplicates
 - **isDistinct()**: Test if all items unique
 
+#### Subsetting Functions
+- **single()**: Return the single item in a collection (error if not exactly one item)
+- **first()**: Return the first item in a collection
+- **last()**: Return the last item in a collection
+- **tail()**: Return all items except the first
+- **skip(num)**: Skip the first `num` items and return the rest
+- **take(num)**: Return the first `num` items
+- **intersect(other)**: Return items that appear in both collections
+- **exclude(other)**: Return items that don't appear in the other collection
+
 #### Filtering Functions
 - **where(criteria)**: Filter collection by criteria
 - **select(projection)**: Transform each item in collection
@@ -153,6 +143,7 @@ The FHIRPath implementation consists of four main components:
 - ✅ Comparison operations with type safety
 - ✅ Membership operations with collection semantics
 - ✅ Collection functions (empty, exists, count, distinct, isDistinct)
+- ✅ Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
 - ✅ Filtering functions (where, select)
 - ✅ String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - ✅ String concatenation and type conversion
@@ -327,6 +318,14 @@ parser.parse("name.empty()").unwrap();       // ✅ → Boolean evaluation
 parser.parse("telecom.count()").unwrap();    // ✅ → Integer evaluation
 parser.parse("items.distinct()").unwrap();   // ✅ → Collection evaluation
 
+// Subsetting functions
+parser.parse("(1 | 2 | 3).first()").unwrap(); // ✅ → Integer(1)
+parser.parse("(1 | 2 | 3).last()").unwrap();  // ✅ → Integer(3)
+parser.parse("(42).single()").unwrap();       // ✅ → Integer(42)
+parser.parse("(1 | 2 | 3 | 4).tail()").unwrap(); // ✅ → Collection([2, 3, 4])
+parser.parse("(1 | 2 | 3 | 4).skip(2)").unwrap(); // ✅ → Collection([3, 4])
+parser.parse("(1 | 2 | 3 | 4).take(2)").unwrap(); // ✅ → Collection([1, 2])
+
 // Filtering functions
 parser.parse("name.where(use = 'official')").unwrap(); // ✅ → Filtered collection
 parser.parse("name.select(family)").unwrap(); // ✅ → Projected collection
@@ -443,8 +442,9 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [ ] Quantity literals
 - [ ] Type operators
 
-### Phase 4: Function Implementation (⏳ Collection, filtering, and string functions complete)
+### Phase 4: Function Implementation (⏳ Collection, subsetting, filtering, and string functions complete)
 - [x] Collection functions (exists, count, empty, distinct, isDistinct)
+- [x] Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
 - [x] Filtering functions (where, select)
 - [x] String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - [ ] Math functions (abs, round, etc.)
