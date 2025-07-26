@@ -165,6 +165,7 @@ The FHIRPath implementation consists of four main components:
 
 #### Basic Evaluation
 - ✅ Literal evaluation (including temporal literals)
+- ✅ Quantity literals (`5 'mg'`, `10 'cm'`)
 - ✅ Simple member access on JSON objects
 - ✅ Array indexing with bounds checking and nested indexing support
 - ✅ Basic logical operations
@@ -177,6 +178,7 @@ The FHIRPath implementation consists of four main components:
 - ✅ String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - ✅ Math functions (abs, ceiling, exp, floor, ln, log, power, round, sqrt, truncate)
 - ✅ Date/time functions (now, today, timeOfDay)
+- ✅ Date/time component extraction functions (yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf, timezoneOffsetOf, dateOf, timeOf)
 - ✅ Polarity operations (-, +)
 - ✅ String concatenation and type conversion
 - ❌ Complex path navigation
@@ -190,8 +192,19 @@ The FHIRPath implementation consists of four main components:
 - **Implies operation**: `condition implies action`
 
 #### Advanced Literals
-- **Quantity literals**: `5 'mg'`, `10 'cm'`
 - **Long numbers**: `1000L`
+
+#### FHIR extensions
+See: https://www.hl7.org/fhir/fhirpath.html
+- **extension**: `.extension.where(url = string)`
+- **hasValue()**: `Patient.name.given.getValue()`
+- **getValue()**: `Observation.issued.hasValue()`
+- (etc)
+
+#### SQL-on-FHIR extensions
+See: https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#fhirpath-functionality
+- **getResourceKey()**: `Observation.getResourceKey()`
+- **getReferenceKey([resource: type specifier])**: `Observation.subject.getReferenceKey(Patient)`
 
 ## FHIRPath Operator Support
 
@@ -658,6 +671,7 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
 - [x] Math functions (abs, round, etc.)
 - [x] Date/time functions (now, today, timeOfDay)
+- [x] Date/time component extraction functions (yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf, timezoneOffsetOf, dateOf, timeOf)
 
 ### Phase 5: Advanced Features (❌ Not Started)
 - [ ] Type system and coercion
@@ -711,6 +725,7 @@ The FHIRPath crate includes several comprehensive examples demonstrating differe
 - **`unit_conversion_example.rs`**: Demonstrates linear unit conversions (mass, length, volume, time, pressure)
 - **`temperature_conversion_example.rs`**: Shows temperature unit conversions with offset-based calculations  
 - **`datetime_functions_example.rs`**: Illustrates date/time functions (now, today, timeOfDay)
+- **`datetime_component_extraction_example.rs`**: Demonstrates component extraction functions (yearOf, monthOf, etc.)
 
 ### Running Examples
 

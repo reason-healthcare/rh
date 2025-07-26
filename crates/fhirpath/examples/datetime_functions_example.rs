@@ -7,7 +7,7 @@
 //!
 //! These functions are useful for date/time calculations and comparisons in FHIR resources.
 
-use fhirpath::{FhirPathEvaluator, FhirPathParser, FhirPathValue, EvaluationContext};
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,29 +22,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------");
 
     // Test the date/time functions
-    let expressions = vec![
-        "now()",
-        "today()",
-        "timeOfDay()",
-    ];
+    let expressions = vec!["now()", "today()", "timeOfDay()"];
 
     for expression in &expressions {
         match parser.parse(expression) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(FhirPathValue::Collection(values)) if values.len() == 1 => {
-                        println!("   {} => {:?}", expression, values[0]);
-                    }
-                    Ok(value) => {
-                        println!("   {} => {:?}", expression, value);
-                    }
-                    Err(e) => {
-                        println!("   {} => ERROR: {}", expression, e);
-                    }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(FhirPathValue::Collection(values)) if values.len() == 1 => {
+                    println!("   {} => {:?}", expression, values[0]);
                 }
-            }
+                Ok(value) => {
+                    println!("   {expression} => {value:?}");
+                }
+                Err(e) => {
+                    println!("   {expression} => ERROR: {e}");
+                }
+            },
             Err(e) => {
-                println!("   {} => PARSE ERROR: {}", expression, e);
+                println!("   {expression} => PARSE ERROR: {e}");
             }
         }
     }
@@ -62,21 +56,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for expression in &complex_expressions {
         match parser.parse(expression) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(FhirPathValue::Collection(values)) if values.len() == 1 => {
-                        println!("   {} => {:?}", expression, values[0]);
-                    }
-                    Ok(value) => {
-                        println!("   {} => {:?}", expression, value);
-                    }
-                    Err(e) => {
-                        println!("   {} => ERROR: {}", expression, e);
-                    }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(FhirPathValue::Collection(values)) if values.len() == 1 => {
+                    println!("   {} => {:?}", expression, values[0]);
                 }
-            }
+                Ok(value) => {
+                    println!("   {expression} => {value:?}");
+                }
+                Err(e) => {
+                    println!("   {expression} => ERROR: {e}");
+                }
+            },
             Err(e) => {
-                println!("   {} => PARSE ERROR: {}", expression, e);
+                println!("   {expression} => PARSE ERROR: {e}");
             }
         }
     }
@@ -85,26 +77,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("---------------");
 
     // Test error cases (functions with parameters)
-    let error_expressions = vec![
-        "now(5)",
-        "today('test')",
-        "timeOfDay(1, 2)",
-    ];
+    let error_expressions = vec!["now(5)", "today('test')", "timeOfDay(1, 2)"];
 
     for expression in &error_expressions {
         match parser.parse(expression) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(value) => {
-                        println!("   {} => UNEXPECTED SUCCESS: {:?}", expression, value);
-                    }
-                    Err(e) => {
-                        println!("   {} => ERROR (expected): {}", expression, e);
-                    }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(value) => {
+                    println!("   {expression} => UNEXPECTED SUCCESS: {value:?}");
                 }
-            }
+                Err(e) => {
+                    println!("   {expression} => ERROR (expected): {e}");
+                }
+            },
             Err(e) => {
-                println!("   {} => PARSE ERROR: {}", expression, e);
+                println!("   {expression} => PARSE ERROR: {e}");
             }
         }
     }
