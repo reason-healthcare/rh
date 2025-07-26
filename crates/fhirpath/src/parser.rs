@@ -359,6 +359,7 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
         parse_time_literal,     // Then time
         parse_date_literal,     // Then date (shorter pattern)
         parse_quantity_literal, // Try quantity before string and number
+        parse_datetime_precision_literal, // Try datetime precision keywords
         parse_string_literal,
         parse_number_literal,
     ))(input)
@@ -464,7 +465,7 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
 }
 
 // Parse quantity literal (number followed by single-quoted unit)
-// Examples: 5'mg', 10.5'kg', 100'mmHg'
+// Examples: 5'mg', 10.5'kg', 100'mmHg', 15 'mm[Hg]' (with optional space)
 fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
     // Parse the numeric value (integer or decimal)
     let (input, number_str) = recognize(tuple((
@@ -472,6 +473,9 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
         digit1,
         opt(tuple((char('.'), digit1))),
     )))(input)?;
+
+    // Parse optional whitespace between number and unit
+    let (input, _) = multispace0(input)?;
 
     // Parse the unit string (single-quoted)
     let (input, _) = char('\'')(input)?;
@@ -495,6 +499,31 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
             unit: unit_opt,
         },
     ))
+}
+
+// Parse datetime precision literal
+// Examples: 'year', 'years', 'month', 'months', 'week', 'weeks', etc.
+fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
+    alt((
+        // Plural forms first (to avoid partial matches)
+        map(tag("years"), |_| Literal::DateTimePrecision(DateTimePrecision::Year)),
+        map(tag("months"), |_| Literal::DateTimePrecision(DateTimePrecision::Month)),
+        map(tag("weeks"), |_| Literal::DateTimePrecision(DateTimePrecision::Week)),
+        map(tag("days"), |_| Literal::DateTimePrecision(DateTimePrecision::Day)),
+        map(tag("hours"), |_| Literal::DateTimePrecision(DateTimePrecision::Hour)),
+        map(tag("minutes"), |_| Literal::DateTimePrecision(DateTimePrecision::Minute)),
+        map(tag("seconds"), |_| Literal::DateTimePrecision(DateTimePrecision::Second)),
+        map(tag("milliseconds"), |_| Literal::DateTimePrecision(DateTimePrecision::Millisecond)),
+        // Singular forms
+        map(tag("year"), |_| Literal::DateTimePrecision(DateTimePrecision::Year)),
+        map(tag("month"), |_| Literal::DateTimePrecision(DateTimePrecision::Month)),
+        map(tag("week"), |_| Literal::DateTimePrecision(DateTimePrecision::Week)),
+        map(tag("day"), |_| Literal::DateTimePrecision(DateTimePrecision::Day)),
+        map(tag("hour"), |_| Literal::DateTimePrecision(DateTimePrecision::Hour)),
+        map(tag("minute"), |_| Literal::DateTimePrecision(DateTimePrecision::Minute)),
+        map(tag("second"), |_| Literal::DateTimePrecision(DateTimePrecision::Second)),
+        map(tag("millisecond"), |_| Literal::DateTimePrecision(DateTimePrecision::Millisecond)),
+    ))(input)
 }
 
 // Parse identifier - simplified version
@@ -809,6 +838,11 @@ mod tests {
             ("100'mmHg'", 100.0, Some("mmHg".to_string())),
             ("0.25'L'", 0.25, Some("L".to_string())),
             ("42''", 42.0, None), // Empty unit
+            // Test quantity literals with space before unit
+            ("15 'mm[Hg]'", 15.0, Some("mm[Hg]".to_string())),
+            ("37.2 'Cel'", 37.2, Some("Cel".to_string())),
+            ("5 'mg'", 5.0, Some("mg".to_string())),
+            ("2.5 'kg'", 2.5, Some("kg".to_string())),
         ];
 
         for (expr_str, expected_value, expected_unit) in quantity_expressions {

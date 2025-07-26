@@ -42,6 +42,62 @@ mod quantity_tests {
     }
 
     #[test]
+    fn test_quantity_with_spaces() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(json!({}));
+
+        // Test quantity literals with spaces between number and unit
+        let test_cases = [
+            ("15 'mm[Hg]'", 15.0, Some("mm[Hg]".to_string())),
+            ("37.2 'Cel'", 37.2, Some("Cel".to_string())),
+            ("5 'mg'", 5.0, Some("mg".to_string())),
+            ("2.5 'kg'", 2.5, Some("kg".to_string())),
+            ("120 'mm[Hg]'", 120.0, Some("mm[Hg]".to_string())),
+            ("98.6 '[degF]'", 98.6, Some("[degF]".to_string())),
+        ];
+
+        for (expr_str, expected_value, expected_unit) in test_cases {
+            let expr = parser
+                .parse(expr_str)
+                .unwrap_or_else(|_| panic!("Failed to parse {expr_str}"));
+            let result = evaluator
+                .evaluate(&expr, &context)
+                .unwrap_or_else(|_| panic!("Failed to evaluate {expr_str}"));
+
+            if let FhirPathValue::Quantity { value, unit } = result {
+                assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
+                assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
+            } else {
+                panic!("Expected Quantity value for {expr_str}, got: {result:?}");
+            }
+        }
+
+        // Test arithmetic with mixed spacing
+        let arithmetic_tests = [
+            ("15'mm[Hg]' + 5 'mm[Hg]'", 20.0, Some("mm[Hg]".to_string())),
+            ("120 'mm[Hg]' - 10'mm[Hg]'", 110.0, Some("mm[Hg]".to_string())),
+            ("5 'mg' * 2", 10.0, Some("mg".to_string())),
+        ];
+
+        for (expr_str, expected_value, expected_unit) in arithmetic_tests {
+            let expr = parser
+                .parse(expr_str)
+                .unwrap_or_else(|_| panic!("Failed to parse {expr_str}"));
+            let result = evaluator
+                .evaluate(&expr, &context)
+                .unwrap_or_else(|_| panic!("Failed to evaluate {expr_str}"));
+
+            if let FhirPathValue::Quantity { value, unit } = result {
+                assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
+                assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
+            } else {
+                panic!("Expected Quantity value for {expr_str}, got: {result:?}");
+            }
+        }
+    }
+
+    #[test]
     fn test_quantity_addition() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();

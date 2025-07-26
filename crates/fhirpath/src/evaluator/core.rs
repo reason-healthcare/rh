@@ -154,6 +154,7 @@ impl FhirPathEvaluator {
                 value: *value,
                 unit: unit.clone(),
             }),
+            Literal::DateTimePrecision(precision) => Ok(FhirPathValue::DateTimePrecision(precision.clone())),
             Literal::Null => Ok(FhirPathValue::Empty),
         }
     }

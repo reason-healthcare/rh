@@ -122,6 +122,8 @@ pub enum Literal {
     Time(String),
     /// Quantity literal (number with unit)
     Quantity { value: f64, unit: Option<String> },
+    /// DateTime precision unit literal
+    DateTimePrecision(DateTimePrecision),
 }
 
 /// Invocation types
@@ -196,6 +198,19 @@ pub enum EqualityOperator {
 pub enum MembershipOperator {
     In,
     Contains,
+}
+
+/// DateTime precision units for temporal calculations
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DateTimePrecision {
+    Year,
+    Month,
+    Week,
+    Day,
+    Hour,
+    Minute,
+    Second,
+    Millisecond,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -292,6 +307,7 @@ impl fmt::Display for Literal {
                     write!(f, "{value}")
                 }
             }
+            Literal::DateTimePrecision(precision) => write!(f, "{precision}"),
         }
     }
 }
@@ -390,6 +406,21 @@ impl fmt::Display for MembershipOperator {
         match self {
             MembershipOperator::In => write!(f, "in"),
             MembershipOperator::Contains => write!(f, "contains"),
+        }
+    }
+}
+
+impl fmt::Display for DateTimePrecision {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DateTimePrecision::Year => write!(f, "year"),
+            DateTimePrecision::Month => write!(f, "month"),
+            DateTimePrecision::Week => write!(f, "week"),
+            DateTimePrecision::Day => write!(f, "day"),
+            DateTimePrecision::Hour => write!(f, "hour"),
+            DateTimePrecision::Minute => write!(f, "minute"),
+            DateTimePrecision::Second => write!(f, "second"),
+            DateTimePrecision::Millisecond => write!(f, "millisecond"),
         }
     }
 }

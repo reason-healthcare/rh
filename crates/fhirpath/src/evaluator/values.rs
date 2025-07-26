@@ -1,5 +1,6 @@
 //! FHIRPath value types and basic value operations
 
+use crate::ast::DateTimePrecision;
 use crate::error::*;
 use serde_json::Value;
 
@@ -22,6 +23,8 @@ pub enum FhirPathValue {
     Time(String),
     /// Quantity value (number with unit)
     Quantity { value: f64, unit: Option<String> },
+    /// DateTime precision unit value
+    DateTimePrecision(DateTimePrecision),
     /// Collection of values
     Collection(Vec<FhirPathValue>),
     /// FHIR resource or object
@@ -41,6 +44,7 @@ impl FhirPathValue {
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
+            (FhirPathValue::DateTimePrecision(a), FhirPathValue::DateTimePrecision(b)) => a == b,
             (FhirPathValue::Empty, FhirPathValue::Empty) => true,
             (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
                 a.len() == b.len()

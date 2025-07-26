@@ -38,6 +38,7 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
             }
             Value::Object(obj)
         }
+        FhirPathValue::DateTimePrecision(precision) => Value::String(precision.to_string()),
         FhirPathValue::Collection(items) => {
             let json_items: Vec<Value> = items.iter().map(fhirpath_value_to_json).collect();
             Value::Array(json_items)

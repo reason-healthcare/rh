@@ -69,6 +69,7 @@ The FHIRPath implementation consists of four main components:
 - **DateTime**: `@2023-01-01T12:30:45`, `@2023-01-01T00:00:00Z`, `@2023-01-01T12:30:45+05:30` (ISO 8601 datetime format with optional timezone)
 - **Time**: `@T12:30:45`, `@T00:00:00`, `@T23:59:59` (ISO 8601 time format)
 - **Quantity**: `5'mg'`, `37.2'Cel'`, `120'mm[Hg]'`, `2'wk'` (value with UCUM unit or calendar duration)
+  - Also supports optional space: `15 'mm[Hg]'`, `37.2 'Cel'`, `5 'mg'`
 - **Null**: `{}`
 
 #### Special Variables
@@ -425,13 +426,16 @@ parser.parse("@T12:30:45").unwrap();                 // ✅ → Time literal
 
 // Quantity literals and arithmetic
 parser.parse("5'mg'").unwrap();                       // ✅ → Quantity with UCUM unit
+parser.parse("5 'mg'").unwrap();                      // ✅ → Same quantity (space supported)
 parser.parse("37.2'Cel'").unwrap();                   // ✅ → Temperature quantity
 parser.parse("98.6'[degF]'").unwrap();                // ✅ → Fahrenheit temperature
+parser.parse("15 'mm[Hg]'").unwrap();                 // ✅ → Blood pressure quantity (space supported)
 parser.parse("273.15'K'").unwrap();                   // ✅ → Kelvin temperature
 parser.parse("2'wk'").unwrap();                       // ✅ → Calendar duration
 parser.parse("5'mg' + 3'mg'").unwrap();               // ✅ → 8mg (same units)
 parser.parse("10'kg' * 2").unwrap();                  // ✅ → 20kg (scalar multiplication)
 parser.parse("120'mm[Hg]' / 60'mm[Hg]'").unwrap();   // ✅ → 2.0 (dimensionless ratio)
+parser.parse("15 'mm[Hg]' + 5 'mm[Hg]'").unwrap();   // ✅ → 20mm[Hg] (with spaces)
 
 // Unit conversion examples (linear units)
 parser.parse("1.0'kg' + 500.0'g'").unwrap();         // ✅ → 1.5kg (500g→0.5kg, then add)
