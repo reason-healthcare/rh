@@ -10,6 +10,7 @@ pub mod comparison_operations;
 pub mod membership_operations;
 pub mod collection_functions;
 pub mod filtering_functions;
+pub mod string_functions;
 
 // Common test utilities
 use fhirpath::*;

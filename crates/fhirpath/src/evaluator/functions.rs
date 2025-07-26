@@ -2,6 +2,7 @@
 
 use crate::error::*;
 use crate::evaluator::collection::CollectionEvaluator;
+use crate::evaluator::strings::StringEvaluator;
 use crate::evaluator::values::FhirPathValue;
 use std::collections::HashMap;
 
@@ -31,11 +32,15 @@ impl FunctionRegistry {
 
     /// Register all built-in functions
     fn register_builtin_functions(&mut self) {
+        // Collection functions
         self.register_empty_function();
         self.register_exists_function();
         self.register_count_function();
         self.register_distinct_function();
         self.register_is_distinct_function();
+        
+        // String functions
+        self.register_string_functions();
     }
 
     /// Register the empty() function
@@ -86,6 +91,151 @@ impl FunctionRegistry {
                 CollectionEvaluator::is_distinct(target)
             }),
         );
+    }
+
+    /// Register all string manipulation functions
+    fn register_string_functions(&mut self) {
+        // length() function
+        self.functions.insert(
+            "length".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                StringEvaluator::length(target)
+            }),
+        );
+
+        // upper() function
+        self.functions.insert(
+            "upper".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                StringEvaluator::upper(target)
+            }),
+        );
+
+        // lower() function
+        self.functions.insert(
+            "lower".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                StringEvaluator::lower(target)
+            }),
+        );
+
+        // trim() function
+        self.functions.insert(
+            "trim".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                StringEvaluator::trim(target)
+            }),
+        );
+
+        // substring() function
+        self.functions.insert(
+            "substring".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.is_empty() {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "substring() requires at least one parameter (start index)".to_string(),
+                    });
+                }
+                let start = &params[0];
+                let length = params.get(1);
+                StringEvaluator::substring(target, start, length)
+            }),
+        );
+
+        // startsWith() function
+        self.functions.insert(
+            "startsWith".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "startsWith() requires exactly one parameter".to_string(),
+                    });
+                }
+                StringEvaluator::starts_with(target, &params[0])
+            }),
+        );
+
+        // endsWith() function
+        self.functions.insert(
+            "endsWith".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "endsWith() requires exactly one parameter".to_string(),
+                    });
+                }
+                StringEvaluator::ends_with(target, &params[0])
+            }),
+        );
+
+        // indexOf() function
+        self.functions.insert(
+            "indexOf".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "indexOf() requires exactly one parameter".to_string(),
+                    });
+                }
+                StringEvaluator::index_of(target, &params[0])
+            }),
+        );
+
+        // replace() function
+        self.functions.insert(
+            "replace".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 2 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "replace() requires exactly two parameters (pattern, replacement)".to_string(),
+                    });
+                }
+                StringEvaluator::replace(target, &params[0], &params[1])
+            }),
+        );
+
+        // split() function
+        self.functions.insert(
+            "split".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "split() requires exactly one parameter (delimiter)".to_string(),
+                    });
+                }
+                StringEvaluator::split(target, &params[0])
+            }),
+        );
+
+        // join() function
+        self.functions.insert(
+            "join".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "join() requires exactly one parameter (delimiter)".to_string(),
+                    });
+                }
+                StringEvaluator::join(target, &params[0])
+            }),
+        );
+
+        // matches() function
+        self.functions.insert(
+            "matches".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "matches() requires exactly one parameter (pattern)".to_string(),
+                    });
+                }
+                StringEvaluator::matches(target, &params[0])
+            }),
+        );
+
+        // Note: We don't register string_contains as "contains" to avoid conflict
+        // with the FHIRPath collection contains operator. String containment
+        // can be checked using indexOf() >= 0 or matches() with appropriate patterns.
     }
 }
 
