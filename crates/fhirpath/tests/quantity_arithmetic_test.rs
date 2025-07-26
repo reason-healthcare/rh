@@ -76,7 +76,11 @@ mod quantity_tests {
         // Test arithmetic with mixed spacing
         let arithmetic_tests = [
             ("15'mm[Hg]' + 5 'mm[Hg]'", 20.0, Some("mm[Hg]".to_string())),
-            ("120 'mm[Hg]' - 10'mm[Hg]'", 110.0, Some("mm[Hg]".to_string())),
+            (
+                "120 'mm[Hg]' - 10'mm[Hg]'",
+                110.0,
+                Some("mm[Hg]".to_string()),
+            ),
             ("5 'mg' * 2", 10.0, Some("mg".to_string())),
         ];
 

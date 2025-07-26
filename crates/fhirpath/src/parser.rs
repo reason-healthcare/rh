@@ -12,6 +12,56 @@ use nom::{
     IResult,
 };
 
+// Parse compound duration literal (number + precision unit)
+// Examples: "6 months", "2 years", "24 hours"
+fn parse_compound_duration_literal(input: &str) -> IResult<&str, Literal> {
+    let (input, number_str) = recognize(tuple((
+        opt(char('-')),
+        digit1,
+        opt(tuple((char('.'), digit1))),
+    )))(input)?;
+
+    let (input, _) = multispace0(input)?; // Allow space between number and precision
+
+    let (input, precision) = alt((
+        // Plural forms first (to avoid partial matches)
+        map(tag("years"), |_| DateTimePrecision::Year),
+        map(tag("months"), |_| DateTimePrecision::Month),
+        map(tag("weeks"), |_| DateTimePrecision::Week),
+        map(tag("days"), |_| DateTimePrecision::Day),
+        map(tag("hours"), |_| DateTimePrecision::Hour),
+        map(tag("minutes"), |_| DateTimePrecision::Minute),
+        map(tag("seconds"), |_| DateTimePrecision::Second),
+        map(tag("milliseconds"), |_| DateTimePrecision::Millisecond),
+        // Singular forms
+        map(tag("year"), |_| DateTimePrecision::Year),
+        map(tag("month"), |_| DateTimePrecision::Month),
+        map(tag("week"), |_| DateTimePrecision::Week),
+        map(tag("day"), |_| DateTimePrecision::Day),
+        map(tag("hour"), |_| DateTimePrecision::Hour),
+        map(tag("minute"), |_| DateTimePrecision::Minute),
+        map(tag("second"), |_| DateTimePrecision::Second),
+        map(tag("millisecond"), |_| DateTimePrecision::Millisecond),
+    ))(input)?;
+
+    // Parse the number
+    let count = if number_str.contains('.') {
+        // For fractional durations, we'll need to handle this as a floating-point operation
+        number_str.parse::<f64>().unwrap_or(0.0) as i64
+    } else {
+        number_str.parse::<i64>().unwrap_or(0)
+    };
+
+    // Create a special compound duration quantity with the precision unit as the "unit"
+    Ok((
+        input,
+        Literal::Quantity {
+            value: count as f64,
+            unit: Some(format!("{precision}")),
+        },
+    ))
+}
+
 /// FHIRPath expression parser
 pub struct FhirPathParser;
 
@@ -355,10 +405,11 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
         map(tag("{}"), |_| Literal::Null),
         map(tag("true"), |_| Literal::Boolean(true)),
         map(tag("false"), |_| Literal::Boolean(false)),
-        parse_datetime_literal, // Try datetime first (longer pattern)
-        parse_time_literal,     // Then time
-        parse_date_literal,     // Then date (shorter pattern)
-        parse_quantity_literal, // Try quantity before string and number
+        parse_datetime_literal,          // Try datetime first (longer pattern)
+        parse_time_literal,              // Then time
+        parse_date_literal,              // Then date (shorter pattern)
+        parse_quantity_literal,          // Try quantity before string and number
+        parse_compound_duration_literal, // Try compound duration (number + precision)
         parse_datetime_precision_literal, // Try datetime precision keywords
         parse_string_literal,
         parse_number_literal,
@@ -394,14 +445,22 @@ fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
     }
 }
 
-// Parse date literal (@YYYY-MM-DD)
+// Parse date literal (@YYYY, @YYYY-MM, or @YYYY-MM-DD)
 fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('@')(input)?;
     let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, month) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, day) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+
+    // Check if there's more date information
+    let (input, month_day) = opt(tuple((
+        preceded(
+            char('-'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ),
+        opt(preceded(
+            char('-'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        )),
+    )))(input)?;
 
     // Ensure this doesn't match datetime by checking for 'T'
     if input.starts_with('T') {
@@ -411,7 +470,12 @@ fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
         )));
     }
 
-    let date_str = format!("{year}-{month}-{day}");
+    let date_str = match month_day {
+        Some((month, Some(day))) => format!("{year}-{month}-{day}"),
+        Some((month, None)) => format!("{year}-{month}"),
+        None => year.to_string(),
+    };
+
     Ok((input, Literal::Date(date_str)))
 }
 
@@ -506,23 +570,55 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
 fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
     alt((
         // Plural forms first (to avoid partial matches)
-        map(tag("years"), |_| Literal::DateTimePrecision(DateTimePrecision::Year)),
-        map(tag("months"), |_| Literal::DateTimePrecision(DateTimePrecision::Month)),
-        map(tag("weeks"), |_| Literal::DateTimePrecision(DateTimePrecision::Week)),
-        map(tag("days"), |_| Literal::DateTimePrecision(DateTimePrecision::Day)),
-        map(tag("hours"), |_| Literal::DateTimePrecision(DateTimePrecision::Hour)),
-        map(tag("minutes"), |_| Literal::DateTimePrecision(DateTimePrecision::Minute)),
-        map(tag("seconds"), |_| Literal::DateTimePrecision(DateTimePrecision::Second)),
-        map(tag("milliseconds"), |_| Literal::DateTimePrecision(DateTimePrecision::Millisecond)),
+        map(tag("years"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Year)
+        }),
+        map(tag("months"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Month)
+        }),
+        map(tag("weeks"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Week)
+        }),
+        map(tag("days"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Day)
+        }),
+        map(tag("hours"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Hour)
+        }),
+        map(tag("minutes"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Minute)
+        }),
+        map(tag("seconds"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Second)
+        }),
+        map(tag("milliseconds"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Millisecond)
+        }),
         // Singular forms
-        map(tag("year"), |_| Literal::DateTimePrecision(DateTimePrecision::Year)),
-        map(tag("month"), |_| Literal::DateTimePrecision(DateTimePrecision::Month)),
-        map(tag("week"), |_| Literal::DateTimePrecision(DateTimePrecision::Week)),
-        map(tag("day"), |_| Literal::DateTimePrecision(DateTimePrecision::Day)),
-        map(tag("hour"), |_| Literal::DateTimePrecision(DateTimePrecision::Hour)),
-        map(tag("minute"), |_| Literal::DateTimePrecision(DateTimePrecision::Minute)),
-        map(tag("second"), |_| Literal::DateTimePrecision(DateTimePrecision::Second)),
-        map(tag("millisecond"), |_| Literal::DateTimePrecision(DateTimePrecision::Millisecond)),
+        map(tag("year"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Year)
+        }),
+        map(tag("month"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Month)
+        }),
+        map(tag("week"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Week)
+        }),
+        map(tag("day"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Day)
+        }),
+        map(tag("hour"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Hour)
+        }),
+        map(tag("minute"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Minute)
+        }),
+        map(tag("second"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Second)
+        }),
+        map(tag("millisecond"), |_| {
+            Literal::DateTimePrecision(DateTimePrecision::Millisecond)
+        }),
     ))(input)
 }
 
