@@ -2,6 +2,7 @@
 
 use crate::ast::*;
 use crate::error::*;
+use crate::evaluator::units::UnitConverter;
 use crate::evaluator::values::FhirPathValue;
 
 /// Arithmetic operations handler
@@ -67,28 +68,23 @@ impl ArithmeticEvaluator {
             (FhirPathValue::String(a), FhirPathValue::String(b)) => {
                 Ok(FhirPathValue::String(format!("{a}{b}")))
             }
-            // Quantity arithmetic - addition requires same units
+            // Quantity arithmetic - with automatic unit conversion
             (
-                FhirPathValue::Quantity { value: a, unit: unit_a },
-                FhirPathValue::Quantity { value: b, unit: unit_b },
+                FhirPathValue::Quantity {
+                    value: a,
+                    unit: unit_a,
+                },
+                FhirPathValue::Quantity {
+                    value: b,
+                    unit: unit_b,
+                },
             ) => {
-                if unit_a == unit_b {
-                    Ok(FhirPathValue::Quantity {
-                        value: a + b,
-                        unit: unit_a.clone(),
-                    })
-                } else {
-                    Err(FhirPathError::EvaluationError {
-                        message: format!(
-                            "Cannot add quantities with different units: {:?} and {:?}",
-                            unit_a, unit_b
-                        ),
-                    })
-                }
+                let converter = UnitConverter::new();
+                converter.add_quantities(*a, unit_a, *b, unit_b)
             }
             // Mixed quantity and numeric operations (treating numeric as dimensionless)
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) |
-            (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n))
+            | (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 if unit.is_none() {
                     // Only allow if quantity has no unit (dimensionless)
                     Ok(FhirPathValue::Quantity {
@@ -101,8 +97,8 @@ impl ArithmeticEvaluator {
                     })
                 }
             }
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) |
-            (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i))
+            | (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 if unit.is_none() {
                     // Only allow if quantity has no unit (dimensionless)
                     Ok(FhirPathValue::Quantity {
@@ -139,24 +135,19 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 Ok(FhirPathValue::Number(a - *b as f64))
             }
-            // Quantity arithmetic - subtraction requires same units
+            // Quantity arithmetic - with automatic unit conversion
             (
-                FhirPathValue::Quantity { value: a, unit: unit_a },
-                FhirPathValue::Quantity { value: b, unit: unit_b },
+                FhirPathValue::Quantity {
+                    value: a,
+                    unit: unit_a,
+                },
+                FhirPathValue::Quantity {
+                    value: b,
+                    unit: unit_b,
+                },
             ) => {
-                if unit_a == unit_b {
-                    Ok(FhirPathValue::Quantity {
-                        value: a - b,
-                        unit: unit_a.clone(),
-                    })
-                } else {
-                    Err(FhirPathError::EvaluationError {
-                        message: format!(
-                            "Cannot subtract quantities with different units: {:?} and {:?}",
-                            unit_a, unit_b
-                        ),
-                    })
-                }
+                let converter = UnitConverter::new();
+                converter.subtract_quantities(*a, unit_a, *b, unit_b)
             }
             // Mixed quantity and numeric operations (treating numeric as dimensionless)
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) => {
@@ -234,17 +225,13 @@ impl ArithmeticEvaluator {
             // Quantity multiplication by scalars
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) |
             (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
-                Ok(FhirPathValue::Quantity {
-                    value: value * n,
-                    unit: unit.clone(),
-                })
+                let converter = UnitConverter::new();
+                Ok(converter.multiply_by_scalar(*value, unit, *n))
             }
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) |
             (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
-                Ok(FhirPathValue::Quantity {
-                    value: value * (*i as f64),
-                    unit: unit.clone(),
-                })
+                let converter = UnitConverter::new();
+                Ok(converter.multiply_by_scalar(*value, unit, *i as f64))
             }
             // Quantity * Quantity is more complex (unit multiplication) - for now, error
             (
@@ -306,28 +293,12 @@ impl ArithmeticEvaluator {
             }
             // Quantity division by scalars
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) => {
-                if *n == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
-                } else {
-                    Ok(FhirPathValue::Quantity {
-                        value: value / n,
-                        unit: unit.clone(),
-                    })
-                }
+                let converter = UnitConverter::new();
+                converter.divide_by_scalar(*value, unit, *n)
             }
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) => {
-                if *i == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
-                } else {
-                    Ok(FhirPathValue::Quantity {
-                        value: value / (*i as f64),
-                        unit: unit.clone(),
-                    })
-                }
+                let converter = UnitConverter::new();
+                converter.divide_by_scalar(*value, unit, *i as f64)
             }
             // Number/Integer divided by Quantity (result is different unit)
             (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
@@ -340,7 +311,8 @@ impl ArithmeticEvaluator {
                     Ok(FhirPathValue::Number(n / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
-                        message: "Division of number by quantity with units is not supported".to_string(),
+                        message: "Division of number by quantity with units is not supported"
+                            .to_string(),
                     })
                 }
             }
@@ -354,30 +326,24 @@ impl ArithmeticEvaluator {
                     Ok(FhirPathValue::Number((*i as f64) / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
-                        message: "Division of integer by quantity with units is not supported".to_string(),
+                        message: "Division of integer by quantity with units is not supported"
+                            .to_string(),
                     })
                 }
             }
-            // Quantity / Quantity with same units -> dimensionless number
+            // Quantity / Quantity with compatible units -> dimensionless number
             (
-                FhirPathValue::Quantity { value: a, unit: unit_a },
-                FhirPathValue::Quantity { value: b, unit: unit_b },
+                FhirPathValue::Quantity {
+                    value: a,
+                    unit: unit_a,
+                },
+                FhirPathValue::Quantity {
+                    value: b,
+                    unit: unit_b,
+                },
             ) => {
-                if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
-                } else if unit_a == unit_b {
-                    // Same units cancel out, result is dimensionless
-                    Ok(FhirPathValue::Number(a / b))
-                } else {
-                    Err(FhirPathError::EvaluationError {
-                        message: format!(
-                            "Division of quantities with different units is not supported: {:?} / {:?}",
-                            unit_a, unit_b
-                        ),
-                    })
-                }
+                let converter = UnitConverter::new();
+                converter.divide_quantities(*a, unit_a, *b, unit_b)
             }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot divide {left:?} and {right:?}"),

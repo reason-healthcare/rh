@@ -479,11 +479,7 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('\'')(input)?;
 
     // Convert the number string to f64 (quantities are always decimal)
-    let value = if let Ok(num) = number_str.parse::<f64>() {
-        num
-    } else {
-        0.0 // Fallback for invalid numbers
-    };
+    let value = number_str.parse::<f64>().unwrap_or(0.0); // Fallback for invalid numbers
 
     // Unit is optional per FHIR spec (can be empty string)
     let unit_opt = if unit.is_empty() {
@@ -492,7 +488,13 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
         Some(unit.to_string())
     };
 
-    Ok((input, Literal::Quantity { value, unit: unit_opt }))
+    Ok((
+        input,
+        Literal::Quantity {
+            value,
+            unit: unit_opt,
+        },
+    ))
 }
 
 // Parse identifier - simplified version
@@ -815,11 +817,16 @@ mod tests {
                 Ok(expr) => {
                     println!("✓ Parsed quantity: {expr_str} -> {expr}");
                     // Verify it's a Quantity literal
-                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) = expr.root {
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) =
+                        expr.root
+                    {
                         assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
                         assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
                     } else {
-                        panic!("Expected Quantity literal for {expr_str}, got: {:?}", expr.root);
+                        panic!(
+                            "Expected Quantity literal for {expr_str}, got: {:?}",
+                            expr.root
+                        );
                     }
                 }
                 Err(e) => {
@@ -836,14 +843,21 @@ mod tests {
                 // Should be a polarity expression containing a quantity
                 if let Expression::Polarity { operator, operand } = expr.root {
                     assert!(matches!(operator, PolarityOperator::Minus));
-                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) = operand.as_ref() {
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) =
+                        operand.as_ref()
+                    {
                         assert_eq!(*value, 2.5);
                         assert_eq!(*unit, Some("degC".to_string()));
                     } else {
-                        panic!("Expected Quantity literal in polarity expression, got: {:?}", operand);
+                        panic!(
+                            "Expected Quantity literal in polarity expression, got: {operand:?}"
+                        );
                     }
                 } else {
-                    panic!("Expected Polarity expression for -2.5'degC', got: {:?}", expr.root);
+                    panic!(
+                        "Expected Polarity expression for -2.5'degC', got: {:?}",
+                        expr.root
+                    );
                 }
             }
             Err(e) => {
@@ -853,13 +867,13 @@ mod tests {
 
         // Test UCUM units (examples from healthcare)
         let ucum_expressions = [
-            "37'Cel'",      // Celsius temperature
-            "120'mm[Hg]'",  // Millimeters of mercury
-            "2.5'mg/kg'",   // Milligrams per kilogram
-            "1'wk'",        // Week (calendar duration)
-            "30'd'",        // Day (calendar duration)
-            "6'mo'",        // Month (calendar duration)
-            "2'a'",         // Year (calendar duration)
+            "37'Cel'",     // Celsius temperature
+            "120'mm[Hg]'", // Millimeters of mercury
+            "2.5'mg/kg'",  // Milligrams per kilogram
+            "1'wk'",       // Week (calendar duration)
+            "30'd'",       // Day (calendar duration)
+            "6'mo'",       // Month (calendar duration)
+            "2'a'",        // Year (calendar duration)
         ];
 
         for expr_str in ucum_expressions {
@@ -868,10 +882,18 @@ mod tests {
                 Ok(expr) => {
                     println!("✓ Parsed UCUM quantity: {expr_str} -> {expr}");
                     // Verify it's a Quantity literal
-                    if let Expression::Term(Term::Literal(Literal::Quantity { value: _, unit })) = expr.root {
-                        assert!(unit.is_some(), "UCUM unit should not be empty for {expr_str}");
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value: _, unit })) =
+                        expr.root
+                    {
+                        assert!(
+                            unit.is_some(),
+                            "UCUM unit should not be empty for {expr_str}"
+                        );
                     } else {
-                        panic!("Expected Quantity literal for {expr_str}, got: {:?}", expr.root);
+                        panic!(
+                            "Expected Quantity literal for {expr_str}, got: {:?}",
+                            expr.root
+                        );
                     }
                 }
                 Err(e) => {

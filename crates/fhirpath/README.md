@@ -7,7 +7,8 @@ A comprehensive Rust implementation of a FHIRPath expression parser and evaluato
 - **String Functions**: Comprehensive string manipulation capabilities
 - **Collection Operations**: Work with FHIR collections and lists including subsetting functions
 - **Temporal Literals**: Support for date (@2023-01-01), datetime (@2023-01-01T12:30:45), and time (@T12:30:45) literals
-- **Quantity Literals**: Support for UCUM units (5'mg', 37'Cel') and calendar durations (2'wk', 6'mo') with arithmetic operations
+- **Quantity Literals**: Support for UCUM units (5'mg', 37'Cel') and calendar durations (2'wk', 6'mo') with automatic unit conversion
+- **Unit Conversion**: Automatic conversion between compatible units (kg↔g, L↔mL, h↔min) during arithmetic operations
 - **Type Safety**: Rust-native type checking and error handling
 
 ## Overview
@@ -84,10 +85,11 @@ The FHIRPath implementation consists of four main components:
 - **Integer operations**: `1 + 2` → `Integer(3)`, `5 * 6` → `Integer(30)`
 - **Mixed type operations**: `2.5 + 3` → `Number(5.5)`, `10 / 4` → `Number(2.5)`
 - **Quantity operations**: `5'mg' + 3'mg'` → `8mg`, `10'kg' * 2` → `20kg`, `120'mm[Hg]' / 60'mm[Hg]'` → `2.0`
+- **Unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`, `2.0'L' + 250.0'mL'` → `2.25L` (automatic conversion)
 - **String concatenation**: `'Hello' & ' World'` → `"Hello World"`
 - **Proper precedence**: `2 + 3 * 4` → `Integer(14)` (multiplication first)
 - **Division semantics**: `/` always returns Number, `div` returns Integer
-- **Unit compatibility**: Same units required for addition/subtraction, quantities support scalar multiplication/division
+- **Unit compatibility**: Compatible units automatically converted, scalar operations preserve units
 - **Error handling**: Division by zero, invalid type combinations, incompatible units
 
 #### Comparison Operations
@@ -401,9 +403,102 @@ parser.parse("5'mg' + 3'mg'").unwrap();               // ✅ → 8mg (same units
 parser.parse("10'kg' * 2").unwrap();                  // ✅ → 20kg (scalar multiplication)
 parser.parse("120'mm[Hg]' / 60'mm[Hg]'").unwrap();   // ✅ → 2.0 (dimensionless ratio)
 
+// Unit conversion examples
+parser.parse("1.0'kg' + 500.0'g'").unwrap();         // ✅ → 1.5kg (automatic conversion)
+parser.parse("2.0'L' + 250.0'mL'").unwrap();         // ✅ → 2.25L (mL→L conversion)
+parser.parse("1.0'h' + 30.0'min'").unwrap();         // ✅ → 1.5h (min→h conversion)
+
 // Empty collection indexing
 parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
 ```
+
+## Unit Conversion System
+
+The FHIRPath library includes a comprehensive unit conversion system that automatically handles conversions between compatible UCUM units during arithmetic operations. This enables seamless calculations between different units of the same physical quantity.
+
+### Supported Unit Categories
+
+#### Mass Units
+- `g` (gram) - base unit
+- `kg` (kilogram) = 1000 g
+- `mg` (milligram) = 0.001 g  
+- `ug` (microgram) = 0.000001 g
+- `lb` (pound) = 453.592 g
+
+#### Length Units
+- `m` (meter) - base unit
+- `cm` (centimeter) = 0.01 m
+- `mm` (millimeter) = 0.001 m
+- `km` (kilometer) = 1000 m
+- `in` or `[in_i]` (inch) = 0.0254 m
+- `ft` (foot) = 0.3048 m
+
+#### Volume Units
+- `L` (liter) - base unit
+- `mL` (milliliter) = 0.001 L
+- `dL` (deciliter) = 0.1 L
+- `uL` (microliter) = 0.000001 L
+
+#### Time Units
+- `s` (second) - base unit
+- `min` (minute) = 60 s
+- `h` (hour) = 3600 s
+- `d` (day) = 86400 s
+- `wk` (week) = 604800 s
+- `mo` (month) = 2629746 s (average)
+- `a` (year) = 31556952 s (average)
+
+#### Pressure Units
+- `Pa` (pascal) - base unit
+- `kPa` (kilopascal) = 1000 Pa
+- `mm[Hg]` (millimeter of mercury) = 133.322 Pa
+- `bar` (bar) = 100000 Pa
+
+### Unit Conversion Examples
+
+```rust
+// Addition and Subtraction with automatic conversion
+parser.parse("1.0'kg' + 500.0'g'").unwrap();      // → 1.5 kg (500g → 0.5kg)
+parser.parse("2.0'L' + 250.0'mL'").unwrap();      // → 2.25 L (250mL → 0.25L)
+parser.parse("1.0'h' + 30.0'min'").unwrap();      // → 1.5 h (30min → 0.5h)
+parser.parse("1.5'm' + 50.0'cm'").unwrap();       // → 2.0 m (50cm → 0.5m)
+
+// Multiplication and Division by scalars
+parser.parse("5.0'mg' * 3.0").unwrap();           // → 15.0 mg
+parser.parse("100.0'mL' / 4.0").unwrap();         // → 25.0 mL
+
+// Division of compatible quantities (dimensionless result)
+parser.parse("10.0'kg' / 2.0'kg'").unwrap();      // → 5.0 (dimensionless)
+parser.parse("1.0'kg' / 500.0'g'").unwrap();      // → 2.0 (1kg = 1000g, 1000/500 = 2)
+
+// Error cases - incompatible units
+parser.parse("1.0'kg' + 1.0'm'").unwrap();        // → Error: incompatible units
+```
+
+### Conversion Process
+
+The unit conversion system follows this process:
+
+1. **Compatibility Check**: Verify both quantities are of the same physical type (mass, length, volume, etc.)
+2. **Base Unit Conversion**: Convert both values to their respective base units
+3. **Arithmetic Operation**: Perform the operation on base unit values  
+4. **Result Conversion**: Convert back to the left operand's unit system
+
+### Base Units by Category
+- **Mass**: gram (g)
+- **Length**: meter (m) 
+- **Volume**: liter (L)
+- **Time**: second (s)
+- **Pressure**: pascal (Pa)
+
+### Error Handling
+
+The system provides clear error messages for:
+- **Incompatible units**: `Cannot add quantities with incompatible units: Some("kg") and Some("m")`
+- **Division by zero**: `Division by zero`
+- **Unknown units**: `Unknown target unit: xyz`
+
+See `examples/unit_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 
 ## Grammar Support
 

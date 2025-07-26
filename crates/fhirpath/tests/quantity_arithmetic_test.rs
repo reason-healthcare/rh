@@ -25,14 +25,20 @@ mod quantity_tests {
         ];
 
         for (expr_str, expected_value, expected_unit) in test_cases {
-            let expr = parser.parse(expr_str).expect(&format!("Failed to parse {}", expr_str));
-            let result = evaluator.evaluate(&expr, &context).expect(&format!("Failed to evaluate {}", expr_str));
-            
+            let expr = parser
+                .parse(expr_str)
+                .unwrap_or_else(|_| panic!("Failed to parse {expr_str}"));
+            let result = evaluator
+                .evaluate(&expr, &context)
+                .unwrap_or_else(|_| panic!("Failed to evaluate {expr_str}"));
+
             if let FhirPathValue::Quantity { value, unit } = result {
-                assert_eq!(value, expected_value, "Value mismatch for {}", expr_str);
-                assert_eq!(unit, expected_unit, "Unit mismatch for {}", expr_str);
+                assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
+                assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
             } else {
-                panic!("Expected Quantity value for {}, got: {:?}", expr_str, result);
+                panic!(
+                    "Expected Quantity value for {expr_str}, got: {result:?}"
+                );
             }
         }
     }
@@ -50,13 +56,28 @@ mod quantity_tests {
             assert_eq!(value, 8.0);
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
-        // Different units - should error
+        // Compatible units with conversion - should work
         let expr = parser.parse("5'mg' + 3'kg'").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 3000005.0); // 5mg + 3,000,000mg = 3,000,005mg
+            assert_eq!(unit, Some("mg".to_string()));
+        } else {
+            panic!(
+                "Expected Quantity result with unit conversion, got: {result:?}"
+            );
+        }
+
+        // Incompatible units - should error
+        let expr = parser.parse("5'mg' + 3'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(result.is_err(), "Should error when adding different units");
+        assert!(
+            result.is_err(),
+            "Should error when adding incompatible units"
+        );
 
         // Dimensionless quantities
         let expr = parser.parse("5'' + 3''").unwrap();
@@ -65,7 +86,7 @@ mod quantity_tests {
             assert_eq!(value, 8.0);
             assert_eq!(unit, None);
         } else {
-            panic!("Expected dimensionless Quantity result, got: {:?}", result);
+            panic!("Expected dimensionless Quantity result, got: {result:?}");
         }
     }
 
@@ -82,13 +103,28 @@ mod quantity_tests {
             assert_eq!(value, 7.0);
             assert_eq!(unit, Some("kg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
-        // Different units - should error
+        // Compatible units with conversion - should work
         let expr = parser.parse("10'kg' - 3'mg'").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert!((value - 9.999997).abs() < 0.000001); // 10kg - 0.000003kg = 9.999997kg
+            assert_eq!(unit, Some("kg".to_string()));
+        } else {
+            panic!(
+                "Expected Quantity result with unit conversion, got: {result:?}"
+            );
+        }
+
+        // Incompatible units - should error
+        let expr = parser.parse("10'kg' - 3'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(result.is_err(), "Should error when subtracting different units");
+        assert!(
+            result.is_err(),
+            "Should error when subtracting incompatible units"
+        );
     }
 
     #[test]
@@ -104,7 +140,7 @@ mod quantity_tests {
             assert_eq!(value, 10.0);
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Scalar * quantity
@@ -114,7 +150,7 @@ mod quantity_tests {
             assert_eq!(value, 12.0);
             assert_eq!(unit, Some("kg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Decimal scalar
@@ -124,7 +160,7 @@ mod quantity_tests {
             assert_eq!(value, 3.75);
             assert_eq!(unit, Some("L".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
     }
 
@@ -141,7 +177,7 @@ mod quantity_tests {
             assert_eq!(value, 5.0);
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Same units divide to dimensionless number
@@ -150,7 +186,7 @@ mod quantity_tests {
         if let FhirPathValue::Number(ratio) = result {
             assert_eq!(ratio, 2.0);
         } else {
-            panic!("Expected Number result, got: {:?}", result);
+            panic!("Expected Number result, got: {result:?}");
         }
 
         // Division by zero
@@ -172,13 +208,16 @@ mod quantity_tests {
             assert_eq!(value, 8.0);
             assert_eq!(unit, None);
         } else {
-            panic!("Expected dimensionless Quantity result, got: {:?}", result);
+            panic!("Expected dimensionless Quantity result, got: {result:?}");
         }
 
         // Quantity with unit + number should error
         let expr = parser.parse("5'mg' + 3").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(result.is_err(), "Should error when adding number to quantity with units");
+        assert!(
+            result.is_err(),
+            "Should error when adding number to quantity with units"
+        );
     }
 
     #[test]
@@ -194,7 +233,7 @@ mod quantity_tests {
             assert_eq!(value, 30.0);
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Mixed operations
@@ -204,7 +243,7 @@ mod quantity_tests {
             assert_eq!(value, 17.5); // 20 - (5/2) = 20 - 2.5 = 17.5
             assert_eq!(unit, Some("kg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
     }
 
@@ -221,7 +260,7 @@ mod quantity_tests {
             assert_eq!(value, -5.0);
             assert_eq!(unit, Some("mg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Subtraction resulting in negative
@@ -231,7 +270,7 @@ mod quantity_tests {
             assert_eq!(value, -5.0);
             assert_eq!(unit, Some("kg".to_string()));
         } else {
-            panic!("Expected Quantity result, got: {:?}", result);
+            panic!("Expected Quantity result, got: {result:?}");
         }
     }
 }

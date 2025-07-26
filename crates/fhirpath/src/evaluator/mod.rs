@@ -8,6 +8,7 @@ mod core;
 mod functions;
 mod math;
 mod strings;
+mod units;
 mod values;
 
 // Re-export the main types
