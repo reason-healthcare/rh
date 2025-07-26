@@ -8,7 +8,7 @@ A comprehensive Rust implementation of a FHIRPath expression parser and evaluato
 - **Collection Operations**: Work with FHIR collections and lists including subsetting functions
 - **Temporal Literals**: Support for date (@2023-01-01), datetime (@2023-01-01T12:30:45), and time (@T12:30:45) literals
 - **Quantity Literals**: Support for UCUM units (5'mg', 37'Cel') and calendar durations (2'wk', 6'mo') with automatic unit conversion
-- **Unit Conversion**: Automatic conversion between compatible units (kg↔g, L↔mL, h↔min) during arithmetic operations
+- **Unit Conversion**: Comprehensive automatic unit conversion between compatible UCUM units (mass, length, volume, time, pressure) with special offset-based temperature conversion support (Celsius, Kelvin, Fahrenheit)
 - **Type Safety**: Rust-native type checking and error handling
 
 ## Overview
@@ -85,7 +85,9 @@ The FHIRPath implementation consists of four main components:
 - **Integer operations**: `1 + 2` → `Integer(3)`, `5 * 6` → `Integer(30)`
 - **Mixed type operations**: `2.5 + 3` → `Number(5.5)`, `10 / 4` → `Number(2.5)`
 - **Quantity operations**: `5'mg' + 3'mg'` → `8mg`, `10'kg' * 2` → `20kg`, `120'mm[Hg]' / 60'mm[Hg]'` → `2.0`
-- **Unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`, `2.0'L' + 250.0'mL'` → `2.25L` (automatic conversion)
+- **Linear unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`, `2.0'L' + 250.0'mL'` → `2.25L` (automatic conversion)
+- **Temperature conversion**: `20.0'Cel' + 5.0'Cel'` → `25.0Cel`, `0.0'Cel' + 273.15'K'` → `273.15Cel` (offset-based)
+- **Cross-unit support**: Mass (g,kg,mg,ug,lb), Length (m,cm,mm,km,in,ft), Volume (L,mL,dL,uL), Time (s,min,h,d,wk,mo,a), Pressure (Pa,kPa,mm[Hg],bar), Temperature (Cel,K,[degF])
 - **String concatenation**: `'Hello' & ' World'` → `"Hello World"`
 - **Proper precedence**: `2 + 3 * 4` → `Integer(14)` (multiplication first)
 - **Division semantics**: `/` always returns Number, `div` returns Integer
@@ -405,15 +407,21 @@ parser.parse("5'mg' + 3'mg'").unwrap();               // ✅ → 8mg (same units
 parser.parse("10'kg' * 2").unwrap();                  // ✅ → 20kg (scalar multiplication)
 parser.parse("120'mm[Hg]' / 60'mm[Hg]'").unwrap();   // ✅ → 2.0 (dimensionless ratio)
 
-// Unit conversion examples
-parser.parse("1.0'kg' + 500.0'g'").unwrap();         // ✅ → 1.5kg (automatic conversion)
-parser.parse("2.0'L' + 250.0'mL'").unwrap();         // ✅ → 2.25L (mL→L conversion)
-parser.parse("1.0'h' + 30.0'min'").unwrap();         // ✅ → 1.5h (min→h conversion)
+// Unit conversion examples (linear units)
+parser.parse("1.0'kg' + 500.0'g'").unwrap();         // ✅ → 1.5kg (500g→0.5kg, then add)
+parser.parse("2.0'L' + 250.0'mL'").unwrap();         // ✅ → 2.25L (250mL→0.25L, then add)
+parser.parse("1.0'h' + 30.0'min'").unwrap();         // ✅ → 1.5h (30min→0.5h, then add)
+parser.parse("100.0'Pa' + 1.0'kPa'").unwrap();       // ✅ → 1100Pa (1kPa→1000Pa, then add)
 
-// Temperature conversion examples
-parser.parse("0.0'Cel' + 273.15'K'").unwrap();       // ✅ → 273.15Cel (K→Cel conversion)
-parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap();    // ✅ → 32.0[degF] (Cel→degF conversion)
-parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();       // ✅ → 25.0Cel (now intuitive!)
+// Temperature conversion examples (offset-based)
+parser.parse("0.0'Cel' + 273.15'K'").unwrap();       // ✅ → 273.15Cel (273.15K→273.15°C, then add)
+parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap();    // ✅ → 32.0[degF] (0°C→32°F, then add)
+parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();       // ✅ → 25.0Cel (same unit, direct add)
+parser.parse("100.0'Cel' - 373.15'K'").unwrap();     // ✅ → 0.0Cel (373.15K→100°C, then subtract)
+
+// Cross-unit operations
+parser.parse("1.0'ft' + 12.0'in'").unwrap();         // ✅ → 2.0ft (12in→1ft, then add)
+parser.parse("500.0'mg' / 0.5'g'").unwrap();         // ✅ → 1.0 (dimensionless: 0.5g→500mg, ratio)
 
 // Empty collection indexing
 parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
@@ -421,7 +429,7 @@ parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
 
 ## Unit Conversion System
 
-The FHIRPath library includes a comprehensive unit conversion system that automatically handles conversions between compatible UCUM units during arithmetic operations. This enables seamless calculations between different units of the same physical quantity.
+The FHIRPath library includes a comprehensive unit conversion system that automatically handles conversions between compatible UCUM units during arithmetic operations. This enables seamless calculations between different units of the same physical quantity, with special support for temperature units that require offset-based conversions.
 
 ### Supported Unit Categories
 
@@ -461,10 +469,12 @@ The FHIRPath library includes a comprehensive unit conversion system that automa
 - `mm[Hg]` (millimeter of mercury) = 133.322 Pa
 - `bar` (bar) = 100000 Pa
 
-#### Temperature Units
+#### Temperature Units (with Offset Conversion)
 - `Cel` (celsius) - base unit
-- `K` (kelvin) - offset conversion: Cel = K - 273.15
-- `[degF]` (fahrenheit) - offset conversion: Cel = (°F - 32) × 5/9
+- `K` (kelvin) - offset conversion: K = Cel + 273.15
+- `[degF]` (fahrenheit) - offset conversion: °F = (Cel × 9/5) + 32
+
+Temperature units are handled with special offset-based conversion logic to ensure accurate conversions between Celsius, Kelvin, and Fahrenheit scales. Unlike linear unit conversions, temperature conversions account for the different zero points of each scale.
 
 ### Unit Conversion Examples
 
@@ -475,31 +485,58 @@ parser.parse("2.0'L' + 250.0'mL'").unwrap();      // → 2.25 L (250mL → 0.25L
 parser.parse("1.0'h' + 30.0'min'").unwrap();      // → 1.5 h (30min → 0.5h)
 parser.parse("1.5'm' + 50.0'cm'").unwrap();       // → 2.0 m (50cm → 0.5m)
 
-// Temperature conversions with offset handling
-parser.parse("0.0'Cel' + 273.15'K'").unwrap();    // → 273.15 Cel (273.15K → 273.15°C)
-parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap(); // → 32.0 [degF] (0°C → 32°F)
-parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();    // → 25.0 Cel (now intuitive!)
+// Temperature conversions with offset handling (Celsius as base unit)
+parser.parse("0.0'Cel' + 273.15'K'").unwrap();    // → 273.15 Cel (273.15K → 273.15°C, then add)
+parser.parse("32.0'[degF]' + 0.0'Cel'").unwrap(); // → 32.0 [degF] (0°C → 32°F, then add)
+parser.parse("20.0'Cel' + 5.0'Cel'").unwrap();    // → 25.0 Cel (same unit addition)
+parser.parse("100.0'Cel' - 273.15'K'").unwrap();  // → 100.0 Cel (273.15K → 0°C, then subtract)
+
+// Cross-temperature scale conversions  
+parser.parse("0.0'K' + 0.0'Cel'").unwrap();       // → -273.15 K (0°C → -273.15K in Kelvin result)
+parser.parse("32.0'[degF]' - 32.0'[degF]'").unwrap(); // → 0.0 [degF] (same unit subtraction)
+
+// Pressure unit conversions
+parser.parse("120.0'mm[Hg]' + 10.0'kPa'").unwrap(); // → Automatic conversion and addition
+parser.parse("1.0'bar' / 2.0").unwrap();           // → 0.5 bar (scalar division)
 
 // Multiplication and Division by scalars
 parser.parse("5.0'mg' * 3.0").unwrap();           // → 15.0 mg
 parser.parse("100.0'mL' / 4.0").unwrap();         // → 25.0 mL
+parser.parse("37.0'Cel' * 2.0").unwrap();         // → 74.0 Cel
 
 // Division of compatible quantities (dimensionless result)
 parser.parse("10.0'kg' / 2.0'kg'").unwrap();      // → 5.0 (dimensionless)
 parser.parse("1.0'kg' / 500.0'g'").unwrap();      // → 2.0 (1kg = 1000g, 1000/500 = 2)
+parser.parse("212.0'[degF]' / 100.0'Cel'").unwrap(); // → 2.12 (212°F = 100°C, ratio calculation)
 
 // Error cases - incompatible units
 parser.parse("1.0'kg' + 1.0'm'").unwrap();        // → Error: incompatible units
+parser.parse("20.0'Cel' + 5.0'kg'").unwrap();     // → Error: cannot add temperature and mass
 ```
 
 ### Conversion Process
 
-The unit conversion system follows this process:
+The unit conversion system follows different processes depending on the unit type:
 
+#### Linear Unit Conversions (Mass, Length, Volume, Time, Pressure)
 1. **Compatibility Check**: Verify both quantities are of the same physical type (mass, length, volume, etc.)
-2. **Base Unit Conversion**: Convert both values to their respective base units
+2. **Base Unit Conversion**: Convert both values to their respective base units using multiplicative factors
 3. **Arithmetic Operation**: Perform the operation on base unit values  
 4. **Result Conversion**: Convert back to the left operand's unit system
+
+#### Temperature Unit Conversions (Offset-Based)
+1. **Compatibility Check**: Verify both quantities are temperature units
+2. **Base Unit Conversion**: Convert both values to Celsius using offset formulas:
+   - Kelvin → Celsius: `Cel = K - 273.15`
+   - Fahrenheit → Celsius: `Cel = (°F - 32) × 5/9`
+   - Celsius → Celsius: `Cel = Cel` (identity)
+3. **Arithmetic Operation**: Perform the operation on Celsius values
+4. **Result Conversion**: Convert back to the left operand's unit using inverse offset formulas:
+   - Celsius → Kelvin: `K = Cel + 273.15` 
+   - Celsius → Fahrenheit: `°F = (Cel × 9/5) + 32`
+   - Celsius → Celsius: `Cel = Cel` (identity)
+
+This dual approach ensures accurate conversions for both proportional quantities (where zero means "nothing") and interval scales like temperature (where zero is arbitrary).
 
 ### Base Units by Category
 - **Mass**: gram (g)
@@ -507,14 +544,16 @@ The unit conversion system follows this process:
 - **Volume**: liter (L)
 - **Time**: second (s)
 - **Pressure**: pascal (Pa)
-- **Temperature**: celsius (Cel)
+- **Temperature**: celsius (Cel) - with special offset-based conversion handling
 
 ### Error Handling
 
 The system provides clear error messages for:
 - **Incompatible units**: `Cannot add quantities with incompatible units: Some("kg") and Some("m")`
 - **Division by zero**: `Division by zero`
-- **Unknown units**: `Unknown target unit: xyz`
+- **Unknown units**: `Unknown unit: xyz`
+- **Temperature conversion errors**: `Unknown temperature unit: xyz`
+- **Mixed unit types**: `Cannot add quantities with incompatible units: Some("Cel") and Some("kg")`
 
 See `examples/unit_conversion_example.rs` and `examples/temperature_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 
@@ -641,7 +680,6 @@ This implementation covers the core FHIRPath functionality but there are areas w
 2. **Performance**: Optimization of parser and evaluator
 3. **Error Messages**: Better error reporting with suggestions
 4. **FHIR Integration**: Better integration with generated FHIR types
-5. **Quantity Literals**: Support for unit-based quantities like `5 'mg'`
 
 ### Development Guidelines
 
