@@ -2,16 +2,20 @@
 
 This directory contains comprehensive examples demonstrating the FHIR code generation crate capabilities. These examples show how to generate type-safe Rust code from FHIR StructureDefinitions, manage FHIR packages, and work with generated types.
 
-✅ **All examples are fully functional and demonstrate real working code.**
+- **Type-Safe Code Generation**: Convert FHIR StructureDefinitions to idiomatic Rust types
+- **Package Management**: Download FHIR packages from npm-style registries
+- **Enum Generation**: Create type-safe enums for required value set bindings
+- **Batch Processing**: Process entire directories of FHIR definitions
+- **Serde Integration**: Automatic JSON serialization/deserialization support
 
 ## 🔧 Examples Overview
 
 ### [`codegen_basic_usage.rs`](codegen_basic_usage.rs)
 **Basic code generation workflow**
-- Creating CodegenConfig with proper settings
-- Creating StructureDefinition instances
-- Generating Rust structs from FHIR definitions
-- Writing generated code to files
+- Creating configurations
+- Generating from single files
+- Batch processing directories
+- Basic error handling
 
 **Run with:**
 ```bash
@@ -20,10 +24,9 @@ cargo run -p codegen --example codegen_basic_usage
 
 ### [`codegen_package_management.rs`](codegen_package_management.rs)
 **FHIR package management**
-- Configuring package downloaders for FHIR registries
-- Setting up authentication for custom registries
-- Demonstrating async package download workflows
-- Configuration examples for package management
+- Downloading packages from registries
+- Installing packages and generating types
+- Custom registry authentication
 - Package processing workflows
 
 **Run with:**
@@ -33,11 +36,11 @@ cargo run -p codegen --example codegen_package_management
 
 ### [`codegen_generated_types.rs`](codegen_generated_types.rs)
 **Working with generated Rust types**
-- Setting up code generation with Serde support
-- Creating multiple StructureDefinitions 
-- Generating multiple Rust structs
-- Demonstrating benefits of type-safe generated code
-- Examples of generated code patterns
+- Creating FHIR resources programmatically
+- JSON serialization/deserialization
+- Type-safe enum handling
+- Validation patterns
+- Error handling with generated types
 
 **Run with:**
 ```bash

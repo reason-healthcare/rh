@@ -9,15 +9,6 @@ A comprehensive Rust workspace for FHIR (Fast Healthcare Interoperability Resour
 git clone <repo-url>
 cd research
 cargo build
-
-# Generate Rust types from a FHIR StructureDefinition
-cargo run -p rh -- codegen generate -i examples/patient.json -o examples/patient.rs
-
-# Download and install a FHIR package with automatic code generation
-cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
-
-# Parse and evaluate FHIRPath expressions
-cargo run -p rh -- fhirpath eval "Patient.name.family.upper()"
 ```
 
 For detailed usage examples and comprehensive documentation, see:
@@ -36,67 +27,23 @@ For detailed usage examples and comprehensive documentation, see:
 │   ├── core/              # 🏗️ Core functionality
 │   └── fhirpath/          # 🔍 FHIRPath expression parser and evaluator
 ├── apps/                  # Executable applications
-│   ├── example-cli/       # 📋 Example CLI application
-│   ├── fhir-codegen/      # ⚡ CLI tool for FHIR code generation (legacy)
 │   └── rh/                # 🎯 Unified CLI with codegen and fhirpath subcommands
-├── docs/                  # 📚 Documentation and guides
-├── tools/                 # 🛠️ Development tools and scripts
-├── examples/              # 💡 Example files and generated code samples
-│   ├── README.md          # 📖 Examples documentation and usage guide
-│   ├── codegen_*.rs       # 🔧 Code generation examples
-│   ├── fhirpath_*.rs      # 🔍 FHIRPath operation examples
-│   ├── patient.json       # 📄 Sample FHIR Patient resource
-│   └── patient.rs         # 🦀 Generated Rust types example
 ├── setup.sh              # 🔨 Development setup script
 └── build.sh              # 🏭 Build script for CI/CD
 ```
 
-## 📚 Documentation
-
-### Libraries
+## Libraries
 
 - **[FHIR Code Generation](crates/codegen/README.md)** - Generate type-safe Rust code from FHIR StructureDefinitions with package management support
 - **[FHIRPath](crates/fhirpath/README.md)** - Parse and evaluate FHIRPath expressions with comprehensive operator support
 - **Common** (`crates/common/`) - Shared utilities and error handling
 - **Core** (`crates/core/`) - Core functionality and types
 
-### Applications
+## Applications
 
 - **[RH CLI](apps/rh/README.md)** - Unified CLI application with subcommands for:
   - **Code Generation** (`rh codegen`) - Convert FHIR StructureDefinitions to Rust types
   - **FHIRPath Operations** (`rh fhirpath`) - Parse, evaluate, and test FHIRPath expressions  
-  - **Package Management** - Download and install FHIR packages from registries
-- **FHIR Codegen CLI** (`apps/fhir-codegen/`) - Legacy CLI tool (deprecated, use `rh codegen` instead)
-- **Example CLI** (`apps/example-cli/`) - Legacy example application (deprecated)
-
-### Examples and Tutorials
-
-- **[Examples Directory](examples/README.md)** - Comprehensive examples demonstrating:
-  - **Code Generation** - Basic usage, package management, working with generated types
-  - **FHIRPath Operations** - Arithmetic, strings, collections, FHIR resource navigation
-  - **Data Files** - Sample FHIR resources and generated Rust code  
-
-## 🏗️ Core Features
-
-### FHIR Code Generation
-- **Type-Safe Code Generation**: Convert FHIR StructureDefinitions to idiomatic Rust types
-- **Package Management**: Download FHIR packages from npm-style registries
-- **Enum Generation**: Create type-safe enums for required value set bindings
-- **Batch Processing**: Process entire directories of FHIR definitions
-- **Serde Integration**: Automatic JSON serialization/deserialization support
-
-### FHIRPath Expression Engine
-- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions
-- **Mathematical Operations**: Arithmetic, comparison, and logical operators
-- **String Functions**: Comprehensive string manipulation capabilities
-- **Collection Operations**: Work with FHIR collections and lists
-- **Type Safety**: Rust-native type checking and error handling
-
-### Workspace Benefits
-- **Unified Dependencies**: Shared dependencies across all crates
-- **Consistent Versioning**: Coordinated releases and dependency management  
-- **Cross-crate Testing**: Easy integration testing between components
-- **Simplified Build Process**: Single `cargo build` command for everything
 
 ## 🛠️ Getting Started
 
@@ -159,15 +106,6 @@ cargo run -p rh -- fhirpath --help
 cargo run -p rh -- -v codegen init
 ```
 
-**Legacy CLI (deprecated):**
-```bash
-# Legacy codegen tool (still available)
-cargo run -p fhir-codegen -- --help
-
-# Legacy example CLI
-cargo run -p example-cli -- --help
-```
-
 Check code formatting:
 
 ```bash
@@ -191,24 +129,6 @@ Run clippy with all features:
 ```bash
 cargo clippy --all-features
 ```
-
-## ➕ Adding New Packages
-
-### Library Crate
-
-```bash
-cd crates
-cargo new my-lib --lib
-```
-
-### Application
-
-```bash
-cd apps
-cargo new my-app --bin
-```
-
-After creating a new package, it will automatically be included in the workspace due to the wildcard patterns in `Cargo.toml`.
 
 ## 📦 Dependency Management
 
@@ -239,94 +159,6 @@ Add directly to the crate's `Cargo.toml`:
 [dependencies]
 regex = "1.0"
 ```
-
-## 🔥 FHIR Code Generation
-
-This monorepo includes a specialized code generation library for creating Rust types from FHIR StructureDefinition JSON files.
-
-### Quick Start with RH CLI
-
-1. **Initialize configuration:**
-   ```bash
-   cargo run -p rh -- codegen init
-   ```
-
-2. **Generate from a FHIR StructureDefinition:**
-   ```bash
-   cargo run -p rh -- codegen generate -i examples/patient.json -o examples/patient.rs
-   ```
-
-3. **Batch process multiple files:**
-   ```bash
-   cargo run -p rh -- codegen batch -i fhir-definitions/ -o src/generated/
-   ```
-
-**For comprehensive documentation including:**
-- Advanced configuration options
-- Library usage examples
-- Package management features
-- Custom type mappings
-- Error handling strategies
-
-**See the [FHIR Code Generation documentation](crates/codegen/README.md)**
-
-### FHIR Package Management
-
-The RH CLI supports downloading FHIR packages from npm-style registries:
-
-```bash
-# Download a FHIR package
-cargo run -p rh -- codegen download hl7.fhir.r4.core 4.0.1 -o ./packages/
-
-# Install and generate types from a FHIR package
-cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
-
-# Use custom registry or authentication
-cargo run -p rh -- codegen download my.custom.package 1.0.0 \
-  --registry https://my-fhir-registry.com \
-  --token your-auth-token
-```
-
-**For complete package management documentation including:**
-- Private registry authentication
-- Advanced configuration options
-- Package validation and integrity checks
-- Batch processing workflows
-
-**See the [RH CLI documentation](apps/rh/README.md) and [FHIR Code Generation documentation](crates/codegen/README.md)**
-
-## 🔍 FHIRPath Expressions
-
-The workspace includes a comprehensive FHIRPath expression parser and evaluator with support for:
-- Mathematical operations and comparisons
-- String manipulation functions
-- Collection operations and filtering
-- Type-safe evaluation with Rust error handling
-
-### Quick FHIRPath Examples
-
-```bash
-# Parse expressions and view AST
-cargo run -p rh -- fhirpath parse "Patient.name.family"
-
-# Evaluate against FHIR data
-cargo run -p rh -- fhirpath eval "name.where(use='official').given" --data patient.json
-
-# Interactive REPL for experimentation
-cargo run -p rh -- fhirpath repl --data patient.json
-
-# Run test suites
-cargo run -p rh -- fhirpath test --file tests.json --data patient.json
-```
-
-**For comprehensive documentation including:**
-- Complete FHIRPath syntax reference
-- Library API usage examples
-- Advanced expression patterns
-- Performance optimization tips
-- Testing and validation strategies
-
-**See the [FHIRPath documentation](crates/fhirpath/README.md)**
 
 ## 🔄 Development Workflow
 

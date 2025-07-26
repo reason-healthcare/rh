@@ -2,6 +2,12 @@
 
 A comprehensive Rust implementation of a FHIRPath expression parser and evaluator for FHIR resources.
 
+- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions
+- **Mathematical Operations**: Arithmetic, comparison, and logical operators
+- **String Functions**: Comprehensive string manipulation capabilities
+- **Collection Operations**: Work with FHIR collections and lists
+- **Type Safety**: Rust-native type checking and error handling
+
 ## Overview
 
 FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. This crate provides:
