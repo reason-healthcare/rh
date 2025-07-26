@@ -172,7 +172,8 @@ impl FunctionRegistry {
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
                 if params.len() != 1 {
                     return Err(FhirPathError::InvalidOperation {
-                        message: "intersect() requires exactly one parameter (other collection)".to_string(),
+                        message: "intersect() requires exactly one parameter (other collection)"
+                            .to_string(),
                     });
                 }
                 CollectionEvaluator::intersect(target, &params[0])
@@ -185,7 +186,8 @@ impl FunctionRegistry {
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
                 if params.len() != 1 {
                     return Err(FhirPathError::InvalidOperation {
-                        message: "exclude() requires exactly one parameter (other collection)".to_string(),
+                        message: "exclude() requires exactly one parameter (other collection)"
+                            .to_string(),
                     });
                 }
                 CollectionEvaluator::exclude(target, &params[0])
@@ -335,9 +337,22 @@ impl FunctionRegistry {
             }),
         );
 
-        // Note: We don't register string_contains as "contains" to avoid conflict
-        // with the FHIRPath collection contains operator. String containment
-        // can be checked using indexOf() >= 0 or matches() with appropriate patterns.
+        // contains() function
+        self.functions.insert(
+            "contains".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "contains() requires exactly one parameter (substring)"
+                            .to_string(),
+                    });
+                }
+                StringEvaluator::contains(target, &params[0])
+            }),
+        );
+
+        // Note: The contains() function above provides string containment checking.
+        // This is distinct from FHIRPath collection contains operations.
     }
 }
 

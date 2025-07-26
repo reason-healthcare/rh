@@ -53,6 +53,9 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 Ok(FhirPathValue::Number(a + *b as f64))
             }
+            (FhirPathValue::String(a), FhirPathValue::String(b)) => {
+                Ok(FhirPathValue::String(format!("{a}{b}")))
+            }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot add {left:?} and {right:?}"),
             }),

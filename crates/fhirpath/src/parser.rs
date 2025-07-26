@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::*;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_while1},
+    bytes::complete::{tag, take_while, take_while1},
     character::complete::{alpha1, char, digit1, multispace0},
     combinator::{map, opt, recognize},
     multi::{many0, separated_list0},
@@ -350,7 +350,7 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
 // Parse string literal
 fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('\'')(input)?;
-    let (input, content) = take_while1(|c| c != '\'')(input)?;
+    let (input, content) = take_while(|c| c != '\'')(input)?;
     let (input, _) = char('\'')(input)?;
     Ok((input, Literal::String(content.to_string())))
 }

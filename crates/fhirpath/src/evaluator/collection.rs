@@ -159,7 +159,10 @@ impl CollectionEvaluator {
                     Ok(items[0].clone())
                 } else {
                     Err(FhirPathError::InvalidOperation {
-                        message: format!("single() requires exactly one item, found {}", items.len()),
+                        message: format!(
+                            "single() requires exactly one item, found {}",
+                            items.len()
+                        ),
                     })
                 }
             }
@@ -293,7 +296,10 @@ impl CollectionEvaluator {
     }
 
     /// Get intersection of two collections
-    pub fn intersect(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    pub fn intersect(
+        target: &FhirPathValue,
+        other: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
         let target_items = match target {
             FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) => items.clone(),

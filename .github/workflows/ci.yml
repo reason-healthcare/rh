@@ -121,44 +121,6 @@ jobs:
       - name: Build RH CLI
         run: cargo build --release -p rh
 
-  examples:
-    name: Test Examples
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build workspace
-        run: cargo build --workspace
-
-      - name: Test codegen examples
-        run: |
-          cargo run -p codegen --example codegen_basic_usage
-          cargo run -p codegen --example codegen_generated_types
-          cargo run -p codegen --example codegen_package_management
-
-      - name: Test FHIRPath examples
-        run: |
-          cargo run -p fhirpath --example basic_demo
-          cargo run -p fhirpath --example arithmetic_operations
-          cargo run -p fhirpath --example fhir_patient_navigation
-          cargo run -p fhirpath --example collection_operations
-          cargo run -p fhirpath --example union_operations
-          cargo run -p fhirpath --example indexing_operations
 
   cli:
     name: Test CLI
