@@ -5,6 +5,9 @@
 //!
 //! Tests are organized into focused modules that mirror the source code structure
 //! for better maintainability and easier navigation.
+//!
+//! Note: Example validation tests are in examples_test.rs - these ensure all
+//! FHIRPath examples build and run correctly without exceptions.
 
 #[cfg(test)]
 mod tests {
@@ -269,7 +272,7 @@ mod tests {
     fn test_array_indexing() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         // Create a patient with multiple name entries for testing
         let patient_with_multiple_names = json!({
             "resourceType": "Patient",
@@ -283,7 +286,7 @@ mod tests {
                 },
                 {
                     "use": "usual",
-                    "family": "Doe", 
+                    "family": "Doe",
                     "given": ["Johnny"]
                 },
                 {
@@ -294,13 +297,13 @@ mod tests {
             ],
             "birthDate": "1974-12-25"
         });
-        
+
         let context = EvaluationContext::new(patient_with_multiple_names);
 
         // Test indexing name[0] - should get first name entry
         let expr = parser.parse("name[0]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Object(name_obj) => {
                 // Verify it's the first name object with "official" use
@@ -315,10 +318,10 @@ mod tests {
             }
         }
 
-        // Test indexing name[1] - should get second name entry  
+        // Test indexing name[1] - should get second name entry
         let expr = parser.parse("name[1]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Object(name_obj) => {
                 // Verify it's the second name object with "usual" use
@@ -336,7 +339,7 @@ mod tests {
         // Test out of bounds indexing - should return empty collection
         let expr = parser.parse("name[10]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Empty => {
                 // This is the expected result for out of bounds access
@@ -349,7 +352,7 @@ mod tests {
         // Test nested array indexing - accessing first given name from first name entry
         let expr = parser.parse("name[0].given[0]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::String(given_name) => {
                 assert_eq!(given_name, "John");
@@ -362,7 +365,7 @@ mod tests {
         // Test nested array indexing - accessing second given name from first name entry
         let expr = parser.parse("name[0].given[1]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::String(given_name) => {
                 assert_eq!(given_name, "James");
@@ -375,7 +378,7 @@ mod tests {
         // Test indexing on primitive collections
         let expr = parser.parse("(10 | 20 | 30)[0]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Integer(num) => {
                 assert_eq!(num, 10);
@@ -388,7 +391,7 @@ mod tests {
         // Test indexing on primitive collections - second element
         let expr = parser.parse("(10 | 20 | 30)[1]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Integer(num) => {
                 assert_eq!(num, 20);
@@ -401,7 +404,7 @@ mod tests {
         // Test out of bounds on primitive collection
         let expr = parser.parse("(10 | 20 | 30)[5]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Empty => {
                 // This is the expected result for out of bounds access
@@ -414,7 +417,7 @@ mod tests {
         // Test indexing on string collections
         let expr = parser.parse("('a' | 'b' | 'c')[0]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::String(s) => {
                 assert_eq!(s, "a");
@@ -424,10 +427,10 @@ mod tests {
             }
         }
 
-        // Test indexing on empty collection  
+        // Test indexing on empty collection
         let expr = parser.parse("{}[0]").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Empty => {
                 // This is the expected result for indexing empty collection
@@ -436,7 +439,148 @@ mod tests {
                 panic!("Expected Empty value for empty collection[0], got {result:?}");
             }
         }
-        
+
         println!("Array indexing test completed successfully!");
+    }
+
+    #[test]
+    fn test_union_operations() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create test data with various collections
+        let patient = json!({
+            "resourceType": "Patient",
+            "id": "union-test",
+            "name": [
+                {
+                    "use": "official",
+                    "family": "Smith",
+                    "given": ["John", "William"]
+                },
+                {
+                    "use": "usual",
+                    "family": "Smith",
+                    "given": ["Johnny"]
+                }
+            ],
+            "telecom": [
+                {"system": "phone", "value": "555-1234"},
+                {"system": "email", "value": "john@example.com"}
+            ]
+        });
+
+        let context = EvaluationContext::new(patient);
+
+        // Test 1: Simple union of primitive values
+        let expr = parser.parse("(1 | 2 | 3)").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0], FhirPathValue::Integer(1));
+                assert_eq!(items[1], FhirPathValue::Integer(2));
+                assert_eq!(items[2], FhirPathValue::Integer(3));
+            }
+            _ => panic!("Expected collection from union operation, got {result:?}"),
+        }
+
+        // Test 2: Union with strings
+        let expr = parser.parse("('apple' | 'banana' | 'cherry')").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0], FhirPathValue::String("apple".to_string()));
+                assert_eq!(items[1], FhirPathValue::String("banana".to_string()));
+                assert_eq!(items[2], FhirPathValue::String("cherry".to_string()));
+            }
+            _ => panic!("Expected collection from string union, got {result:?}"),
+        }
+
+        // Test 3: Union with FHIR data - combining given names and family names
+        let expr = parser.parse("name.given | name.family").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                // Should contain all given names and family names
+                assert!(items.len() >= 5); // At least John, William, Johnny, Smith, Smith
+                                           // Verify some expected values are present
+                assert!(items.contains(&FhirPathValue::String("John".to_string())));
+                assert!(items.contains(&FhirPathValue::String("Smith".to_string())));
+            }
+            _ => panic!("Expected collection from FHIR union, got {result:?}"),
+        }
+
+        // Test 4: Union with indexing
+        let expr = parser.parse("(10 | 20 | 30)[1]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Integer(20) => {
+                // Perfect - indexing works on union results
+            }
+            _ => panic!("Expected Integer(20) from union indexing, got {result:?}"),
+        }
+
+        // Test 5: Union with empty values
+        let expr = parser.parse("(1 | {} | 3)").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 2); // Should only have 1 and 3, empty is not added
+                assert_eq!(items[0], FhirPathValue::Integer(1));
+                assert_eq!(items[1], FhirPathValue::Integer(3));
+            }
+            _ => panic!("Expected collection from union with empty, got {result:?}"),
+        }
+
+        // Test 6: Union with mixed types
+        let expr = parser.parse("(42 | 'hello' | true)").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0], FhirPathValue::Integer(42));
+                assert_eq!(items[1], FhirPathValue::String("hello".to_string()));
+                assert_eq!(items[2], FhirPathValue::Boolean(true));
+            }
+            _ => panic!("Expected collection from mixed type union, got {result:?}"),
+        }
+
+        // Test 7: Nested unions
+        let expr = parser.parse("((1 | 2) | (3 | 4))").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 4);
+                assert_eq!(items[0], FhirPathValue::Integer(1));
+                assert_eq!(items[1], FhirPathValue::Integer(2));
+                assert_eq!(items[2], FhirPathValue::Integer(3));
+                assert_eq!(items[3], FhirPathValue::Integer(4));
+            }
+            _ => panic!("Expected collection from nested union, got {result:?}"),
+        }
+
+        // Test 8: Union with single values (should work but return single value)
+        let expr = parser.parse("42 | 'single'").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+
+        match result {
+            FhirPathValue::Collection(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0], FhirPathValue::Integer(42));
+                assert_eq!(items[1], FhirPathValue::String("single".to_string()));
+            }
+            _ => panic!("Expected collection from single value union, got {result:?}"),
+        }
+
+        println!("Union operations test completed successfully!");
     }
 }

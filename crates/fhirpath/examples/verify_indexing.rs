@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
             {
                 "use": "usual",
-                "family": "Smith", 
+                "family": "Smith",
                 "given": ["Johnny"]
             }
         ]
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match evaluator.evaluate(&expr, &context) {
                 Ok(result) => {
                     println!("   ✅ name[1] = {result:?}");
-                    
+
                     // Let's check what type this result is
                     match &result {
                         fhirpath::FhirPathValue::Object(obj) => {
@@ -58,34 +58,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nStep 2: Test name[1].given");
     match parser.parse("name[1].given") {
-        Ok(expr) => {
-            match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   ✅ name[1].given = {result:?}"),
-                Err(e) => println!("   ❌ Error: {e:?}"),
-            }
-        }
+        Ok(expr) => match evaluator.evaluate(&expr, &context) {
+            Ok(result) => println!("   ✅ name[1].given = {result:?}"),
+            Err(e) => println!("   ❌ Error: {e:?}"),
+        },
         Err(e) => println!("   ❌ Parse Error: {e:?}"),
     }
 
     println!("\nStep 3: Test name[1].given[0] (the failing case)");
     match parser.parse("name[1].given[0]") {
-        Ok(expr) => {
-            match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   ✅ name[1].given[0] = {result:?}"),
-                Err(e) => println!("   ❌ Error: {e:?}"),
-            }
-        }
+        Ok(expr) => match evaluator.evaluate(&expr, &context) {
+            Ok(result) => println!("   ✅ name[1].given[0] = {result:?}"),
+            Err(e) => println!("   ❌ Error: {e:?}"),
+        },
         Err(e) => println!("   ❌ Parse Error: {e:?}"),
     }
 
     println!("\nStep 4: Test name[0].given[0] (the working case)");
     match parser.parse("name[0].given[0]") {
-        Ok(expr) => {
-            match evaluator.evaluate(&expr, &context) {
-                Ok(result) => println!("   ✅ name[0].given[0] = {result:?}"),
-                Err(e) => println!("   ❌ Error: {e:?}"),
-            }
-        }
+        Ok(expr) => match evaluator.evaluate(&expr, &context) {
+            Ok(result) => println!("   ✅ name[0].given[0] = {result:?}"),
+            Err(e) => println!("   ❌ Error: {e:?}"),
+        },
         Err(e) => println!("   ❌ Parse Error: {e:?}"),
     }
 

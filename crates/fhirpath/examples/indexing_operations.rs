@@ -1,6 +1,6 @@
 //! Array Indexing Demo
 //!
-//! This example demonstrates FHIRPath array indexing functionality, 
+//! This example demonstrates FHIRPath array indexing functionality,
 //! showing how to access elements from collections using index notation.
 
 use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
             {
                 "use": "usual",
-                "family": "Smith", 
+                "family": "Smith",
                 "given": ["Johnny"]
             },
             {
@@ -48,27 +48,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("name[1]", "Access second name entry"),
         ("name[2]", "Access third name entry"),
         ("name[10]", "Out of bounds access (should be empty)"),
-        ("name[0].given[0]", "Access first given name from first entry"),
-        ("name[0].given[1]", "Access second given name from first entry"),
-        ("name[1].given[0]", "Access first given name from second entry"),
+        (
+            "name[0].given[0]",
+            "Access first given name from first entry",
+        ),
+        (
+            "name[0].given[1]",
+            "Access second given name from first entry",
+        ),
+        (
+            "name[1].given[0]",
+            "Access first given name from second entry",
+        ),
         ("name[0].family", "Access family name from first entry"),
     ];
 
     for (expression, description) in test_cases {
         println!("🧪 Testing: {expression}");
         println!("   Description: {description}");
-        
+
         match parser.parse(expression) {
-            Ok(expr) => {
-                match evaluator.evaluate(&expr, &context) {
-                    Ok(result) => {
-                        println!("   ✅ Result: {result:?}");
-                    }
-                    Err(e) => {
-                        println!("   ❌ Evaluation Error: {e:?}");
-                    }
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => {
+                    println!("   ✅ Result: {result:?}");
                 }
-            }
+                Err(e) => {
+                    println!("   ❌ Evaluation Error: {e:?}");
+                }
+            },
             Err(e) => {
                 println!("   ❌ Parsing Error: {e:?}");
             }

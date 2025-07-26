@@ -16,7 +16,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
 - **AST**: Type-safe representation of FHIRPath expressions with full serialization support
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, and **array indexing with full nested support** implemented, comprehensive evaluation functional
+**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, **array indexing with full nested support**, and **union operations** implemented, comprehensive evaluation functional
 
 ## Recent Updates
 
@@ -28,6 +28,15 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 - ✅ **Primitive collections**: Indexing works on all collection types (strings, integers, objects)
 - ✅ **Edge case handling**: Empty collection indexing, mixed-type collections
 - ✅ **Comprehensive testing**: 15+ test scenarios covering all indexing patterns
+
+### Union Operations Implementation
+- ✅ **Complete union support**: `name.given | name.family`, `(1 | 2 | 3)`
+- ✅ **Mixed type unions**: `(42 | 'hello' | true)` works seamlessly
+- ✅ **Nested unions**: `((1 | 2) | (3 | 4))` properly flattens to single collection
+- ✅ **Empty value handling**: `(1 | {} | 3)` correctly excludes empty values
+- ✅ **Union with indexing**: `(10 | 20 | 30)[1]` returns proper indexed value
+- ✅ **FHIR data unions**: Combining collections from different FHIR properties
+- ✅ **Comprehensive testing**: 8+ test scenarios covering all union patterns
 
 ## Architecture
 
@@ -340,6 +349,12 @@ parser.parse("active and name.exists()").unwrap(); // ✅ Works
 // Union operations
 parser.parse("name.given | name.family").unwrap(); // ✅ Works
 
+// Complex union operations
+parser.parse("(1 | 2 | 3)").unwrap();          // ✅ → Collection([1, 2, 3])
+parser.parse("(42 | 'hello' | true)").unwrap(); // ✅ → Mixed type collection
+parser.parse("((1 | 2) | (3 | 4))").unwrap();   // ✅ → Nested union flattening
+parser.parse("(10 | 20 | 30)[1]").unwrap();     // ✅ → Integer(20) (union + indexing)
+
 // Complex indexing with filtering
 parser.parse("name.where(use = 'official')[0].given[0]").unwrap(); // ✅ Works
 
@@ -381,10 +396,10 @@ The parser is built with operator precedence in mind:
 The implementation includes comprehensive tests:
 
 - **Unit tests**: 27 tests covering parser and evaluator
-- **Integration tests**: 20+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, and array indexing
-- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, and array indexing
-- **Evaluator coverage**: Literals, member access, array indexing (including nested indexing), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
-- **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation
+- **Integration tests**: 25+ real-world usage examples including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation, array indexing, and union operations
+- **Parser coverage**: All core syntax elements parse successfully including collection, filtering, string function calls, array indexing, and union operations
+- **Evaluator coverage**: Literals, member access, array indexing (including nested indexing), union operations (including mixed types and nested unions), arithmetic, comparison, membership, collection functions, filtering operations, and string manipulation
+- **Edge case coverage**: Out-of-bounds indexing, empty collection handling, single-element array preservation, union with empty values
 
 ### Run Tests
 
@@ -396,6 +411,7 @@ cargo test --package fhirpath
 cargo test --package fhirpath test_collection_functions -- --nocapture
 cargo test --package fhirpath test_filtering_functions_integration -- --nocapture
 cargo test --package fhirpath test_array_indexing -- --nocapture
+cargo test --package fhirpath test_union_operations -- --nocapture
 cargo test --package fhirpath strings -- --nocapture
 cargo test --package fhirpath --test string_integration_test
 cargo test --package fhirpath --test comprehensive_string_test
@@ -420,7 +436,7 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] Basic logical operations
 - [x] Arithmetic operations with proper precedence
 - [x] String concatenation and type conversion
-- [ ] Union operation evaluation
+- [x] Union operation evaluation
 
 ### Phase 3: Advanced Parsing (❌ Not Started)
 - [ ] Date/time literals
