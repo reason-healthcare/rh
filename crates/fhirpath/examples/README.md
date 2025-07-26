@@ -218,6 +218,7 @@ Run all main FHIRPath examples sequentially:
 examples=(
     "basic_demo"
     "arithmetic_operations"
+    "quantity_literals"
     "string_functions"
     "collection_operations"
     "indexing_operations"
@@ -251,6 +252,7 @@ echo "Testing FHIRPath examples..."
 core_examples=(
     "basic_demo"
     "arithmetic_operations"
+    "quantity_literals"
     "string_functions"
     "collection_operations"
     "indexing_operations"

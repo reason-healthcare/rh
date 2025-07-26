@@ -358,6 +358,7 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
         parse_datetime_literal, // Try datetime first (longer pattern)
         parse_time_literal,     // Then time
         parse_date_literal,     // Then date (shorter pattern)
+        parse_quantity_literal, // Try quantity before string and number
         parse_string_literal,
         parse_number_literal,
     ))(input)
@@ -460,6 +461,38 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
 
     let time_str = format!("T{hour}:{minute}:{second}");
     Ok((input, Literal::Time(time_str)))
+}
+
+// Parse quantity literal (number followed by single-quoted unit)
+// Examples: 5'mg', 10.5'kg', 100'mmHg'
+fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
+    // Parse the numeric value (integer or decimal)
+    let (input, number_str) = recognize(tuple((
+        opt(char('-')), // Optional negative sign
+        digit1,
+        opt(tuple((char('.'), digit1))),
+    )))(input)?;
+
+    // Parse the unit string (single-quoted)
+    let (input, _) = char('\'')(input)?;
+    let (input, unit) = take_while(|c| c != '\'')(input)?;
+    let (input, _) = char('\'')(input)?;
+
+    // Convert the number string to f64 (quantities are always decimal)
+    let value = if let Ok(num) = number_str.parse::<f64>() {
+        num
+    } else {
+        0.0 // Fallback for invalid numbers
+    };
+
+    // Unit is optional per FHIR spec (can be empty string)
+    let unit_opt = if unit.is_empty() {
+        None
+    } else {
+        Some(unit.to_string())
+    };
+
+    Ok((input, Literal::Quantity { value, unit: unit_opt }))
 }
 
 // Parse identifier - simplified version
@@ -758,6 +791,91 @@ mod tests {
                 }
                 Err(e) => {
                     panic!("Failed to parse time {expr_str}: {e:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_quantity_literals() {
+        let parser = FhirPathParser::new();
+
+        // Test basic quantity literals
+        let quantity_expressions = [
+            ("5'mg'", 5.0, Some("mg".to_string())),
+            ("10.5'kg'", 10.5, Some("kg".to_string())),
+            ("100'mmHg'", 100.0, Some("mmHg".to_string())),
+            ("0.25'L'", 0.25, Some("L".to_string())),
+            ("42''", 42.0, None), // Empty unit
+        ];
+
+        for (expr_str, expected_value, expected_unit) in quantity_expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed quantity: {expr_str} -> {expr}");
+                    // Verify it's a Quantity literal
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) = expr.root {
+                        assert_eq!(value, expected_value, "Value mismatch for {expr_str}");
+                        assert_eq!(unit, expected_unit, "Unit mismatch for {expr_str}");
+                    } else {
+                        panic!("Expected Quantity literal for {expr_str}, got: {:?}", expr.root);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse quantity {expr_str}: {e:?}");
+                }
+            }
+        }
+
+        // Test negative quantity (should parse as polarity expression)
+        let result = parser.parse("-2.5'degC'");
+        match result {
+            Ok(expr) => {
+                println!("✓ Parsed negative quantity: -2.5'degC' -> {expr}");
+                // Should be a polarity expression containing a quantity
+                if let Expression::Polarity { operator, operand } = expr.root {
+                    assert!(matches!(operator, PolarityOperator::Minus));
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) = operand.as_ref() {
+                        assert_eq!(*value, 2.5);
+                        assert_eq!(*unit, Some("degC".to_string()));
+                    } else {
+                        panic!("Expected Quantity literal in polarity expression, got: {:?}", operand);
+                    }
+                } else {
+                    panic!("Expected Polarity expression for -2.5'degC', got: {:?}", expr.root);
+                }
+            }
+            Err(e) => {
+                panic!("Failed to parse negative quantity -2.5'degC': {e:?}");
+            }
+        }
+
+        // Test UCUM units (examples from healthcare)
+        let ucum_expressions = [
+            "37'Cel'",      // Celsius temperature
+            "120'mm[Hg]'",  // Millimeters of mercury
+            "2.5'mg/kg'",   // Milligrams per kilogram
+            "1'wk'",        // Week (calendar duration)
+            "30'd'",        // Day (calendar duration)
+            "6'mo'",        // Month (calendar duration)
+            "2'a'",         // Year (calendar duration)
+        ];
+
+        for expr_str in ucum_expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed UCUM quantity: {expr_str} -> {expr}");
+                    // Verify it's a Quantity literal
+                    if let Expression::Term(Term::Literal(Literal::Quantity { value: _, unit })) = expr.root {
+                        assert!(unit.is_some(), "UCUM unit should not be empty for {expr_str}");
+                    } else {
+                        panic!("Expected Quantity literal for {expr_str}, got: {:?}", expr.root);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse UCUM quantity {expr_str}: {e:?}");
                 }
             }
         }

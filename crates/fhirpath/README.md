@@ -2,11 +2,12 @@
 
 A comprehensive Rust implementation of a FHIRPath expression parser and evaluator for FHIR resources.
 
-- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions with temporal literal support
-- **Mathematical Operations**: Arithmetic, comparison, and logical operators
+- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions with quantity and temporal literal support
+- **Mathematical Operations**: Arithmetic, comparison, and logical operators with quantity support
 - **String Functions**: Comprehensive string manipulation capabilities
 - **Collection Operations**: Work with FHIR collections and lists including subsetting functions
 - **Temporal Literals**: Support for date (@2023-01-01), datetime (@2023-01-01T12:30:45), and time (@T12:30:45) literals
+- **Quantity Literals**: Support for UCUM units (5'mg', 37'Cel') and calendar durations (2'wk', 6'mo') with arithmetic operations
 - **Type Safety**: Rust-native type checking and error handling
 
 ## Overview
@@ -66,6 +67,7 @@ The FHIRPath implementation consists of four main components:
 - **Date**: `@2023-01-01`, `@1990-12-25` (ISO 8601 date format)
 - **DateTime**: `@2023-01-01T12:30:45`, `@2023-01-01T00:00:00Z`, `@2023-01-01T12:30:45+05:30` (ISO 8601 datetime format with optional timezone)
 - **Time**: `@T12:30:45`, `@T00:00:00`, `@T23:59:59` (ISO 8601 time format)
+- **Quantity**: `5'mg'`, `37.2'Cel'`, `120'mm[Hg]'`, `2'wk'` (value with UCUM unit or calendar duration)
 - **Null**: `{}`
 
 #### Special Variables
@@ -81,10 +83,12 @@ The FHIRPath implementation consists of four main components:
 #### Arithmetic Operations
 - **Integer operations**: `1 + 2` → `Integer(3)`, `5 * 6` → `Integer(30)`
 - **Mixed type operations**: `2.5 + 3` → `Number(5.5)`, `10 / 4` → `Number(2.5)`
+- **Quantity operations**: `5'mg' + 3'mg'` → `8mg`, `10'kg' * 2` → `20kg`, `120'mm[Hg]' / 60'mm[Hg]'` → `2.0`
 - **String concatenation**: `'Hello' & ' World'` → `"Hello World"`
 - **Proper precedence**: `2 + 3 * 4` → `Integer(14)` (multiplication first)
 - **Division semantics**: `/` always returns Number, `div` returns Integer
-- **Error handling**: Division by zero, invalid type combinations
+- **Unit compatibility**: Same units required for addition/subtraction, quantities support scalar multiplication/division
+- **Error handling**: Division by zero, invalid type combinations, incompatible units
 
 #### Comparison Operations
 - **Numeric comparisons**: `5 > 3` → `Boolean(true)`, `age >= 18` → evaluation
@@ -389,6 +393,14 @@ parser.parse("@2023-01-01T00:00:00Z").unwrap();      // ✅ → DateTime with UT
 parser.parse("@2023-01-01T12:30:45+05:30").unwrap(); // ✅ → DateTime with timezone offset
 parser.parse("@T12:30:45").unwrap();                 // ✅ → Time literal
 
+// Quantity literals and arithmetic
+parser.parse("5'mg'").unwrap();                       // ✅ → Quantity with UCUM unit
+parser.parse("37.2'Cel'").unwrap();                   // ✅ → Temperature quantity
+parser.parse("2'wk'").unwrap();                       // ✅ → Calendar duration
+parser.parse("5'mg' + 3'mg'").unwrap();               // ✅ → 8mg (same units)
+parser.parse("10'kg' * 2").unwrap();                  // ✅ → 20kg (scalar multiplication)
+parser.parse("120'mm[Hg]' / 60'mm[Hg]'").unwrap();   // ✅ → 2.0 (dimensionless ratio)
+
 // Empty collection indexing
 parser.parse("{}[0]").unwrap(); // ✅ → Empty (graceful handling)
 ```
@@ -469,9 +481,9 @@ cargo test --package fhirpath test_parser_examples -- --nocapture
 - [x] String concatenation and type conversion
 - [x] Union operation evaluation
 
-### Phase 3: Advanced Parsing (⏳ Temporal literals complete)
+### Phase 3: Advanced Parsing (⏳ Quantity literals complete)
 - [x] Date/time literals
-- [ ] Quantity literals
+- [x] Quantity literals
 - [ ] Type operators
 
 ### Phase 4: Function Implementation (⏳ Collection, subsetting, filtering, and string functions complete)
