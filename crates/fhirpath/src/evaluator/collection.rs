@@ -63,6 +63,10 @@ impl CollectionEvaluator {
                     Ok(FhirPathValue::Empty)
                 }
             }
+            (FhirPathValue::Empty, FhirPathValue::Integer(_)) => {
+                // Indexing an empty collection always returns empty
+                Ok(FhirPathValue::Empty)
+            }
             _ => Err(FhirPathError::InvalidOperation {
                 message: "Invalid indexer operation".to_string(),
             }),

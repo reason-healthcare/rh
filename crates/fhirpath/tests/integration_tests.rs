@@ -264,4 +264,179 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_array_indexing() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        
+        // Create a patient with multiple name entries for testing
+        let patient_with_multiple_names = json!({
+            "resourceType": "Patient",
+            "id": "example",
+            "active": true,
+            "name": [
+                {
+                    "use": "official",
+                    "family": "Doe",
+                    "given": ["John", "James"]
+                },
+                {
+                    "use": "usual",
+                    "family": "Doe", 
+                    "given": ["Johnny"]
+                },
+                {
+                    "use": "maiden",
+                    "family": "Smith",
+                    "given": ["Jane"]
+                }
+            ],
+            "birthDate": "1974-12-25"
+        });
+        
+        let context = EvaluationContext::new(patient_with_multiple_names);
+
+        // Test indexing name[0] - should get first name entry
+        let expr = parser.parse("name[0]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Object(name_obj) => {
+                // Verify it's the first name object with "official" use
+                if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
+                    assert_eq!(use_str, "official");
+                } else {
+                    panic!("Expected 'use' field with string value in name[0]");
+                }
+            }
+            _ => {
+                panic!("Expected object value for name[0], got {result:?}");
+            }
+        }
+
+        // Test indexing name[1] - should get second name entry  
+        let expr = parser.parse("name[1]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Object(name_obj) => {
+                // Verify it's the second name object with "usual" use
+                if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
+                    assert_eq!(use_str, "usual");
+                } else {
+                    panic!("Expected 'use' field with string value in name[1]");
+                }
+            }
+            _ => {
+                panic!("Expected object value for name[1], got {result:?}");
+            }
+        }
+
+        // Test out of bounds indexing - should return empty collection
+        let expr = parser.parse("name[10]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Empty => {
+                // This is the expected result for out of bounds access
+            }
+            _ => {
+                panic!("Expected Empty value for out of bounds index name[10], got {result:?}");
+            }
+        }
+
+        // Test nested array indexing - accessing first given name from first name entry
+        let expr = parser.parse("name[0].given[0]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::String(given_name) => {
+                assert_eq!(given_name, "John");
+            }
+            _ => {
+                panic!("Expected string value for name[0].given[0], got {result:?}");
+            }
+        }
+
+        // Test nested array indexing - accessing second given name from first name entry
+        let expr = parser.parse("name[0].given[1]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::String(given_name) => {
+                assert_eq!(given_name, "James");
+            }
+            _ => {
+                panic!("Expected string value for name[0].given[1], got {result:?}");
+            }
+        }
+
+        // Test indexing on primitive collections
+        let expr = parser.parse("(10 | 20 | 30)[0]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Integer(num) => {
+                assert_eq!(num, 10);
+            }
+            _ => {
+                panic!("Expected integer value for primitive collection[0], got {result:?}");
+            }
+        }
+
+        // Test indexing on primitive collections - second element
+        let expr = parser.parse("(10 | 20 | 30)[1]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Integer(num) => {
+                assert_eq!(num, 20);
+            }
+            _ => {
+                panic!("Expected integer value for primitive collection[1], got {result:?}");
+            }
+        }
+
+        // Test out of bounds on primitive collection
+        let expr = parser.parse("(10 | 20 | 30)[5]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Empty => {
+                // This is the expected result for out of bounds access
+            }
+            _ => {
+                panic!("Expected Empty value for out of bounds primitive collection[5], got {result:?}");
+            }
+        }
+
+        // Test indexing on string collections
+        let expr = parser.parse("('a' | 'b' | 'c')[0]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::String(s) => {
+                assert_eq!(s, "a");
+            }
+            _ => {
+                panic!("Expected string value for string collection[0], got {result:?}");
+            }
+        }
+
+        // Test indexing on empty collection  
+        let expr = parser.parse("{}[0]").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        
+        match result {
+            FhirPathValue::Empty => {
+                // This is the expected result for indexing empty collection
+            }
+            _ => {
+                panic!("Expected Empty value for empty collection[0], got {result:?}");
+            }
+        }
+        
+        println!("Array indexing test completed successfully!");
+    }
 }

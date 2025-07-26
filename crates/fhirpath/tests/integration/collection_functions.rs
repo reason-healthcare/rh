@@ -199,3 +199,131 @@ fn test_last_function() {
         panic!("Expected integer value for last, got {:?}", result[0]);
     }
 }
+
+#[test]
+fn test_array_indexing() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test indexing patient.name[0] - should get first name entry
+    let result = evaluator.evaluate("name[0]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Object(name_obj) = &result[0] {
+        // Verify it's the first name object with "official" use
+        if let Some(use_value) = name_obj.get("use") {
+            if let Value::String(use_str) = use_value {
+                assert_eq!(use_str, "official");
+            } else {
+                panic!("Expected string value for 'use', got {:?}", use_value);
+            }
+        } else {
+            panic!("Expected 'use' field in name object");
+        }
+    } else {
+        panic!("Expected object value for name[0], got {:?}", result[0]);
+    }
+
+    // Test indexing patient.name[1] - should get second name entry
+    let result = evaluator.evaluate("name[1]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Object(name_obj) = &result[0] {
+        // Verify it's the second name object with "usual" use
+        if let Some(use_value) = name_obj.get("use") {
+            if let Value::String(use_str) = use_value {
+                assert_eq!(use_str, "usual");
+            } else {
+                panic!("Expected string value for 'use', got {:?}", use_value);
+            }
+        } else {
+            panic!("Expected 'use' field in name object");
+        }
+    } else {
+        panic!("Expected object value for name[1], got {:?}", result[0]);
+    }
+
+    // Test indexing patient.name[2] - should get third name entry
+    let result = evaluator.evaluate("name[2]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Object(name_obj) = &result[0] {
+        // Verify it's the third name object with "maiden" use
+        if let Some(use_value) = name_obj.get("use") {
+            if let Value::String(use_str) = use_value {
+                assert_eq!(use_str, "maiden");
+            } else {
+                panic!("Expected string value for 'use', got {:?}", use_value);
+            }
+        } else {
+            panic!("Expected 'use' field in name object");
+        }
+    } else {
+        panic!("Expected object value for name[2], got {:?}", result[0]);
+    }
+
+    // Test out of bounds indexing - should return empty collection
+    let result = evaluator.evaluate("name[10]", &patient).unwrap();
+    assert_eq!(result.len(), 0);
+
+    // Test negative indexing - should return empty collection (invalid)
+    let result = evaluator.evaluate("name[-1]", &patient).unwrap();
+    assert_eq!(result.len(), 0);
+
+    // Test nested array indexing - accessing first given name from first name entry
+    let result = evaluator.evaluate("name[0].given[0]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::String(given_name) = &result[0] {
+        assert_eq!(given_name, "John");
+    } else {
+        panic!("Expected string value for given[0], got {:?}", result[0]);
+    }
+
+    // Test nested array indexing - accessing second given name from first name entry
+    let result = evaluator.evaluate("name[0].given[1]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::String(given_name) = &result[0] {
+        assert_eq!(given_name, "James");
+    } else {
+        panic!("Expected string value for given[1], got {:?}", result[0]);
+    }
+
+    // Test indexing on primitive collections
+    let result = evaluator.evaluate("(10 | 20 | 30)[0]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Integer(num) = &result[0] {
+        assert_eq!(*num, 10);
+    } else {
+        panic!("Expected integer value for collection[0], got {:?}", result[0]);
+    }
+
+    let result = evaluator.evaluate("(10 | 20 | 30)[1]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Integer(num) = &result[0] {
+        assert_eq!(*num, 20);
+    } else {
+        panic!("Expected integer value for collection[1], got {:?}", result[0]);
+    }
+
+    let result = evaluator.evaluate("(10 | 20 | 30)[2]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::Integer(num) = &result[0] {
+        assert_eq!(*num, 30);
+    } else {
+        panic!("Expected integer value for collection[2], got {:?}", result[0]);
+    }
+
+    // Test out of bounds on primitive collection
+    let result = evaluator.evaluate("(10 | 20 | 30)[5]", &patient).unwrap();
+    assert_eq!(result.len(), 0);
+
+    // Test indexing on string collections
+    let result = evaluator.evaluate("('a' | 'b' | 'c')[0]", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    if let Value::String(s) = &result[0] {
+        assert_eq!(s, "a");
+    } else {
+        panic!("Expected string value for string collection[0], got {:?}", result[0]);
+    }
+
+    // Test indexing on empty collection
+    let result = evaluator.evaluate("{}[0]", &patient).unwrap();
+    assert_eq!(result.len(), 0);
+}

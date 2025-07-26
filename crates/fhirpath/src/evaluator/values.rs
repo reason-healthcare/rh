@@ -119,9 +119,9 @@ impl FhirPathValue {
                 let items: Vec<FhirPathValue> = arr.iter().map(Self::from_json).collect();
                 if items.is_empty() {
                     FhirPathValue::Empty
-                } else if items.len() == 1 {
-                    items.into_iter().next().unwrap()
                 } else {
+                    // Always return a Collection for arrays, even single-element ones
+                    // This preserves array semantics needed for indexing
                     FhirPathValue::Collection(items)
                 }
             }
