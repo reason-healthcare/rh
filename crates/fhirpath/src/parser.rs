@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::*;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_while, take_while1},
+    bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{alpha1, char, digit1, multispace0},
     combinator::{map, opt, recognize},
     multi::{many0, separated_list0},
@@ -342,6 +342,9 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
         map(tag("{}"), |_| Literal::Null),
         map(tag("true"), |_| Literal::Boolean(true)),
         map(tag("false"), |_| Literal::Boolean(false)),
+        parse_datetime_literal, // Try datetime first (longer pattern)
+        parse_time_literal,     // Then time
+        parse_date_literal,     // Then date (shorter pattern)
         parse_string_literal,
         parse_number_literal,
     ))(input)
@@ -376,10 +379,80 @@ fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
     }
 }
 
+// Parse date literal (@YYYY-MM-DD)
+fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
+    let (input, _) = char('@')(input)?;
+    let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char('-')(input)?;
+    let (input, month) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char('-')(input)?;
+    let (input, day) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+
+    // Ensure this doesn't match datetime by checking for 'T'
+    if input.starts_with('T') {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    }
+
+    let date_str = format!("{year}-{month}-{day}");
+    Ok((input, Literal::Date(date_str)))
+}
+
+// Parse datetime literal (@YYYY-MM-DDTHH:mm:ss or @YYYY-MM-DDTHH:mm:ssZ or @YYYY-MM-DDTHH:mm:ss+HH:mm)
+fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
+    let (input, _) = char('@')(input)?;
+    let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char('-')(input)?;
+    let (input, month) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char('-')(input)?;
+    let (input, day) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char('T')(input)?;
+    let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+
+    // Optional timezone information
+    let (input, timezone) = opt(alt((
+        recognize(char('Z')),
+        recognize(tuple((
+            alt((char('+'), char('-'))),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))),
+    )))(input)?;
+
+    let datetime_str = if let Some(tz) = timezone {
+        format!("{year}-{month}-{day}T{hour}:{minute}:{second}{tz}")
+    } else {
+        format!("{year}-{month}-{day}T{hour}:{minute}:{second}")
+    };
+
+    Ok((input, Literal::DateTime(datetime_str)))
+}
+
+// Parse time literal (@Thh:mm:ss)
+fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
+    let (input, _) = char('@')(input)?;
+    let (input, _) = char('T')(input)?;
+    let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+
+    let time_str = format!("T{hour}:{minute}:{second}");
+    Ok((input, Literal::Time(time_str)))
+}
+
 // Parse identifier - simplified version
 fn parse_identifier(input: &str) -> IResult<&str, String> {
     let (input, ident) = recognize(tuple((
-        alt((alpha1, tag("_"))),
+        alt((alpha1, recognize(char('_')))),
         opt(take_while1(|c: char| c.is_alphanumeric() || c == '_')),
     )))(input)?;
     Ok((input, ident.to_string()))
@@ -592,6 +665,88 @@ mod tests {
             assert!(matches!(operator, MembershipOperator::In));
         } else {
             panic!("Expected membership expression, got: {:?}", expr.root);
+        }
+    }
+
+    #[test]
+    fn test_date_time_literals() {
+        let parser = FhirPathParser::new();
+
+        // Test date literals
+        let date_expressions = ["@2023-01-01", "@1990-12-25", "@2025-07-26"];
+
+        for expr_str in date_expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed date: {expr_str} -> {expr}");
+                    // Verify it's a Date literal
+                    if let Expression::Term(Term::Literal(Literal::Date(date))) = expr.root {
+                        assert!(!date.is_empty());
+                        assert!(date.contains('-'));
+                    } else {
+                        panic!("Expected Date literal for {expr_str}, got: {:?}", expr.root);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse date {expr_str}: {e:?}");
+                }
+            }
+        }
+
+        // Test datetime literals
+        let datetime_expressions = [
+            "@2023-01-01T12:30:45",
+            "@2023-01-01T00:00:00Z",
+            "@2023-01-01T12:30:45+05:30",
+            "@2023-01-01T12:30:45-08:00",
+        ];
+
+        for expr_str in datetime_expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed datetime: {expr_str} -> {expr}");
+                    // Verify it's a DateTime literal
+                    if let Expression::Term(Term::Literal(Literal::DateTime(datetime))) = expr.root
+                    {
+                        assert!(!datetime.is_empty());
+                        assert!(datetime.contains('T'));
+                        assert!(datetime.contains(':'));
+                    } else {
+                        panic!(
+                            "Expected DateTime literal for {expr_str}, got: {:?}",
+                            expr.root
+                        );
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse datetime {expr_str}: {e:?}");
+                }
+            }
+        }
+
+        // Test time literals
+        let time_expressions = ["@T12:30:45", "@T00:00:00", "@T23:59:59"];
+
+        for expr_str in time_expressions {
+            let result = parser.parse(expr_str);
+            match result {
+                Ok(expr) => {
+                    println!("✓ Parsed time: {expr_str} -> {expr}");
+                    // Verify it's a Time literal
+                    if let Expression::Term(Term::Literal(Literal::Time(time))) = expr.root {
+                        assert!(!time.is_empty());
+                        assert!(time.starts_with('T'));
+                        assert!(time.contains(':'));
+                    } else {
+                        panic!("Expected Time literal for {expr_str}, got: {:?}", expr.root);
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to parse time {expr_str}: {e:?}");
+                }
+            }
         }
     }
 }

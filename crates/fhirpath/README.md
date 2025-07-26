@@ -2,10 +2,11 @@
 
 A comprehensive Rust implementation of a FHIRPath expression parser and evaluator for FHIR resources.
 
-- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions
+- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions with temporal literal support
 - **Mathematical Operations**: Arithmetic, comparison, and logical operators
 - **String Functions**: Comprehensive string manipulation capabilities
-- **Collection Operations**: Work with FHIR collections and lists
+- **Collection Operations**: Work with FHIR collections and lists including subsetting functions
+- **Temporal Literals**: Support for date (@2023-01-01), datetime (@2023-01-01T12:30:45), and time (@T12:30:45) literals
 - **Type Safety**: Rust-native type checking and error handling
 
 ## Overview
@@ -25,7 +26,7 @@ The FHIRPath implementation consists of four main components:
 ### 1. Parser (`src/parser.rs`)
 - **Technology**: nom parser combinators
 - **Status**: ✅ Complete for core syntax
-- **Features**: Converts FHIRPath string expressions into type-safe AST
+- **Features**: Converts FHIRPath string expressions into type-safe AST including temporal literals (date, datetime, time)
 - **Dependencies**: Uses the `nom` crate for parsing without build-time code generation
 
 ### 2. Abstract Syntax Tree (`src/ast.rs`)
@@ -62,6 +63,9 @@ The FHIRPath implementation consists of four main components:
 - **Integers**: `42`, `-10` (distinct from decimals)
 - **Numbers**: `3.14`, `-0.5` (floating-point)
 - **Strings**: `'hello world'`, `'patient name'`
+- **Date**: `@2023-01-01`, `@1990-12-25` (ISO 8601 date format)
+- **DateTime**: `@2023-01-01T12:30:45`, `@2023-01-01T00:00:00Z`, `@2023-01-01T12:30:45+05:30` (ISO 8601 datetime format with optional timezone)
+- **Time**: `@T12:30:45`, `@T00:00:00`, `@T23:59:59` (ISO 8601 time format)
 - **Null**: `{}`
 
 #### Special Variables
