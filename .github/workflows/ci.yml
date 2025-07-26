@@ -243,6 +243,11 @@ jobs:
         run: cargo tarpaulin --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: reason-healthcare/rh
+
+
+
