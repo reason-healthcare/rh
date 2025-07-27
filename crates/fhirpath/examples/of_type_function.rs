@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "string value",
             42,
             true,
-            3.14159,
+            3.15159,
             {"type": "custom", "data": "object"},
             false,
             99
@@ -94,8 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in type_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -127,8 +127,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in resource_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -160,8 +160,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in chaining_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -189,8 +189,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in complex_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -213,13 +213,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Format a FhirPathValue for display
 fn format_result(value: &FhirPathValue) -> String {
     match value {
-        FhirPathValue::Boolean(b) => format!("Boolean({})", b),
-        FhirPathValue::String(s) => format!("String(\"{}\")", s),
-        FhirPathValue::Number(n) => format!("Number({})", n),
-        FhirPathValue::Integer(i) => format!("Integer({})", i),
-        FhirPathValue::Date(d) => format!("Date({})", d),
-        FhirPathValue::DateTime(dt) => format!("DateTime({})", dt),
-        FhirPathValue::Time(t) => format!("Time({})", t),
+        FhirPathValue::Boolean(b) => format!("Boolean({b})"),
+        FhirPathValue::String(s) => format!("String(\"{s}\")"),
+        FhirPathValue::Number(n) => format!("Number({n})"),
+        FhirPathValue::Integer(i) => format!("Integer({i})"),
+        FhirPathValue::Date(d) => format!("Date({d})"),
+        FhirPathValue::DateTime(dt) => format!("DateTime({dt})"),
+        FhirPathValue::Time(t) => format!("Time({t})"),
         FhirPathValue::Quantity { value, unit } => {
             format!("Quantity({} {})", value, unit.as_deref().unwrap_or(""))
         }
@@ -268,6 +268,6 @@ fn format_result(value: &FhirPathValue) -> String {
             }
         }
         FhirPathValue::Empty => "Empty".to_string(),
-        _ => format!("{:?}", value),
+        _ => format!("{value:?}"),
     }
 }

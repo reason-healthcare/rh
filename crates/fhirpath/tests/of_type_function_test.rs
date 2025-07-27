@@ -13,7 +13,7 @@ fn create_mixed_type_context() -> EvaluationContext {
             "hello",
             42,
             true,
-            3.14,
+            3.15,
             null,
             {"resourceType": "Patient", "id": "patient1"},
             {"resourceType": "Observation", "id": "obs1"},
@@ -186,7 +186,7 @@ fn test_of_type_on_single_item() {
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "apple");
     } else {
-        panic!("Expected string result, got: {:?}", result);
+        panic!("Expected string result, got: {result:?}");
     }
 }
 
@@ -236,14 +236,14 @@ fn test_of_type_with_where_filtering() {
         assert_eq!(items.len(), 1);
         if let FhirPathValue::Object(obj) = &items[0] {
             assert_eq!(obj.get("id").unwrap().as_str().unwrap(), "p1");
-            assert_eq!(obj.get("active").unwrap().as_bool().unwrap(), true);
+            assert!(obj.get("active").unwrap().as_bool().unwrap());
         }
     } else if let FhirPathValue::Object(obj) = result {
         // Handle single object result
         assert_eq!(obj.get("id").unwrap().as_str().unwrap(), "p1");
-        assert_eq!(obj.get("active").unwrap().as_bool().unwrap(), true);
+        assert!(obj.get("active").unwrap().as_bool().unwrap());
     } else {
-        panic!("Expected collection or object result, got: {:?}", result);
+        panic!("Expected collection or object result, got: {result:?}");
     }
 }
 

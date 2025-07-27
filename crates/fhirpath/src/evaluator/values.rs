@@ -133,6 +133,31 @@ impl FhirPathValue {
         }
     }
 
+    /// Convert FHIRPath value to JSON value (for context)
+    pub fn to_json(&self) -> Value {
+        match self {
+            FhirPathValue::Boolean(b) => Value::Bool(*b),
+            FhirPathValue::String(s) => Value::String(s.clone()),
+            FhirPathValue::Number(n) => Value::Number(
+                serde_json::Number::from_f64(*n).unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+            FhirPathValue::Integer(i) => Value::Number(serde_json::Number::from(*i)),
+            FhirPathValue::Date(s) => Value::String(s.clone()),
+            FhirPathValue::DateTime(s) => Value::String(s.clone()),
+            FhirPathValue::Time(s) => Value::String(s.clone()),
+            FhirPathValue::Quantity { value, unit: _ } => Value::Number(
+                serde_json::Number::from_f64(*value).unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+            FhirPathValue::DateTimePrecision(_) => Value::Null,
+            FhirPathValue::Collection(items) => {
+                let json_items: Vec<Value> = items.iter().map(|item| item.to_json()).collect();
+                Value::Array(json_items)
+            }
+            FhirPathValue::Object(obj) => obj.clone(),
+            FhirPathValue::Empty => Value::Null,
+        }
+    }
+
     /// Compare two values for ordering (-1, 0, 1)
     pub fn compare_values(&self, other: &FhirPathValue) -> FhirPathResult<i32> {
         match (self, other) {

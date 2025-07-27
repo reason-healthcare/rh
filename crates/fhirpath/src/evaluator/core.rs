@@ -58,6 +58,15 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_and(&left_result, &right_result)
             }
+            Expression::Or {
+                left,
+                operator,
+                right,
+            } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                ComparisonEvaluator::evaluate_or(&left_result, operator, &right_result)
+            }
             Expression::Implies { left, right } => {
                 let left_result = self.evaluate_expression(left, context)?;
                 let right_result = self.evaluate_expression(right, context)?;
@@ -120,9 +129,6 @@ impl FhirPathEvaluator {
                 let left_result = self.evaluate_expression(left, context)?;
                 TypeEvaluator::evaluate_type_operation(&left_result, operator, type_specifier)
             }
-            _ => Err(FhirPathError::EvaluationError {
-                message: format!("Unsupported expression type: {expression:?}"),
-            }),
         }
     }
 
@@ -201,7 +207,14 @@ impl FhirPathEvaluator {
                     }
                 }
             }
-            Invocation::This => Ok(FhirPathValue::Object(context.current.clone())),
+            Invocation::This => {
+                // Return the stored $this value, or fall back to context current
+                if let Some(this_value) = &context.this_value {
+                    Ok(this_value.clone())
+                } else {
+                    Ok(FhirPathValue::Object(context.current.clone()))
+                }
+            }
             Invocation::Index => Err(FhirPathError::EvaluationError {
                 message: "$index not implemented yet".to_string(),
             }),
@@ -292,16 +305,7 @@ impl FhirPathEvaluator {
 
                 for item in items {
                     // Create new context with current item as $this
-                    let item_context = EvaluationContext {
-                        current: if let FhirPathValue::Object(obj) = item {
-                            obj.clone()
-                        } else {
-                            // For non-object values, we need to wrap them somehow
-                            // For now, let's use the current context but this might need refinement
-                            context.current.clone()
-                        },
-                        ..context.clone()
-                    };
+                    let item_context = context.with_this_value(item.clone());
 
                     // Evaluate the criteria expression in the item context
                     let criteria_result = self.evaluate_expression(criteria_expr, &item_context)?;
@@ -323,14 +327,7 @@ impl FhirPathEvaluator {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             _ => {
                 // For single values, treat as single-item collection
-                let item_context = EvaluationContext {
-                    current: if let FhirPathValue::Object(obj) = target {
-                        obj.clone()
-                    } else {
-                        context.current.clone()
-                    },
-                    ..context.clone()
-                };
+                let item_context = context.with_this_value(target.clone());
 
                 let criteria_result = self.evaluate_expression(criteria_expr, &item_context)?;
                 if criteria_result.is_truthy() {
@@ -363,14 +360,7 @@ impl FhirPathEvaluator {
 
                 for item in items {
                     // Create new context with current item as $this
-                    let item_context = EvaluationContext {
-                        current: if let FhirPathValue::Object(obj) = item {
-                            obj.clone()
-                        } else {
-                            context.current.clone()
-                        },
-                        ..context.clone()
-                    };
+                    let item_context = context.with_this_value(item.clone());
 
                     // Evaluate the projection expression in the item context
                     let projection_result =
@@ -401,14 +391,7 @@ impl FhirPathEvaluator {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             _ => {
                 // For single values, treat as single-item collection
-                let item_context = EvaluationContext {
-                    current: if let FhirPathValue::Object(obj) = target {
-                        obj.clone()
-                    } else {
-                        context.current.clone()
-                    },
-                    ..context.clone()
-                };
+                let item_context = context.with_this_value(target.clone());
 
                 self.evaluate_expression(projection_expr, &item_context)
             }
@@ -454,14 +437,7 @@ impl FhirPathEvaluator {
 
             // Apply the projection expression to each item in the current collection
             for item in &current_collection {
-                let item_context = EvaluationContext {
-                    current: if let FhirPathValue::Object(obj) = item {
-                        obj.clone()
-                    } else {
-                        context.current.clone()
-                    },
-                    ..context.clone()
-                };
+                let item_context = context.with_this_value(item.clone());
 
                 // Evaluate the projection expression in the item context
                 let projection_result = self.evaluate_expression(projection_expr, &item_context)?;

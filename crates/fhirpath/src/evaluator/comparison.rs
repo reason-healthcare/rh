@@ -99,6 +99,23 @@ impl ComparisonEvaluator {
         }
     }
 
+    /// Evaluate or/xor operations
+    pub fn evaluate_or(
+        left: &FhirPathValue,
+        operator: &OrOperator,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        let left_bool = left.to_boolean();
+        let right_bool = right.to_boolean();
+
+        let result = match operator {
+            OrOperator::Or => left_bool || right_bool,
+            OrOperator::Xor => left_bool ^ right_bool,
+        };
+
+        Ok(FhirPathValue::Boolean(result))
+    }
+
     /// Check if two values are equivalent (more lenient than equal)
     pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         // For now, same as equal - can be extended for type coercion

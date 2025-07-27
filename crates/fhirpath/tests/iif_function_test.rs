@@ -245,7 +245,7 @@ fn test_iif_with_complex_expressions() {
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "Smith");
     } else {
-        panic!("Expected string result, got: {:?}", result);
+        panic!("Expected string result, got: {result:?}");
     }
 
     // Test with count() expression as criterion
@@ -423,7 +423,7 @@ fn test_iif_real_world_scenarios() {
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "555-1234");
     } else {
-        panic!("Expected string result, got: {:?}", result);
+        panic!("Expected string result, got: {result:?}");
     }
 
     // Scenario 2: Age-based categorization (simulated)

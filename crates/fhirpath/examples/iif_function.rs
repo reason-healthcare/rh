@@ -109,8 +109,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in basic_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -150,8 +150,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in truthiness_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -183,8 +183,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in conditional_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -216,8 +216,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in math_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -245,8 +245,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in collection_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -270,10 +270,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in nested_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
-        let expr = parser.parse(&expression)?;
+        let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("Result: {}", format_result(&result));
         println!();
@@ -303,8 +303,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in return_type_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -332,8 +332,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expression, description) in clinical_examples {
-        println!("Expression: {}", expression);
-        println!("Description: {}", description);
+        println!("Expression: {expression}");
+        println!("Description: {description}");
 
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
@@ -358,13 +358,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Format a FhirPathValue for display
 fn format_result(value: &FhirPathValue) -> String {
     match value {
-        FhirPathValue::Boolean(b) => format!("Boolean({})", b),
-        FhirPathValue::String(s) => format!("String(\"{}\")", s),
-        FhirPathValue::Number(n) => format!("Number({})", n),
-        FhirPathValue::Integer(i) => format!("Integer({})", i),
-        FhirPathValue::Date(d) => format!("Date({})", d),
-        FhirPathValue::DateTime(dt) => format!("DateTime({})", dt),
-        FhirPathValue::Time(t) => format!("Time({})", t),
+        FhirPathValue::Boolean(b) => format!("Boolean({b})"),
+        FhirPathValue::String(s) => format!("String(\"{s}\")"),
+        FhirPathValue::Number(n) => format!("Number({n})"),
+        FhirPathValue::Integer(i) => format!("Integer({i})"),
+        FhirPathValue::Date(d) => format!("Date({d})"),
+        FhirPathValue::DateTime(dt) => format!("DateTime({dt})"),
+        FhirPathValue::Time(t) => format!("Time({t})"),
         FhirPathValue::Quantity { value, unit } => {
             format!("Quantity({} {})", value, unit.as_deref().unwrap_or(""))
         }
@@ -413,6 +413,6 @@ fn format_result(value: &FhirPathValue) -> String {
             }
         }
         FhirPathValue::Empty => "Empty".to_string(),
-        _ => format!("{:?}", value),
+        _ => format!("{value:?}"),
     }
 }

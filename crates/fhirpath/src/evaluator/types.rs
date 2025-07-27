@@ -228,8 +228,6 @@ mod tests {
 
     #[test]
     fn test_of_type_basic_filtering() {
-        use serde_json::json;
-
         // Test filtering strings from mixed collection
         let mixed_collection = FhirPathValue::Collection(vec![
             FhirPathValue::String("hello".to_string()),

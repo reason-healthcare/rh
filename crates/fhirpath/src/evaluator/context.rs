@@ -11,6 +11,8 @@ pub struct EvaluationContext {
     pub root: Value,
     /// Current context (this)
     pub current: Value,
+    /// Current FhirPathValue for $this context variable
+    pub this_value: Option<FhirPathValue>,
     /// External constants
     pub constants: HashMap<String, FhirPathValue>,
 }
@@ -21,6 +23,7 @@ impl EvaluationContext {
         Self {
             current: resource.clone(),
             root: resource,
+            this_value: None,
             constants: HashMap::new(),
         }
     }
@@ -35,6 +38,17 @@ impl EvaluationContext {
         Self {
             root: self.root.clone(),
             current,
+            this_value: self.this_value.clone(),
+            constants: self.constants.clone(),
+        }
+    }
+
+    /// Create a new context with a specific $this value
+    pub fn with_this_value(&self, this_value: FhirPathValue) -> Self {
+        Self {
+            root: self.root.clone(),
+            current: this_value.to_json(),
+            this_value: Some(this_value),
             constants: self.constants.clone(),
         }
     }
