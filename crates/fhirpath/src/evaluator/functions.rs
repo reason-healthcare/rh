@@ -860,7 +860,7 @@ impl FunctionRegistry {
         self.functions.insert(
             "toQuantity".to_string(),
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-                Self::to_quantity(target, params.get(0))
+                Self::to_quantity(target, params.first())
             }),
         );
 
@@ -868,7 +868,7 @@ impl FunctionRegistry {
         self.functions.insert(
             "convertsToQuantity".to_string(),
             Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-                Self::converts_to_quantity(target, params.get(0))
+                Self::converts_to_quantity(target, params.first())
             }),
         );
     }
@@ -1730,7 +1730,10 @@ impl FunctionRegistry {
     }
 
     /// Convert a value to Quantity according to FHIRPath specification
-    fn to_quantity(value: &FhirPathValue, unit_param: Option<&FhirPathValue>) -> FhirPathResult<FhirPathValue> {
+    fn to_quantity(
+        value: &FhirPathValue,
+        unit_param: Option<&FhirPathValue>,
+    ) -> FhirPathResult<FhirPathValue> {
         match value {
             // If the collection is empty, return empty
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
@@ -1756,10 +1759,10 @@ impl FunctionRegistry {
                 } else {
                     unit.clone()
                 };
-                
-                Ok(FhirPathValue::Quantity { 
-                    value: *value, 
-                    unit: target_unit 
+
+                Ok(FhirPathValue::Quantity {
+                    value: *value,
+                    unit: target_unit,
                 })
             }
 
@@ -1772,10 +1775,10 @@ impl FunctionRegistry {
                 } else {
                     None
                 };
-                
-                Ok(FhirPathValue::Quantity { 
-                    value: *i as f64, 
-                    unit: target_unit 
+
+                Ok(FhirPathValue::Quantity {
+                    value: *i as f64,
+                    unit: target_unit,
                 })
             }
 
@@ -1788,10 +1791,10 @@ impl FunctionRegistry {
                 } else {
                     None
                 };
-                
-                Ok(FhirPathValue::Quantity { 
-                    value: *n, 
-                    unit: target_unit 
+
+                Ok(FhirPathValue::Quantity {
+                    value: *n,
+                    unit: target_unit,
                 })
             }
 
@@ -1804,10 +1807,10 @@ impl FunctionRegistry {
                 } else {
                     None
                 };
-                
-                Ok(FhirPathValue::Quantity { 
-                    value: *l as f64, 
-                    unit: target_unit 
+
+                Ok(FhirPathValue::Quantity {
+                    value: *l as f64,
+                    unit: target_unit,
                 })
             }
 
@@ -1823,10 +1826,10 @@ impl FunctionRegistry {
                     } else {
                         unit
                     };
-                    
-                    Ok(FhirPathValue::Quantity { 
-                        value, 
-                        unit: target_unit 
+
+                    Ok(FhirPathValue::Quantity {
+                        value,
+                        unit: target_unit,
                     })
                 } else if let Ok(value) = s.parse::<f64>() {
                     // Parse as a plain number
@@ -1838,10 +1841,10 @@ impl FunctionRegistry {
                     } else {
                         None
                     };
-                    
-                    Ok(FhirPathValue::Quantity { 
-                        value, 
-                        unit: target_unit 
+
+                    Ok(FhirPathValue::Quantity {
+                        value,
+                        unit: target_unit,
                     })
                 } else {
                     // Not convertible
@@ -1855,7 +1858,10 @@ impl FunctionRegistry {
     }
 
     /// Check if a value can be converted to Quantity according to FHIRPath specification
-    fn converts_to_quantity(value: &FhirPathValue, unit_param: Option<&FhirPathValue>) -> FhirPathResult<FhirPathValue> {
+    fn converts_to_quantity(
+        value: &FhirPathValue,
+        _unit_param: Option<&FhirPathValue>,
+    ) -> FhirPathResult<FhirPathValue> {
         match value {
             // If the collection is empty, return false
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
@@ -1863,7 +1869,7 @@ impl FunctionRegistry {
             // If the collection contains more than one item, return false
             FhirPathValue::Collection(items) => {
                 if items.len() == 1 {
-                    Self::converts_to_quantity(&items[0], unit_param)
+                    Self::converts_to_quantity(&items[0], _unit_param)
                 } else {
                     // Multiple items - cannot convert
                     Ok(FhirPathValue::Boolean(false))
@@ -1898,7 +1904,7 @@ impl FunctionRegistry {
     fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
         // Try to parse as "value 'unit'" or "value'unit'" format
         let s = s.trim();
-        
+
         // Look for quote patterns
         if let Some(quote_start) = s.find('\'') {
             if let Some(quote_end) = s.rfind('\'') {
@@ -1906,7 +1912,7 @@ impl FunctionRegistry {
                     // Extract the value part
                     let value_str = s[..quote_start].trim();
                     let unit_str = &s[quote_start + 1..quote_end];
-                    
+
                     if let Ok(value) = value_str.parse::<f64>() {
                         let unit = if unit_str.is_empty() {
                             None
@@ -1918,7 +1924,7 @@ impl FunctionRegistry {
                 }
             }
         }
-        
+
         None
     }
 }

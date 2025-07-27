@@ -319,9 +319,14 @@ impl StringEvaluator {
             }
         };
 
-        // For now, we'll implement a simple contains check
-        // In a full implementation, you'd want to use a regex crate
-        Ok(FhirPathValue::Boolean(string.contains(pattern_str)))
+        // Use regex for proper pattern matching
+        match regex::Regex::new(pattern_str) {
+            Ok(re) => Ok(FhirPathValue::Boolean(re.is_match(string))),
+            Err(_) => {
+                // If regex compilation fails, return false (invalid pattern)
+                Ok(FhirPathValue::Boolean(false))
+            }
+        }
     }
 
     /// Check if a string contains another string (helper function)

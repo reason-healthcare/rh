@@ -21,11 +21,11 @@ fn test_to_quantity_basic_conversions() {
     }
 
     // Test decimal to quantity without unit
-    let expr = parser.parse("3.14.toQuantity()").unwrap();
+    let expr = parser.parse("2.5.toQuantity()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 3.14);
+            assert_eq!(value, 2.5);
             assert_eq!(unit, None);
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -319,7 +319,9 @@ fn test_quantity_conversion_with_unit_parameters() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    let expr = parser.parse("'not-a-number'.convertsToQuantity('kg')").unwrap();
+    let expr = parser
+        .parse("'not-a-number'.convertsToQuantity('kg')")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(false));
 

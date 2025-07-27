@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for example in test_cases {
-        let expr = parser.parse(&example)?;
+        let expr = parser.parse(example)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("{example} → {result:?}");
     }
@@ -202,9 +202,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (value, unit) in check_and_convert {
         let check_expr = parser.parse(&format!("{value}.convertsToQuantity()"))?;
         let check_result = evaluator.evaluate(&check_expr, &context)?;
-        
+
         println!("Can convert {value}? → {check_result:?}");
-        
+
         if let FhirPathValue::Boolean(true) = check_result {
             let convert_expr = parser.parse(&format!("{value}.toQuantity({unit})"))?;
             let convert_result = evaluator.evaluate(&convert_expr, &context)?;
