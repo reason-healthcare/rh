@@ -1502,7 +1502,15 @@ impl FunctionRegistry {
 
             FhirPathValue::DateTime(dt) => Ok(FhirPathValue::String(dt.clone())),
 
-            FhirPathValue::Time(t) => Ok(FhirPathValue::String(t.clone())),
+            FhirPathValue::Time(t) => {
+                // Remove the leading 'T' from time format for string conversion
+                let time_str = if let Some(stripped) = t.strip_prefix('T') {
+                    stripped.to_string()
+                } else {
+                    t.clone()
+                };
+                Ok(FhirPathValue::String(time_str))
+            }
 
             FhirPathValue::Quantity { value, unit } => match unit {
                 Some(u) => Ok(FhirPathValue::String(format!("{value} '{u}'"))),

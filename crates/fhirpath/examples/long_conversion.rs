@@ -1,5 +1,5 @@
 //! Example demonstrating Long type conversion functions
-//! 
+//!
 //! This example shows how to use toLong() and convertsToLong() functions
 //! with different input types, including the explicit Long literal syntax.
 

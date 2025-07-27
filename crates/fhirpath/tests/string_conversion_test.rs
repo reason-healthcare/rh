@@ -62,10 +62,15 @@ fn test_to_string_function() {
     // Test Time to String
     let expr = parser.parse("@T10:30:45.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::String("T10:30:45".to_string()));
+    assert_eq!(result, FhirPathValue::String("10:30:45".to_string()));
 
     // Test Quantity to String
     let expr = parser.parse("5'mg'.toString()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::String("5 'mg'".to_string()));
+
+    // Test Quantity to String
+    let expr = parser.parse("5 'mg'.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::String("5 'mg'".to_string()));
 }
@@ -189,16 +194,16 @@ fn test_string_conversion_comprehensive() {
         ("0.0", "0"),
         ("@2023-01-15", "2023-01-15"),
         ("@2023-01-15T10:30:45", "2023-01-15T10:30:45"),
-        ("@T10:30:45", "T10:30:45"),
+        ("@T10:30:45", "10:30:45"),
     ];
 
     for (input, expected) in test_cases {
-        let expr = parser.parse(&format!("{}.toString()", input)).unwrap();
+        let expr = parser.parse(&format!("{input}.toString()")).unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         assert_eq!(result, FhirPathValue::String(expected.to_string()));
 
         let expr = parser
-            .parse(&format!("{}.convertsToString()", input))
+            .parse(&format!("{input}.convertsToString()"))
             .unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));

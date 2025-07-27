@@ -88,9 +88,7 @@ mod long_conversion_tests {
 
         match result {
             FhirPathValue::Empty => {} // Expected
-            _ => panic!(
-                "Expected Empty from 'not a number'.toLong(), got {result:?}"
-            ),
+            _ => panic!("Expected Empty from 'not a number'.toLong(), got {result:?}"),
         }
     }
 
@@ -131,9 +129,7 @@ mod long_conversion_tests {
 
         match result {
             FhirPathValue::Boolean(val) => assert!(val),
-            _ => panic!(
-                "Expected Boolean(true) from true.convertsToLong(), got {result:?}"
-            ),
+            _ => panic!("Expected Boolean(true) from true.convertsToLong(), got {result:?}"),
         }
 
         // Integer should convert
@@ -142,9 +138,7 @@ mod long_conversion_tests {
 
         match result {
             FhirPathValue::Boolean(val) => assert!(val),
-            _ => panic!(
-                "Expected Boolean(true) from 42.convertsToLong(), got {result:?}"
-            ),
+            _ => panic!("Expected Boolean(true) from 42.convertsToLong(), got {result:?}"),
         }
 
         // Invalid string should not convert
@@ -164,9 +158,7 @@ mod long_conversion_tests {
 
         match result {
             FhirPathValue::Boolean(val) => assert!(!val),
-            _ => panic!(
-                "Expected Boolean(false) from 42.5.convertsToLong(), got {result:?}"
-            ),
+            _ => panic!("Expected Boolean(false) from 42.5.convertsToLong(), got {result:?}"),
         }
     }
 }
