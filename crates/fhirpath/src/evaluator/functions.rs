@@ -827,6 +827,20 @@ impl FunctionRegistry {
                 Self::converts_to_datetime(target)
             }),
         );
+
+        // toString() function
+        self.functions.insert(
+            "toString".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_string(target)),
+        );
+
+        // convertsToString() function
+        self.functions.insert(
+            "convertsToString".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_string(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -1314,7 +1328,9 @@ impl FunctionRegistry {
         }
 
         // Validate month (1-12)
-        if parts[1].is_empty() || parts[1].len() > 2 || !parts[1].chars().all(|c| c.is_ascii_digit())
+        if parts[1].is_empty()
+            || parts[1].len() > 2
+            || !parts[1].chars().all(|c| c.is_ascii_digit())
         {
             return false;
         }
@@ -1327,7 +1343,9 @@ impl FunctionRegistry {
         }
 
         // Validate day (1-31, basic check)
-        if parts[2].is_empty() || parts[2].len() > 2 || !parts[2].chars().all(|c| c.is_ascii_digit())
+        if parts[2].is_empty()
+            || parts[2].len() > 2
+            || !parts[2].chars().all(|c| c.is_ascii_digit())
         {
             return false;
         }
@@ -1431,6 +1449,101 @@ impl FunctionRegistry {
         }
 
         true
+    }
+
+    /// Convert a value to String according to FHIRPath specification
+    fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_string(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::String(s) => Ok(FhirPathValue::String(s.clone())),
+
+            FhirPathValue::Boolean(b) => Ok(FhirPathValue::String(if *b {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            })),
+
+            FhirPathValue::Integer(i) => Ok(FhirPathValue::String(i.to_string())),
+
+            FhirPathValue::Long(l) => Ok(FhirPathValue::String(l.to_string())),
+
+            FhirPathValue::Number(n) => {
+                // Format number without unnecessary trailing zeros
+                let formatted = if n.fract() == 0.0 {
+                    format!("{n:.0}")
+                } else {
+                    // Remove trailing zeros but keep at least one decimal place if needed
+                    let mut formatted = format!("{n}");
+                    if formatted.contains('.') {
+                        formatted = formatted.trim_end_matches('0').to_string();
+                        if formatted.ends_with('.') {
+                            formatted.push('0');
+                        }
+                    }
+                    formatted
+                };
+                Ok(FhirPathValue::String(formatted))
+            }
+
+            FhirPathValue::Date(d) => Ok(FhirPathValue::String(d.clone())),
+
+            FhirPathValue::DateTime(dt) => Ok(FhirPathValue::String(dt.clone())),
+
+            FhirPathValue::Time(t) => Ok(FhirPathValue::String(t.clone())),
+
+            FhirPathValue::Quantity { value, unit } => match unit {
+                Some(u) => Ok(FhirPathValue::String(format!("{value} '{u}'"))),
+                None => Ok(FhirPathValue::String(value.to_string())),
+            },
+
+            // All other types cannot be converted to String (return empty)
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to String according to FHIRPath specification
+    fn converts_to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_string(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks - most types can be converted to string
+            FhirPathValue::String(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Boolean(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Integer(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Long(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Number(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Date(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::DateTime(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Time(_) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Quantity { .. } => Ok(FhirPathValue::Boolean(true)),
+
+            // Complex types (Object, DateTimePrecision) cannot be converted to string
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
     }
 }
 

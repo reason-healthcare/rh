@@ -124,6 +124,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `convertsToDate()` | ✅ | Test if value can be converted to date |
 | `toDateTime()` | ✅ | Convert to datetime |
 | `convertsToDateTime()` | ✅ | Test if value can be converted to datetime |
+| `toString()` | ✅ | Convert to string |
+| `convertsToString()` | ✅ | Test if value can be converted to string |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -321,6 +323,31 @@ let expr = parser.parse("'2023-01-15T10:30:45'.convertsToDateTime()").unwrap(); 
 let expr = parser.parse("'not-a-datetime'.convertsToDateTime()").unwrap(); // → Boolean(false)
 ```
 
+### String Conversions
+
+The FHIRPath evaluator supports conversion of most value types to String with conversion functions:
+
+```rust
+// Convert values to String
+let expr = parser.parse("'hello world'.toString()").unwrap(); // → String("hello world") - identity
+let expr = parser.parse("true.toString()").unwrap(); // → String("true")
+let expr = parser.parse("false.toString()").unwrap(); // → String("false")
+let expr = parser.parse("42.toString()").unwrap(); // → String("42")
+let expr = parser.parse("42L.toString()").unwrap(); // → String("42")
+let expr = parser.parse("3.14.toString()").unwrap(); // → String("3.14")
+let expr = parser.parse("42.0.toString()").unwrap(); // → String("42") - removes unnecessary decimals
+let expr = parser.parse("@2023-01-15.toString()").unwrap(); // → String("2023-01-15")
+let expr = parser.parse("@2023-01-15T10:30:45.toString()").unwrap(); // → String("2023-01-15T10:30:45")
+let expr = parser.parse("@T10:30:45.toString()").unwrap(); // → String("T10:30:45")
+let expr = parser.parse("5'mg'.toString()").unwrap(); // → String("5 'mg'")
+
+// Test conversion compatibility
+let expr = parser.parse("42.convertsToString()").unwrap(); // → Boolean(true)
+let expr = parser.parse("true.convertsToString()").unwrap(); // → Boolean(true)
+let expr = parser.parse("@2023-01-15.convertsToString()").unwrap(); // → Boolean(true)
+let expr = parser.parse("5'mg'.convertsToString()").unwrap(); // → Boolean(true)
+```
+
 ## Architecture
 
 ### Parser (`src/parser.rs`)
@@ -355,6 +382,7 @@ cargo run --example to_boolean --package fhirpath
 cargo run --example to_integer --package fhirpath
 cargo run --example long_conversion --package fhirpath
 cargo run --example date_conversion --package fhirpath
+cargo run --example string_conversion --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
