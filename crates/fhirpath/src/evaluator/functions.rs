@@ -58,6 +58,9 @@ impl FunctionRegistry {
 
         // Control flow functions
         self.register_control_flow_functions();
+
+        // Conversion functions
+        self.register_conversion_functions();
     }
 
     /// Register the empty() function
@@ -751,6 +754,63 @@ impl FunctionRegistry {
                 CollectionEvaluator::iif(criterion, true_result, otherwise_result)
             }),
         );
+    }
+
+    /// Register conversion functions
+    fn register_conversion_functions(&mut self) {
+        // toBoolean() function
+        self.functions.insert(
+            "toBoolean".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_boolean(target)),
+        );
+    }
+
+    /// Convert a value to Boolean according to FHIRPath specification
+    fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_boolean(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Boolean(b) => Ok(FhirPathValue::Boolean(*b)),
+
+            FhirPathValue::Integer(i) => match *i {
+                1 => Ok(FhirPathValue::Boolean(true)),
+                0 => Ok(FhirPathValue::Boolean(false)),
+                _ => Ok(FhirPathValue::Empty), // Not convertible
+            },
+
+            FhirPathValue::Number(n) => {
+                if (*n - 1.0).abs() < f64::EPSILON {
+                    Ok(FhirPathValue::Boolean(true))
+                } else if (*n - 0.0).abs() < f64::EPSILON {
+                    Ok(FhirPathValue::Boolean(false))
+                } else {
+                    Ok(FhirPathValue::Empty) // Not convertible
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.to_lowercase().as_str() {
+                    "true" | "t" | "yes" | "y" | "1" | "1.0" => Ok(FhirPathValue::Boolean(true)),
+                    "false" | "f" | "no" | "n" | "0" | "0.0" => Ok(FhirPathValue::Boolean(false)),
+                    _ => Ok(FhirPathValue::Empty), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Boolean
+            _ => Ok(FhirPathValue::Empty),
+        }
     }
 }
 

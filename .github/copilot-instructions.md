@@ -25,7 +25,12 @@ This is a Rust monorepo focused on FHIR (Fast Healthcare Interoperability Resour
   - `snake_case` for functions, variables, modules, and files
   - `PascalCase` for types, structs, enums, and traits
   - `SCREAMING_SNAKE_CASE` for constants and static variables
-- **Use `cargo clippy`** to catch common issues and enforce best practices
+- **Use `cargo clippy`** to catch common issues and enforce best practices before committing any code
+  - Especially check for:
+    - Unused variables and imports
+    - Clippy lints that suggest more idiomatic Rust patterns
+    - Performance improvements (e.g., using iterators instead of manual loops)
+    - uninlined_format_args
 - **Maximum line length**: 100 characters (configured in rustfmt.toml if present)
 
 ### Error Handling
