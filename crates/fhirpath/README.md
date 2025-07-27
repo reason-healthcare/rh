@@ -2,302 +2,283 @@
 
 A comprehensive Rust implementation of a FHIRPath expression parser and evaluator for FHIR resources.
 
-- **Complete FHIRPath Support**: Parse and evaluate FHIRPath expressions with quantity and temporal literal support
-- **Mathematical Operations**: Arithmetic, comparison, and logical operators with quantity support
-- **String Functions**: Comprehensive string manipulation capabilities
-- **Collection Operations**: Work with FHIR collections and lists including subsetting functions
-- **Temporal Literals**: Support for date (@2023-01-01), datetime (@2023-01-01T12:30:45), and time (@T12:30:45) literals
-- **Quantity Literals**: Support for UCUM units (5'mg', 37'Cel') and calendar durations (2'wk', 6'mo') with automatic unit conversion
-- **Unit Conversion**: Comprehensive automatic unit conversion between compatible UCUM units (mass, length, volume, time, pressure) with special offset-based temperature conversion support (Celsius, Kelvin, Fahrenheit)
-- **Type Safety**: Rust-native type checking and error handling
+## Background
 
-## Overview
+FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. This crate provides a complete implementation with:
 
-FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. This crate provides:
-
-- **Parser**: Converts FHIRPath expressions into an Abstract Syntax Tree (AST)
+- **Parser**: Converts FHIRPath expressions into an Abstract Syntax Tree (AST) using nom parser combinators
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
-- **AST**: Type-safe representation of FHIRPath expressions with full serialization support
+- **Type Safety**: Rust-native type checking and error handling with comprehensive error types
+- **Performance**: Optimized for production use with efficient parsing and evaluation
 
-**Implementation Status**: 🚧 **Active Development** - Core parsing complete, arithmetic, comparison, membership operations, collection functions, filtering functions, string functions, **math functions**, **array indexing with full nested support**, and **union operations** implemented, comprehensive evaluation functional
+## Implementation Status
 
-## Architecture
+### Path Selection
 
-The FHIRPath implementation consists of four main components:
+| Feature | Status | Notes |
+|---------|--------|--------|
+| **Collections** | ✅ | Collection operations and indexing |
+| Member access (`.`) | ✅ | `Patient.name`, `name.given` |
+| Array indexing (`[]`) | ✅ | `name[0]`, `telecom[1].value` with nested support |
+| **Paths and polymorphic items** | ⏳ | Basic path navigation implemented |
 
-### 1. Parser (`src/parser.rs`)
-- **Technology**: nom parser combinators
-- **Status**: ✅ Complete for core syntax
-- **Features**: Converts FHIRPath string expressions into type-safe AST including temporal literals (date, datetime, time)
-- **Dependencies**: Uses the `nom` crate for parsing without build-time code generation
+### Expressions
 
-### 2. Abstract Syntax Tree (`src/ast.rs`)
-- **Status**: ✅ Complete
-- **Features**: Type-safe representation of all FHIRPath expression types
-- **Serialization**: Full serde support for JSON serialization
+| Feature | Status | Notes |
+|---------|--------|--------|
+| **Literals** | ✅ | |
+| Boolean | ✅ | `true`, `false` |
+| Integer | ✅ | `42`, `-10` |
+| Decimal | ✅ | `3.14`, `-0.5` |
+| String | ✅ | `'hello world'` |
+| Date | ✅ | `@2023-01-01` |
+| DateTime | ✅ | `@2023-01-01T12:30:45Z` |
+| Time | ✅ | `@T12:30:45` |
+| Quantity | ✅ | `5'mg'`, `37.2'Cel'` with UCUM units |
+| **Operators** | ✅ | All standard operators implemented |
+| **Function Invocations** | ✅ | `name.count()`, `where(criteria)` |
+| **Null and empty** | ✅ | `{}` literal and empty collection handling |
+| **Singleton Evaluation of Collections** | ✅ | Automatic singleton handling |
 
-### 3. Evaluator (`src/evaluator.rs`)
-- **Status**: ⏳ Expanding implementation
-- **Features**: Evaluates expressions against JSON FHIR resources including arithmetic, comparisons, membership, collection functions, filtering functions, string manipulation functions, and mathematical functions
+### Functions
 
-### 4. Error Handling (`src/error.rs`)
-- **Status**: ✅ Complete
-- **Features**: Comprehensive error types with context information
+| Category | Feature | Status | Notes |
+|----------|---------|--------|--------|
+| **Existence** | | | |
+| | `empty()` | ✅ | Test if collection is empty |
+| | `exists()` | ✅ | Test if any items exist |
+| | `count()` | ✅ | Count items in collection |
+| **Filtering and projection** | | | |
+| | `where(criteria)` | ✅ | Filter collection by criteria |
+| | `select(projection)` | ✅ | Transform each item |
+| **Subsetting** | | | |
+| | `single()` | ✅ | Return single item (error if != 1) |
+| | `first()` | ✅ | Return first item |
+| | `last()` | ✅ | Return last item |
+| | `tail()` | ✅ | All items except first |
+| | `skip(num)` | ✅ | Skip first num items |
+| | `take(num)` | ✅ | Take first num items |
+| **Combining** | | | |
+| | `union(\|)` | ✅ | Union operator |
+| | `intersect(other)` | ✅ | Items in both collections |
+| | `exclude(other)` | ✅ | Items not in other collection |
+| **Conversion** | | | |
+| | `distinct()` | ✅ | Remove duplicates |
+| | `isDistinct()` | ✅ | Test if all items unique |
+| **String Manipulation** | | | |
+| | `length()` | ✅ | String length |
+| | `substring(start, length?)` | ✅ | Extract substring |
+| | `upper()` | ✅ | Convert to uppercase |
+| | `lower()` | ✅ | Convert to lowercase |
+| | `trim()` | ✅ | Remove whitespace |
+| **Additional String Functions** | | | |
+| | `startsWith(prefix)` | ✅ | Test string prefix |
+| | `endsWith(suffix)` | ✅ | Test string suffix |
+| | `indexOf(substring)` | ✅ | Find substring index |
+| | `replace(pattern, replacement)` | ✅ | Replace occurrences |
+| | `split(delimiter)` | ✅ | Split into collection |
+| | `join(delimiter)` | ✅ | Join collection |
+| | `matches(pattern)` | ✅ | Pattern matching |
+| **Math** | | | |
+| | `abs()` | ✅ | Absolute value |
+| | `ceiling()` | ✅ | Round up |
+| | `floor()` | ✅ | Round down |
+| | `round(precision?)` | ✅ | Round to precision |
+| | `truncate()` | ✅ | Remove fractional part |
+| | `sqrt()` | ✅ | Square root |
+| | `power(exponent)` | ✅ | Raise to power |
+| | `exp()` | ✅ | e^x |
+| | `ln()` | ✅ | Natural logarithm |
+| | `log(base)` | ✅ | Logarithm with base |
+| **Tree navigation** | | | |
+| | `children()` | ❌ | Not implemented |
+| | `descendants()` | ❌ | Not implemented |
+| **Utility functions** | | | |
+| | `now()` | ✅ | Current date/time UTC |
+| | `today()` | ✅ | Current date local |
+| | `timeOfDay()` | ✅ | Current time local |
 
-## Features
+### Operations
 
-### ✅ Fully Implemented
+| Category | Feature | Status | Notes |
+|----------|---------|--------|--------|
+| **Equality** | | | |
+| | `=` (equals) | ✅ | Equality comparison |
+| | `!=` (not equals) | ✅ | Inequality comparison |
+| | `~` (equivalent) | ✅ | Equivalence |
+| | `!~` (not equivalent) | ✅ | Non-equivalence |
+| **Comparison** | | | |
+| | `<` (less than) | ✅ | Numeric, string, boolean |
+| | `<=` (less or equal) | ✅ | Numeric, string, boolean |
+| | `>` (greater than) | ✅ | Numeric, string, boolean |
+| | `>=` (greater or equal) | ✅ | Numeric, string, boolean |
+| **Types** | | | |
+| | `is` (type test) | ❌ | Not implemented |
+| | `as` (type cast) | ❌ | Not implemented |
+| **Collections** | | | |
+| | `in` (membership) | ✅ | Value in collection |
+| | `contains` | ✅ | Collection contains value |
+| **Boolean logic** | | | |
+| | `and` | ✅ | Logical AND |
+| | `or` | ✅ | Logical OR |
+| | `xor` | ✅ | Logical XOR |
+| | `implies` | ❌ | Parsed but not evaluated |
+| **Math** | | | |
+| | `+` (addition) | ✅ | Numbers, quantities, strings |
+| | `-` (subtraction) | ✅ | Numbers, quantities |
+| | `*` (multiplication) | ✅ | Numbers, quantities |
+| | `/` (division) | ✅ | Numbers, quantities |
+| | `div` (integer division) | ✅ | Integer division |
+| | `mod` (modulo) | ✅ | Modulo operation |
+| | `&` (concatenation) | ✅ | String concatenation |
+| **Date/Time Arithmetic** | | | |
+| | Date + duration | ✅ | `@2025-01-01 + 6 months` |
+| | DateTime + duration | ✅ | `now() - 10 days` |
+| | Function arithmetic | ✅ | `today() + 2 years` |
+| | Compound durations | ✅ | `6 months`, `24 hours` |
+| | Precision handling | ✅ | Year, month, day, hour, minute, second |
+| **Operator precedence** | ✅ | Full precedence support |
 
-#### Expression Types
-- **Term expressions**: Simple literals and identifiers
-- **Member invocation**: `Patient.name`, `name.given`
-- **Array indexing**: `Patient.name[0]`, `telecom[1].value`, `name[0].given[0]` (with full nested indexing support)
-- **Union operations**: `name.given | name.family`
-- **Logical operations**: `active and birthDate.exists()`
-- **Equality operations**: `use = 'official'`, `active != false`
-- **Comparison operations**: `age > 18`, `weight <= 100`, `'apple' < 'banana'`
-- **Membership operations**: `value in collection`, `list contains item`
-- **Arithmetic operations**: `1 + 2`, `age * 2`, `'Hello' & ' World'`
-- **Parenthesized expressions**: `(name.given | name.family).exists()`
+### Aggregates
 
-#### Literal Values
-- **Boolean**: `true`, `false`
-- **Integers**: `42`, `-10` (distinct from decimals)
-- **Numbers**: `3.14`, `-0.5` (floating-point)
-- **Strings**: `'hello world'`, `'patient name'`
-- **Date**: `@2023-01-01`, `@1990-12-25` (ISO 8601 date format)
-- **DateTime**: `@2023-01-01T12:30:45`, `@2023-01-01T00:00:00Z`, `@2023-01-01T12:30:45+05:30` (ISO 8601 datetime format with optional timezone)
-- **Time**: `@T12:30:45`, `@T00:00:00`, `@T23:59:59` (ISO 8601 time format)
-- **Quantity**: `5'mg'`, `37.2'Cel'`, `120'mm[Hg]'`, `2'wk'` (value with UCUM unit or calendar duration)
-  - Also supports optional space: `15 'mm[Hg]'`, `37.2 'Cel'`, `5 'mg'`
-- **Null**: `{}`
+| Feature | Status | Notes |
+|---------|--------|--------|
+| `aggregate(aggregator, init?)` | ❌ | Not implemented |
 
-#### Special Variables
-- **Context reference**: `$this`
-- **Index reference**: `$index`
-- **Total reference**: `$total`
-- **External constants**: `%context`, `%resource`
+### Extension: FHIR
 
-#### Function Support
-- **Function calls**: `name.count()`, `telecom.exists()`
-- **Parameterized functions**: `name.where(use = 'official')`
+| Feature | Status | Notes |
+|---------|--------|--------|
+| **FHIR Variables** | | |
+| `%resource` | ❌ | Not implemented |
+| `%context` | ❌ | Not implemented |
+| `%rootResource` | ❌ | Not implemented |
+| `%sct` | ❌ | Not implemented |
+| `%loinc` | ❌ | Not implemented |
+| `%"vs-[name]"` | ❌ | Not implemented |
+| `%"ext-[name]"` | ❌ | Not implemented |
+| **Additional Functions** | | |
+| `extension(url)` | ❌ | Not implemented |
+| `hasValue()` | ❌ | Not implemented |
+| `getValue()` | ❌ | Not implemented |
+| `trace()` | ❌ | Not implemented |
+| `resolve()` | ❌ | Not implemented |
+| `ofType(Identifier)` | ❌ | Not implemented |
+| `elementDefinition()` | ❌ | Not implemented |
+| `slice(structure, name)` | ❌ | Not implemented |
+| `checkModifiers()` | ❌ | Not implemented |
+| `conformsTo(structure)` | ❌ | Not implemented |
+| `memberOf(valueset)` | ❌ | Not implemented |
+| `subsumes(code)` | ❌ | Not implemented |
+| `subsumedBy(code)` | ❌ | Not implemented |
+| `htmlChecks` | ❌ | Not implemented |
 
-#### Arithmetic Operations
-- **Integer operations**: `1 + 2` → `Integer(3)`, `5 * 6` → `Integer(30)`
-- **Mixed type operations**: `2.5 + 3` → `Number(5.5)`, `10 / 4` → `Number(2.5)`
-- **Quantity operations**: `5'mg' + 3'mg'` → `8mg`, `10'kg' * 2` → `20kg`, `120'mm[Hg]' / 60'mm[Hg]'` → `2.0`
-- **Linear unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`, `2.0'L' + 250.0'mL'` → `2.25L` (automatic conversion)
-- **Temperature conversion**: `20.0'Cel' + 5.0'Cel'` → `25.0Cel`, `0.0'Cel' + 273.15'K'` → `273.15Cel` (offset-based)
-- **Cross-unit support**: Mass (g,kg,mg,ug,lb), Length (m,cm,mm,km,in,ft), Volume (L,mL,dL,uL), Time (s,min,h,d,wk,mo,a), Pressure (Pa,kPa,mm[Hg],bar), Temperature (Cel,K,[degF])
-- **String concatenation**: `'Hello' & ' World'` → `"Hello World"`
-- **Proper precedence**: `2 + 3 * 4` → `Integer(14)` (multiplication first)
-- **Division semantics**: `/` always returns Number, `div` returns Integer
-- **Unit compatibility**: Compatible units automatically converted, scalar operations preserve units
-- **Error handling**: Division by zero, invalid type combinations, incompatible units
+### Extension: SQL-on-FHIR
 
-#### Comparison Operations
-- **Numeric comparisons**: `5 > 3` → `Boolean(true)`, `age >= 18` → evaluation
-- **String comparisons**: `'apple' < 'banana'` → `Boolean(true)` (lexicographic)
-- **Boolean comparisons**: `false < true` → `Boolean(true)` (false < true)
-- **Mixed numeric types**: `5 > 4.9` → `Boolean(true)`, `4.99 <= 5` → `Boolean(true)`
-- **Proper precedence**: `2 + 3 > 4` → `Boolean(true)` (arithmetic first)
-- **Type safety**: Invalid comparisons properly rejected with clear errors
+| Feature | Status | Notes |
+|---------|--------|--------|
+| `getResourceKey()` | ❌ | Not implemented |
+| `getReferenceKey(resource?)` | ❌ | Not implemented |
 
-#### Membership Operations
-- **Value membership**: `'apple' in fruits` → `Boolean(true)` if fruits contains 'apple'
-- **Collection contains**: `fruits contains 'apple'` → `Boolean(true)` if fruits contains 'apple'
-- **Single value membership**: `value in 'value'` → `Boolean(true)` (single values treated as collections)
-- **Type safety**: Membership tests use equality comparison semantics
-- **Proper precedence**: Same precedence as equality operators, left-associative
+## Key Features
 
-#### Collection Functions
-- **empty()**: Test if collection is empty
-- **exists()**: Test if any items exist
-- **count()**: Count items in collection
-- **distinct()**: Remove duplicates
-- **isDistinct()**: Test if all items unique
+### Comprehensive Type Support
+- **Temporal literals**: Date (`@2023-01-01`), DateTime (`@2023-01-01T12:30:45Z`), Time (`@T12:30:45`)
+- **Quantity literals**: UCUM units (`5'mg'`, `37.2'Cel'`) with automatic unit conversion
+- **Unit conversion**: Mass, length, volume, time, pressure, temperature with offset-based temperature conversion
 
-#### Subsetting Functions
-- **single()**: Return the single item in a collection (error if not exactly one item)
-- **first()**: Return the first item in a collection
-- **last()**: Return the last item in a collection
-- **tail()**: Return all items except the first
-- **skip(num)**: Skip the first `num` items and return the rest
-- **take(num)**: Return the first `num` items
-- **intersect(other)**: Return items that appear in both collections
-- **exclude(other)**: Return items that don't appear in the other collection
+### Advanced Arithmetic
+- **Mixed-type operations**: Integer + Number → Number
+- **Quantity arithmetic**: `5'mg' + 3'mg'` → `8mg`
+- **Unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`
+- **Date/time arithmetic**: `now() - 10 days`, `today() + 6 months`
+- **Proper precedence**: `2 + 3 * 4` → `14`
 
-#### Filtering Functions
-- **where(criteria)**: Filter collection by criteria
-- **select(projection)**: Transform each item in collection
+### String Operations
+- **Full manipulation**: length, substring, case conversion, trimming
+- **Pattern operations**: startsWith, endsWith, indexOf, replace, matches
+- **Collection operations**: split, join
 
-#### String Functions
-- **length()**: Get string length
-- **substring(start, length?)**: Extract substring
-- **startsWith(prefix)**: Test if string starts with prefix
-- **endsWith(suffix)**: Test if string ends with suffix
-- **indexOf(substring)**: Find index of substring (returns -1 if not found)
-- **replace(pattern, replacement)**: Replace all occurrences
-- **upper()**: Convert to uppercase
-- **lower()**: Convert to lowercase
-- **trim()**: Remove leading/trailing whitespace
-- **split(delimiter)**: Split string into collection
-- **join(delimiter)**: Join collection with delimiter
-- **matches(pattern)**: Test if string matches pattern
-
-#### Math Functions
-- **abs()**: Absolute value of number
-- **ceiling()**: Round up to nearest integer
-- **exp()**: e raised to the power of number (e^x)
-- **floor()**: Round down to nearest integer
-- **ln()**: Natural logarithm (base e)
-- **log(base)**: Logarithm with specified base
-- **power(exponent)**: Raise number to specified power
-- **round(precision?)**: Round to specified decimal places (default 0)
-- **sqrt()**: Square root of number
-- **truncate()**: Remove fractional part (toward zero)
-
-#### Date/Time Functions
-- **now()**: Returns current date and time in UTC (ISO 8601: YYYY-MM-DDTHH:mm:ss.sssZ)
-- **today()**: Returns current date in local timezone (ISO 8601: YYYY-MM-DD)
-- **timeOfDay()**: Returns current time in local timezone (ISO 8601: HH:mm:ss.sss)
-
-### ⏳ Partially Implemented
-
-#### Basic Evaluation
-- ✅ Literal evaluation (including temporal literals)
-- ✅ Quantity literals (`5 'mg'`, `10 'cm'`)
-- ✅ Simple member access on JSON objects
-- ✅ Array indexing with bounds checking and nested indexing support
-- ✅ Basic logical operations
-- ✅ Arithmetic operations with proper precedence
-- ✅ Comparison operations with type safety
-- ✅ Membership operations with collection semantics
-- ✅ Collection functions (empty, exists, count, distinct, isDistinct)
-- ✅ Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
-- ✅ Filtering functions (where, select)
-- ✅ String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
-- ✅ Math functions (abs, ceiling, exp, floor, ln, log, power, round, sqrt, truncate)
-- ✅ Date/time functions (now, today, timeOfDay)
-- ✅ Date/time component extraction functions (yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf, timezoneOffsetOf, dateOf, timeOf)
-- ✅ Polarity operations (-, +)
-- ✅ String concatenation and type conversion
-- ❌ Complex path navigation
-- ❌ Advanced function execution (repeat, etc.)
-- ❌ Type coercion
-
-### ❌ Not Yet Implemented
-
-#### Advanced Expression Types
-- **Type operations**: `is`, `as`
-- **Implies operation**: `condition implies action`
-
-#### Advanced Literals
-- **Long numbers**: `1000L`
-
-#### FHIR extensions
-See: https://www.hl7.org/fhir/fhirpath.html
-- **extension**: `.extension.where(url = string)`
-- **hasValue()**: `Patient.name.given.getValue()`
-- **getValue()**: `Observation.issued.hasValue()`
-- (etc)
-
-#### SQL-on-FHIR extensions
-See: https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#fhirpath-functionality
-- **getResourceKey()**: `Observation.getResourceKey()`
-- **getReferenceKey([resource: type specifier])**: `Observation.subject.getReferenceKey(Patient)`
-
-## FHIRPath Operator Support
-
-### Operators
-
-| Operator | Description | Parser | Evaluator | Status |
-|----------|-------------|---------|-----------|---------|
-| `.` | Member access | ✅ | ✅ | Complete |
-| `[]` | Indexer | ✅ | ✅ | Complete |
-| `()` | Function call | ✅ | ✅ | Complete |
-| `()` | Grouping | ✅ | ✅ | Complete |
-
-### Arithmetic Operators
-
-| Operator | Description | Parser | Evaluator | Status |
-|----------|-------------|---------|-----------|---------|
-| `+` | Addition | ✅ | ✅ | Complete |
-| `-` | Subtraction | ✅ | ✅ | Complete |
-| `*` | Multiplication | ✅ | ✅ | Complete |
-| `/` | Division | ✅ | ✅ | Complete |
-| `div` | Integer division | ✅ | ✅ | Complete |
-| `mod` | Modulo | ✅ | ✅ | Complete |
-| `&` | String concatenation | ✅ | ✅ | Complete |
-
-### Comparison Operators
-
-| Operator | Description | Parser | Evaluator | Status |
-|----------|-------------|---------|-----------|---------|
-| `=` | Equality | ✅ | ✅ | Complete |
-| `!=` | Inequality | ✅ | ✅ | Complete |
-| `~` | Equivalence | ✅ | ✅ | Complete |
-| `!~` | Non-equivalence | ✅ | ✅ | Complete |
-| `<` | Less than | ✅ | ✅ | Complete |
-| `<=` | Less than or equal | ✅ | ✅ | Complete |
-| `>` | Greater than | ✅ | ✅ | Complete |
-| `>=` | Greater than or equal | ✅ | ✅ | Complete |
-
-### Logical Operators
-
-| Operator | Description | Parser | Evaluator | Status |
-|----------|-------------|---------|-----------|---------|
-| `and` | Logical AND | ✅ | ✅ | Complete |
-| `or` | Logical OR | ✅ | ✅ | Complete |
-| `xor` | Logical XOR | ✅ | ✅ | Complete |
-| `implies` | Logical implication | ✅ | ❌ | Parse only |
-
-### Collection Operators
-
-| Operator | Description | Parser | Evaluator | Status |
-|----------|-------------|---------|-----------|---------|
-| `\|` | Union | ✅ | ✅ | Complete |
-| `in` | Membership test | ✅ | ✅ | Complete |
-| `contains` | Contains test | ✅ | ✅ | Complete |
+### Error Handling
+- **Comprehensive errors**: Parse errors, evaluation errors, type mismatches
+- **Context information**: Line/column information for parse errors
+- **Type safety**: Runtime type checking with clear error messages
 
 ## Usage
 
-### Basic Parsing
+### Basic Example
 
 ```rust
-use fhirpath::FhirPathParser;
-
-let parser = FhirPathParser::new();
-
-// Simple expressions
-let expr = parser.parse("Patient.name.given").unwrap();
-let expr = parser.parse("name.where(use = 'official')").unwrap();
-let expr = parser.parse("age > 18 and active = true").unwrap();
-```
-
-### Expression Evaluation
-
-```rust
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
+use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
 use serde_json::json;
 
 let patient = json!({
     "resourceType": "Patient",
-    "active": true,
-    "name": [{
-        "use": "official",
-        "given": ["John", "James"],
-        "family": "Doe"
-    }, {
-        "use": "usual",
-        "given": ["Johnny"],
-        "family": "Doe"
-    }],
+    "name": [{"given": ["John"], "family": "Doe"}],
     "birthDate": "1974-12-25"
 });
 
 let parser = FhirPathParser::new();
 let evaluator = FhirPathEvaluator::new();
+let context = EvaluationContext::new(patient);
+
+// Extract patient name
+let expr = parser.parse("name.given").unwrap();
+let result = evaluator.evaluate(&expr, &context).unwrap();
+
+// Date arithmetic
+let expr = parser.parse("now() - 30 days").unwrap();
+let result = evaluator.evaluate(&expr, &context).unwrap();
+
+// String operations
+let expr = parser.parse("name.family.upper()").unwrap();
+let result = evaluator.evaluate(&expr, &context).unwrap();
+```
+
+### Quantity Operations
+
+```rust
+// Unit conversion
+let expr = parser.parse("1.0'kg' + 500.0'g'").unwrap(); // → 1.5kg
+
+// Temperature conversion
+let expr = parser.parse("20.0'Cel' + 273.15'K'").unwrap(); // → 293.15Cel
+```
+
+### Date/Time Arithmetic
+
+```rust
+// Current time minus duration
+let expr = parser.parse("now() - 10 days").unwrap();
+
+// Date literals with arithmetic
+let expr = parser.parse("@2025-01-01 + 6 months").unwrap(); // → 2025-07-01
+
+// Complex expressions
+let expr = parser.parse("today() - 1 year + 30 days").unwrap();
+```
+
+## Architecture
+
+### Parser (`src/parser.rs`)
+- **Technology**: nom parser combinators for zero-copy parsing
+- **Features**: Complete FHIRPath syntax support including temporal and quantity literals
+- **Performance**: Efficient recursive descent parser with proper error recovery
+
+### AST (`src/ast.rs`)
+- **Design**: Type-safe representation of all FHIRPath expressions
+- **Serialization**: Full serde support for JSON serialization/deserialization
+- **Extensibility**: Easy to extend for new expression types
+
+### Evaluator (`src/evaluator/`)
+- **Architecture**: Modular evaluation with separate modules for different operation types
+- **Type System**: Runtime type checking with automatic conversions where appropriate
+- **Performance**: Optimized evaluation with lazy collection processing
+
+### Error Handling (`src/error.rs`)
+- **Parse Errors**: Detailed location information with helpful messages
+- **Evaluation Errors**: Context-aware runtime errors with type information
+- **Recovery**: Graceful error handling with partial results where possible
 let context = EvaluationContext::new(patient);
 
 // Simple member access

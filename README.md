@@ -1,11 +1,15 @@
-# FHIR Rust
+# RH - Rust Healthcare Toolkit
 
 [![CI](https://github.com/reason-healthcare/rh/workflows/CI/badge.svg)](https://github.com/reason-healthcare/rh/actions)
 [![codecov](https://codecov.io/gh/reason-healthcare/rh/branch/main/graph/badge.svg)](https://codecov.io/gh/reason-healthcare/rh)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 
-A comprehensive Rust workspace for FHIR (Fast Healthcare Interoperability Resources) code generation and processing. This monorepo provides libraries and CLI tools for working with FHIR StructureDefinitions, package management, and type-safe Rust code generation.
+
+**RH** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extendable. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: superior UX, small, composable, and ideal for scripting and automation.
+
+Cross-platform and lightning-fast, and running nativelly cross platform, RH eliminates the overhead of heavy virtual machines like the JVM or .NET. RH can even be compiled to **WebAssembly** for seamless integration into web applications and embedded environments.
+
 
 ## 🚀 Quick Start
 
@@ -16,10 +20,6 @@ cd research
 cargo build
 ```
 
-For detailed usage examples and comprehensive documentation, see:
-- **[RH CLI Documentation](apps/rh/README.md)** - Complete guide to the unified CLI
-- **[FHIR Code Generation](crates/codegen/README.md)** - Library usage and advanced features
-- **[FHIRPath Operations](crates/fhirpath/README.md)** - Expression syntax and evaluation examples
 
 ## 📁 Workspace Structure
 
@@ -37,18 +37,12 @@ For detailed usage examples and comprehensive documentation, see:
 └── build.sh                # 🏭 Build script for CI/CD
 ```
 
-## Libraries
+For detailed usage examples and comprehensive documentation, see:
 
-- **[FHIR Code Generation](crates/codegen/README.md)** - Generate type-safe Rust code from FHIR StructureDefinitions with package management support
-- **[FHIRPath](crates/fhirpath/README.md)** - Parse and evaluate FHIRPath expressions with comprehensive operator support
-- **Common** (`crates/common/`) - Shared utilities and error handling
-- **Core** (`crates/core/`) - Core functionality and types
+- **[Rust Code Generation](crates/codegen/README.md)** - Rust code generation from any FHIR Package.
+- **[FHIRPath](crates/fhirpath/README.md)** - FHIRPath engine, highly extensible and comprehensive
+- **[RH CLI](apps/rh/README.md)** - Ergonomic CLI for FHIR with awesome UX
 
-## Applications
-
-- **[RH CLI](apps/rh/README.md)** - Unified CLI application with subcommands for:
-  - **Code Generation** (`rh codegen`) - Convert FHIR StructureDefinitions to Rust types
-  - **FHIRPath Operations** (`rh fhirpath`) - Parse, evaluate, and test FHIRPath expressions  
 
 ## 🛠️ Getting Started
 
@@ -95,7 +89,7 @@ cargo test -p <package-name>
 
 ### Development Commands
 
-All functionality is now available through the unified `rh` CLI. Legacy applications remain available but are deprecated.
+All functionality is available through the unified `rh` CLI.
 
 **For complete CLI documentation and examples, see the [RH CLI documentation](apps/rh/README.md)**
 
@@ -106,9 +100,6 @@ cargo run -p rh -- codegen --help
 
 # FHIRPath operations  
 cargo run -p rh -- fhirpath --help
-
-# Enable verbose logging for any subcommand
-cargo run -p rh -- -v codegen init
 ```
 
 Check code formatting:
@@ -135,11 +126,17 @@ Run clippy with all features:
 cargo clippy --all-features
 ```
 
+Run tests:
+
+```bash
+cargo tes
+```
+
 ## 📦 Dependency Management
 
 ### Workspace Dependencies
 
-Add common dependencies to the root `Cargo.toml`:
+Add common dependencies to the root `Cargo.toml`, e.g.:
 
 ```toml
 [workspace.dependencies]
@@ -148,7 +145,7 @@ tokio = "1.0"
 anyhow = "1.0"
 ```
 
-Then reference them in individual crates:
+Then reference them in individual crates, e.g.:
 
 ```toml
 [dependencies]
@@ -158,7 +155,7 @@ tokio = { workspace = true }
 
 ### Crate-specific Dependencies
 
-Add directly to the crate's `Cargo.toml`:
+Add directly to the crate's `Cargo.toml`, e.g.:
 
 ```toml
 [dependencies]
