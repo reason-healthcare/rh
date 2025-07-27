@@ -30,7 +30,8 @@ This is a Rust monorepo focused on FHIR (Fast Healthcare Interoperability Resour
     - Unused variables and imports
     - Clippy lints that suggest more idiomatic Rust patterns
     - Performance improvements (e.g., using iterators instead of manual loops)
-    - uninlined_format_args
+    - uninlined_format_args - always inline format arguments in `println!` and `format!` macros
+    - Do not use 3.14 as an example as it is confused with Pi, use a more generic number like 2.5
 - **Maximum line length**: 100 characters (configured in rustfmt.toml if present)
 
 ### Error Handling
