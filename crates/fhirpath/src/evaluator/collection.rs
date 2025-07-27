@@ -495,4 +495,100 @@ impl CollectionEvaluator {
             },
         }
     }
+
+    /// Check if target collection is a subset of the other collection
+    /// Returns true if all items in target are contained in other
+    pub fn subset_of(
+        target: &FhirPathValue,
+        other: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        // Convert both collections to vectors
+        let target_items = match target {
+            FhirPathValue::Empty => vec![],
+            FhirPathValue::Collection(items) => items.clone(),
+            value => vec![value.clone()],
+        };
+
+        let other_items = match other {
+            FhirPathValue::Empty => vec![],
+            FhirPathValue::Collection(items) => items.clone(),
+            value => vec![value.clone()],
+        };
+
+        // Empty set is a subset of any set
+        if target_items.is_empty() {
+            return Ok(FhirPathValue::Boolean(true));
+        }
+
+        // Check if all items in target are contained in other
+        for target_item in &target_items {
+            let mut found = false;
+            for other_item in &other_items {
+                if Self::values_equal(target_item, other_item) {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                return Ok(FhirPathValue::Boolean(false));
+            }
+        }
+
+        Ok(FhirPathValue::Boolean(true))
+    }
+
+    /// Check if target collection is a superset of the other collection
+    /// Returns true if target contains all items in other
+    pub fn superset_of(
+        target: &FhirPathValue,
+        other: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        // A superset of B means B is a subset of A
+        Self::subset_of(other, target)
+    }
+
+    /// Helper function to check if two FhirPathValues are equal
+    fn values_equal(left: &FhirPathValue, right: &FhirPathValue) -> bool {
+        match (left, right) {
+            (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => (a - b).abs() < f64::EPSILON,
+            (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
+            (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
+            (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
+            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
+            (
+                FhirPathValue::Quantity {
+                    value: a_val,
+                    unit: a_unit,
+                },
+                FhirPathValue::Quantity {
+                    value: b_val,
+                    unit: b_unit,
+                },
+            ) => (a_val - b_val).abs() < f64::EPSILON && a_unit == b_unit,
+            // Mixed numeric types
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
+                (*a as f64 - b).abs() < f64::EPSILON
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                (a - *b as f64).abs() < f64::EPSILON
+            }
+            // Objects need deep comparison
+            (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
+            // Collections need element-wise comparison (order doesn't matter for sets)
+            (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                for item_a in a {
+                    if !b.iter().any(|item_b| Self::values_equal(item_a, item_b)) {
+                        return false;
+                    }
+                }
+                true
+            }
+            _ => false,
+        }
+    }
 }

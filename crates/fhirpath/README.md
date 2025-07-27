@@ -49,6 +49,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | **Collections** | |
 | `in` (membership) | ✅ | Value in collection |
 | `contains` | ✅ | Collection contains value |
+| `subsetOf(other)` | ✅ | Test if this collection is a subset of other |
+| `supersetOf(other)` | ✅ | Test if this collection is a superset of other |
 | **Boolean logic** | |
 | `and` | ✅ | Logical AND |
 | `or` | ✅ | Logical OR |

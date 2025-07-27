@@ -232,6 +232,50 @@ fn main() -> Result<()> {
         }
     }
 
+    // 9️⃣ Collection Set Operations
+    println!("\n9️⃣ Collection Set Operations:");
+
+    // Set operations - intersect, exclude, union
+    let set_expressions = vec![
+        "numbers.intersect(3 | 4 | 5 | 6)", // intersection
+        "numbers.exclude(1 | 2)",           // difference
+        "numbers | (10 | 11)",              // union
+        "numbers.distinct()",               // remove duplicates
+    ];
+
+    for expr_str in set_expressions {
+        match parser.parse(expr_str) {
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Evaluation Error: {e}"),
+            },
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
+        }
+    }
+
+    // 🔟 Subset and Superset Operations (NEW!)
+    println!("\n🔟 Subset and Superset Operations:");
+
+    let subset_superset_expressions = vec![
+        "(1 | 2 | 3).subsetOf(numbers)", // subset test
+        "numbers.supersetOf(3 | 4 | 5)", // superset test
+        "names.subsetOf('Alice' | 'Bob' | 'Charlie' | 'Diana' | 'Eve')", // string subset
+        "('Alice' | 'Bob').subsetOf(names)", // partial subset
+        "{}.subsetOf(numbers)",          // empty set is subset of any set
+        "numbers.supersetOf({})",        // any set is superset of empty set
+        "(1 | 2 | 3).subsetOf(3 | 2 | 1)", // equal sets (order independent)
+    ];
+
+    for expr_str in subset_superset_expressions {
+        match parser.parse(expr_str) {
+            Ok(expr) => match evaluator.evaluate(&expr, &context) {
+                Ok(result) => println!("   {expr_str} = {result:?}"),
+                Err(e) => println!("   {expr_str} = Evaluation Error: {e}"),
+            },
+            Err(e) => println!("   {expr_str} = Parse Error: {e}"),
+        }
+    }
+
     println!("\n✅ All collection operation examples completed!");
     println!("💡 Collections are fundamental to working with FHIR data");
     println!("💡 Use field access (e.g., 'patients.name') to extract data from object collections");

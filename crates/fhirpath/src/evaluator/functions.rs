@@ -247,6 +247,34 @@ impl FunctionRegistry {
                 CollectionEvaluator::exclude(target, &params[0])
             }),
         );
+
+        // subsetOf() function
+        self.functions.insert(
+            "subsetOf".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "subsetOf() requires exactly one parameter (other collection)"
+                            .to_string(),
+                    });
+                }
+                CollectionEvaluator::subset_of(target, &params[0])
+            }),
+        );
+
+        // supersetOf() function
+        self.functions.insert(
+            "supersetOf".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "supersetOf() requires exactly one parameter (other collection)"
+                            .to_string(),
+                    });
+                }
+                CollectionEvaluator::superset_of(target, &params[0])
+            }),
+        );
     }
 
     /// Register all string manipulation functions
