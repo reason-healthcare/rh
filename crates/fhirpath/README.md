@@ -107,7 +107,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `skip(num)` | ✅ | Skip first num items |
 | `take(num)` | ✅ | Take first num items |
 | **Combining** | |
-| `union(\|)` | ✅ | Union operator |
+| `union(other)` | ✅ | Union operator |
+| `combine(other)` | ✅ | Merge collections preserving duplicates |
 | `intersect(other)` | ✅ | Items in both collections |
 | `exclude(other)` | ✅ | Items not in other collection |
 | **Conversion** | |
@@ -408,6 +409,12 @@ parser.parse("(1 | 2 | 3)").unwrap();          // ✅ → Collection([1, 2, 3])
 parser.parse("(42 | 'hello' | true)").unwrap(); // ✅ → Mixed type collection
 parser.parse("((1 | 2) | (3 | 4))").unwrap();   // ✅ → Nested union flattening
 parser.parse("(10 | 20 | 30)[1]").unwrap();     // ✅ → Integer(20) (union + indexing)
+
+// Collection combining operations
+parser.parse("(1 | 2 | 3).combine((3 | 4 | 5))").unwrap(); // ✅ → Collection([1, 2, 3, 3, 4, 5]) - preserves duplicates
+parser.parse("strings1.combine(strings2)").unwrap();       // ✅ → Merge collections keeping all items
+parser.parse("patients.combine(observations)").unwrap();   // ✅ → Combine FHIR resources
+parser.parse("collection1.combine(collection2).distinct()").unwrap(); // ✅ → Merge and remove duplicates
 
 // Complex indexing with filtering
 parser.parse("name.where(use = 'official')[0].given[0]").unwrap(); // ✅ Works

@@ -370,6 +370,49 @@ impl CollectionEvaluator {
         }
     }
 
+    /// Combine this collection with another, preserving duplicates
+    /// Merges the input and other collections into a single collection without eliminating duplicate values.
+    /// Combining an empty collection with a non-empty collection will return the non-empty collection.
+    /// There is no expectation of order in the resulting collection.
+    pub fn combine(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        let mut result = Vec::new();
+
+        // Add items from target collection
+        match target {
+            FhirPathValue::Empty => {
+                // Don't add anything from empty target
+            }
+            FhirPathValue::Collection(items) => {
+                result.extend(items.clone());
+            }
+            value => {
+                result.push(value.clone());
+            }
+        }
+
+        // Add items from other collection
+        match other {
+            FhirPathValue::Empty => {
+                // Don't add anything from empty other
+            }
+            FhirPathValue::Collection(items) => {
+                result.extend(items.clone());
+            }
+            value => {
+                result.push(value.clone());
+            }
+        }
+
+        // Return result based on size
+        if result.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else if result.len() == 1 {
+            Ok(result.into_iter().next().unwrap())
+        } else {
+            Ok(FhirPathValue::Collection(result))
+        }
+    }
+
     /// Check if all items in collection evaluate to true
     pub fn all(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {

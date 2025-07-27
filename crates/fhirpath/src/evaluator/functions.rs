@@ -248,6 +248,20 @@ impl FunctionRegistry {
             }),
         );
 
+        // combine() function
+        self.functions.insert(
+            "combine".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "combine() requires exactly one parameter (other collection)"
+                            .to_string(),
+                    });
+                }
+                CollectionEvaluator::combine(target, &params[0])
+            }),
+        );
+
         // subsetOf() function
         self.functions.insert(
             "subsetOf".to_string(),
