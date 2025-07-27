@@ -439,6 +439,20 @@ impl FunctionRegistry {
             }),
         );
 
+        // matchesFull() function
+        self.functions.insert(
+            "matchesFull".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() != 1 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "matchesFull() requires exactly one parameter (pattern)"
+                            .to_string(),
+                    });
+                }
+                StringEvaluator::matches_full(target, &params[0])
+            }),
+        );
+
         // contains() function
         self.functions.insert(
             "contains".to_string(),

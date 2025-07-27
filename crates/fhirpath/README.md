@@ -151,7 +151,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `replace(pattern, replacement)` | ✅ | Replace occurrences |
 | `split(delimiter)` | ✅ | Split into collection |
 | `join(delimiter)` | ✅ | Join collection |
-| `matches(pattern)` | ✅ | Pattern matching |
+| `matches(regex)` | ✅ | Regex attern matching |
+| `matchesFull(regex)` | ✅ | Exact regex pattern matching (implied ^ and $) |
 | **Null and empty** | | |
 | Empty collection literal: `{}` | ✅ | `{}` - represents empty collection |
 | Empty collection evaluation | ✅ | Empty results from operations (e.g., out-of-bounds indexing) |
@@ -444,6 +445,7 @@ cargo run --example string_conversion --package fhirpath
 cargo run --example time_conversion --package fhirpath
 cargo run --example quantity_conversion --package fhirpath
 cargo run --example matches_function --package fhirpath
+cargo run --example matches_full_function --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath

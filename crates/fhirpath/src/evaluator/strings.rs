@@ -329,6 +329,44 @@ impl StringEvaluator {
         }
     }
 
+    /// Check if a string matches a regular expression pattern exactly (full match with implied anchors)
+    /// FHIRPath: String.matchesFull(pattern: String) -> Boolean
+    /// This is equivalent to wrapping the pattern with ^ and $ anchors
+    pub fn matches_full(
+        target: &FhirPathValue,
+        pattern: &FhirPathValue,
+    ) -> Result<FhirPathValue, FhirPathError> {
+        let string = match target {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "matchesFull() can only be called on String values".to_string(),
+                })
+            }
+        };
+
+        let pattern_str = match pattern {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "matchesFull() pattern parameter must be a String".to_string(),
+                })
+            }
+        };
+
+        // Add anchors to pattern for full match
+        let anchored_pattern = format!("^{pattern_str}$");
+
+        // Use regex for proper pattern matching with anchors
+        match regex::Regex::new(&anchored_pattern) {
+            Ok(re) => Ok(FhirPathValue::Boolean(re.is_match(string))),
+            Err(_) => {
+                // If regex compilation fails, return false (invalid pattern)
+                Ok(FhirPathValue::Boolean(false))
+            }
+        }
+    }
+
     /// Check if a string contains another string (helper function)
     /// This is not a standard FHIRPath function, but useful for implementation
     pub fn contains(
