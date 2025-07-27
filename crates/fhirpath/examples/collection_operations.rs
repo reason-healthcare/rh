@@ -241,6 +241,9 @@ fn main() -> Result<()> {
         "numbers.exclude(1 | 2)",           // difference
         "numbers | (10 | 11)",              // union
         "numbers.distinct()",               // remove duplicates
+        "numbers.isDistinct()",             // check if all items are unique
+        "(1 | 2 | 2 | 3).distinct()",       // remove duplicates from collection with duplicates
+        "(1 | 2 | 2 | 3).isDistinct()",     // check distinctness of collection with duplicates
     ];
 
     for expr_str in set_expressions {

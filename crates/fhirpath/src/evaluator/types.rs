@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_numeric_types() {
         let integer_val = FhirPathValue::Integer(42);
-        let number_val = FhirPathValue::Number(3.14);
+        let number_val = FhirPathValue::Number(std::f64::consts::PI);
 
         let integer_type = TypeSpecifier {
             qualified_name: vec!["Integer".to_string()],
