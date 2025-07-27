@@ -855,6 +855,22 @@ impl FunctionRegistry {
                 Self::converts_to_time(target)
             }),
         );
+
+        // toQuantity() function
+        self.functions.insert(
+            "toQuantity".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                Self::to_quantity(target, params.get(0))
+            }),
+        );
+
+        // convertsToQuantity() function
+        self.functions.insert(
+            "convertsToQuantity".to_string(),
+            Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+                Self::converts_to_quantity(target, params.get(0))
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -1711,6 +1727,199 @@ impl FunctionRegistry {
         } else {
             None
         }
+    }
+
+    /// Convert a value to Quantity according to FHIRPath specification
+    fn to_quantity(value: &FhirPathValue, unit_param: Option<&FhirPathValue>) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_quantity(&items[0], unit_param)
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Quantity { value, unit } => {
+                // If unit parameter is provided, use it; otherwise keep existing unit
+                let target_unit = if let Some(unit_param) = unit_param {
+                    match unit_param {
+                        FhirPathValue::String(u) => Some(u.clone()),
+                        _ => unit.clone(), // Invalid unit parameter, keep existing
+                    }
+                } else {
+                    unit.clone()
+                };
+                
+                Ok(FhirPathValue::Quantity { 
+                    value: *value, 
+                    unit: target_unit 
+                })
+            }
+
+            FhirPathValue::Integer(i) => {
+                let target_unit = if let Some(unit_param) = unit_param {
+                    match unit_param {
+                        FhirPathValue::String(u) => Some(u.clone()),
+                        _ => None, // Invalid unit parameter
+                    }
+                } else {
+                    None
+                };
+                
+                Ok(FhirPathValue::Quantity { 
+                    value: *i as f64, 
+                    unit: target_unit 
+                })
+            }
+
+            FhirPathValue::Number(n) => {
+                let target_unit = if let Some(unit_param) = unit_param {
+                    match unit_param {
+                        FhirPathValue::String(u) => Some(u.clone()),
+                        _ => None, // Invalid unit parameter
+                    }
+                } else {
+                    None
+                };
+                
+                Ok(FhirPathValue::Quantity { 
+                    value: *n, 
+                    unit: target_unit 
+                })
+            }
+
+            FhirPathValue::Long(l) => {
+                let target_unit = if let Some(unit_param) = unit_param {
+                    match unit_param {
+                        FhirPathValue::String(u) => Some(u.clone()),
+                        _ => None, // Invalid unit parameter
+                    }
+                } else {
+                    None
+                };
+                
+                Ok(FhirPathValue::Quantity { 
+                    value: *l as f64, 
+                    unit: target_unit 
+                })
+            }
+
+            FhirPathValue::String(s) => {
+                // Try to parse as a quantity string or as a number
+                if let Some((value, unit)) = Self::parse_quantity_string(s) {
+                    // If unit parameter is provided, use it; otherwise use parsed unit
+                    let target_unit = if let Some(unit_param) = unit_param {
+                        match unit_param {
+                            FhirPathValue::String(u) => Some(u.clone()),
+                            _ => unit, // Invalid unit parameter, use parsed unit
+                        }
+                    } else {
+                        unit
+                    };
+                    
+                    Ok(FhirPathValue::Quantity { 
+                        value, 
+                        unit: target_unit 
+                    })
+                } else if let Ok(value) = s.parse::<f64>() {
+                    // Parse as a plain number
+                    let target_unit = if let Some(unit_param) = unit_param {
+                        match unit_param {
+                            FhirPathValue::String(u) => Some(u.clone()),
+                            _ => None, // Invalid unit parameter
+                        }
+                    } else {
+                        None
+                    };
+                    
+                    Ok(FhirPathValue::Quantity { 
+                        value, 
+                        unit: target_unit 
+                    })
+                } else {
+                    // Not convertible
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // All other types cannot be converted to Quantity
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Quantity according to FHIRPath specification
+    fn converts_to_quantity(value: &FhirPathValue, unit_param: Option<&FhirPathValue>) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_quantity(&items[0], unit_param)
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Quantity { .. } => {
+                // Always convertible (identity or unit change)
+                Ok(FhirPathValue::Boolean(true))
+            }
+
+            FhirPathValue::Integer(_) | FhirPathValue::Number(_) | FhirPathValue::Long(_) => {
+                // Numeric types are always convertible to quantity
+                Ok(FhirPathValue::Boolean(true))
+            }
+
+            FhirPathValue::String(s) => {
+                // Check if string can be parsed as quantity or number
+                let is_quantity = Self::parse_quantity_string(s).is_some();
+                let is_number = s.parse::<f64>().is_ok();
+                Ok(FhirPathValue::Boolean(is_quantity || is_number))
+            }
+
+            // All other types cannot be converted to Quantity
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Parse a string that might represent a quantity (e.g., "5 'mg'", "10.5'kg'")
+    /// Returns (value, unit) if successful
+    fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
+        // Try to parse as "value 'unit'" or "value'unit'" format
+        let s = s.trim();
+        
+        // Look for quote patterns
+        if let Some(quote_start) = s.find('\'') {
+            if let Some(quote_end) = s.rfind('\'') {
+                if quote_start < quote_end {
+                    // Extract the value part
+                    let value_str = s[..quote_start].trim();
+                    let unit_str = &s[quote_start + 1..quote_end];
+                    
+                    if let Ok(value) = value_str.parse::<f64>() {
+                        let unit = if unit_str.is_empty() {
+                            None
+                        } else {
+                            Some(unit_str.to_string())
+                        };
+                        return Some((value, unit));
+                    }
+                }
+            }
+        }
+        
+        None
     }
 }
 

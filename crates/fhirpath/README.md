@@ -128,6 +128,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `convertsToString()` | ✅ | Test if value can be converted to string |
 | `toTime()` | ✅ | Convert to time |
 | `convertsToTime()` | ✅ | Test if value can be converted to time |
+| `toQuantity([unit])` | ✅ | Convert to quantity with optional unit |
+| `convertsToQuantity([unit])` | ✅ | Test if value can be converted to quantity |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -373,6 +375,37 @@ let expr = parser.parse("'25:00:00'.convertsToTime()").unwrap(); // → Boolean(
 let expr = parser.parse("42.convertsToTime()").unwrap(); // → Boolean(false)
 ```
 
+### Quantity Conversions
+
+The FHIRPath evaluator supports conversion of various value types to Quantity with optional unit specification:
+
+```rust
+// Convert numbers to quantities without units
+let expr = parser.parse("42.toQuantity()").unwrap(); // → Quantity { value: 42.0, unit: None }
+let expr = parser.parse("3.14.toQuantity()").unwrap(); // → Quantity { value: 3.14, unit: None }
+let expr = parser.parse("100L.toQuantity()").unwrap(); // → Quantity { value: 100.0, unit: None }
+
+// Convert with unit parameter
+let expr = parser.parse("5.toQuantity('mg')").unwrap(); // → Quantity { value: 5.0, unit: Some("mg") }
+let expr = parser.parse("37.2.toQuantity('Cel')").unwrap(); // → Quantity { value: 37.2, unit: Some("Cel") }
+let expr = parser.parse("120.toQuantity('mm[Hg]')").unwrap(); // → Quantity { value: 120.0, unit: Some("mm[Hg]") }
+
+// Convert strings to quantities
+let expr = parser.parse("'42.7'.toQuantity()").unwrap(); // → Quantity { value: 42.7, unit: None }
+let expr = parser.parse("'98.6'.toQuantity('[degF]')").unwrap(); // → Quantity { value: 98.6, unit: Some("[degF]") }
+
+// Unit override for existing quantities
+let expr = parser.parse("5'mg'.toQuantity()").unwrap(); // → Quantity { value: 5.0, unit: Some("mg") } - identity
+let expr = parser.parse("5'mg'.toQuantity('g')").unwrap(); // → Quantity { value: 5.0, unit: Some("g") } - unit override
+
+// Test conversion compatibility
+let expr = parser.parse("42.convertsToQuantity()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'123.45'.convertsToQuantity()").unwrap(); // → Boolean(true)
+let expr = parser.parse("5'mg'.convertsToQuantity()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'not-a-number'.convertsToQuantity()").unwrap(); // → Boolean(false)
+let expr = parser.parse("true.convertsToQuantity()").unwrap(); // → Boolean(false)
+```
+
 ## Architecture
 
 ### Parser (`src/parser.rs`)
@@ -409,6 +442,7 @@ cargo run --example long_conversion --package fhirpath
 cargo run --example date_conversion --package fhirpath
 cargo run --example string_conversion --package fhirpath
 cargo run --example time_conversion --package fhirpath
+cargo run --example quantity_conversion --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
