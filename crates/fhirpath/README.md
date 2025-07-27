@@ -13,20 +13,18 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 ## Implementation Status
 
-### Path Selection
+### Core FHIRPath
 
 | Feature | Status | Notes |
 |---------|--------|--------|
-| **Collections** | ✅ | Collection operations and indexing |
-| Member access (`.`) | ✅ | `Patient.name`, `name.given` |
+| **Navigation and paths** | | |
+| Simple path navigation (`.`) | ✅ | `Patient.name` - basic dot notation |
+| Nested property access | ✅ | `Patient.name.given` - accessing nested structures |
 | Array indexing (`[]`) | ✅ | `name[0]`, `telecom[1].value` with nested support |
-| **Paths and polymorphic items** | ⏳ | Basic path navigation implemented |
-
-### Expressions
-
-| Feature | Status | Notes |
-|---------|--------|--------|
-| **Literals** | ✅ | |
+| **Tree navigation** | |
+| `children()` | ❌ | Not implemented |
+| `descendants()` | ❌ | Not implemented |
+| **Literals** | | |
 | Boolean | ✅ | `true`, `false` |
 | Integer | ✅ | `42`, `-10` |
 | Decimal | ✅ | `3.14`, `-0.5` |
@@ -35,114 +33,116 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | DateTime | ✅ | `@2023-01-01T12:30:45Z` |
 | Time | ✅ | `@T12:30:45` |
 | Quantity | ✅ | `5'mg'`, `37.2'Cel'` with UCUM units |
-| **Operators** | ✅ | All standard operators implemented |
-| **Function Invocations** | ✅ | `name.count()`, `where(criteria)` |
-| **Null and empty** | ✅ | `{}` literal and empty collection handling |
-| **Singleton Evaluation of Collections** | ✅ | Automatic singleton handling |
-
-### Functions
-
-| Category | Feature | Status | Notes |
-|----------|---------|--------|--------|
-| **Existence** | | | |
-| | `empty()` | ✅ | Test if collection is empty |
-| | `exists()` | ✅ | Test if any items exist |
-| | `count()` | ✅ | Count items in collection |
-| **Filtering and projection** | | | |
-| | `where(criteria)` | ✅ | Filter collection by criteria |
-| | `select(projection)` | ✅ | Transform each item |
-| **Subsetting** | | | |
-| | `single()` | ✅ | Return single item (error if != 1) |
-| | `first()` | ✅ | Return first item |
-| | `last()` | ✅ | Return last item |
-| | `tail()` | ✅ | All items except first |
-| | `skip(num)` | ✅ | Skip first num items |
-| | `take(num)` | ✅ | Take first num items |
-| **Combining** | | | |
-| | `union(\|)` | ✅ | Union operator |
-| | `intersect(other)` | ✅ | Items in both collections |
-| | `exclude(other)` | ✅ | Items not in other collection |
-| **Conversion** | | | |
-| | `distinct()` | ✅ | Remove duplicates |
-| | `isDistinct()` | ✅ | Test if all items unique |
-| **String Manipulation** | | | |
-| | `length()` | ✅ | String length |
-| | `substring(start, length?)` | ✅ | Extract substring |
-| | `upper()` | ✅ | Convert to uppercase |
-| | `lower()` | ✅ | Convert to lowercase |
-| | `trim()` | ✅ | Remove whitespace |
-| **Additional String Functions** | | | |
-| | `startsWith(prefix)` | ✅ | Test string prefix |
-| | `endsWith(suffix)` | ✅ | Test string suffix |
-| | `indexOf(substring)` | ✅ | Find substring index |
-| | `replace(pattern, replacement)` | ✅ | Replace occurrences |
-| | `split(delimiter)` | ✅ | Split into collection |
-| | `join(delimiter)` | ✅ | Join collection |
-| | `matches(pattern)` | ✅ | Pattern matching |
-| **Math** | | | |
-| | `abs()` | ✅ | Absolute value |
-| | `ceiling()` | ✅ | Round up |
-| | `floor()` | ✅ | Round down |
-| | `round(precision?)` | ✅ | Round to precision |
-| | `truncate()` | ✅ | Remove fractional part |
-| | `sqrt()` | ✅ | Square root |
-| | `power(exponent)` | ✅ | Raise to power |
-| | `exp()` | ✅ | e^x |
-| | `ln()` | ✅ | Natural logarithm |
-| | `log(base)` | ✅ | Logarithm with base |
-| **Tree navigation** | | | |
-| | `children()` | ❌ | Not implemented |
-| | `descendants()` | ❌ | Not implemented |
-| **Utility functions** | | | |
-| | `now()` | ✅ | Current date/time UTC |
-| | `today()` | ✅ | Current date local |
-| | `timeOfDay()` | ✅ | Current time local |
-
-### Operations
-
-| Category | Feature | Status | Notes |
-|----------|---------|--------|--------|
-| **Equality** | | | |
-| | `=` (equals) | ✅ | Equality comparison |
-| | `!=` (not equals) | ✅ | Inequality comparison |
-| | `~` (equivalent) | ✅ | Equivalence |
-| | `!~` (not equivalent) | ✅ | Non-equivalence |
-| **Comparison** | | | |
-| | `<` (less than) | ✅ | Numeric, string, boolean |
-| | `<=` (less or equal) | ✅ | Numeric, string, boolean |
-| | `>` (greater than) | ✅ | Numeric, string, boolean |
-| | `>=` (greater or equal) | ✅ | Numeric, string, boolean |
-| **Types** | | | |
-| | `is` (type test) | ❌ | Not implemented |
-| | `as` (type cast) | ❌ | Not implemented |
-| **Collections** | | | |
-| | `in` (membership) | ✅ | Value in collection |
-| | `contains` | ✅ | Collection contains value |
-| **Boolean logic** | | | |
-| | `and` | ✅ | Logical AND |
-| | `or` | ✅ | Logical OR |
-| | `xor` | ✅ | Logical XOR |
-| | `implies` | ❌ | Parsed but not evaluated |
-| **Math** | | | |
-| | `+` (addition) | ✅ | Numbers, quantities, strings |
-| | `-` (subtraction) | ✅ | Numbers, quantities |
-| | `*` (multiplication) | ✅ | Numbers, quantities |
-| | `/` (division) | ✅ | Numbers, quantities |
-| | `div` (integer division) | ✅ | Integer division |
-| | `mod` (modulo) | ✅ | Modulo operation |
-| | `&` (concatenation) | ✅ | String concatenation |
-| **Date/Time Arithmetic** | | | |
-| | Date + duration | ✅ | `@2025-01-01 + 6 months` |
-| | DateTime + duration | ✅ | `now() - 10 days` |
-| | Function arithmetic | ✅ | `today() + 2 years` |
-| | Compound durations | ✅ | `6 months`, `24 hours` |
-| | Precision handling | ✅ | Year, month, day, hour, minute, second |
-| **Operator precedence** | ✅ | Full precedence support |
-
-### Aggregates
-
-| Feature | Status | Notes |
-|---------|--------|--------|
+| **Equality** | |
+| `=` (equals) | ✅ | Equality comparison |
+| `!=` (not equals) | ✅ | Inequality comparison |
+| `~` (equivalent) | ✅ | Equivalence |
+| `!~` (not equivalent) | ✅ | Non-equivalence |
+| **Comparison** | |
+| `<` (less than) | ✅ | Numeric, string, boolean |
+| `<=` (less or equal) | ✅ | Numeric, string, boolean |
+| `>` (greater than) | ✅ | Numeric, string, boolean |
+| `>=` (greater or equal) | ✅ | Numeric, string, boolean |
+| **Types** | | 
+| `is` (type test) | ❌ | Not implemented |
+| `as` (type cast) | ❌ | Not implemented |
+| **Collections** | |
+| `in` (membership) | ✅ | Value in collection |
+| `contains` | ✅ | Collection contains value |
+| **Boolean logic** | |
+| `and` | ✅ | Logical AND |
+| `or` | ✅ | Logical OR |
+| `xor` | ✅ | Logical XOR |
+| `implies` | ❌ | Parsed but not evaluated |
+| **Unary** | |
+| `-` (negation) | ✅ | `-5`, `-weight` |
+| `+` (positive) | ✅ | `+value` |
+| **Math** | | 
+| `+` (addition) | ✅ | Numbers, quantities, strings |
+| `-` (subtraction) | ✅ | Numbers, quantities |
+| `*` (multiplication) | ✅ | Numbers, quantities |
+| `/` (division) | ✅ | Numbers, quantities |
+| `div` (integer division) | ✅ | Integer division |
+| `mod` (modulo) | ✅ | Modulo operation |
+| `&` (concatenation) | ✅ | String concatenation |
+| **Date/Time Arithmetic** | |
+| Date + duration | ✅ | `@2025-01-01 + 6 months` |
+| DateTime + duration | ✅ | `now() - 10 days` |
+| Function arithmetic | ✅ | `today() + 2 years` |
+| Compound durations | ✅ | `6 months`, `24 hours` |
+| Precision handling | ✅ | year(s), month(s), day(s), hour(s), minute(s), second(s) |
+| **Utility functions** | |
+| `now()` | ✅ | Current date/time UTC |
+| `today()` | ✅ | Current date local |
+| `timeOfDay()` | ✅ | Current time local |
+| **Operator precedence** | | |
+| `()` (Parentheses/Grouping) | ✅ | Highest precedence: `(age + 5) * 2`, `(name.given \| name.family).count()` |
+| Function calls | ✅ | `name.where(use='official').count()` - after member access |
+| Unary operators (`+`, `-`) | ✅ | `-age`, `+value` - right-associative |
+| `*`, `/`, `div`, `mod` | ✅ | Left-to-right: `10 / 2 * 3` → `(10 / 2) * 3` = 15 |
+| `+`, `-` (binary) | ✅ | Left-to-right: `10 - 3 + 2` → `(10 - 3) + 2` = 9 |
+| `&` (concatenation) | ✅ | Left-to-right: `'a' & 'b' & 'c'` → `'abc'` |
+| `\|` (union) | ✅ | Left-to-right: `1 \| 2 \| 3` creates collection |
+| `in`, `contains` | ✅ | Membership: `'apple' in fruits` |
+| `<`, `<=`, `>`, `>=` | ✅ | Comparison: `age >= 18 and age < 65` |
+| `=`, `!=`, `~`, `!~` | ✅ | Equality: `name.family = 'Smith'` |
+| `and` | ✅ | Logical AND: `active and name.exists()` |
+| `or`, `xor` | ✅ | Logical OR/XOR (lowest precedence) |
+| **Existence** | |
+| `empty()` | ✅ | Test if collection is empty |
+| `exists()` | ✅ | Test if any items exist |
+| `count()` | ✅ | Count items in collection |
+| **Filtering and projection** | |
+| `where(criteria)` | ✅ | Filter collection by criteria |
+| `select(projection)` | ✅ | Transform each item |
+| **Subsetting** | |
+| `single()` | ✅ | Return single item (error if != 1) |
+| `first()` | ✅ | Return first item |
+| `last()` | ✅ | Return last item |
+| `tail()` | ✅ | All items except first |
+| `skip(num)` | ✅ | Skip first num items |
+| `take(num)` | ✅ | Take first num items |
+| **Combining** | |
+| `union(\|)` | ✅ | Union operator |
+| `intersect(other)` | ✅ | Items in both collections |
+| `exclude(other)` | ✅ | Items not in other collection |
+| **Conversion** | |
+| `distinct()` | ✅ | Remove duplicates |
+| `isDistinct()` | ✅ | Test if all items unique |
+| **String Manipulation** | |
+| `length()` | ✅ | String length |
+| `substring(start, length?)` | ✅ | Extract substring |
+| `upper()` | ✅ | Convert to uppercase |
+| `lower()` | ✅ | Convert to lowercase |
+| `trim()` | ✅ | Remove whitespace |
+| **Additional String Functions** | |
+| `startsWith(prefix)` | ✅ | Test string prefix |
+| `endsWith(suffix)` | ✅ | Test string suffix |
+| `indexOf(substring)` | ✅ | Find substring index |
+| `replace(pattern, replacement)` | ✅ | Replace occurrences |
+| `split(delimiter)` | ✅ | Split into collection |
+| `join(delimiter)` | ✅ | Join collection |
+| `matches(pattern)` | ✅ | Pattern matching |
+| **Null and empty** | | |
+| Empty collection literal: `{}` | ✅ | `{}` - represents empty collection |
+| Empty collection evaluation | ✅ | Empty results from operations (e.g., out-of-bounds indexing) |
+| Null propagation in operations | ✅ | Operations on empty collections return empty |
+| Null-safe equality (`~`) | ✅ | `value ~ null` - handles null comparisons |
+| Null-safe inequality (`!~`) | ✅ | `value !~ null` - handles null comparisons |
+| Empty collection in boolean context | ✅ | Empty collections evaluate to `false` in logical operations |
+| Empty collection indexing | ✅ | `{}[0]` returns empty (no error) |
+| Empty collection functions | ✅ | Functions like `count()`, `exists()` work on empty collections |
+| Missing field access | ✅ | `nonexistent.field` returns empty (no error) |
+| **Singleton Evaluation of Collections** | | |
+| Single-item collections | ✅ | Collections with one item behave as singletons in operations |
+| Automatic unwrapping | ✅ | `[42]` automatically becomes `42` in scalar contexts |
+| Arithmetic with singletons | ✅ | `[5] + [3]` → `8` (automatic unwrapping) |
+| Comparison with singletons | ✅ | `[5] > [3]` → `true` (automatic unwrapping) |
+| String operations on singletons | ✅ | `['hello'].upper()` → `'HELLO'` |
+| Function calls on singletons | ✅ | `[42].abs()` → `42` (functions work on singleton values) |
+| Singleton preservation | ✅ | Operations that should return collections maintain collection type |
+| Multi-item collection handling | ✅ | Operations on multi-item collections work element-wise where appropriate |
+| **Aggregates** | | |
 | `aggregate(aggregator, init?)` | ❌ | Not implemented |
 
 ### Extension: FHIR
@@ -172,6 +172,11 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `subsumes(code)` | ❌ | Not implemented |
 | `subsumedBy(code)` | ❌ | Not implemented |
 | `htmlChecks` | ❌ | Not implemented |
+| **Paths and polymorphic items** | | |
+| Polymorphic field access (value[x]) | ❌ | `Observation.value` for `valueString`, `valueQuantity` etc. |
+| Type-specific polymorphic access | ❌ | `Observation.valueString`, `Observation.valueQuantity` |
+| Resource type navigation | ❌ | Navigation based on resource type context |
+| Profile-aware navigation | ❌ | Navigation based on profile constraints |
 
 ### Extension: SQL-on-FHIR
 
@@ -180,31 +185,20 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `getResourceKey()` | ❌ | Not implemented |
 | `getReferenceKey(resource?)` | ❌ | Not implemented |
 
-## Key Features
-
-### Comprehensive Type Support
-- **Temporal literals**: Date (`@2023-01-01`), DateTime (`@2023-01-01T12:30:45Z`), Time (`@T12:30:45`)
-- **Quantity literals**: UCUM units (`5'mg'`, `37.2'Cel'`) with automatic unit conversion
-- **Unit conversion**: Mass, length, volume, time, pressure, temperature with offset-based temperature conversion
-
-### Advanced Arithmetic
-- **Mixed-type operations**: Integer + Number → Number
-- **Quantity arithmetic**: `5'mg' + 3'mg'` → `8mg`
-- **Unit conversion**: `1.0'kg' + 500.0'g'` → `1.5kg`
-- **Date/time arithmetic**: `now() - 10 days`, `today() + 6 months`
-- **Proper precedence**: `2 + 3 * 4` → `14`
-
-### String Operations
-- **Full manipulation**: length, substring, case conversion, trimming
-- **Pattern operations**: startsWith, endsWith, indexOf, replace, matches
-- **Collection operations**: split, join
-
-### Error Handling
-- **Comprehensive errors**: Parse errors, evaluation errors, type mismatches
-- **Context information**: Line/column information for parse errors
-- **Type safety**: Runtime type checking with clear error messages
 
 ## Usage
+
+### CLI
+
+You can use the `rh` cli. For help:
+```
+cargo run -p rh -- fhirpath --help
+```
+
+There is also an interactive REPL:
+```
+cargo run -p rh -- fhirpath repl
+```
 
 ### Basic Example
 
@@ -279,35 +273,20 @@ let expr = parser.parse("today() - 1 year + 30 days").unwrap();
 - **Parse Errors**: Detailed location information with helpful messages
 - **Evaluation Errors**: Context-aware runtime errors with type information
 - **Recovery**: Graceful error handling with partial results where possible
-let context = EvaluationContext::new(patient);
 
-// Simple member access
-let expr = parser.parse("resourceType").unwrap();
-let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::String("Patient")
-
-// Array indexing
-let expr = parser.parse("name[0].family").unwrap();
-let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::String("Doe")
-
-// Nested array indexing
-let expr = parser.parse("name[0].given[1]").unwrap();
-let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::String("James")
-
-// Collection operations
-let expr = parser.parse("name.count()").unwrap();
-let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::Integer(2)
-
-// Filtering with indexing
-let expr = parser.parse("name.where(use = 'official')[0].given[0]").unwrap();
-let result = evaluator.evaluate(&expr, &context).unwrap();
-// result: FhirPathValue::String("John")
-```
 
 ### Working Examples
+
+
+NOTE: See the [examples directory](./examples/) for complete, runnable examples with detailed output and explanations.
+
+```bash
+# Run individual examples, e.g.:
+cargo run --example unit_conversion_example --package fhirpath
+cargo run --example temperature_conversion_example --package fhirpath  
+cargo run --example datetime_functions_example --package fhirpath
+```
+
 
 ```rust
 // Array indexing operations
@@ -626,71 +605,9 @@ cargo test --package fhirpath --test comprehensive_string_test
 cargo test --package fhirpath test_parser_examples -- --nocapture
 ```
 
-## Development Roadmap
-
-### Phase 1: Core Parser (✅ Complete)
-- [x] Basic expression parsing
-- [x] Operator precedence
-- [x] Function call syntax
-- [x] Literal values
-- [x] Error handling
-
-### Phase 2: Basic Evaluation (✅ Complete)
-- [x] Literal evaluation
-- [x] Simple member access
-- [x] Array indexing evaluation with bounds checking and nested support
-- [x] Basic logical operations
-- [x] Arithmetic operations with proper precedence
-- [x] String concatenation and type conversion
-- [x] Union operation evaluation
-
-### Phase 3: Advanced Parsing (⏳ Quantity literals complete)
-- [x] Date/time literals
-- [x] Quantity literals
-- [ ] Type operators
-
-### Phase 4: Function Implementation (⏳ Collection, subsetting, filtering, and string functions complete)
-- [x] Collection functions (exists, count, empty, distinct, isDistinct)
-- [x] Subsetting functions (single, first, last, tail, skip, take, intersect, exclude)
-- [x] Filtering functions (where, select)
-- [x] String functions (length, substring, indexOf, replace, startsWith, endsWith, upper, lower, trim, split, join, matches)
-- [x] Math functions (abs, round, etc.)
-- [x] Date/time functions (now, today, timeOfDay)
-- [x] Date/time component extraction functions (yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf, timezoneOffsetOf, dateOf, timeOf)
-
-### Phase 5: Advanced Features (❌ Not Started)
-- [ ] Type system and coercion
-- [ ] Performance optimization
-- [ ] FHIR-specific functions
-- [ ] Error recovery and suggestions
-
-## Integration with FHIR Ecosystem
-
-The FHIRPath crate is designed to integrate with the broader FHIR code generation ecosystem:
-
-### Use Cases
-
-1. **FHIR Validation**: Use FHIRPath expressions to validate FHIR resources
-2. **Resource Querying**: Query FHIR data using FHIRPath expressions
-3. **Template Processing**: Use FHIRPath in FHIR resource templates
-4. **CLI Tools**: Integrate FHIRPath evaluation into command-line tools
-
-### Workspace Integration
-
-- **Common dependencies**: Managed through workspace Cargo.toml
-- **Error handling patterns**: Uses `anyhow` and `thiserror`
-- **Serde integration**: Compatible with FHIR JSON processing
-- **Testing conventions**: Follows workspace testing standards
-
 ## Contributing
 
-This implementation covers the core FHIRPath functionality but there are areas where contributions are welcome:
-
-### Priority Areas
-
-1. **Performance**: Optimization of parser and evaluator
-2. **Error Messages**: Better error reporting with suggestions
-3. **FHIR Integration**: Better integration with generated FHIR types
+Contributions are welcome!
 
 ### Development Guidelines
 
@@ -700,35 +617,6 @@ Follow the workspace conventions:
 - Write comprehensive tests for new features
 - Update documentation for API changes
 - Follow conventional commit message format
-
-## Examples
-
-The FHIRPath crate includes several comprehensive examples demonstrating different aspects of the functionality:
-
-### Available Examples
-
-- **`unit_conversion_example.rs`**: Demonstrates linear unit conversions (mass, length, volume, time, pressure)
-- **`temperature_conversion_example.rs`**: Shows temperature unit conversions with offset-based calculations  
-- **`datetime_functions_example.rs`**: Illustrates date/time functions (now, today, timeOfDay)
-- **`datetime_component_extraction_example.rs`**: Demonstrates component extraction functions (yearOf, monthOf, etc.)
-
-### Running Examples
-
-```bash
-# Run all examples
-cargo run --example unit_conversion_example --package fhirpath
-cargo run --example temperature_conversion_example --package fhirpath  
-cargo run --example datetime_functions_example --package fhirpath
-
-# Examples demonstrate:
-# - Unit conversion system with automatic conversions
-# - Temperature handling with proper offset calculations
-# - Date/time functions returning current system time
-# - Error handling for invalid operations
-# - Function usage in complex expressions
-```
-
-See the `examples/` directory for complete, runnable examples with detailed output and explanations.
 
 ## References
 
