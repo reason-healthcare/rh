@@ -590,6 +590,34 @@ impl CollectionEvaluator {
         Self::subset_of(other, target)
     }
 
+    /// Immediate if (conditional operator) - evaluates criterion and returns true-result or otherwise-result
+    ///
+    /// The iif function is an immediate if, also known as a conditional operator (like C's ? : operator).
+    /// It evaluates the criterion expression and returns the true-result if the criterion is truthy,
+    /// otherwise returns the otherwise-result. If otherwise-result is not provided, returns empty.
+    ///
+    /// # Arguments
+    /// * `criterion` - The condition to evaluate for truthiness
+    /// * `true_result` - Value to return if criterion is truthy
+    /// * `otherwise_result` - Optional value to return if criterion is falsy (defaults to empty)
+    pub fn iif(
+        criterion: &FhirPathValue,
+        true_result: &FhirPathValue,
+        otherwise_result: Option<&FhirPathValue>,
+    ) -> FhirPathResult<FhirPathValue> {
+        // Evaluate the criterion for truthiness
+        let is_truthy = criterion.to_boolean();
+
+        if is_truthy {
+            Ok(true_result.clone())
+        } else {
+            match otherwise_result {
+                Some(otherwise) => Ok(otherwise.clone()),
+                None => Ok(FhirPathValue::Empty),
+            }
+        }
+    }
+
     /// Helper function to check if two FhirPathValues are equal
     fn values_equal(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         match (left, right) {

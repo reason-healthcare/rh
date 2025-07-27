@@ -55,6 +55,9 @@ impl FunctionRegistry {
 
         // Date/time functions
         self.register_datetime_functions();
+
+        // Control flow functions
+        self.register_control_flow_functions();
     }
 
     /// Register the empty() function
@@ -725,6 +728,27 @@ impl FunctionRegistry {
                     });
                 }
                 DateTimeEvaluator::time_of(target)
+            }),
+        );
+    }
+
+    /// Register control flow functions
+    fn register_control_flow_functions(&mut self) {
+        // iif() function - immediate if (conditional operator)
+        self.functions.insert(
+            "iif".to_string(),
+            Box::new(|_target: &FhirPathValue, params: &[FhirPathValue]| {
+                if params.len() < 2 || params.len() > 3 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "iif() requires 2 or 3 parameters: criterion, true-result [, otherwise-result]".to_string(),
+                    });
+                }
+
+                let criterion = &params[0];
+                let true_result = &params[1];
+                let otherwise_result = params.get(2);
+
+                CollectionEvaluator::iif(criterion, true_result, otherwise_result)
             }),
         );
     }

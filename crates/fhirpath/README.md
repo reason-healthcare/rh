@@ -77,6 +77,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `now()` | ✅ | Current date/time UTC |
 | `today()` | ✅ | Current date local |
 | `timeOfDay()` | ✅ | Current time local |
+| **Control flow** | |
+| `iif(criterion, true-result [, otherwise-result])` | ✅ | Immediate if (conditional operator) like C's `? :` operator |
 | **Operator precedence** | | |
 | `()` (Parentheses/Grouping) | ✅ | Highest precedence: `(age + 5) * 2`, `(name.given \| name.family).count()` |
 | Function calls | ✅ | `name.where(use='official').count()` - after member access |
@@ -296,6 +298,7 @@ NOTE: See the [examples directory](./examples/) for complete, runnable examples 
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
+cargo run --example iif_function --package fhirpath
 ```
 
 
@@ -371,6 +374,13 @@ parser.parse("3.14159.round(2)").unwrap();   // ✅ → Number(3.14) - round to 
 parser.parse("8.log(2)").unwrap();           // ✅ → Number(3.0) - log₂(8)
 parser.parse("1.exp()").unwrap();            // ✅ → Number(2.718...) - e¹
 parser.parse("(-3.7).abs().ceiling()").unwrap(); // ✅ → Integer(4) - function chaining
+
+// Control flow functions (conditional logic)
+parser.parse("''.iif(5 > 3, 'Greater', 'Not greater')").unwrap(); // ✅ → "Greater"
+parser.parse("''.iif(2 > 5, 'True', 'False')").unwrap(); // ✅ → "False"
+parser.parse("''.iif(age >= 18, 'Adult')").unwrap(); // ✅ → "Adult" or Empty
+parser.parse("''.iif(name.exists(), name.family, 'Unknown')").unwrap(); // ✅ → Conditional value
+parser.parse("''.iif(status = 'active', 'ACTIVE', status.upper())").unwrap(); // ✅ → Status processing
 
 // Date/time functions
 parser.parse("now()").unwrap();              // ✅ → DateTime("2025-07-26T14:26:23.320Z") - current UTC datetime
