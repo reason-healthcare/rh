@@ -771,6 +771,20 @@ impl FunctionRegistry {
                 Self::converts_to_boolean(target)
             }),
         );
+
+        // toInteger() function
+        self.functions.insert(
+            "toInteger".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_integer(target)),
+        );
+
+        // convertsToInteger() function
+        self.functions.insert(
+            "convertsToInteger".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_integer(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -860,6 +874,105 @@ impl FunctionRegistry {
             }
 
             // All other types cannot be converted to Boolean
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Convert a value to Integer according to FHIRPath specification
+    fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_integer(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Integer(i) => Ok(FhirPathValue::Integer(*i)),
+
+            FhirPathValue::Boolean(b) => {
+                if *b {
+                    Ok(FhirPathValue::Integer(1))
+                } else {
+                    Ok(FhirPathValue::Integer(0))
+                }
+            }
+
+            FhirPathValue::Number(n) => {
+                // Check if it's a whole number
+                if n.fract() == 0.0 && n.is_finite() {
+                    // Check if within integer range
+                    if *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+                        Ok(FhirPathValue::Integer(*n as i64))
+                    } else {
+                        Ok(FhirPathValue::Empty) // Out of range
+                    }
+                } else {
+                    Ok(FhirPathValue::Empty) // Not a whole number
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.trim().parse::<i64>() {
+                    Ok(i) => Ok(FhirPathValue::Integer(i)),
+                    Err(_) => Ok(FhirPathValue::Empty), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Integer
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Integer according to FHIRPath specification
+    fn converts_to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_integer(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Integer(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Boolean(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Number(n) => {
+                // Check if it's a whole number within integer range
+                if n.fract() == 0.0
+                    && n.is_finite()
+                    && *n >= i64::MIN as f64
+                    && *n <= i64::MAX as f64
+                {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    Ok(FhirPathValue::Boolean(false)) // Not convertible
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.trim().parse::<i64>() {
+                    Ok(_) => Ok(FhirPathValue::Boolean(true)),
+                    Err(_) => Ok(FhirPathValue::Boolean(false)), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Integer
             _ => Ok(FhirPathValue::Boolean(false)),
         }
     }

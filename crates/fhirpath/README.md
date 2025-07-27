@@ -114,8 +114,10 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `intersect(other)` | ✅ | Items in both collections |
 | `exclude(other)` | ✅ | Items not in other collection |
 | **Conversion** | |
-| `toBoolean()` | ✅ | Convert to boolean per FHIRPath spec |
+| `toBoolean()` | ✅ | Convert to boolean |
 | `convertsToBoolean()` | ✅ | Test if value can be converted to boolean |
+| `toInteger()` | ✅ | Convert to integer |
+| `convertsToInteger()` | ✅ | Test if value can be converted to integer |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -298,7 +300,7 @@ NOTE: See the [examples directory](./examples/) for complete, runnable examples 
 ```bash
 # Run individual examples, e.g.:
 cargo run --example to_boolean --package fhirpath
-cargo run --example converts_to_boolean --package fhirpath
+cargo run --example to_integer --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
