@@ -50,6 +50,40 @@ impl TypeEvaluator {
         type_specifier.qualified_name.join(".")
     }
 
+    /// Evaluate 'ofType' operation - filter collection by type
+    /// Returns a collection containing only items that match the specified type
+    pub fn evaluate_of_type(
+        value: &FhirPathValue,
+        type_specifier: &TypeSpecifier,
+    ) -> FhirPathResult<FhirPathValue> {
+        let type_name = Self::get_type_name(type_specifier);
+
+        match value {
+            FhirPathValue::Collection(items) => {
+                let mut filtered_items = Vec::new();
+                for item in items {
+                    if Self::value_matches_type(item, &type_name)? {
+                        filtered_items.push(item.clone());
+                    }
+                }
+
+                if filtered_items.is_empty() {
+                    Ok(FhirPathValue::Empty)
+                } else {
+                    Ok(FhirPathValue::Collection(filtered_items))
+                }
+            }
+            // For single items, check if it matches the type
+            _ => {
+                if Self::value_matches_type(value, &type_name)? {
+                    Ok(value.clone())
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+        }
+    }
+
     /// Check if a value matches a given type
     fn value_matches_type(value: &FhirPathValue, type_name: &str) -> FhirPathResult<bool> {
         match type_name.to_lowercase().as_str() {
@@ -98,9 +132,16 @@ impl TypeEvaluator {
 
             // Fallback for unknown types
             _ => {
-                // For now, return false for unknown types
-                // In a full implementation, you would check against FHIR resource types
-                // and handle more complex type hierarchies
+                // Check for FHIR resource types by examining the resourceType field
+                if let FhirPathValue::Object(obj) = value {
+                    if let Some(resource_type) = obj.get("resourceType") {
+                        if let Some(resource_type_str) = resource_type.as_str() {
+                            return Ok(resource_type_str.eq_ignore_ascii_case(type_name));
+                        }
+                    }
+                }
+
+                // For unknown types, return false
                 Ok(false)
             }
         }
@@ -183,5 +224,112 @@ mod tests {
         // Number is Decimal
         let result = TypeEvaluator::evaluate_is(&number_val, &decimal_type).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
+    }
+
+    #[test]
+    fn test_of_type_basic_filtering() {
+        use serde_json::json;
+
+        // Test filtering strings from mixed collection
+        let mixed_collection = FhirPathValue::Collection(vec![
+            FhirPathValue::String("hello".to_string()),
+            FhirPathValue::Integer(42),
+            FhirPathValue::Boolean(true),
+            FhirPathValue::String("world".to_string()),
+        ]);
+
+        let string_type = TypeSpecifier {
+            qualified_name: vec!["String".to_string()],
+        };
+
+        let result = TypeEvaluator::evaluate_of_type(&mixed_collection, &string_type).unwrap();
+
+        if let FhirPathValue::Collection(items) = result {
+            assert_eq!(items.len(), 2);
+            assert!(matches!(items[0], FhirPathValue::String(_)));
+            assert!(matches!(items[1], FhirPathValue::String(_)));
+        } else {
+            panic!("Expected collection result");
+        }
+    }
+
+    #[test]
+    fn test_of_type_resource_filtering() {
+        use serde_json::json;
+
+        // Test filtering FHIR resources by type
+        let resources = FhirPathValue::Collection(vec![
+            FhirPathValue::Object(json!({
+                "resourceType": "Patient",
+                "id": "patient1"
+            })),
+            FhirPathValue::Object(json!({
+                "resourceType": "Observation",
+                "id": "obs1"
+            })),
+            FhirPathValue::Object(json!({
+                "resourceType": "Patient",
+                "id": "patient2"
+            })),
+        ]);
+
+        let patient_type = TypeSpecifier {
+            qualified_name: vec!["Patient".to_string()],
+        };
+
+        let result = TypeEvaluator::evaluate_of_type(&resources, &patient_type).unwrap();
+
+        if let FhirPathValue::Collection(items) = result {
+            assert_eq!(items.len(), 2);
+            for item in items {
+                if let FhirPathValue::Object(obj) = item {
+                    assert_eq!(
+                        obj.get("resourceType").unwrap().as_str().unwrap(),
+                        "Patient"
+                    );
+                } else {
+                    panic!("Expected object result");
+                }
+            }
+        } else {
+            panic!("Expected collection result");
+        }
+    }
+
+    #[test]
+    fn test_of_type_single_item() {
+        // Test ofType on single item
+        let string_val = FhirPathValue::String("hello".to_string());
+        let string_type = TypeSpecifier {
+            qualified_name: vec!["String".to_string()],
+        };
+        let integer_type = TypeSpecifier {
+            qualified_name: vec!["Integer".to_string()],
+        };
+
+        // String matches String type
+        let result = TypeEvaluator::evaluate_of_type(&string_val, &string_type).unwrap();
+        assert_eq!(result, string_val);
+
+        // String doesn't match Integer type
+        let result = TypeEvaluator::evaluate_of_type(&string_val, &integer_type).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
+    }
+
+    #[test]
+    fn test_of_type_empty_result() {
+        // Test ofType that returns empty
+        let integer_collection = FhirPathValue::Collection(vec![
+            FhirPathValue::Integer(1),
+            FhirPathValue::Integer(2),
+            FhirPathValue::Integer(3),
+        ]);
+
+        let string_type = TypeSpecifier {
+            qualified_name: vec!["String".to_string()],
+        };
+
+        let result = TypeEvaluator::evaluate_of_type(&integer_collection, &string_type).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
     }
 }

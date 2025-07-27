@@ -98,6 +98,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `where(criteria)` | ✅ | Filter collection by criteria |
 | `select(projection)` | ✅ | Transform each item |
 | `repeat(projection)` | ✅ | Recursively apply projection expression |
+| `ofType(type)` | ✅ | Filter collection by type specifier |
 | **Subsetting** | |
 | `single()` | ✅ | Return single item (error if != 1) |
 | `first()` | ✅ | Return first item |
@@ -172,7 +173,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `getValue()` | ❌ | Not implemented |
 | `trace()` | ❌ | Not implemented |
 | `resolve()` | ❌ | Not implemented |
-| `ofType(Identifier)` | ❌ | Not implemented |
+| `ofType(Identifier)` | ✅ | Filter collection by type specifier |
 | `elementDefinition()` | ❌ | Not implemented |
 | `slice(structure, name)` | ❌ | Not implemented |
 | `checkModifiers()` | ❌ | Not implemented |
@@ -347,6 +348,9 @@ parser.parse("(1 | 2 | 3 | 4).take(2)").unwrap(); // ✅ → Collection([1, 2])
 // Filtering functions
 parser.parse("name.where(use = 'official')").unwrap(); // ✅ → Filtered collection
 parser.parse("name.select(family)").unwrap(); // ✅ → Projected collection
+parser.parse("(1 | 'hello' | true | 3.14).ofType(String)").unwrap(); // ✅ → Collection(["hello"])
+parser.parse("(1 | 'hello' | true | 3.14).ofType(Integer)").unwrap(); // ✅ → Collection([1])
+parser.parse("Bundle.entry.resource.ofType(Patient)").unwrap(); // ✅ → Patient resources only
 
 // String functions
 parser.parse("'hello'.length()").unwrap();   // ✅ → Integer(5)

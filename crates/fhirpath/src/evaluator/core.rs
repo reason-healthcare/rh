@@ -189,6 +189,7 @@ impl FhirPathEvaluator {
                     "where" => self.evaluate_where_function(target, parameters, context),
                     "select" => self.evaluate_select_function(target, parameters, context),
                     "repeat" => self.evaluate_repeat_function(target, parameters, context),
+                    "ofType" => self.evaluate_of_type_function(target, parameters, context),
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -510,6 +511,46 @@ impl FhirPathEvaluator {
         } else {
             Ok(FhirPathValue::Collection(all_results))
         }
+    }
+
+    /// Evaluate ofType function that filters collections by type specifier
+    fn evaluate_of_type_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "ofType() function requires exactly one parameter (type specifier)"
+                    .to_string(),
+            });
+        }
+
+        // Extract type name from the parameter expression
+        let type_name = match &parameters[0] {
+            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
+            _ => {
+                // Try to evaluate the parameter and extract the type name
+                let param_result = self.evaluate_expression(&parameters[0], context)?;
+                match param_result {
+                    FhirPathValue::String(type_str) => type_str,
+                    _ => {
+                        return Err(FhirPathError::FunctionError {
+                            message: "ofType() function requires a type specifier as parameter"
+                                .to_string(),
+                        });
+                    }
+                }
+            }
+        };
+
+        // Create a simple TypeSpecifier from the type name
+        let type_specifier = TypeSpecifier {
+            qualified_name: vec![type_name],
+        };
+
+        TypeEvaluator::evaluate_of_type(target, &type_specifier)
     }
 }
 
