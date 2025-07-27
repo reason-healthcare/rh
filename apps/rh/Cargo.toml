@@ -19,6 +19,7 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
+rustyline = { workspace = true }
 
 # Local workspace crates
 common = { path = "../../crates/common" }

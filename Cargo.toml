@@ -53,6 +53,9 @@ flate2 = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# REPL and command line interfaces
+rustyline = "13.0"
+
 # Development dependencies
 criterion = "0.5"
 

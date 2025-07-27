@@ -1,5 +1,7 @@
 use anyhow::Result;
 use clap::Subcommand;
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use serde_json::Value;
 use std::fs;
 use std::io::{self, Write};
@@ -213,10 +215,18 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
     println!("🔍 FHIRPath Interactive REPL");
     println!("Type FHIRPath expressions to evaluate them.");
     println!("Commands: .help, .data, .quit");
+    println!("Use ↑/↓ arrow keys to navigate command history (persistent across sessions).");
     println!();
 
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
+
+    // Initialize rustyline editor with history
+    let mut rl = DefaultEditor::new()?;
+
+    // Try to load history from file
+    let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
+    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
 
     // Load data if provided
     let mut data = if let Some(path) = data_file {
@@ -228,72 +238,91 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
     };
 
     loop {
-        print!("fhirpath> ");
-        io::stdout().flush()?;
+        let readline = rl.readline("fhirpath> ");
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let input = input.trim();
+        match readline {
+            Ok(line) => {
+                let input = line.trim();
 
-        if input.is_empty() {
-            continue;
-        }
+                if input.is_empty() {
+                    continue;
+                }
 
-        match input {
-            ".quit" | ".exit" => {
-                println!("Goodbye!");
+                // Add non-empty lines to history
+                rl.add_history_entry(input)?;
+
+                match input {
+                    ".quit" | ".exit" => {
+                        println!("Goodbye!");
+                        break;
+                    }
+                    ".help" => {
+                        print_repl_help();
+                        continue;
+                    }
+                    ".data" => {
+                        if data == Value::Null {
+                            println!("No data loaded. Use .load <file> to load FHIR data.");
+                        } else {
+                            println!("Data: {}", serde_json::to_string_pretty(&data)?);
+                        }
+                        continue;
+                    }
+                    cmd if cmd.starts_with(".load ") => {
+                        let path = cmd.strip_prefix(".load ").unwrap().trim();
+                        match load_data_file(path) {
+                            Ok(new_data) => {
+                                data = new_data;
+                                println!("✅ Loaded data from: {path}");
+                            }
+                            Err(e) => {
+                                println!("❌ Failed to load data: {e}");
+                            }
+                        }
+                        continue;
+                    }
+                    cmd if cmd.starts_with(".") => {
+                        println!("❌ Unknown command: {cmd}. Type .help for available commands.");
+                        continue;
+                    }
+                    _ => {}
+                }
+
+                // Parse and evaluate the expression
+                match parser.parse(input) {
+                    Ok(ast) => {
+                        let context = EvaluationContext::new(data.clone());
+                        match evaluator.evaluate(&ast, &context) {
+                            Ok(result) => {
+                                println!("=> {result:?}");
+                            }
+                            Err(e) => {
+                                println!("❌ Evaluation error: {e}");
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("❌ Parse error: {e}");
+                    }
+                }
+            }
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                continue;
+            }
+            Err(ReadlineError::Eof) => {
+                println!("^D");
                 break;
             }
-            ".help" => {
-                print_repl_help();
-                continue;
-            }
-            ".data" => {
-                if data == Value::Null {
-                    println!("No data loaded. Use .load <file> to load FHIR data.");
-                } else {
-                    println!("Data: {}", serde_json::to_string_pretty(&data)?);
-                }
-                continue;
-            }
-            cmd if cmd.starts_with(".load ") => {
-                let path = cmd.strip_prefix(".load ").unwrap().trim();
-                match load_data_file(path) {
-                    Ok(new_data) => {
-                        data = new_data;
-                        println!("✅ Loaded data from: {path}");
-                    }
-                    Err(e) => {
-                        println!("❌ Failed to load data: {e}");
-                    }
-                }
-                continue;
-            }
-            cmd if cmd.starts_with(".") => {
-                println!("❌ Unknown command: {cmd}. Type .help for available commands.");
-                continue;
-            }
-            _ => {}
-        }
-
-        // Parse and evaluate the expression
-        match parser.parse(input) {
-            Ok(ast) => {
-                let context = EvaluationContext::new(data.clone());
-                match evaluator.evaluate(&ast, &context) {
-                    Ok(result) => {
-                        println!("=> {result:?}");
-                    }
-                    Err(e) => {
-                        println!("❌ Evaluation error: {e}");
-                    }
-                }
-            }
-            Err(e) => {
-                println!("❌ Parse error: {e}");
+            Err(err) => {
+                println!("Error: {err:?}");
+                break;
             }
         }
     }
+
+    // Save history to file
+    let _ = rl.save_history(&history_file); // Ignore errors
 
     Ok(())
 }
@@ -312,6 +341,11 @@ fn print_repl_help() {
     println!("  .data                Show currently loaded data");
     println!("  .load <file>         Load FHIR data from JSON file");
     println!("  .quit, .exit         Exit the REPL");
+    println!();
+    println!("Navigation:");
+    println!("  ↑/↓ arrows           Navigate command history");
+    println!("  Ctrl+C               Interrupt current input");
+    println!("  Ctrl+D               Exit REPL");
     println!();
     println!("FHIRPath Examples:");
     println!("  resourceType         Get the resource type");
