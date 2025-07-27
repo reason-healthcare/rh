@@ -763,6 +763,14 @@ impl FunctionRegistry {
             "toBoolean".to_string(),
             Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_boolean(target)),
         );
+
+        // convertsToBoolean() function
+        self.functions.insert(
+            "convertsToBoolean".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_boolean(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -810,6 +818,49 @@ impl FunctionRegistry {
 
             // All other types cannot be converted to Boolean
             _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Boolean according to FHIRPath specification
+    fn converts_to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_boolean(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Boolean(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Integer(1 | 0) => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Integer(_) => Ok(FhirPathValue::Boolean(false)), // Not convertible
+
+            FhirPathValue::Number(n) => {
+                if (*n - 1.0).abs() < f64::EPSILON || (*n - 0.0).abs() < f64::EPSILON {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    Ok(FhirPathValue::Boolean(false)) // Not convertible
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.to_lowercase().as_str() {
+                    "true" | "t" | "yes" | "y" | "1" | "1.0" | "false" | "f" | "no" | "n" | "0"
+                    | "0.0" => Ok(FhirPathValue::Boolean(true)),
+                    _ => Ok(FhirPathValue::Boolean(false)), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Boolean
+            _ => Ok(FhirPathValue::Boolean(false)),
         }
     }
 }
