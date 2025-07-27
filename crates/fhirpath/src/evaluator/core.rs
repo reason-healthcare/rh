@@ -58,6 +58,11 @@ impl FhirPathEvaluator {
                 let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_and(&left_result, &right_result)
             }
+            Expression::Implies { left, right } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
+                ComparisonEvaluator::evaluate_implies(&left_result, &right_result)
+            }
             Expression::Equality {
                 left,
                 operator,

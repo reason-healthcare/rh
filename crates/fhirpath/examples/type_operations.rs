@@ -142,6 +142,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Result: {}", format_result(&precedence_result));
     println!();
 
+    println!("  Related operators: 'implies' has lower precedence than 'and' but higher than 'or'");
+    println!("  Try 'cargo run --example implies_operations' to see implies operator examples");
+    println!();
+
     println!("=== Type Operations Example Complete ===");
 
     Ok(())

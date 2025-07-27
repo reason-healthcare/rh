@@ -62,6 +62,43 @@ impl ComparisonEvaluator {
         Ok(FhirPathValue::Boolean(left_bool && right_bool))
     }
 
+    /// Evaluate implies operation
+    /// If left is true, return boolean evaluation of right
+    /// If left is false, return true
+    /// If left is empty and right evaluates to true, return true, otherwise return empty
+    pub fn evaluate_implies(
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<FhirPathValue> {
+        match left {
+            FhirPathValue::Boolean(true) => {
+                // If left is true, return the boolean evaluation of the right operand
+                Ok(FhirPathValue::Boolean(right.to_boolean()))
+            }
+            FhirPathValue::Boolean(false) => {
+                // If left is false, return true
+                Ok(FhirPathValue::Boolean(true))
+            }
+            FhirPathValue::Empty => {
+                // If left is empty, return true if right evaluates to true, otherwise return empty
+                if right.to_boolean() {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+            _ => {
+                // For other values, convert left to boolean and apply the logic
+                let left_bool = left.to_boolean();
+                if left_bool {
+                    Ok(FhirPathValue::Boolean(right.to_boolean()))
+                } else {
+                    Ok(FhirPathValue::Boolean(true))
+                }
+            }
+        }
+    }
+
     /// Check if two values are equivalent (more lenient than equal)
     pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         // For now, same as equal - can be extended for type coercion

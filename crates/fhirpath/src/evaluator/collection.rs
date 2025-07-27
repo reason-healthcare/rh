@@ -369,4 +369,122 @@ impl CollectionEvaluator {
             Ok(FhirPathValue::Collection(result))
         }
     }
+
+    /// Check if all items in collection evaluate to true
+    pub fn all(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: all() is true
+            FhirPathValue::Collection(items) => {
+                if items.is_empty() {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    for item in items {
+                        if !item.to_boolean() {
+                            return Ok(FhirPathValue::Boolean(false));
+                        }
+                    }
+                    Ok(FhirPathValue::Boolean(true))
+                }
+            }
+            value => Ok(FhirPathValue::Boolean(value.to_boolean())), // Single value
+        }
+    }
+
+    /// Check if all items in collection are true (boolean true values only)
+    pub fn all_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allTrue() is true
+            FhirPathValue::Collection(items) => {
+                if items.is_empty() {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    for item in items {
+                        match item {
+                            FhirPathValue::Boolean(true) => continue,
+                            FhirPathValue::Boolean(false) => return Ok(FhirPathValue::Boolean(false)),
+                            _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not true
+                        }
+                    }
+                    Ok(FhirPathValue::Boolean(true))
+                }
+            }
+            value => match value {
+                FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
+                _ => Ok(FhirPathValue::Boolean(false)),
+            },
+        }
+    }
+
+    /// Check if any item in collection evaluates to true
+    pub fn any_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)), // Empty collection: anyTrue() is false
+            FhirPathValue::Collection(items) => {
+                if items.is_empty() {
+                    Ok(FhirPathValue::Boolean(false))
+                } else {
+                    for item in items {
+                        match item {
+                            FhirPathValue::Boolean(true) => return Ok(FhirPathValue::Boolean(true)),
+                            _ => continue, // Check next item
+                        }
+                    }
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+            value => match value {
+                FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
+                _ => Ok(FhirPathValue::Boolean(false)),
+            },
+        }
+    }
+
+    /// Check if all items in collection are false (boolean false values only)
+    pub fn all_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allFalse() is true
+            FhirPathValue::Collection(items) => {
+                if items.is_empty() {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    for item in items {
+                        match item {
+                            FhirPathValue::Boolean(false) => continue,
+                            FhirPathValue::Boolean(true) => return Ok(FhirPathValue::Boolean(false)),
+                            _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not false
+                        }
+                    }
+                    Ok(FhirPathValue::Boolean(true))
+                }
+            }
+            value => match value {
+                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(true)),
+                _ => Ok(FhirPathValue::Boolean(false)),
+            },
+        }
+    }
+
+    /// Check if any item in collection is false (boolean false values only)
+    pub fn any_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)), // Empty collection: anyFalse() is false
+            FhirPathValue::Collection(items) => {
+                if items.is_empty() {
+                    Ok(FhirPathValue::Boolean(false))
+                } else {
+                    for item in items {
+                        match item {
+                            FhirPathValue::Boolean(false) => return Ok(FhirPathValue::Boolean(true)),
+                            _ => continue, // Check next item
+                        }
+                    }
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+            value => match value {
+                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(true)),
+                _ => Ok(FhirPathValue::Boolean(false)),
+            },
+        }
+    }
 }

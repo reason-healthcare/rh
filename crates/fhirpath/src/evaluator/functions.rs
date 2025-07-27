@@ -41,6 +41,9 @@ impl FunctionRegistry {
         self.register_distinct_function();
         self.register_is_distinct_function();
 
+        // Boolean collection functions
+        self.register_boolean_collection_functions();
+
         // Subsetting functions
         self.register_subsetting_functions();
 
@@ -100,6 +103,49 @@ impl FunctionRegistry {
             "isDistinct".to_string(),
             Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
                 CollectionEvaluator::is_distinct(target)
+            }),
+        );
+    }
+
+    /// Register boolean collection functions
+    fn register_boolean_collection_functions(&mut self) {
+        // all() function
+        self.functions.insert(
+            "all".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::all(target)
+            }),
+        );
+
+        // allTrue() function
+        self.functions.insert(
+            "allTrue".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::all_true(target)
+            }),
+        );
+
+        // anyTrue() function
+        self.functions.insert(
+            "anyTrue".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::any_true(target)
+            }),
+        );
+
+        // allFalse() function
+        self.functions.insert(
+            "allFalse".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::all_false(target)
+            }),
+        );
+
+        // anyFalse() function
+        self.functions.insert(
+            "anyFalse".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                CollectionEvaluator::any_false(target)
             }),
         );
     }

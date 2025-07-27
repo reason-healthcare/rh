@@ -249,3 +249,45 @@ fn test_system_types() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }
+
+#[test]
+fn test_implies_operator() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test basic implies cases
+    let expr = parser.parse("true implies true").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("true implies false").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
+
+    let expr = parser.parse("false implies true").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("false implies false").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    // Test with expressions
+    let expr = parser.parse("(5 > 3) implies (2 < 4)").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("(5 > 3) implies (4 < 2)").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
+
+    // Test with empty values  
+    let expr = parser.parse("{}[0] implies true").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("{}[0] implies false").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+}

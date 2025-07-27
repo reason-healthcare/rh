@@ -583,4 +583,40 @@ mod tests {
 
         println!("Union operations test completed successfully!");
     }
+
+    #[test]
+    fn test_implies_operator() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(json!({}));
+
+        // Test basic implies truth table
+        let expr = parser.parse("true implies true").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+        let expr = parser.parse("true implies false").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(false)));
+
+        let expr = parser.parse("false implies true").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+        let expr = parser.parse("false implies false").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+        // Test with expressions
+        let expr = parser.parse("(5 > 3) implies (2 < 4)").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+        // Test precedence: "true and false implies true" should be "(true and false) implies true" = "false implies true" = true
+        let expr = parser.parse("true and false implies true").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+        println!("Implies operator test completed successfully!");
+    }
 }

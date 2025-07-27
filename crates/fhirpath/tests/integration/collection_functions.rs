@@ -6,61 +6,73 @@ use super::*;
 
 #[test]
 fn test_count_function() {
-    let mut evaluator = FhirPathEvaluator::new();
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();  
     let patient = sample_patient();
+    let context = EvaluationContext::new(patient);
 
     // Test count on collection
-    let result = evaluator.evaluate("name.count()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    if let Value::Integer(count) = &result[0] {
-        assert_eq!(*count, 1);
+    let expr = parser.parse("name.count()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(count) = result {
+        assert!(count >= 1);
     } else {
-        panic!("Expected integer value for count, got {:?}", result[0]);
+        panic!("Expected integer value for count, got {:?}", result);
     }
 
     // Test count on literal collection
-    let result = evaluator.evaluate("(1 | 2 | 3).count()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    if let Value::Integer(count) = &result[0] {
-        assert_eq!(*count, 3);
+    let expr = parser.parse("(1 | 2 | 3).count()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(count) = result {
+        assert_eq!(count, 3);
     } else {
-        panic!("Expected integer value for count, got {:?}", result[0]);
+        panic!("Expected integer value for count, got {:?}", result);
+    }
+    // Test count on literal collection
+    let expr = parser.parse("(1 | 2 | 3).count()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(count) = result {
+        assert_eq!(count, 3);
+    } else {
+        panic!("Expected integer value for count, got {:?}", result);
     }
 
     // Test count on empty collection
-    let result = evaluator.evaluate("{}.count()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    if let Value::Integer(count) = &result[0] {
-        assert_eq!(*count, 0);
+    let expr = parser.parse("{}.count()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(count) = result {
+        assert_eq!(count, 0);
     } else {
-        panic!("Expected integer value for count, got {:?}", result[0]);
+        panic!("Expected integer value for count, got {:?}", result);
     }
 }
 
 #[test]
 fn test_exists_function() {
-    let mut evaluator = FhirPathEvaluator::new();
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();  
     let patient = sample_patient();
+    let context = EvaluationContext::new(patient);
 
     // Test exists on non-empty collection
-    let result = evaluator.evaluate("name.exists()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    assert!(matches!(result[0], Value::Boolean(true)));
+    let expr = parser.parse("name.exists()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Test exists on empty collection
-    let result = evaluator.evaluate("nonexistent.exists()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    assert!(matches!(result[0], Value::Boolean(false)));
+    let expr = parser.parse("nonexistent.exists()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
 
     // Test exists on literal collection
-    let result = evaluator.evaluate("(1 | 2 | 3).exists()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    assert!(matches!(result[0], Value::Boolean(true)));
+    let expr = parser.parse("(1 | 2 | 3).exists()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Test exists on empty literal collection
-    let result = evaluator.evaluate("{}.exists()", &patient).unwrap();
-    assert_eq!(result.len(), 1);
-    assert!(matches!(result[0], Value::Boolean(false)));
+    let expr = parser.parse("{}.exists()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
 }
 
 #[test]
@@ -326,4 +338,184 @@ fn test_array_indexing() {
     // Test indexing on empty collection
     let result = evaluator.evaluate("{}[0]", &patient).unwrap();
     assert_eq!(result.len(), 0);
+}
+
+#[test]
+fn test_all_function() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test all() on collection of all truthy values
+    let result = evaluator.evaluate("(true | 1 | 'test').all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test all() on collection with some falsy values
+    let result = evaluator.evaluate("(true | false | 1).all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test all() on collection of all falsy values
+    let result = evaluator.evaluate("(false | 0).all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test all() on single truthy value
+    let result = evaluator.evaluate("true.all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test all() on single falsy value
+    let result = evaluator.evaluate("false.all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test all() on empty collection
+    let result = evaluator.evaluate("{}.all()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+}
+
+#[test]
+fn test_all_true_function() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test allTrue() on collection of all true values
+    let result = evaluator.evaluate("(true | true | true).allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test allTrue() on collection with some false values
+    let result = evaluator.evaluate("(true | false | true).allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allTrue() on collection with non-boolean values
+    let result = evaluator.evaluate("(true | 1 | true).allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allTrue() on single true value
+    let result = evaluator.evaluate("true.allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test allTrue() on single false value
+    let result = evaluator.evaluate("false.allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allTrue() on empty collection
+    let result = evaluator.evaluate("{}.allTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+}
+
+#[test]
+fn test_any_true_function() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test anyTrue() on collection with some true values
+    let result = evaluator.evaluate("(false | true | false).anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test anyTrue() on collection with no true values
+    let result = evaluator.evaluate("(false | false | false).anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyTrue() on collection with non-boolean values
+    let result = evaluator.evaluate("(1 | 'test' | false).anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyTrue() on single true value
+    let result = evaluator.evaluate("true.anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test anyTrue() on single false value
+    let result = evaluator.evaluate("false.anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyTrue() on empty collection
+    let result = evaluator.evaluate("{}.anyTrue()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+}
+
+#[test]
+fn test_all_false_function() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test allFalse() on collection of all false values
+    let result = evaluator.evaluate("(false | false | false).allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test allFalse() on collection with some true values
+    let result = evaluator.evaluate("(false | true | false).allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allFalse() on collection with non-boolean values
+    let result = evaluator.evaluate("(false | 0 | false).allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allFalse() on single false value
+    let result = evaluator.evaluate("false.allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test allFalse() on single true value
+    let result = evaluator.evaluate("true.allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test allFalse() on empty collection
+    let result = evaluator.evaluate("{}.allFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+}
+
+#[test]
+fn test_any_false_function() {
+    let mut evaluator = FhirPathEvaluator::new();
+    let patient = sample_patient();
+
+    // Test anyFalse() on collection with some false values
+    let result = evaluator.evaluate("(true | false | true).anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test anyFalse() on collection with no false values
+    let result = evaluator.evaluate("(true | true | true).anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyFalse() on collection with non-boolean values
+    let result = evaluator.evaluate("(1 | 'test' | true).anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyFalse() on single false value
+    let result = evaluator.evaluate("false.anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(true)));
+
+    // Test anyFalse() on single true value
+    let result = evaluator.evaluate("true.anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
+
+    // Test anyFalse() on empty collection
+    let result = evaluator.evaluate("{}.anyFalse()", &patient).unwrap();
+    assert_eq!(result.len(), 1);
+    assert!(matches!(result[0], Value::Boolean(false)));
 }

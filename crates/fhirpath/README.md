@@ -53,7 +53,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `and` | ✅ | Logical AND |
 | `or` | ✅ | Logical OR |
 | `xor` | ✅ | Logical XOR |
-| `implies` | ❌ | Parsed but not evaluated |
+| `implies` | ✅ | Logical implication: if left is true, return right; if left is false, return true |
 | **Unary** | |
 | `-` (negation) | ✅ | `-5`, `-weight` |
 | `+` (positive) | ✅ | `+value` |
@@ -109,6 +109,12 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | **Conversion** | |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
+| **Boolean collection operations** | |
+| `all()` | ✅ | Test if all items are truthy |
+| `allTrue()` | ✅ | Test if all items are boolean true |
+| `anyTrue()` | ✅ | Test if any item is boolean true |
+| `allFalse()` | ✅ | Test if all items are boolean false |
+| `anyFalse()` | ✅ | Test if any item is boolean false |
 | **String Manipulation** | |
 | `length()` | ✅ | String length |
 | `substring(start, length?)` | ✅ | Extract substring |
@@ -320,6 +326,13 @@ parser.parse("name.empty()").unwrap();       // ✅ → Boolean evaluation
 parser.parse("telecom.count()").unwrap();    // ✅ → Integer evaluation
 parser.parse("items.distinct()").unwrap();   // ✅ → Collection evaluation
 
+// Boolean collection functions
+parser.parse("(true | false | true).all()").unwrap();     // ✅ → Boolean(false) - not all truthy  
+parser.parse("(true | true | true).allTrue()").unwrap();  // ✅ → Boolean(true) - all boolean true
+parser.parse("(false | true | false).anyTrue()").unwrap(); // ✅ → Boolean(true) - has boolean true
+parser.parse("(false | false).allFalse()").unwrap();      // ✅ → Boolean(true) - all boolean false
+parser.parse("(true | false | true).anyFalse()").unwrap(); // ✅ → Boolean(true) - has boolean false
+
 // Subsetting functions
 parser.parse("(1 | 2 | 3).first()").unwrap(); // ✅ → Integer(1)
 parser.parse("(1 | 2 | 3).last()").unwrap();  // ✅ → Integer(3)
@@ -364,6 +377,9 @@ parser.parse("'a,b,c'.split(',').join('|')").unwrap(); // ✅ → "a|b|c"
 
 // Logical operations
 parser.parse("active and name.exists()").unwrap(); // ✅ Works
+parser.parse("true implies false").unwrap();       // ✅ → Boolean(false) - logical implication
+parser.parse("false implies true").unwrap();       // ✅ → Boolean(true) - false implies anything
+parser.parse("false implies false").unwrap();      // ✅ → Boolean(true) - false implies anything
 
 // Type operations
 parser.parse("true is Boolean").unwrap();       // ✅ → Boolean(true) - type checking

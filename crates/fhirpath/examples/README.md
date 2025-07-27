@@ -24,6 +24,9 @@ cargo run -p fhirpath --example basic_demo
 # Type operations (is/as operators)
 cargo run -p fhirpath --example type_operations
 
+# Logical implies operator
+cargo run -p fhirpath --example implies_operations
+
 # Arithmetic operations
 cargo run -p fhirpath --example arithmetic_operations
 
@@ -32,6 +35,9 @@ cargo run -p fhirpath --example string_functions
 
 # Collection operations
 cargo run -p fhirpath --example collection_operations
+
+# Boolean collection functions
+cargo run -p fhirpath --example boolean_collection_operations
 
 # FHIR Patient navigation
 cargo run -p fhirpath --example fhir_patient_navigation
@@ -54,10 +60,12 @@ RUST_LOG=debug cargo run -p fhirpath --example type_operations
 
 ### Core Language Features
 - **`basic_demo.rs`** - Basic FHIRPath parsing and evaluation
-- **`type_operations.rs`** - Type checking (`is`) and casting (`as`) operations
+- **`type_operations.rs`** - Type checking (`is`) and casting (`as`) operations  
+- **`implies_operations.rs`** - Logical implication operator demonstration
 - **`arithmetic_operations.rs`** - Math operations and numeric expressions
 - **`string_functions.rs`** - String manipulation and functions
 - **`collection_operations.rs`** - Working with collections and arrays
+- **`boolean_collection_operations.rs`** - Boolean collection functions (all, allTrue, anyTrue, etc.)
 - **`union_operations.rs`** - Union operations and set logic
 
 ### Advanced Operations  

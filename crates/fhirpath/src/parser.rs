@@ -116,10 +116,10 @@ fn parse_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse OR/XOR expressions (lowest precedence)
 fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_and_expression(input)?;
+    let (input, first) = parse_implies_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("or"), tag("xor")))),
-        parse_and_expression,
+        parse_implies_expression,
     )))(input)?;
 
     Ok((
@@ -136,6 +136,21 @@ fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
                 right: Box::new(expr),
             }
         }),
+    ))
+}
+
+// Parse implies expressions (between and and or)
+fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_and_expression(input)?;
+    let (input, rest) = many0(preceded(ws(tag("implies")), parse_and_expression))(input)?;
+
+    Ok((
+        input,
+        rest.into_iter()
+            .fold(first, |acc, expr| Expression::Implies {
+                left: Box::new(acc),
+                right: Box::new(expr),
+            }),
     ))
 }
 
