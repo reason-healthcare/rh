@@ -9,6 +9,7 @@ mod datetime;
 mod functions;
 mod math;
 mod strings;
+mod types;
 mod units;
 mod values;
 

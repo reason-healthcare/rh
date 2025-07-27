@@ -7,7 +7,7 @@ use nom::{
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{alpha1, char, digit1, multispace0},
     combinator::{map, opt, recognize},
-    multi::{many0, separated_list0},
+    multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, preceded, tuple},
     IResult,
 };
@@ -141,8 +141,8 @@ fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_equality_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression))(input)?;
+    let (input, first) = parse_type_expression(input)?;
+    let (input, rest) = many0(preceded(ws(tag("and")), parse_type_expression))(input)?;
 
     Ok((
         input,
@@ -151,6 +151,37 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
             right: Box::new(expr),
         }),
     ))
+}
+
+// Parse type expressions (is, as)
+fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_equality_expression(input)?;
+    let (input, rest) = many0(tuple((
+        ws(alt((tag("is"), tag("as")))),
+        parse_type_specifier,
+    )))(input)?;
+
+    Ok((
+        input,
+        rest.into_iter().fold(first, |acc, (op, type_spec)| {
+            let operator = match op {
+                "is" => TypeOperator::Is,
+                "as" => TypeOperator::As,
+                _ => TypeOperator::Is,
+            };
+            Expression::Type {
+                left: Box::new(acc),
+                operator,
+                type_specifier: type_spec,
+            }
+        }),
+    ))
+}
+
+// Parse type specifier (qualified name like System.String)
+fn parse_type_specifier(input: &str) -> IResult<&str, TypeSpecifier> {
+    let (input, qualified_name) = separated_list1(tag("."), parse_identifier)(input)?;
+    Ok((input, TypeSpecifier { qualified_name }))
 }
 
 // Parse equality and membership expressions (same precedence level)

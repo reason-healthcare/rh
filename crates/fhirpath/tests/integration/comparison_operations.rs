@@ -171,3 +171,81 @@ fn test_string_comparison() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }
+
+#[test]
+fn test_is_operator() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test basic type checking
+    let expr = parser.parse("true is Boolean").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("'hello' is String").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("42 is Integer").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("3.14 is Decimal").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    // Test type mismatches
+    let expr = parser.parse("true is String").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
+
+    let expr = parser.parse("'hello' is Integer").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
+}
+
+#[test]
+fn test_as_operator() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test successful type casting
+    let expr = parser.parse("'hello' as String").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::String(s) if s == "hello"));
+
+    let expr = parser.parse("42 as Integer").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Integer(42)));
+
+    // Test failed type casting (should return empty)
+    let expr = parser.parse("true as String").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+
+    let expr = parser.parse("'hello' as Integer").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+}
+
+#[test]
+fn test_system_types() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test System namespace types
+    let expr = parser.parse("true is System.Boolean").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("'hello' is System.String").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+
+    let expr = parser.parse("42 is System.Integer").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(true)));
+}

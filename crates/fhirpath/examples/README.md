@@ -20,12 +20,62 @@ From the workspace root, run any example using:
 ```bash
 # Basic demonstration
 cargo run -p fhirpath --example basic_demo
+
+# Type operations (is/as operators)
+cargo run -p fhirpath --example type_operations
+
+# Arithmetic operations
+cargo run -p fhirpath --example arithmetic_operations
+
+# String functions
+cargo run -p fhirpath --example string_functions
+
+# Collection operations
+cargo run -p fhirpath --example collection_operations
+
+# FHIR Patient navigation
+cargo run -p fhirpath --example fhir_patient_navigation
+
+# Math functions
+cargo run -p fhirpath --example math_functions
+
+# DateTime functions
+cargo run -p fhirpath --example datetime_functions_example
+
+# And many more - see the files in this directory
 ```
 
 Enable detailed logging for any example:
 ```bash
-RUST_LOG=debug cargo run -p fhirpath --example basic_demo
+RUST_LOG=debug cargo run -p fhirpath --example type_operations
 ```
+
+## 📚 Available Examples
+
+### Core Language Features
+- **`basic_demo.rs`** - Basic FHIRPath parsing and evaluation
+- **`type_operations.rs`** - Type checking (`is`) and casting (`as`) operations
+- **`arithmetic_operations.rs`** - Math operations and numeric expressions
+- **`string_functions.rs`** - String manipulation and functions
+- **`collection_operations.rs`** - Working with collections and arrays
+- **`union_operations.rs`** - Union operations and set logic
+
+### Advanced Operations  
+- **`math_functions.rs`** - Mathematical functions and calculations
+- **`datetime_functions_example.rs`** - Date and time operations
+- **`quantity_literals.rs`** - Working with FHIR quantities and units
+- **`indexing_operations.rs`** - Array indexing and element access
+- **`temporal_literals.rs`** - Temporal data types and operations
+
+### FHIR-Specific Examples
+- **`fhir_patient_navigation.rs`** - Navigating FHIR Patient resources
+- **`temperature_conversion_example.rs`** - Unit conversion in FHIR context
+- **`unit_conversion_example.rs`** - General unit conversion operations
+
+### Verification and Testing
+- **`verify_indexing.rs`** - Testing indexing functionality
+- **`verify_union.rs`** - Testing union operations
+- **`simple_math.rs`** - Simple mathematical expressions
 
 ## 🔗 Related Documentation
 

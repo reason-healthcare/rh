@@ -44,8 +44,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `>` (greater than) | ✅ | Numeric, string, boolean |
 | `>=` (greater or equal) | ✅ | Numeric, string, boolean |
 | **Types** | | 
-| `is` (type test) | ❌ | Not implemented |
-| `as` (type cast) | ❌ | Not implemented |
+| `is` (type test) | ✅ | Type checking: `value is String`, `42 is System.Integer` |
+| `as` (type cast) | ✅ | Type casting: `value as String` (returns empty if cast fails) |
 | **Collections** | |
 | `in` (membership) | ✅ | Value in collection |
 | `contains` | ✅ | Collection contains value |
@@ -364,6 +364,18 @@ parser.parse("'a,b,c'.split(',').join('|')").unwrap(); // ✅ → "a|b|c"
 
 // Logical operations
 parser.parse("active and name.exists()").unwrap(); // ✅ Works
+
+// Type operations
+parser.parse("true is Boolean").unwrap();       // ✅ → Boolean(true) - type checking
+parser.parse("'hello' is String").unwrap();     // ✅ → Boolean(true) - type checking
+parser.parse("42 is Integer").unwrap();         // ✅ → Boolean(true) - type checking
+parser.parse("3.14 is Decimal").unwrap();       // ✅ → Boolean(true) - type checking
+parser.parse("true is String").unwrap();        // ✅ → Boolean(false) - type mismatch
+parser.parse("'hello' as String").unwrap();     // ✅ → String("hello") - successful cast
+parser.parse("42 as Integer").unwrap();         // ✅ → Integer(42) - successful cast
+parser.parse("true as String").unwrap();        // ✅ → Empty - failed cast
+parser.parse("true is System.Boolean").unwrap(); // ✅ → Boolean(true) - system types
+parser.parse("42 is System.Integer").unwrap();   // ✅ → Boolean(true) - system types
 
 // Union operations
 parser.parse("name.given | name.family").unwrap(); // ✅ Works

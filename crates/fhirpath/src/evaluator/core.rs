@@ -5,7 +5,7 @@ use crate::error::*;
 use crate::evaluator::{
     arithmetic::ArithmeticEvaluator, collection::CollectionEvaluator,
     comparison::ComparisonEvaluator, context::EvaluationContext, functions::FunctionRegistry,
-    values::FhirPathValue,
+    types::TypeEvaluator, values::FhirPathValue,
 };
 
 /// FHIRPath expression evaluator
@@ -106,6 +106,14 @@ impl FhirPathEvaluator {
             Expression::Polarity { operator, operand } => {
                 let operand_result = self.evaluate_expression(operand, context)?;
                 ArithmeticEvaluator::evaluate_polarity(operator, &operand_result)
+            }
+            Expression::Type {
+                left,
+                operator,
+                type_specifier,
+            } => {
+                let left_result = self.evaluate_expression(left, context)?;
+                TypeEvaluator::evaluate_type_operation(&left_result, operator, type_specifier)
             }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Unsupported expression type: {expression:?}"),
