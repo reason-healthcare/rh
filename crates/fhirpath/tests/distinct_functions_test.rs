@@ -52,11 +52,11 @@ fn test_distinct_with_integer_duplicates() {
         let mut seen = std::collections::HashSet::new();
         for item in &items {
             if let FhirPathValue::Integer(n) = item {
-                assert!(seen.insert(*n), "Found duplicate: {}", n);
+                assert!(seen.insert(*n), "Found duplicate: {n}");
             }
         }
     } else {
-        panic!("Expected collection result, got: {:?}", result);
+        panic!("Expected collection result, got: {result:?}");
     }
 }
 
@@ -75,7 +75,7 @@ fn test_distinct_with_string_duplicates() {
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "banana")));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "cherry")));
     } else {
-        panic!("Expected collection result, got: {:?}", result);
+        panic!("Expected collection result, got: {result:?}");
     }
 }
 
@@ -95,7 +95,7 @@ fn test_distinct_with_mixed_types() {
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Boolean(true))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Boolean(false))));
     } else {
-        panic!("Expected collection result, got: {:?}", result);
+        panic!("Expected collection result, got: {result:?}");
     }
 }
 
@@ -224,7 +224,7 @@ fn test_distinct_functions_with_fhir_data() {
         assert_eq!(james_count, 1, "Should have exactly one James");
         assert_eq!(jane_count, 1, "Should have exactly one Jane");
     } else {
-        panic!("Expected collection result, got: {:?}", result);
+        panic!("Expected collection result, got: {result:?}");
     }
 
     // Test isDistinct() on FHIR path with duplicates (should be false)
@@ -257,7 +257,7 @@ fn test_combined_distinct_operations() {
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(2))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(3))));
     } else {
-        panic!("Expected collection result, got: {:?}", result);
+        panic!("Expected collection result, got: {result:?}");
     }
 
     // Check if result of distinct() is distinct

@@ -17,7 +17,7 @@ fn test_addition() {
     if let FhirPathValue::Integer(sum) = result {
         assert_eq!(sum, 5);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 
     // Test decimal addition
@@ -26,7 +26,7 @@ fn test_addition() {
     if let FhirPathValue::Number(sum) = result {
         assert!((sum - 4.0).abs() < f64::EPSILON);
     } else {
-        panic!("Expected decimal value, got {:?}", result);
+        panic!("Expected decimal value, got {result:?}");
     }
 }
 
@@ -42,7 +42,7 @@ fn test_subtraction() {
     if let FhirPathValue::Integer(diff) = result {
         assert_eq!(diff, 7);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 }
 
@@ -58,7 +58,7 @@ fn test_multiplication() {
     if let FhirPathValue::Integer(product) = result {
         assert_eq!(product, 20);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 }
 
@@ -74,7 +74,7 @@ fn test_division() {
     if let FhirPathValue::Number(quotient) = result {
         assert!((quotient - 5.0).abs() < f64::EPSILON);
     } else {
-        panic!("Expected decimal value for division, got {:?}", result);
+        panic!("Expected decimal value for division, got {result:?}");
     }
 }
 
@@ -90,7 +90,7 @@ fn test_modulo() {
     if let FhirPathValue::Integer(remainder) = result {
         assert_eq!(remainder, 1);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 }
 
@@ -106,7 +106,7 @@ fn test_integer_division() {
     if let FhirPathValue::Integer(quotient) = result {
         assert_eq!(quotient, 3);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 }
 
@@ -122,7 +122,7 @@ fn test_operator_precedence() {
     if let FhirPathValue::Integer(result_val) = result {
         assert_eq!(result_val, 14);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 }
 
@@ -138,7 +138,7 @@ fn test_mixed_type_arithmetic() {
     if let FhirPathValue::Number(sum) = result {
         assert!((sum - 7.5).abs() < f64::EPSILON);
     } else {
-        panic!("Expected decimal value, got {:?}", result);
+        panic!("Expected decimal value, got {result:?}");
     }
 
     // Test decimal * integer = decimal
@@ -147,7 +147,7 @@ fn test_mixed_type_arithmetic() {
     if let FhirPathValue::Number(product) = result {
         assert!((product - 7.0).abs() < f64::EPSILON);
     } else {
-        panic!("Expected decimal value, got {:?}", result);
+        panic!("Expected decimal value, got {result:?}");
     }
 
     // Test complex mixed expression with parentheses
@@ -156,7 +156,7 @@ fn test_mixed_type_arithmetic() {
     match result {
         FhirPathValue::Integer(val) => assert_eq!(val, 11),
         FhirPathValue::Number(val) => assert!((val - 11.0).abs() < f64::EPSILON),
-        _ => panic!("Expected numeric value, got {:?}", result),
+        _ => panic!("Expected numeric value, got {result:?}"),
     }
 }
 
@@ -172,7 +172,7 @@ fn test_negative_numbers() {
     if let FhirPathValue::Integer(val) = result {
         assert_eq!(val, -5);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 
     // Test arithmetic with negative numbers
@@ -181,7 +181,7 @@ fn test_negative_numbers() {
     if let FhirPathValue::Integer(val) = result {
         assert_eq!(val, -3);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 
     // Test multiplication with negative numbers
@@ -190,7 +190,7 @@ fn test_negative_numbers() {
     if let FhirPathValue::Integer(val) = result {
         assert_eq!(val, 12);
     } else {
-        panic!("Expected integer value, got {:?}", result);
+        panic!("Expected integer value, got {result:?}");
     }
 
     // Test division with negative decimal
@@ -199,6 +199,6 @@ fn test_negative_numbers() {
     if let FhirPathValue::Number(val) = result {
         assert!((val - (-3.0)).abs() < f64::EPSILON);
     } else {
-        panic!("Expected decimal value, got {:?}", result);
+        panic!("Expected decimal value, got {result:?}");
     }
 }

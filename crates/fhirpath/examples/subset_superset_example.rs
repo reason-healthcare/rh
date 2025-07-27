@@ -71,22 +71,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test if approved treatments are a subset of available treatments
     let expr = parser.parse("approvedTreatments.subsetOf(availableTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   approvedTreatments ⊆ availableTreatments: {:?}", result);
+    println!("   approvedTreatments ⊆ availableTreatments: {result:?}");
 
     // Test a partial subset
     let expr = parser.parse("('medication' | 'therapy').subsetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
-        "   {{medication, therapy}} ⊆ approvedTreatments: {:?}",
-        result
+        "   {{medication, therapy}} ⊆ approvedTreatments: {result:?}"
     );
 
     // Test a non-subset
     let expr = parser.parse("('medication' | 'counseling').subsetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
-        "   {{medication, counseling}} ⊆ approvedTreatments: {:?}",
-        result
+        "   {{medication, counseling}} ⊆ approvedTreatments: {result:?}"
     );
 
     println!("\n2. Basic Superset Testing:");
@@ -94,17 +92,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test if available treatments are a superset of approved treatments
     let expr = parser.parse("availableTreatments.supersetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   availableTreatments ⊇ approvedTreatments: {:?}", result);
+    println!("   availableTreatments ⊇ approvedTreatments: {result:?}");
 
     // Test contact types superset relationship
     let expr = parser.parse("allContactTypes.supersetOf(contactTypes)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   allContactTypes ⊇ contactTypes: {:?}", result);
+    println!("   allContactTypes ⊇ contactTypes: {result:?}");
 
     // Test a non-superset
     let expr = parser.parse("contactTypes.supersetOf(allContactTypes)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   contactTypes ⊇ allContactTypes: {:?}", result);
+    println!("   contactTypes ⊇ allContactTypes: {result:?}");
 
     println!("\n3. FHIR Resource Field Testing:");
 
@@ -112,52 +110,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let expr = parser.parse("name[0].given.subsetOf(name.given)")?;
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
-        "   first name's given names ⊆ all given names: {:?}",
-        result
+        "   first name's given names ⊆ all given names: {result:?}"
     );
 
     // Test if active systems are a subset of telecom systems
     let expr = parser.parse("activeSystems.subsetOf(telecom.system)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   activeSystems ⊆ telecom.system: {:?}", result);
+    println!("   activeSystems ⊆ telecom.system: {result:?}");
 
     // Test if telecom systems are a superset of contact types
     let expr = parser.parse("telecom.system.supersetOf(contactTypes)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   telecom.system ⊇ contactTypes: {:?}", result);
+    println!("   telecom.system ⊇ contactTypes: {result:?}");
 
     println!("\n4. Empty Collection Edge Cases:");
 
     // Empty set is a subset of any set
     let expr = parser.parse("{}.subsetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   empty set ⊆ approvedTreatments: {:?}", result);
+    println!("   empty set ⊆ approvedTreatments: {result:?}");
 
     // Any set is a superset of empty set
     let expr = parser.parse("approvedTreatments.supersetOf({})")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   approvedTreatments ⊇ empty set: {:?}", result);
+    println!("   approvedTreatments ⊇ empty set: {result:?}");
 
     // Empty set relationships to itself
     let expr = parser.parse("{}.subsetOf({})")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   empty set ⊆ empty set: {:?}", result);
+    println!("   empty set ⊆ empty set: {result:?}");
 
     let expr = parser.parse("{}.supersetOf({})")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   empty set ⊇ empty set: {:?}", result);
+    println!("   empty set ⊇ empty set: {result:?}");
 
     println!("\n5. Mixed Type Collections:");
 
     // Test with mixed numeric types
     let expr = parser.parse("(1 | 2).subsetOf(1 | 2 | 3.0)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   {{1, 2}} ⊆ {{1, 2, 3.0}}: {:?}", result);
+    println!("   {{1, 2}} ⊆ {{1, 2, 3.0}}: {result:?}");
 
     // Test with strings and numbers
     let expr = parser.parse("(true | 'test').subsetOf(true | 'test' | 42)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   {{true, 'test'}} ⊆ {{true, 'test', 42}}: {:?}", result);
+    println!("   {{true, 'test'}} ⊆ {{true, 'test', 42}}: {result:?}");
 
     println!("\n6. Practical FHIR Use Cases:");
 
@@ -170,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let expr = parser.parse("required.subsetOf(patient.telecom.system.distinct())")?;
     let result = evaluator.evaluate(&expr, &required_context)?;
-    println!("   Patient has all required contact methods: {:?}", result);
+    println!("   Patient has all required contact methods: {result:?}");
 
     // Check if patient's treatments include emergency options
     let _emergency_treatments = json!(["surgery"]);
@@ -181,7 +178,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let expr = parser.parse("emergency.subsetOf(patient.approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &emergency_context)?;
-    println!("   Patient approved for emergency treatments: {:?}", result);
+    println!("   Patient approved for emergency treatments: {result:?}");
 
     println!("\n7. Set Equality (both subset and superset):");
 
@@ -190,15 +187,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         parser.parse("(1 | 2 | 3).subsetOf(3 | 2 | 1) and (3 | 2 | 1).subsetOf(1 | 2 | 3)")?;
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
-        "   {{1,2,3}} = {{3,2,1}} (order-independent equality): {:?}",
-        result
+        "   {{1,2,3}} = {{3,2,1}} (order-independent equality): {result:?}"
     );
 
     // Same test using superset
     let expr =
         parser.parse("(1 | 2 | 3).supersetOf(3 | 2 | 1) and (3 | 2 | 1).supersetOf(1 | 2 | 3)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   {{1,2,3}} = {{3,2,1}} (using superset): {:?}", result);
+    println!("   {{1,2,3}} = {{3,2,1}} (using superset): {result:?}");
 
     println!("\n=== Summary ===");
     println!("✅ subsetOf(other): Returns true if all elements in this collection are also in the other collection");

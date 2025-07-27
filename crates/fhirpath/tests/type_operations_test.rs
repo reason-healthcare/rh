@@ -68,7 +68,7 @@ fn test_type_precedence() {
     // Let's test with a clear example where we can verify precedence
     let expr = parser.parse("42 is String and true is Boolean").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    println!("Result of '42 is String and true is Boolean': {:?}", result);
+    println!("Result of '42 is String and true is Boolean': {result:?}");
     // This should be (42 is String) and (true is Boolean) = false and true = false
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
@@ -76,8 +76,7 @@ fn test_type_precedence() {
     let expr = parser.parse("42 is Integer and 'hello' is String").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     println!(
-        "Result of '42 is Integer and hello is String': {:?}",
-        result
+        "Result of '42 is Integer and hello is String': {result:?}"
     );
     // This should be (42 is Integer) and ('hello' is String) = true and true = true
     assert!(matches!(result, FhirPathValue::Boolean(true)));

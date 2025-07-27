@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("  {} -> {}", expression, format_result(&result));
-        println!("    Logic: {}", description);
+        println!("    Logic: {description}");
         println!();
     }
 
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("  {} -> {}", expression, format_result(&result));
-        println!("    Evaluation: {}", description);
+        println!("    Evaluation: {description}");
         println!();
     }
 
@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("  {} -> {}", expression, format_result(&result));
-        println!("    Logic: {}", description);
+        println!("    Logic: {description}");
         println!();
     }
 
@@ -145,7 +145,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expr = parser.parse(expression)?;
         let result = evaluator.evaluate(&expr, &context)?;
         println!("  {} -> {}", expression, format_result(&result));
-        println!("    Mathematical: {}", math_equiv);
+        println!("    Mathematical: {math_equiv}");
         println!();
     }
 
@@ -157,10 +157,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Format a FhirPathValue for display
 fn format_result(value: &FhirPathValue) -> String {
     match value {
-        FhirPathValue::Boolean(b) => format!("Boolean({})", b),
-        FhirPathValue::String(s) => format!("String(\"{}\")", s),
-        FhirPathValue::Integer(i) => format!("Integer({})", i),
-        FhirPathValue::Number(n) => format!("Number({})", n),
+        FhirPathValue::Boolean(b) => format!("Boolean({b})"),
+        FhirPathValue::String(s) => format!("String(\"{s}\")"),
+        FhirPathValue::Integer(i) => format!("Integer({i})"),
+        FhirPathValue::Number(n) => format!("Number({n})"),
         FhirPathValue::Empty => "Empty".to_string(),
         FhirPathValue::Collection(items) => {
             if items.is_empty() {
@@ -169,6 +169,6 @@ fn format_result(value: &FhirPathValue) -> String {
                 format!("Collection({} items)", items.len())
             }
         }
-        _ => format!("{:?}", value),
+        _ => format!("{value:?}"),
     }
 }
