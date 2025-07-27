@@ -120,6 +120,10 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `convertsToInteger()` | ✅ | Test if value can be converted to integer |
 | `toLong()` | ✅ | Convert to long integer (64-bit) |
 | `convertsToLong()` | ✅ | Test if value can be converted to long |
+| `toDate()` | ✅ | Convert to date |
+| `convertsToDate()` | ✅ | Test if value can be converted to date |
+| `toDateTime()` | ✅ | Convert to datetime |
+| `convertsToDateTime()` | ✅ | Test if value can be converted to datetime |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -291,6 +295,32 @@ let expr = parser.parse("'abc'.convertsToLong()").unwrap(); // → Boolean(false
 let expr = parser.parse("42.5.convertsToLong()").unwrap(); // → Boolean(false)
 ```
 
+### Date/DateTime Conversions
+
+The FHIRPath evaluator supports conversion between Date and DateTime types with conversion functions:
+
+```rust
+// Convert values to Date
+let expr = parser.parse("@2023-01-15.toDate()").unwrap(); // → Date("2023-01-15") - identity
+let expr = parser.parse("@2023-01-15T10:30:45.toDate()").unwrap(); // → Date("2023-01-15") - extract date part
+let expr = parser.parse("'2023-12-25'.toDate()").unwrap(); // → Date("2023-12-25")
+let expr = parser.parse("'2023-12-25T23:59:59Z'.toDate()").unwrap(); // → Date("2023-12-25")
+
+// Convert values to DateTime
+let expr = parser.parse("@2023-01-15T10:30:45.toDateTime()").unwrap(); // → DateTime("2023-01-15T10:30:45") - identity
+let expr = parser.parse("@2023-01-15.toDateTime()").unwrap(); // → DateTime("2023-01-15T00:00:00") - add midnight
+let expr = parser.parse("'2023-12-25'.toDateTime()").unwrap(); // → DateTime("2023-12-25T00:00:00")
+let expr = parser.parse("'2023-12-25T23:59:59'.toDateTime()").unwrap(); // → DateTime("2023-12-25T23:59:59")
+
+// Test conversion compatibility
+let expr = parser.parse("'2023-01-15'.convertsToDate()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'2023-01-15T10:30:45'.convertsToDate()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'not-a-date'.convertsToDate()").unwrap(); // → Boolean(false)
+let expr = parser.parse("'2023-01-15'.convertsToDateTime()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'2023-01-15T10:30:45'.convertsToDateTime()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'not-a-datetime'.convertsToDateTime()").unwrap(); // → Boolean(false)
+```
+
 ## Architecture
 
 ### Parser (`src/parser.rs`)
@@ -324,6 +354,7 @@ NOTE: See the [examples directory](./examples/) for complete, runnable examples 
 cargo run --example to_boolean --package fhirpath
 cargo run --example to_integer --package fhirpath
 cargo run --example long_conversion --package fhirpath
+cargo run --example date_conversion --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath

@@ -799,6 +799,34 @@ impl FunctionRegistry {
                 Self::converts_to_long(target)
             }),
         );
+
+        // toDate() function
+        self.functions.insert(
+            "toDate".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_date(target)),
+        );
+
+        // convertsToDate() function
+        self.functions.insert(
+            "convertsToDate".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_date(target)
+            }),
+        );
+
+        // toDateTime() function
+        self.functions.insert(
+            "toDateTime".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_datetime(target)),
+        );
+
+        // convertsToDateTime() function
+        self.functions.insert(
+            "convertsToDateTime".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_datetime(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -1092,6 +1120,317 @@ impl FunctionRegistry {
             // All other types cannot be converted to Long
             _ => Ok(FhirPathValue::Boolean(false)),
         }
+    }
+
+    /// Convert a value to Date according to FHIRPath specification
+    fn to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_date(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Date(d) => Ok(FhirPathValue::Date(d.clone())),
+
+            FhirPathValue::DateTime(dt) => {
+                // Extract date part from datetime
+                if let Some(date_part) = dt.split('T').next() {
+                    Ok(FhirPathValue::Date(date_part.to_string()))
+                } else {
+                    Ok(FhirPathValue::Empty) // Invalid datetime format
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                // Try to parse as date (YYYY-MM-DD format)
+                if Self::is_valid_date_string(s) {
+                    Ok(FhirPathValue::Date(s.clone()))
+                } else {
+                    // Try to extract date from datetime string
+                    if let Some(date_part) = s.split('T').next() {
+                        if Self::is_valid_date_string(date_part) {
+                            Ok(FhirPathValue::Date(date_part.to_string()))
+                        } else {
+                            Ok(FhirPathValue::Empty) // Not convertible
+                        }
+                    } else {
+                        Ok(FhirPathValue::Empty) // Not convertible
+                    }
+                }
+            }
+
+            // All other types cannot be converted to Date
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Date according to FHIRPath specification
+    fn converts_to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_date(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Date(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::DateTime(dt) => {
+                // Check if we can extract a valid date part
+                if let Some(date_part) = dt.split('T').next() {
+                    Ok(FhirPathValue::Boolean(Self::is_valid_date_string(
+                        date_part,
+                    )))
+                } else {
+                    Ok(FhirPathValue::Boolean(false)) // Invalid datetime format
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                // Check if it's a valid date or can extract date from datetime
+                if Self::is_valid_date_string(s) {
+                    Ok(FhirPathValue::Boolean(true))
+                } else if let Some(date_part) = s.split('T').next() {
+                    Ok(FhirPathValue::Boolean(Self::is_valid_date_string(
+                        date_part,
+                    )))
+                } else {
+                    Ok(FhirPathValue::Boolean(false)) // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Date
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Convert a value to DateTime according to FHIRPath specification
+    fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_datetime(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::DateTime(dt) => Ok(FhirPathValue::DateTime(dt.clone())),
+
+            FhirPathValue::Date(d) => {
+                // Convert date to datetime by adding midnight time
+                Ok(FhirPathValue::DateTime(format!("{d}T00:00:00")))
+            }
+
+            FhirPathValue::String(s) => {
+                // Try to parse as datetime
+                if Self::is_valid_datetime_string(s) {
+                    Ok(FhirPathValue::DateTime(s.clone()))
+                } else if Self::is_valid_date_string(s) {
+                    // Convert date string to datetime
+                    Ok(FhirPathValue::DateTime(format!("{s}T00:00:00")))
+                } else {
+                    Ok(FhirPathValue::Empty) // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to DateTime
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to DateTime according to FHIRPath specification
+    fn converts_to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_datetime(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::DateTime(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Date(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::String(s) => {
+                // Check if it's a valid datetime or date that can be converted
+                Ok(FhirPathValue::Boolean(
+                    Self::is_valid_datetime_string(s) || Self::is_valid_date_string(s),
+                ))
+            }
+
+            // All other types cannot be converted to DateTime
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Helper function to validate date string format (YYYY-MM-DD)
+    fn is_valid_date_string(s: &str) -> bool {
+        // Basic validation for YYYY-MM-DD format
+        if s.len() < 8 || s.len() > 10 {
+            return false;
+        }
+
+        // Check for basic date pattern
+        let parts: Vec<&str> = s.split('-').collect();
+        if parts.len() != 3 {
+            return false;
+        }
+
+        // Validate year (4 digits)
+        if parts[0].len() != 4 || !parts[0].chars().all(|c| c.is_ascii_digit()) {
+            return false;
+        }
+
+        // Validate month (1-12)
+        if parts[1].is_empty() || parts[1].len() > 2 || !parts[1].chars().all(|c| c.is_ascii_digit())
+        {
+            return false;
+        }
+        if let Ok(month) = parts[1].parse::<u32>() {
+            if !(1..=12).contains(&month) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        // Validate day (1-31, basic check)
+        if parts[2].is_empty() || parts[2].len() > 2 || !parts[2].chars().all(|c| c.is_ascii_digit())
+        {
+            return false;
+        }
+        if let Ok(day) = parts[2].parse::<u32>() {
+            if !(1..=31).contains(&day) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        true
+    }
+
+    /// Helper function to validate datetime string format
+    fn is_valid_datetime_string(s: &str) -> bool {
+        // Basic validation for ISO 8601 datetime format
+        if !s.contains('T') {
+            return false;
+        }
+
+        let parts: Vec<&str> = s.split('T').collect();
+        if parts.len() != 2 {
+            return false;
+        }
+
+        // Validate date part
+        if !Self::is_valid_date_string(parts[0]) {
+            return false;
+        }
+
+        // Basic time validation (HH:MM:SS or HH:MM:SS.sss with optional timezone)
+        let time_part = parts[1];
+        if time_part.is_empty() {
+            return false;
+        }
+
+        // Remove timezone info for basic validation
+        let time_only = if let Some(tz_pos) = time_part.find(&['+', '-', 'Z'][..]) {
+            &time_part[..tz_pos]
+        } else {
+            time_part
+        };
+
+        // Split by colon to get time components
+        let time_components: Vec<&str> = time_only.split(':').collect();
+        if time_components.len() < 2 || time_components.len() > 3 {
+            return false;
+        }
+
+        // Validate hour (00-23)
+        if time_components[0].len() != 2 || !time_components[0].chars().all(|c| c.is_ascii_digit())
+        {
+            return false;
+        }
+        if let Ok(hour) = time_components[0].parse::<u32>() {
+            if hour > 23 {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        // Validate minute (00-59)
+        if time_components[1].len() != 2 || !time_components[1].chars().all(|c| c.is_ascii_digit())
+        {
+            return false;
+        }
+        if let Ok(minute) = time_components[1].parse::<u32>() {
+            if minute > 59 {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        // Validate seconds if present (00-59, may include decimal)
+        if time_components.len() == 3 {
+            let seconds_part = time_components[2];
+            if seconds_part.is_empty() {
+                return false;
+            }
+
+            // Handle decimal seconds
+            let seconds_str = if let Some(dot_pos) = seconds_part.find('.') {
+                &seconds_part[..dot_pos]
+            } else {
+                seconds_part
+            };
+
+            if seconds_str.len() != 2 || !seconds_str.chars().all(|c| c.is_ascii_digit()) {
+                return false;
+            }
+            if let Ok(seconds) = seconds_str.parse::<u32>() {
+                if seconds > 59 {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
