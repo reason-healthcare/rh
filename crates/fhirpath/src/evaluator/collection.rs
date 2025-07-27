@@ -401,7 +401,9 @@ impl CollectionEvaluator {
                     for item in items {
                         match item {
                             FhirPathValue::Boolean(true) => continue,
-                            FhirPathValue::Boolean(false) => return Ok(FhirPathValue::Boolean(false)),
+                            FhirPathValue::Boolean(false) => {
+                                return Ok(FhirPathValue::Boolean(false))
+                            }
                             _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not true
                         }
                     }
@@ -425,7 +427,9 @@ impl CollectionEvaluator {
                 } else {
                     for item in items {
                         match item {
-                            FhirPathValue::Boolean(true) => return Ok(FhirPathValue::Boolean(true)),
+                            FhirPathValue::Boolean(true) => {
+                                return Ok(FhirPathValue::Boolean(true))
+                            }
                             _ => continue, // Check next item
                         }
                     }
@@ -450,7 +454,9 @@ impl CollectionEvaluator {
                     for item in items {
                         match item {
                             FhirPathValue::Boolean(false) => continue,
-                            FhirPathValue::Boolean(true) => return Ok(FhirPathValue::Boolean(false)),
+                            FhirPathValue::Boolean(true) => {
+                                return Ok(FhirPathValue::Boolean(false))
+                            }
                             _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not false
                         }
                     }
@@ -474,7 +480,9 @@ impl CollectionEvaluator {
                 } else {
                     for item in items {
                         match item {
-                            FhirPathValue::Boolean(false) => return Ok(FhirPathValue::Boolean(true)),
+                            FhirPathValue::Boolean(false) => {
+                                return Ok(FhirPathValue::Boolean(true))
+                            }
                             _ => continue, // Check next item
                         }
                     }

@@ -1,8 +1,9 @@
 //! Arithmetic operation tests
-//! 
+//!
 //! Tests for mathematical operations in FHIRPath expressions
 
-use super::*;
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use serde_json::json;
 
 #[test]
 fn test_addition() {
@@ -122,5 +123,82 @@ fn test_operator_precedence() {
         assert_eq!(result_val, 14);
     } else {
         panic!("Expected integer value, got {:?}", result);
+    }
+}
+
+#[test]
+fn test_mixed_type_arithmetic() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test integer + decimal = decimal
+    let expr = parser.parse("5 + 2.5").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Number(sum) = result {
+        assert!((sum - 7.5).abs() < f64::EPSILON);
+    } else {
+        panic!("Expected decimal value, got {:?}", result);
+    }
+
+    // Test decimal * integer = decimal
+    let expr = parser.parse("3.5 * 2").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Number(product) = result {
+        assert!((product - 7.0).abs() < f64::EPSILON);
+    } else {
+        panic!("Expected decimal value, got {:?}", result);
+    }
+
+    // Test complex mixed expression with parentheses
+    let expr = parser.parse("(2.5 + 1.5) * 3 - 1").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    match result {
+        FhirPathValue::Integer(val) => assert_eq!(val, 11),
+        FhirPathValue::Number(val) => assert!((val - 11.0).abs() < f64::EPSILON),
+        _ => panic!("Expected numeric value, got {:?}", result),
+    }
+}
+
+#[test]
+fn test_negative_numbers() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    // Test unary minus
+    let expr = parser.parse("-5").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(val) = result {
+        assert_eq!(val, -5);
+    } else {
+        panic!("Expected integer value, got {:?}", result);
+    }
+
+    // Test arithmetic with negative numbers
+    let expr = parser.parse("-10 + 7").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(val) = result {
+        assert_eq!(val, -3);
+    } else {
+        panic!("Expected integer value, got {:?}", result);
+    }
+
+    // Test multiplication with negative numbers
+    let expr = parser.parse("-3 * -4").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Integer(val) = result {
+        assert_eq!(val, 12);
+    } else {
+        panic!("Expected integer value, got {:?}", result);
+    }
+
+    // Test division with negative decimal
+    let expr = parser.parse("-9.0 / 3").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Number(val) = result {
+        assert!((val - (-3.0)).abs() < f64::EPSILON);
+    } else {
+        panic!("Expected decimal value, got {:?}", result);
     }
 }

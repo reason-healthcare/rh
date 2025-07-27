@@ -45,7 +45,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let all_true_examples = vec![
         ("(true | true | true).allTrue()", "All boolean true values"),
         ("(true | false | true).allTrue()", "Mixed boolean values"),
-        ("(true | 1 | true).allTrue()", "Boolean true with non-boolean"),
+        (
+            "(true | 1 | true).allTrue()",
+            "Boolean true with non-boolean",
+        ),
         ("true.allTrue()", "Single boolean true"),
         ("false.allTrue()", "Single boolean false"),
         ("1.allTrue()", "Non-boolean truthy value"),
@@ -66,9 +69,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let any_true_examples = vec![
         ("(false | true | false).anyTrue()", "One boolean true value"),
-        ("(false | false | false).anyTrue()", "No boolean true values"),
-        ("(1 | 'test' | false).anyTrue()", "Truthy but not boolean true"),
-        ("(1 | true | 'test').anyTrue()", "Mixed with one boolean true"),
+        (
+            "(false | false | false).anyTrue()",
+            "No boolean true values",
+        ),
+        (
+            "(1 | 'test' | false).anyTrue()",
+            "Truthy but not boolean true",
+        ),
+        (
+            "(1 | true | 'test').anyTrue()",
+            "Mixed with one boolean true",
+        ),
         ("true.anyTrue()", "Single boolean true"),
         ("1.anyTrue()", "Single non-boolean truthy"),
         ("{}.anyTrue()", "Empty collection"),
@@ -87,9 +99,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(60));
 
     let all_false_examples = vec![
-        ("(false | false | false).allFalse()", "All boolean false values"),
+        (
+            "(false | false | false).allFalse()",
+            "All boolean false values",
+        ),
         ("(false | true | false).allFalse()", "Mixed boolean values"),
-        ("(false | 0 | false).allFalse()", "Boolean false with non-boolean"),
+        (
+            "(false | 0 | false).allFalse()",
+            "Boolean false with non-boolean",
+        ),
         ("false.allFalse()", "Single boolean false"),
         ("true.allFalse()", "Single boolean true"),
         ("0.allFalse()", "Non-boolean falsy value"),
@@ -109,10 +127,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(60));
 
     let any_false_examples = vec![
-        ("(true | false | true).anyFalse()", "One boolean false value"),
+        (
+            "(true | false | true).anyFalse()",
+            "One boolean false value",
+        ),
         ("(true | true | true).anyFalse()", "No boolean false values"),
         ("(1 | 0 | true).anyFalse()", "Falsy but not boolean false"),
-        ("(1 | false | 'test').anyFalse()", "Mixed with one boolean false"),
+        (
+            "(1 | false | 'test').anyFalse()",
+            "Mixed with one boolean false",
+        ),
         ("false.anyFalse()", "Single boolean false"),
         ("0.anyFalse()", "Single non-boolean falsy"),
         ("{}.anyFalse()", "Empty collection"),
@@ -155,22 +179,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("  Key differences:");
     println!("  - all() vs allTrue(): all() uses truthiness, allTrue() requires boolean true");
-    println!("  - exists() vs anyTrue(): exists() checks presence, anyTrue() checks boolean true values");
+    println!(
+        "  - exists() vs anyTrue(): exists() checks presence, anyTrue() checks boolean true values"
+    );
     println!("  - empty() vs allFalse(): empty() checks collection size, allFalse() checks boolean false values");
     println!();
 
     let comparison_examples = vec![
-        ("(1 | 2 | 3).all()", "(1 | 2 | 3).allTrue()", "Truthy vs boolean true"),
-        ("(true | true).exists()", "(true | true).anyTrue()", "Existence vs boolean true"),
-        ("{}.empty()", "{}.allFalse()", "Empty collection vs all false"),
+        (
+            "(1 | 2 | 3).all()",
+            "(1 | 2 | 3).allTrue()",
+            "Truthy vs boolean true",
+        ),
+        (
+            "(true | true).exists()",
+            "(true | true).anyTrue()",
+            "Existence vs boolean true",
+        ),
+        (
+            "{}.empty()",
+            "{}.allFalse()",
+            "Empty collection vs all false",
+        ),
     ];
 
     for (expr1, expr2, description) in comparison_examples {
         let result1 = evaluator.evaluate(&parser.parse(expr1)?, &context)?;
         let result2 = evaluator.evaluate(&parser.parse(expr2)?, &context)?;
-        println!("  {} -> {} vs {} -> {}",
-                 expr1, format_result(&result1),
-                 expr2, format_result(&result2));
+        println!(
+            "  {} -> {} vs {} -> {}",
+            expr1,
+            format_result(&result1),
+            expr2,
+            format_result(&result2)
+        );
         println!("    {}", description);
         println!();
     }

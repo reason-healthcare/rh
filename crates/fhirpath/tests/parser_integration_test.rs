@@ -1,8 +1,8 @@
 //! Parser integration tests
-//! 
+//!
 //! Tests for parsing various FHIRPath expressions without evaluation
 
-use super::*;
+use fhirpath::FhirPathParser;
 
 #[test]
 fn test_basic_expression_parsing() {
@@ -106,8 +106,8 @@ fn test_precedence_parsing() {
     let precedence_cases = vec![
         "a = b in collection",       // Should parse as (a = b) in collection
         "value contains 'x' = true", // Should parse as (value contains 'x') = true
-        "2 + 3 * 4",                // Should parse as 2 + (3 * 4)
-        "10 - 5 < 8",               // Should parse as (10 - 5) < 8
+        "2 + 3 * 4",                 // Should parse as 2 + (3 * 4)
+        "10 - 5 < 8",                // Should parse as (10 - 5) < 8
     ];
 
     for expr_str in precedence_cases {

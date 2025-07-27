@@ -25,7 +25,7 @@ fn test_all_function() {
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }
 
-#[test] 
+#[test]
 fn test_all_true_function() {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
