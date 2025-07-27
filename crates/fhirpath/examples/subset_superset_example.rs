@@ -76,16 +76,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test a partial subset
     let expr = parser.parse("('medication' | 'therapy').subsetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!(
-        "   {{medication, therapy}} ⊆ approvedTreatments: {result:?}"
-    );
+    println!("   {{medication, therapy}} ⊆ approvedTreatments: {result:?}");
 
     // Test a non-subset
     let expr = parser.parse("('medication' | 'counseling').subsetOf(approvedTreatments)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!(
-        "   {{medication, counseling}} ⊆ approvedTreatments: {result:?}"
-    );
+    println!("   {{medication, counseling}} ⊆ approvedTreatments: {result:?}");
 
     println!("\n2. Basic Superset Testing:");
 
@@ -109,9 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test if patient's given names are a subset of all given names
     let expr = parser.parse("name[0].given.subsetOf(name.given)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!(
-        "   first name's given names ⊆ all given names: {result:?}"
-    );
+    println!("   first name's given names ⊆ all given names: {result:?}");
 
     // Test if active systems are a subset of telecom systems
     let expr = parser.parse("activeSystems.subsetOf(telecom.system)")?;
@@ -186,9 +180,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let expr =
         parser.parse("(1 | 2 | 3).subsetOf(3 | 2 | 1) and (3 | 2 | 1).subsetOf(1 | 2 | 3)")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!(
-        "   {{1,2,3}} = {{3,2,1}} (order-independent equality): {result:?}"
-    );
+    println!("   {{1,2,3}} = {{3,2,1}} (order-independent equality): {result:?}");
 
     // Same test using superset
     let expr =

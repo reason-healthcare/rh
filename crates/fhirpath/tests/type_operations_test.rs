@@ -75,9 +75,7 @@ fn test_type_precedence() {
     // Test another case
     let expr = parser.parse("42 is Integer and 'hello' is String").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    println!(
-        "Result of '42 is Integer and hello is String': {result:?}"
-    );
+    println!("Result of '42 is Integer and hello is String': {result:?}");
     // This should be (42 is Integer) and ('hello' is String) = true and true = true
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 

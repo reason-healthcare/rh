@@ -38,16 +38,18 @@ fn test_distinct_with_integer_duplicates() {
     let context = create_test_context();
 
     // Test distinct() with duplicates
-    let expr = parser.parse("(1 | 2 | 2 | 3 | 1 | 4 | 3).distinct()").unwrap();
+    let expr = parser
+        .parse("(1 | 2 | 2 | 3 | 1 | 4 | 3).distinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    
+
     if let FhirPathValue::Collection(items) = result {
         assert_eq!(items.len(), 4);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(2))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(3))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(4))));
-        
+
         // Verify no duplicates remain
         let mut seen = std::collections::HashSet::new();
         for item in &items {
@@ -66,14 +68,22 @@ fn test_distinct_with_string_duplicates() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_test_context();
 
-    let expr = parser.parse("('apple' | 'banana' | 'apple' | 'cherry' | 'banana').distinct()").unwrap();
+    let expr = parser
+        .parse("('apple' | 'banana' | 'apple' | 'cherry' | 'banana').distinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    
+
     if let FhirPathValue::Collection(items) = result {
         assert_eq!(items.len(), 3);
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "apple")));
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "banana")));
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "cherry")));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::String(ref s) if s == "apple")));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::String(ref s) if s == "banana")));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::String(ref s) if s == "cherry")));
     } else {
         panic!("Expected collection result, got: {result:?}");
     }
@@ -85,15 +95,23 @@ fn test_distinct_with_mixed_types() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_test_context();
 
-    let expr = parser.parse("(1 | 'hello' | true | 1 | 'hello' | false | true).distinct()").unwrap();
+    let expr = parser
+        .parse("(1 | 'hello' | true | 1 | 'hello' | false | true).distinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    
+
     if let FhirPathValue::Collection(items) = result {
         assert_eq!(items.len(), 4);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::String(ref s) if s == "hello")));
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::Boolean(true))));
-        assert!(items.iter().any(|v| matches!(v, FhirPathValue::Boolean(false))));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::String(ref s) if s == "hello")));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::Boolean(true))));
+        assert!(items
+            .iter()
+            .any(|v| matches!(v, FhirPathValue::Boolean(false))));
     } else {
         panic!("Expected collection result, got: {result:?}");
     }
@@ -138,12 +156,16 @@ fn test_is_distinct_with_unique_collections() {
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Collection with unique strings
-    let expr = parser.parse("('apple' | 'banana' | 'cherry').isDistinct()").unwrap();
+    let expr = parser
+        .parse("('apple' | 'banana' | 'cherry').isDistinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Mixed unique types
-    let expr = parser.parse("(1 | 'hello' | true | 2.5).isDistinct()").unwrap();
+    let expr = parser
+        .parse("(1 | 'hello' | true | 2.5).isDistinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }
@@ -160,12 +182,16 @@ fn test_is_distinct_with_duplicates() {
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
     // Collection with duplicate strings
-    let expr = parser.parse("('apple' | 'banana' | 'apple').isDistinct()").unwrap();
+    let expr = parser
+        .parse("('apple' | 'banana' | 'apple').isDistinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
     // Mixed types with duplicates
-    let expr = parser.parse("(1 | 'hello' | true | 1).isDistinct()").unwrap();
+    let expr = parser
+        .parse("(1 | 'hello' | true | 1).isDistinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 }
@@ -201,14 +227,14 @@ fn test_distinct_functions_with_fhir_data() {
     // Test distinct() on FHIR path with duplicates
     let expr = parser.parse("name.given.distinct()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    
+
     if let FhirPathValue::Collection(items) = result {
         // Should remove duplicate "John" but keep "James" and "Jane"
         assert_eq!(items.len(), 3);
         let mut john_count = 0;
         let mut james_count = 0;
         let mut jane_count = 0;
-        
+
         for item in &items {
             if let FhirPathValue::String(s) = item {
                 match s.as_str() {
@@ -219,8 +245,11 @@ fn test_distinct_functions_with_fhir_data() {
                 }
             }
         }
-        
-        assert_eq!(john_count, 1, "Should have exactly one John after distinct()");
+
+        assert_eq!(
+            john_count, 1,
+            "Should have exactly one John after distinct()"
+        );
         assert_eq!(james_count, 1, "Should have exactly one James");
         assert_eq!(jane_count, 1, "Should have exactly one Jane");
     } else {
@@ -245,12 +274,16 @@ fn test_combined_distinct_operations() {
     let context = create_test_context();
 
     // Chain distinct() with other operations
-    let expr = parser.parse("(1 | 2 | 2 | 3 | 1 | 4).distinct().count()").unwrap();
+    let expr = parser
+        .parse("(1 | 2 | 2 | 3 | 1 | 4).distinct().count()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Integer(4)));
 
     // Use distinct() before intersect
-    let expr = parser.parse("(1 | 2 | 2 | 3 | 3).distinct().intersect(2 | 3 | 4)").unwrap();
+    let expr = parser
+        .parse("(1 | 2 | 2 | 3 | 3).distinct().intersect(2 | 3 | 4)")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(items) = result {
         assert_eq!(items.len(), 2);
@@ -261,7 +294,9 @@ fn test_combined_distinct_operations() {
     }
 
     // Check if result of distinct() is distinct
-    let expr = parser.parse("(1 | 2 | 2 | 3 | 1).distinct().isDistinct()").unwrap();
+    let expr = parser
+        .parse("(1 | 2 | 2 | 3 | 1).distinct().isDistinct()")
+        .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }
