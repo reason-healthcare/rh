@@ -118,6 +118,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `convertsToBoolean()` | ✅ | Test if value can be converted to boolean |
 | `toInteger()` | ✅ | Convert to integer |
 | `convertsToInteger()` | ✅ | Test if value can be converted to integer |
+| `toLong()` | ✅ | Convert to long integer (64-bit) |
+| `convertsToLong()` | ✅ | Test if value can be converted to long |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -269,6 +271,26 @@ let expr = parser.parse("@2025-01-01 + 6 months").unwrap(); // → 2025-07-01
 let expr = parser.parse("today() - 1 year + 30 days").unwrap();
 ```
 
+### Long Type Conversions
+
+The FHIRPath evaluator supports explicit Long types (64-bit integers) with the `L` suffix and conversion functions:
+
+```rust
+// Long literals with L suffix
+let expr = parser.parse("42L").unwrap(); // → Long(42)
+
+// Convert values to Long
+let expr = parser.parse("true.toLong()").unwrap(); // → Long(1)
+let expr = parser.parse("false.toLong()").unwrap(); // → Long(0)
+let expr = parser.parse("'123'.toLong()").unwrap(); // → Long(123)
+let expr = parser.parse("42.0.toLong()").unwrap(); // → Long(42) - whole numbers only
+
+// Test conversion compatibility
+let expr = parser.parse("'123'.convertsToLong()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'abc'.convertsToLong()").unwrap(); // → Boolean(false)
+let expr = parser.parse("42.5.convertsToLong()").unwrap(); // → Boolean(false)
+```
+
 ## Architecture
 
 ### Parser (`src/parser.rs`)
@@ -301,6 +323,7 @@ NOTE: See the [examples directory](./examples/) for complete, runnable examples 
 # Run individual examples, e.g.:
 cargo run --example to_boolean --package fhirpath
 cargo run --example to_integer --package fhirpath
+cargo run --example long_conversion --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath

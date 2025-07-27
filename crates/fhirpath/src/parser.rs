@@ -474,19 +474,41 @@ fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
 fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
     let (input, number_str) = recognize(tuple((digit1, opt(tuple((char('.'), digit1))))))(input)?;
 
-    if number_str.contains('.') {
-        // Parse as float
+    // Check for Long suffix
+    let (input, has_long_suffix) = opt(char('L'))(input)?;
+
+    if has_long_suffix.is_some() {
+        // Explicit Long literal with 'L' suffix
+        if number_str.contains('.') {
+            // Cannot have decimal with Long suffix - this is an error case
+            // For now, parse as whole number part only
+            let whole_part = number_str.split('.').next().unwrap_or("0");
+            if let Ok(num) = whole_part.parse::<i64>() {
+                Ok((input, Literal::LongNumber(num)))
+            } else {
+                Ok((input, Literal::LongNumber(0)))
+            }
+        } else {
+            // Integer with L suffix - parse as Long
+            if let Ok(num) = number_str.parse::<i64>() {
+                Ok((input, Literal::LongNumber(num)))
+            } else {
+                Ok((input, Literal::LongNumber(0)))
+            }
+        }
+    } else if number_str.contains('.') {
+        // Parse as float (no L suffix, contains decimal)
         if let Ok(num) = number_str.parse::<f64>() {
             Ok((input, Literal::Number(num)))
         } else {
             Ok((input, Literal::Number(0.0)))
         }
     } else {
-        // Parse as integer
+        // Parse as integer (no L suffix, no decimal) - use Integer type
         if let Ok(num) = number_str.parse::<i64>() {
-            Ok((input, Literal::LongNumber(num)))
+            Ok((input, Literal::Integer(num)))
         } else {
-            Ok((input, Literal::LongNumber(0)))
+            Ok((input, Literal::Integer(0)))
         }
     }
 }

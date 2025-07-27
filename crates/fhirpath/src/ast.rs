@@ -112,7 +112,9 @@ pub enum Literal {
     String(String),
     /// Number literal
     Number(f64),
-    /// Long number literal
+    /// Integer literal
+    Integer(i64),
+    /// Long number literal (explicit L suffix)
     LongNumber(i64),
     /// Date literal
     Date(String),
@@ -296,7 +298,8 @@ impl fmt::Display for Literal {
             Literal::Boolean(b) => write!(f, "{b}"),
             Literal::String(s) => write!(f, "'{s}'"),
             Literal::Number(n) => write!(f, "{n}"),
-            Literal::LongNumber(n) => write!(f, "{n}"),
+            Literal::Integer(n) => write!(f, "{n}"),
+            Literal::LongNumber(n) => write!(f, "{n}L"),
             Literal::Date(d) => write!(f, "{d}"),
             Literal::DateTime(dt) => write!(f, "{dt}"),
             Literal::Time(t) => write!(f, "{t}"),

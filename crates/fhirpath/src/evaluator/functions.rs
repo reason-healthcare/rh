@@ -785,6 +785,20 @@ impl FunctionRegistry {
                 Self::converts_to_integer(target)
             }),
         );
+
+        // toLong() function
+        self.functions.insert(
+            "toLong".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_long(target)),
+        );
+
+        // convertsToLong() function
+        self.functions.insert(
+            "convertsToLong".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_long(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -973,6 +987,109 @@ impl FunctionRegistry {
             }
 
             // All other types cannot be converted to Integer
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Convert a value to Long according to FHIRPath specification
+    fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_long(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Long(l) => Ok(FhirPathValue::Long(*l)),
+
+            FhirPathValue::Integer(i) => Ok(FhirPathValue::Long(*i)),
+
+            FhirPathValue::Boolean(b) => {
+                if *b {
+                    Ok(FhirPathValue::Long(1))
+                } else {
+                    Ok(FhirPathValue::Long(0))
+                }
+            }
+
+            FhirPathValue::Number(n) => {
+                // Check if it's a whole number
+                if n.fract() == 0.0 && n.is_finite() {
+                    // Check if within i64 range
+                    if *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+                        Ok(FhirPathValue::Long(*n as i64))
+                    } else {
+                        Ok(FhirPathValue::Empty) // Out of range
+                    }
+                } else {
+                    Ok(FhirPathValue::Empty) // Not a whole number
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.trim().parse::<i64>() {
+                    Ok(l) => Ok(FhirPathValue::Long(l)),
+                    Err(_) => Ok(FhirPathValue::Empty), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Long
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Long according to FHIRPath specification
+    fn converts_to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_long(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Long(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Integer(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Boolean(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::Number(n) => {
+                // Check if it's a whole number within i64 range
+                if n.fract() == 0.0
+                    && n.is_finite()
+                    && *n >= i64::MIN as f64
+                    && *n <= i64::MAX as f64
+                {
+                    Ok(FhirPathValue::Boolean(true))
+                } else {
+                    Ok(FhirPathValue::Boolean(false)) // Not convertible
+                }
+            }
+
+            FhirPathValue::String(s) => {
+                match s.trim().parse::<i64>() {
+                    Ok(_) => Ok(FhirPathValue::Boolean(true)),
+                    Err(_) => Ok(FhirPathValue::Boolean(false)), // Not convertible
+                }
+            }
+
+            // All other types cannot be converted to Long
             _ => Ok(FhirPathValue::Boolean(false)),
         }
     }

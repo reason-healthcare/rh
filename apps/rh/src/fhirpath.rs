@@ -23,6 +23,7 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
             }
         }
         FhirPathValue::Integer(i) => Value::Number(serde_json::Number::from(*i)),
+        FhirPathValue::Long(l) => Value::Number(serde_json::Number::from(*l)),
         FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => {
             Value::String(s.clone())
         }

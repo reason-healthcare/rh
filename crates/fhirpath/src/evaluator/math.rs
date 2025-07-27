@@ -338,6 +338,7 @@ impl MathEvaluator {
         match value {
             FhirPathValue::Boolean(_) => "Boolean",
             FhirPathValue::Integer(_) => "Integer",
+            FhirPathValue::Long(_) => "Long",
             FhirPathValue::Number(_) => "Number",
             FhirPathValue::String(_) => "String",
             FhirPathValue::Date(_) => "Date",

@@ -15,6 +15,8 @@ pub enum FhirPathValue {
     Number(f64),
     /// Integer value
     Integer(i64),
+    /// Long value (64-bit integer)
+    Long(i64),
     /// Date value
     Date(String),
     /// DateTime value
@@ -41,6 +43,7 @@ impl FhirPathValue {
             (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => a == b,
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
+            (FhirPathValue::Long(a), FhirPathValue::Long(b)) => a == b,
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
@@ -142,6 +145,7 @@ impl FhirPathValue {
                 serde_json::Number::from_f64(*n).unwrap_or_else(|| serde_json::Number::from(0)),
             ),
             FhirPathValue::Integer(i) => Value::Number(serde_json::Number::from(*i)),
+            FhirPathValue::Long(l) => Value::Number(serde_json::Number::from(*l)),
             FhirPathValue::Date(s) => Value::String(s.clone()),
             FhirPathValue::DateTime(s) => Value::String(s.clone()),
             FhirPathValue::Time(s) => Value::String(s.clone()),
@@ -163,6 +167,9 @@ impl FhirPathValue {
         match (self, other) {
             // Numeric comparisons
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Long(a), FhirPathValue::Long(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Integer(a), FhirPathValue::Long(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Long(a), FhirPathValue::Integer(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if a < b {
                     Ok(-1)
@@ -182,7 +189,27 @@ impl FhirPathValue {
                     Ok(0)
                 }
             }
+            (FhirPathValue::Long(a), FhirPathValue::Number(b)) => {
+                let a_f = *a as f64;
+                if a_f < *b {
+                    Ok(-1)
+                } else if a_f > *b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
+                let b_f = *b as f64;
+                if *a < b_f {
+                    Ok(-1)
+                } else if *a > b_f {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            (FhirPathValue::Number(a), FhirPathValue::Long(b)) => {
                 let b_f = *b as f64;
                 if *a < b_f {
                     Ok(-1)
