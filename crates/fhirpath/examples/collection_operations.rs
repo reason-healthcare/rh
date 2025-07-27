@@ -279,11 +279,124 @@ fn main() -> Result<()> {
         }
     }
 
+    // Repeat function examples
+    println!("\n🔄 Repeat Function Examples");
+    println!("===========================");
+
+    // Create hierarchical test data
+    let hierarchy_data = json!({
+        "organizations": [
+            {
+                "id": "org1",
+                "name": "Healthcare System",
+                "parent": null,
+                "type": "system"
+            },
+            {
+                "id": "org2",
+                "name": "General Hospital",
+                "parent": "org1",
+                "type": "hospital"
+            },
+            {
+                "id": "org3",
+                "name": "Emergency Department",
+                "parent": "org2",
+                "type": "department"
+            },
+            {
+                "id": "org4",
+                "name": "Trauma Unit",
+                "parent": "org3",
+                "type": "unit"
+            },
+            {
+                "id": "org5",
+                "name": "Outpatient Clinic",
+                "parent": "org1",
+                "type": "clinic"
+            }
+        ],
+        "tree": {
+            "id": "root",
+            "name": "Root Node",
+            "children": [
+                {
+                    "id": "branch1",
+                    "name": "Branch 1",
+                    "children": [
+                        {
+                            "id": "leaf1",
+                            "name": "Leaf 1",
+                            "children": []
+                        },
+                        {
+                            "id": "leaf2",
+                            "name": "Leaf 2",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "id": "branch2",
+                    "name": "Branch 2",
+                    "children": [
+                        {
+                            "id": "leaf3",
+                            "name": "Leaf 3",
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let hierarchy_context = EvaluationContext::new(hierarchy_data);
+
+    println!("Test Data: Organization hierarchy and tree structure");
+
+    // Find all organizations starting with root
+    let expr = parser.parse("organizations.first().repeat(organizations)")?;
+    let result = evaluator.evaluate(&expr, &hierarchy_context)?;
+    println!("🌲 All organizations (starting from first): {result:?}");
+
+    // Get all nodes in tree by following children
+    let expr = parser.parse("tree.repeat(children)")?;
+    let result = evaluator.evaluate(&expr, &hierarchy_context)?;
+    println!("🌳 All nodes in tree (following children): {result:?}");
+
+    // Get just the names of all tree nodes
+    let expr = parser.parse("tree.repeat(children).name")?;
+    let result = evaluator.evaluate(&expr, &hierarchy_context)?;
+    println!("📝 All node names: {result:?}");
+
+    // Count total nodes in tree
+    let expr = parser.parse("tree.repeat(children).count()")?;
+    let result = evaluator.evaluate(&expr, &hierarchy_context)?;
+    println!("🔢 Total nodes in tree: {result:?}");
+
+    // Find leaf nodes using basic expressions
+    let expr = parser.parse("tree.repeat(children)")?;
+    let result = evaluator.evaluate(&expr, &hierarchy_context)?;
+    println!("🍃 All tree nodes: {result:?}");
+
+    // Demonstrate simple numeric repeat
+    let progression_data = json!({
+        "values": [1, 2, 3]
+    });
+    let progression_context = EvaluationContext::new(progression_data);
+
+    let expr = parser.parse("values.repeat(values)")?;
+    let result = evaluator.evaluate(&expr, &progression_context)?;
+    println!("🔢 Numeric repeat example: {result:?}");
+
     println!("\n✅ All collection operation examples completed!");
     println!("💡 Collections are fundamental to working with FHIR data");
     println!("💡 Use field access (e.g., 'patients.name') to extract data from object collections");
     println!("💡 Filter collections with 'where()' clauses for specific criteria");
-    println!("💡 Some advanced collection functions may require full FHIRPath implementation");
+    println!("💡 Use repeat() for transitive closure operations on hierarchical data");
+    println!("💡 repeat() applies projection recursively until no new items are found");
     println!(
         "💡 Collections in FHIR often represent repeating elements like names, addresses, etc."
     );

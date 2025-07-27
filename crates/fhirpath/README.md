@@ -97,6 +97,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | **Filtering and projection** | |
 | `where(criteria)` | ✅ | Filter collection by criteria |
 | `select(projection)` | ✅ | Transform each item |
+| `repeat(projection)` | ✅ | Recursively apply projection expression |
 | **Subsetting** | |
 | `single()` | ✅ | Return single item (error if != 1) |
 | `first()` | ✅ | Return first item |

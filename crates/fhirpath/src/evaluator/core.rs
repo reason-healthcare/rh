@@ -188,6 +188,7 @@ impl FhirPathEvaluator {
                 match name.as_str() {
                     "where" => self.evaluate_where_function(target, parameters, context),
                     "select" => self.evaluate_select_function(target, parameters, context),
+                    "repeat" => self.evaluate_repeat_function(target, parameters, context),
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -410,6 +411,104 @@ impl FhirPathEvaluator {
 
                 self.evaluate_expression(projection_expr, &item_context)
             }
+        }
+    }
+
+    /// Evaluate repeat function that recursively applies a projection expression
+    /// until no new items are found (transitive closure)
+    fn evaluate_repeat_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "repeat() function requires exactly one parameter".to_string(),
+            });
+        }
+
+        let projection_expr = &parameters[0];
+        let mut all_results = Vec::new();
+        let mut current_collection = vec![];
+
+        // Initialize the current collection with the target
+        match target {
+            FhirPathValue::Collection(items) => {
+                current_collection.extend(items.clone());
+            }
+            FhirPathValue::Empty => {
+                return Ok(FhirPathValue::Empty);
+            }
+            value => {
+                current_collection.push(value.clone());
+            }
+        }
+
+        // Add the initial collection to results
+        all_results.extend(current_collection.clone());
+
+        loop {
+            let mut next_collection = Vec::new();
+
+            // Apply the projection expression to each item in the current collection
+            for item in &current_collection {
+                let item_context = EvaluationContext {
+                    current: if let FhirPathValue::Object(obj) = item {
+                        obj.clone()
+                    } else {
+                        context.current.clone()
+                    },
+                    ..context.clone()
+                };
+
+                // Evaluate the projection expression in the item context
+                let projection_result = self.evaluate_expression(projection_expr, &item_context)?;
+
+                // Collect new items from the projection result
+                match projection_result {
+                    FhirPathValue::Collection(items) => {
+                        for new_item in items {
+                            // Only add items that haven't been seen before
+                            if !all_results
+                                .iter()
+                                .any(|existing| FhirPathValue::equals_static(existing, &new_item))
+                            {
+                                next_collection.push(new_item.clone());
+                                all_results.push(new_item);
+                            }
+                        }
+                    }
+                    FhirPathValue::Empty => {
+                        // Don't add empty values
+                    }
+                    value => {
+                        // Only add items that haven't been seen before
+                        if !all_results
+                            .iter()
+                            .any(|existing| FhirPathValue::equals_static(existing, &value))
+                        {
+                            next_collection.push(value.clone());
+                            all_results.push(value);
+                        }
+                    }
+                }
+            }
+
+            // If no new items were found, we're done
+            if next_collection.is_empty() {
+                break;
+            }
+
+            // Continue with the new collection
+            current_collection = next_collection;
+        }
+
+        // Return the results as a collection (repeat always returns a collection)
+        if all_results.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else {
+            Ok(FhirPathValue::Collection(all_results))
         }
     }
 }
