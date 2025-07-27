@@ -841,6 +841,20 @@ impl FunctionRegistry {
                 Self::converts_to_string(target)
             }),
         );
+
+        // toTime() function
+        self.functions.insert(
+            "toTime".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| Self::to_time(target)),
+        );
+
+        // convertsToTime() function
+        self.functions.insert(
+            "convertsToTime".to_string(),
+            Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+                Self::converts_to_time(target)
+            }),
+        );
     }
 
     /// Convert a value to Boolean according to FHIRPath specification
@@ -1551,6 +1565,151 @@ impl FunctionRegistry {
 
             // Complex types (Object, DateTimePrecision) cannot be converted to string
             _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Convert a value to Time according to FHIRPath specification
+    fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return empty
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+
+            // If the collection contains more than one item, return empty
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::to_time(&items[0])
+                } else {
+                    // Multiple items - return empty per spec
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // Single item conversions
+            FhirPathValue::Time(t) => Ok(FhirPathValue::Time(t.clone())),
+
+            FhirPathValue::String(s) => {
+                // Validate time format: HH:MM:SS or HH:MM:SS.sss
+                if Self::is_valid_time_string(s) {
+                    // Add leading 'T' for internal representation
+                    let time_with_t = if s.starts_with('T') {
+                        s.clone()
+                    } else {
+                        format!("T{s}")
+                    };
+                    Ok(FhirPathValue::Time(time_with_t))
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            FhirPathValue::DateTime(dt) => {
+                // Extract time part from datetime
+                if let Some(time_part) = Self::extract_time_from_datetime(dt) {
+                    Ok(FhirPathValue::Time(format!("T{time_part}")))
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+
+            // All other types cannot be converted to Time (return empty)
+            _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Check if a value can be converted to Time according to FHIRPath specification
+    fn converts_to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match value {
+            // If the collection is empty, return false
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+
+            // If the collection contains more than one item, return false
+            FhirPathValue::Collection(items) => {
+                if items.len() == 1 {
+                    Self::converts_to_time(&items[0])
+                } else {
+                    // Multiple items - cannot convert
+                    Ok(FhirPathValue::Boolean(false))
+                }
+            }
+
+            // Single item checks
+            FhirPathValue::Time(_) => Ok(FhirPathValue::Boolean(true)),
+
+            FhirPathValue::String(s) => Ok(FhirPathValue::Boolean(Self::is_valid_time_string(s))),
+
+            FhirPathValue::DateTime(dt) => Ok(FhirPathValue::Boolean(
+                Self::extract_time_from_datetime(dt).is_some(),
+            )),
+
+            // All other types cannot be converted to Time
+            _ => Ok(FhirPathValue::Boolean(false)),
+        }
+    }
+
+    /// Validate if a string represents a valid time format
+    fn is_valid_time_string(s: &str) -> bool {
+        use regex::Regex;
+
+        // Remove leading 'T' if present for validation
+        let time_str = s.strip_prefix('T').unwrap_or(s);
+
+        // Time format: HH:MM:SS or HH:MM:SS.sss
+        let time_regex =
+            Regex::new(r"^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])(\.\d{1,3})?$").unwrap();
+
+        if !time_regex.is_match(time_str) {
+            return false;
+        }
+
+        // Additional validation for actual time values
+        let parts: Vec<&str> = time_str.split(':').collect();
+        if parts.len() < 3 {
+            return false;
+        }
+
+        let hour: u8 = match parts[0].parse() {
+            Ok(h) => h,
+            Err(_) => return false,
+        };
+        let minute: u8 = match parts[1].parse() {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+
+        // Parse seconds (might have fractional part)
+        let second_str = parts[2];
+        let second: f64 = match second_str.parse() {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        hour <= 23 && minute <= 59 && second < 60.0
+    }
+
+    /// Extract time part from datetime string
+    fn extract_time_from_datetime(dt: &str) -> Option<String> {
+        // Look for 'T' separator in datetime
+        if let Some(t_pos) = dt.find('T') {
+            let time_part = &dt[t_pos + 1..];
+
+            // Remove timezone information if present
+            let time_clean =
+                if let Some(tz_pos) = time_part.find('+').or_else(|| time_part.find('-')) {
+                    &time_part[..tz_pos]
+                } else if let Some(z_pos) = time_part.find('Z') {
+                    &time_part[..z_pos]
+                } else {
+                    time_part
+                };
+
+            // Validate the extracted time
+            if Self::is_valid_time_string(time_clean) {
+                Some(time_clean.to_string())
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 }

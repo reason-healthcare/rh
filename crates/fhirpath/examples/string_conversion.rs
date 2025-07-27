@@ -21,43 +21,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // String to String (identity)
     let expr = parser.parse("'hello world'.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("'hello world'.toString() → {:?}", result);
+    println!("'hello world'.toString() → {result:?}");
 
     // Boolean to String
     let expr = parser.parse("true.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("true.toString() → {:?}", result);
+    println!("true.toString() → {result:?}");
 
     let expr = parser.parse("false.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("false.toString() → {:?}", result);
+    println!("false.toString() → {result:?}");
 
     // Integer to String
     let expr = parser.parse("42.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("42.toString() → {:?}", result);
+    println!("42.toString() → {result:?}");
 
     let expr = parser.parse("(-123).toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("(-123).toString() → {:?}", result);
+    println!("(-123).toString() → {result:?}");
 
     // Long to String
     let expr = parser.parse("42L.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("42L.toString() → {:?}", result);
+    println!("42L.toString() → {result:?}");
 
     // Number to String
     let expr = parser.parse("3.14.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("3.14.toString() → {:?}", result);
+    println!("3.14.toString() → {result:?}");
 
     let expr = parser.parse("42.0.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("42.0.toString() → {:?}", result);
+    println!("42.0.toString() → {result:?}");
 
     let expr = parser.parse("0.0.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("0.0.toString() → {:?}", result);
+    println!("0.0.toString() → {result:?}");
 
     println!();
 
@@ -67,15 +67,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let expr = parser.parse("@2023-01-15.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("@2023-01-15.toString() → {:?}", result);
+    println!("@2023-01-15.toString() → {result:?}");
 
     let expr = parser.parse("@2023-01-15T10:30:45.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("@2023-01-15T10:30:45.toString() → {:?}", result);
+    println!("@2023-01-15T10:30:45.toString() → {result:?}");
 
     let expr = parser.parse("@T10:30:45.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("@T10:30:45.toString() → {:?}", result);
+    println!("@T10:30:45.toString() → {result:?}");
 
     println!();
 
@@ -85,11 +85,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let expr = parser.parse("5'mg'.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("5'mg'.toString() → {:?}", result);
+    println!("5'mg'.toString() → {result:?}");
 
     let expr = parser.parse("37.2'Cel'.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("37.2'Cel'.toString() → {:?}", result);
+    println!("37.2'Cel'.toString() → {result:?}");
 
     println!();
 
@@ -111,9 +111,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for type_expr in basic_types {
-        let expr = parser.parse(&format!("{}.convertsToString()", type_expr))?;
+        let expr = parser.parse(&format!("{type_expr}.convertsToString()"))?;
         let result = evaluator.evaluate(&expr, &context)?;
-        println!("{}.convertsToString() → {:?}", type_expr, result);
+        println!("{type_expr}.convertsToString() → {result:?}");
     }
 
     println!();
@@ -125,25 +125,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Empty collection
     let expr = parser.parse("{}.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("{{}}.toString() → {:?}", result);
+    println!("{{}}.toString() → {result:?}");
 
     let expr = parser.parse("{}.convertsToString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("{{}}.convertsToString() → {:?}", result);
+    println!("{{}}.convertsToString() → {result:?}");
 
     // Multiple items
     let expr = parser.parse("(1 | 2).toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("(1 | 2).toString() → {:?}", result);
+    println!("(1 | 2).toString() → {result:?}");
 
     let expr = parser.parse("(1 | 2).convertsToString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("(1 | 2).convertsToString() → {:?}", result);
+    println!("(1 | 2).convertsToString() → {result:?}");
 
     // Single item collection
     let expr = parser.parse("(42).toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("(42).toString() → {:?}", result);
+    println!("(42).toString() → {result:?}");
 
     println!();
 
@@ -154,17 +154,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Convert different types for display
     let expr = parser.parse("(true | 42 | 3.14).select(toString())")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("Convert mixed types to strings: {:?}", result);
+    println!("Convert mixed types to strings: {result:?}");
 
     // Check if values can be stringified before converting
     let expr = parser.parse("42.convertsToString() and 42.toString()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("Check convertibility then convert: {:?}", result);
+    println!("Check convertibility then convert: {result:?}");
 
     // Format numbers as strings
     let expr = parser.parse("(1 | 2.5 | 42L).select(toString())")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("Format numbers as strings: {:?}", result);
+    println!("Format numbers as strings: {result:?}");
 
     Ok(())
 }

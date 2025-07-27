@@ -126,6 +126,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `convertsToDateTime()` | ✅ | Test if value can be converted to datetime |
 | `toString()` | ✅ | Convert to string |
 | `convertsToString()` | ✅ | Test if value can be converted to string |
+| `toTime()` | ✅ | Convert to time |
+| `convertsToTime()` | ✅ | Test if value can be converted to time |
 | `distinct()` | ✅ | Remove duplicates |
 | `isDistinct()` | ✅ | Test if all items unique |
 | **Boolean collection operations** | |
@@ -348,6 +350,29 @@ let expr = parser.parse("@2023-01-15.convertsToString()").unwrap(); // → Boole
 let expr = parser.parse("5'mg'.convertsToString()").unwrap(); // → Boolean(true)
 ```
 
+### Time Conversions
+
+The FHIRPath evaluator supports conversion of various value types to Time with conversion functions:
+
+```rust
+// Convert values to Time
+let expr = parser.parse("@T10:30:45.toTime()").unwrap(); // → Time("T10:30:45") - identity
+let expr = parser.parse("'10:30:45'.toTime()").unwrap(); // → Time("T10:30:45")
+let expr = parser.parse("'23:59:59.123'.toTime()").unwrap(); // → Time("T23:59:59.123")
+let expr = parser.parse("'T14:25:36'.toTime()").unwrap(); // → Time("T14:25:36")
+let expr = parser.parse("@2023-01-15T10:30:45.toTime()").unwrap(); // → Time("T10:30:45") - extract time part
+let expr = parser.parse("@2023-01-15T23:59:59Z.toTime()").unwrap(); // → Time("T23:59:59") - with timezone
+let expr = parser.parse("@2023-01-15T14:25:36+05:30.toTime()").unwrap(); // → Time("T14:25:36") - with offset
+
+// Test conversion compatibility
+let expr = parser.parse("'10:30:45'.convertsToTime()").unwrap(); // → Boolean(true)
+let expr = parser.parse("@T14:25:36.convertsToTime()").unwrap(); // → Boolean(true)
+let expr = parser.parse("@2023-01-15T10:30:45.convertsToTime()").unwrap(); // → Boolean(true)
+let expr = parser.parse("'not-a-time'.convertsToTime()").unwrap(); // → Boolean(false)
+let expr = parser.parse("'25:00:00'.convertsToTime()").unwrap(); // → Boolean(false) - invalid hour
+let expr = parser.parse("42.convertsToTime()").unwrap(); // → Boolean(false)
+```
+
 ## Architecture
 
 ### Parser (`src/parser.rs`)
@@ -383,6 +408,7 @@ cargo run --example to_integer --package fhirpath
 cargo run --example long_conversion --package fhirpath
 cargo run --example date_conversion --package fhirpath
 cargo run --example string_conversion --package fhirpath
+cargo run --example time_conversion --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath

@@ -41,6 +41,7 @@ url = "2.0"
 
 # Parsing
 nom = "7.1"
+regex = "1.0"
 
 # Date and time handling  
 chrono = { version = "0.4", features = ["serde"] }

@@ -78,16 +78,16 @@ fn evaluate_and_print(
         Ok(expr) => match evaluator.evaluate(&expr, context) {
             Ok(result) => {
                 let result_str = match result {
-                    FhirPathValue::Long(l) => format!("Long({})", l),
-                    FhirPathValue::Integer(i) => format!("Integer({})", i),
-                    FhirPathValue::Boolean(b) => format!("Boolean({})", b),
+                    FhirPathValue::Long(l) => format!("Long({l})"),
+                    FhirPathValue::Integer(i) => format!("Integer({i})"),
+                    FhirPathValue::Boolean(b) => format!("Boolean({b})"),
                     FhirPathValue::Empty => "Empty".to_string(),
-                    other => format!("{:?}", other),
+                    other => format!("{other:?}"),
                 };
-                println!("  {} → {}", expression, result_str);
+                println!("  {expression} → {result_str}");
             }
-            Err(e) => println!("  {} → Error: {}", expression, e),
+            Err(e) => println!("  {expression} → Error: {e}"),
         },
-        Err(e) => println!("  {} → Parse Error: {}", expression, e),
+        Err(e) => println!("  {expression} → Parse Error: {e}"),
     }
 }
