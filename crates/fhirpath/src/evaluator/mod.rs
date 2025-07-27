@@ -1,28 +1,24 @@
 //! FHIRPath expression evaluator module
+//!
+//! This module is organized into several logical groups:
+//! - `core`: Core evaluation engine and context management
+//! - `operations`: All operation evaluators (arithmetic, comparison, collection, etc.)
+//! - `types`: Type system and value types
+//! - `functions`: Built-in function registry and implementations
 
-mod arithmetic;
-mod collection;
-mod comparison;
-mod context;
-mod core;
-mod datetime;
-mod functions;
-mod math;
-mod strings;
-mod types;
-mod units;
-mod values;
+pub mod core;
+pub mod functions;
+pub mod operations;
+pub mod types;
 
-// Re-export the main types
-pub use context::EvaluationContext;
-pub use core::FhirPathEvaluator;
-pub use values::FhirPathValue;
-
-// Re-export the evaluator modules for testing and advanced usage
-pub use arithmetic::ArithmeticEvaluator;
-pub use collection::CollectionEvaluator;
-pub use comparison::ComparisonEvaluator;
-pub use datetime::DateTimeEvaluator;
+// Re-export the main types for public API
+pub use core::{EvaluationContext, FhirPathEvaluator};
 pub use functions::FunctionRegistry;
-pub use math::MathEvaluator;
-pub use strings::StringEvaluator;
+pub use types::FhirPathValue;
+
+// Re-export the operation evaluators for testing and advanced usage
+pub use operations::{
+    ArithmeticEvaluator, CollectionEvaluator, ComparisonEvaluator, DateTimeEvaluator,
+    MathEvaluator, StringEvaluator, UnitEvaluator,
+};
+pub use types::operations::TypeEvaluator;

@@ -1,7 +1,7 @@
 //! Mathematical functions for FHIRPath expressions
 
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 
 /// Evaluator for mathematical functions in FHIRPath expressions
 pub struct MathEvaluator;

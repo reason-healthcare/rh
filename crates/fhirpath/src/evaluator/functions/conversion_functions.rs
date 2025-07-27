@@ -1,7 +1,7 @@
 //! Conversion function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 use regex::Regex;
 use std::collections::HashMap;
 

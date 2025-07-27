@@ -4,7 +4,7 @@
 //! conversion system with predefined conversion factors for medical and scientific units.
 
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
 /// Unit converter for UCUM codes
@@ -738,5 +738,15 @@ mod tests {
             .convert_from_base_unit(0.0, &Some("Cel".to_string()), &Some("[degF]".to_string()))
             .unwrap();
         assert!((fahrenheit_val - 32.0).abs() < 0.01);
+    }
+}
+
+/// Unit evaluator that wraps the UnitConverter for consistency with other evaluators
+pub struct UnitEvaluator;
+
+impl UnitEvaluator {
+    /// Create a new UnitConverter instance
+    pub fn new_converter() -> UnitConverter {
+        UnitConverter::new()
     }
 }

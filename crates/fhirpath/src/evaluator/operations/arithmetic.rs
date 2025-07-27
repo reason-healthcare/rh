@@ -2,8 +2,8 @@
 
 use crate::ast::*;
 use crate::error::*;
-use crate::evaluator::units::UnitConverter;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::operations::units::UnitConverter;
+use crate::evaluator::types::FhirPathValue;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
 
 /// Arithmetic operations handler

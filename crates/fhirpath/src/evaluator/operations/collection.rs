@@ -1,7 +1,7 @@
 //! Collection operations for FHIRPath values
 
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 
 /// Collection operations handler
 pub struct CollectionEvaluator;

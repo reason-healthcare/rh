@@ -1,8 +1,8 @@
 //! String function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::strings::StringEvaluator;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::operations::strings::StringEvaluator;
+use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;

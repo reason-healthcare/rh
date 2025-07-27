@@ -1,8 +1,8 @@
 //! Math function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::math::MathEvaluator;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::operations::math::MathEvaluator;
+use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;

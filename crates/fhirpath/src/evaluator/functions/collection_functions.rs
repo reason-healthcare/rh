@@ -1,8 +1,8 @@
 //! Collection function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::collection::CollectionEvaluator;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::operations::collection::CollectionEvaluator;
+use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;

@@ -3,9 +3,17 @@
 use crate::ast::*;
 use crate::error::*;
 use crate::evaluator::{
-    arithmetic::ArithmeticEvaluator, collection::CollectionEvaluator,
-    comparison::ComparisonEvaluator, context::EvaluationContext, functions::FunctionRegistry,
-    types::TypeEvaluator, values::FhirPathValue,
+    operations::{
+        arithmetic::ArithmeticEvaluator,
+        collection::CollectionEvaluator,
+        comparison::ComparisonEvaluator,
+    },
+    core::context::EvaluationContext,
+    functions::FunctionRegistry,
+    types::{
+        operations::TypeEvaluator,
+        FhirPathValue,
+    },
 };
 
 /// FHIRPath expression evaluator

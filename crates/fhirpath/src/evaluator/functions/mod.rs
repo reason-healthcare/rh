@@ -1,4 +1,12 @@
 //! Built-in function registration and evaluation for FHIRPath
+//!
+//! This module contains the function registry and implementations for all
+//! built-in FHIRPath functions organized by category:
+//! - Collection functions (empty, exists, count, distinct, etc.)
+//! - String functions (length, upper, lower, substring, etc.)
+//! - Math functions (abs, ceiling, floor, sqrt, etc.)
+//! - DateTime functions (now, today, yearOf, etc.)
+//! - Conversion functions (toBoolean, toInteger, toString, etc.)
 
 pub mod collection_functions;
 pub mod conversion_functions;
@@ -7,7 +15,7 @@ pub mod math_functions;
 pub mod string_functions;
 
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
 /// Type alias for FHIRPath function implementation

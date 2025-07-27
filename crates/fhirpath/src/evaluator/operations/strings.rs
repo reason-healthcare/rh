@@ -1,5 +1,5 @@
 use crate::error::FhirPathError;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 
 /// Evaluator for string manipulation functions in FHIRPath expressions
 pub struct StringEvaluator;

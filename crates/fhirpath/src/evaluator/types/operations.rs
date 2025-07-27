@@ -2,7 +2,7 @@
 
 use crate::ast::*;
 use crate::error::*;
-use crate::evaluator::values::FhirPathValue;
+use crate::evaluator::types::FhirPathValue;
 
 /// Type operations handler
 pub struct TypeEvaluator;
