@@ -45,6 +45,16 @@ cargo run -p fhirpath --example boolean_collection_operations
 # FHIR Patient navigation
 cargo run -p fhirpath --example fhir_patient_navigation
 
+# FHIR Extension System Examples
+cargo run -p fhirpath --example fhir_extension_functions
+cargo run -p fhirpath --example fhir_extension_variables
+
+# SQL-on-FHIR Extension Examples
+cargo run -p fhirpath --example sql_on_fhir_examples
+cargo run -p fhirpath --example fhir_resource_navigation
+cargo run -p fhirpath --example fhir_validation_examples
+cargo run -p fhirpath --example extension_system_demo
+
 # Math functions
 cargo run -p fhirpath --example math_functions
 
@@ -83,6 +93,13 @@ RUST_LOG=debug cargo run -p fhirpath --example type_operations
 - **`fhir_patient_navigation.rs`** - Navigating FHIR Patient resources
 - **`temperature_conversion_example.rs`** - Unit conversion in FHIR context
 - **`unit_conversion_example.rs`** - General unit conversion operations
+
+### FHIR Extension System Examples
+- **`fhir_extension_functions.rs`** - Core FHIR extension functions (`extension()`, `hasValue()`)
+- **`fhir_extension_variables.rs`** - FHIR extension variables (`%resource`, `%ucum`, `%loinc`, `%sct`)
+- **`fhir_resource_navigation.rs`** - Complex real-world FHIR resource navigation scenarios
+- **`fhir_validation_examples.rs`** - Data validation and quality assurance using FHIR extensions
+- **`extension_system_demo.rs`** - Comprehensive demonstration of all extension capabilities
 
 ### Verification and Testing
 - **`verify_indexing.rs`** - Testing indexing functionality

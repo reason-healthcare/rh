@@ -155,7 +155,14 @@ impl FhirPathEvaluator {
                     match name.as_str() {
                         "context" => Ok(FhirPathValue::Object(context.current.clone())),
                         "resource" => Ok(FhirPathValue::Object(context.root.clone())),
-                        _ => Ok(FhirPathValue::Empty),
+                        _ => {
+                            // Try extension variables
+                            let extension_registry = crate::extensions::ExtensionRegistry::new();
+                            match extension_registry.resolve_variable(name, context)? {
+                                Some(value) => Ok(value),
+                                None => Ok(FhirPathValue::Empty),
+                            }
+                        }
                     }
                 }
             }

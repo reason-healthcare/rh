@@ -21,6 +21,7 @@
 pub mod ast;
 pub mod error;
 pub mod evaluator;
+pub mod extensions;
 pub mod parser;
 
 // Re-export the main public types users need
@@ -31,4 +32,5 @@ pub use ast::{
 };
 pub use error::{FhirPathError, FhirPathResult};
 pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue};
+pub use extensions::ExtensionRegistry;
 pub use parser::FhirPathParser;
