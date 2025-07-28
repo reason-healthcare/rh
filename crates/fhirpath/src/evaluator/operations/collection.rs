@@ -590,11 +590,57 @@ impl CollectionEvaluator {
         Self::subset_of(other, target)
     }
 
-    /// Immediate if (conditional operator) - evaluates criterion and returns true-result or otherwise-result
-    ///
-    /// The iif function is an immediate if, also known as a conditional operator (like C's ? : operator).
-    /// It evaluates the criterion expression and returns the true-result if the criterion is truthy,
-    /// otherwise returns the otherwise-result. If otherwise-result is not provided, returns empty.
+    /// Returns a collection with all immediate child nodes of all items in the input collection
+    /// The ordering of children is undefined and may vary between platforms
+    pub fn children(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        match target {
+            FhirPathValue::Object(obj) => {
+                let mut children = Vec::new();
+
+                // Iterate through all properties of the object
+                for value in obj.as_object().unwrap().values() {
+                    children.push(FhirPathValue::from_json(value));
+                }
+
+                if children.is_empty() {
+                    Ok(FhirPathValue::Empty)
+                } else {
+                    Ok(FhirPathValue::Collection(children))
+                }
+            }
+            FhirPathValue::Collection(items) => {
+                let mut all_children = Vec::new();
+
+                for item in items {
+                    let item_children = Self::children(item)?;
+                    match item_children {
+                        FhirPathValue::Collection(mut children) => {
+                            all_children.append(&mut children);
+                        }
+                        FhirPathValue::Empty => {
+                            // Skip empty results
+                        }
+                        value => {
+                            all_children.push(value);
+                        }
+                    }
+                }
+
+                if all_children.is_empty() {
+                    Ok(FhirPathValue::Empty)
+                } else {
+                    Ok(FhirPathValue::Collection(all_children))
+                }
+            }
+            _ => {
+                // Non-object values (primitives, empty) have no children
+                Ok(FhirPathValue::Empty)
+            }
+        }
+    }
+
+    /// Immediate if function - returns true_result if criterion is truthy, otherwise otherwise_result
+    /// This is similar to the conditional operator in C-like languages (? :)
     ///
     /// # Arguments
     /// * `criterion` - The condition to evaluate for truthiness

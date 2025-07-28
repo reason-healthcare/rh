@@ -22,8 +22,8 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | Nested property access | ✅ | `Patient.name.given` - accessing nested structures |
 | Array indexing (`[]`) | ✅ | `name[0]`, `telecom[1].value` with nested support |
 | **Tree navigation** | |
-| `children()` | ❌ | Not implemented |
-| `descendants()` | ❌ | Not implemented |
+| `children()` | ✅ | Returns collection of immediate child nodes (undefined order) |
+| `descendants()` | ❌ | Not implemented - use `repeat()` for recursive traversal (e.g., `obj.repeat(children)`) |
 | **Literals** | | |
 | Boolean | ✅ | `true`, `false` |
 | Integer | ✅ | `42`, `-10` |
@@ -454,6 +454,8 @@ cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
 cargo run --example iif_function --package fhirpath
+cargo run --example children_function --package fhirpath
+cargo run --example tree_navigation_alternatives --package fhirpath
 ```
 
 

@@ -18,7 +18,7 @@ fn test_replace_matches_integration() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     // Check if we got the expected result
-    println!("Result: {:?}", result);
+    println!("Result: {result:?}");
     // The result should be a String with the replacements made
     assert!(matches!(result, fhirpath::FhirPathValue::String(_)));
     if let fhirpath::FhirPathValue::String(s) = result {

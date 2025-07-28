@@ -367,3 +367,109 @@ fn test_edge_cases_and_error_conditions() {
         panic!("Expected collection result");
     }
 }
+
+#[test]
+fn test_children_function() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+
+    let tree_data = json!({
+        "patient": {
+            "name": "John Doe",
+            "age": 30,
+            "active": true,
+            "nested": {
+                "value": "test"
+            }
+        },
+        "empty_object": {},
+        "simple_value": "test"
+    });
+
+    let context = EvaluationContext::new(tree_data);
+
+    // Test children() on object with properties
+    let expr = parser.parse("patient.children()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Collection(items) = result {
+        assert_eq!(items.len(), 4); // name, age, active, nested
+
+        // Check that we have the expected values (order is undefined)
+        let values: Vec<String> = items
+            .iter()
+            .map(|item| match item {
+                FhirPathValue::String(s) => s.clone(),
+                FhirPathValue::Integer(i) => i.to_string(),
+                FhirPathValue::Boolean(b) => b.to_string(),
+                FhirPathValue::Object(_) => "object".to_string(),
+                _ => "unknown".to_string(),
+            })
+            .collect();
+
+        assert!(values.contains(&"John Doe".to_string()));
+        assert!(values.contains(&"30".to_string()));
+        assert!(values.contains(&"true".to_string()));
+        assert!(values.contains(&"object".to_string()));
+    } else {
+        panic!("Expected collection result, got: {result:?}");
+    }
+
+    // Test children() on empty object
+    let expr = parser.parse("empty_object.children()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+
+    // Test children() on primitive value (should return empty)
+    let expr = parser.parse("simple_value.children()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+
+    // Test children() on nested object
+    let expr = parser.parse("patient.nested.children()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    match result {
+        FhirPathValue::String(s) => {
+            assert_eq!(s, "test");
+        }
+        FhirPathValue::Collection(items) => {
+            assert_eq!(items.len(), 1);
+            if let FhirPathValue::String(s) = &items[0] {
+                assert_eq!(s, "test");
+            } else {
+                panic!("Expected string in collection, got: {:?}", items[0]);
+            }
+        }
+        _ => panic!("Expected string or collection result, got: {result:?}"),
+    }
+
+    // Test children() on collection of objects
+    let collection_data = json!({
+        "items": [
+            {"a": 1, "b": 2},
+            {"c": 3, "d": 4}
+        ]
+    });
+    let collection_context = EvaluationContext::new(collection_data);
+
+    let expr = parser.parse("items.children()").unwrap();
+    let result = evaluator.evaluate(&expr, &collection_context).unwrap();
+    if let FhirPathValue::Collection(items) = result {
+        assert_eq!(items.len(), 4); // 1, 2, 3, 4
+
+        let values: Vec<i64> = items
+            .iter()
+            .map(|item| match item {
+                FhirPathValue::Integer(i) => *i,
+                _ => panic!("Expected integer"),
+            })
+            .collect();
+
+        // Check all values are present (order undefined)
+        assert!(values.contains(&1));
+        assert!(values.contains(&2));
+        assert!(values.contains(&3));
+        assert!(values.contains(&4));
+    } else {
+        panic!("Expected collection result, got: {result:?}");
+    }
+}

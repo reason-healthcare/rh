@@ -23,31 +23,31 @@ fn main() -> anyhow::Result<()> {
 
     let expr = parser.parse("name.length()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'John Doe'.length() = {:?}", result);
+    println!("   'John Doe'.length() = {result:?}");
 
     let expr = parser.parse("shortName.length()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'Joe'.length() = {:?}", result);
+    println!("   'Joe'.length() = {result:?}");
 
     let expr = parser.parse("empty.length()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   ''.length() = {:?}\n", result);
+    println!("   ''.length() = {result:?}\n");
 
     // Example 2: toChars() function - basic usage
     println!("2. String toChars() function - basic usage:");
     let expr = parser.parse("shortName.toChars()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'Joe'.toChars() = {:?}", result);
+    println!("   'Joe'.toChars() = {result:?}");
 
     let expr = parser.parse("name.toChars()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'John Doe'.toChars() = {:?}\n", result);
+    println!("   'John Doe'.toChars() = {result:?}\n");
 
     // Example 3: toChars() with empty string
     println!("3. toChars() with empty string:");
     let expr = parser.parse("empty.toChars()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   ''.toChars() = {:?}\n", result);
+    println!("   ''.toChars() = {result:?}\n");
 
     // Example 4: Unicode characters
     println!("4. Unicode character handling:");
@@ -59,19 +59,19 @@ fn main() -> anyhow::Result<()> {
 
     let expr = parser.parse("greeting.length()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'café'.length() = {:?}", result);
+    println!("   'café'.length() = {result:?}");
 
     let expr = parser.parse("greeting.toChars()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'café'.toChars() = {:?}", result);
+    println!("   'café'.toChars() = {result:?}");
 
     let expr = parser.parse("emoji.length()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   '👋🌍'.length() = {:?}", result);
+    println!("   '👋🌍'.length() = {result:?}");
 
     let expr = parser.parse("emoji.toChars()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   '👋🌍'.toChars() = {:?}\n", result);
+    println!("   '👋🌍'.toChars() = {result:?}\n");
 
     // Example 5: Combining functions
     println!("5. Combining string functions:");
@@ -83,26 +83,26 @@ fn main() -> anyhow::Result<()> {
     // Count characters
     let expr = parser.parse("text.toChars().count()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'Hello World'.toChars().count() = {:?}", result);
+    println!("   'Hello World'.toChars().count() = {result:?}");
 
     // First and last characters
     let expr = parser.parse("text.toChars().first()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'Hello World'.toChars().first() = {:?}", result);
+    println!("   'Hello World'.toChars().first() = {result:?}");
 
     let expr = parser.parse("text.toChars().last()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   'Hello World'.toChars().last() = {:?}", result);
+    println!("   'Hello World'.toChars().last() = {result:?}");
 
     // Filter for vowels (case-sensitive)
     let expr = parser.parse("text.toChars().where($this in ('a' | 'e' | 'i' | 'o' | 'u'))")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   Vowels in 'Hello World': {:?}", result);
+    println!("   Vowels in 'Hello World': {result:?}");
 
     // Get unique characters
     let expr = parser.parse("text.toChars().distinct()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   Unique chars in 'Hello World': {:?}\n", result);
+    println!("   Unique chars in 'Hello World': {result:?}\n");
 
     // Example 6: Medical use case - parsing identifiers
     println!("6. Medical use case - parsing patient identifier:");
@@ -115,17 +115,17 @@ fn main() -> anyhow::Result<()> {
     // Count alphabetic characters
     let expr = parser.parse("patientId.toChars().where($this.matches('[A-Z]')).count()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   Alphabetic chars in 'P12345': {:?}", result);
+    println!("   Alphabetic chars in 'P12345': {result:?}");
 
     // Count numeric characters
     let expr = parser.parse("patientId.toChars().where($this.matches('[0-9]')).count()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   Numeric chars in 'P12345': {:?}", result);
+    println!("   Numeric chars in 'P12345': {result:?}");
 
     // Count dashes in MRN
     let expr = parser.parse("mrn.toChars().where($this = '-').count()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("   Number of dashes in 'MRN-ABC-123': {:?}", result);
+    println!("   Number of dashes in 'MRN-ABC-123': {result:?}");
 
     Ok(())
 }

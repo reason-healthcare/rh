@@ -48,6 +48,14 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
             CollectionEvaluator::is_distinct(target)
         }),
     );
+
+    // children() function
+    functions.insert(
+        "children".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            CollectionEvaluator::children(target)
+        }),
+    );
 }
 
 /// Register boolean collection functions (all, allTrue, anyTrue, etc.)
