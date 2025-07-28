@@ -56,6 +56,14 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
             CollectionEvaluator::children(target)
         }),
     );
+
+    // descendants() function
+    functions.insert(
+        "descendants".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            CollectionEvaluator::descendants(target)
+        }),
+    );
 }
 
 /// Register boolean collection functions (all, allTrue, anyTrue, etc.)

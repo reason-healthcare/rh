@@ -639,6 +639,50 @@ impl CollectionEvaluator {
         }
     }
 
+    /// Returns a collection with all descendant nodes (all children, their children, etc.) of all items in the input collection
+    /// This is a recursive operation that collects all nodes at any depth
+    /// The ordering of descendants is undefined and may vary between platforms
+    pub fn descendants(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        let mut all_descendants = Vec::new();
+        Self::collect_descendants(target, &mut all_descendants)?;
+
+        if all_descendants.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else {
+            Ok(FhirPathValue::Collection(all_descendants))
+        }
+    }
+
+    /// Helper function to recursively collect all descendants
+    fn collect_descendants(
+        target: &FhirPathValue,
+        descendants: &mut Vec<FhirPathValue>,
+    ) -> FhirPathResult<()> {
+        match target {
+            FhirPathValue::Object(obj) => {
+                // Get immediate children first
+                for value in obj.as_object().unwrap().values() {
+                    let child = FhirPathValue::from_json(value);
+                    descendants.push(child.clone());
+                    // Recursively collect descendants of this child
+                    Self::collect_descendants(&child, descendants)?;
+                }
+            }
+            FhirPathValue::Collection(items) => {
+                // For collections (like arrays), add individual items as descendants
+                // and then recursively process each item
+                for item in items {
+                    descendants.push(item.clone());
+                    Self::collect_descendants(item, descendants)?;
+                }
+            }
+            _ => {
+                // Non-object/non-collection values (primitives, empty) have no descendants
+            }
+        }
+        Ok(())
+    }
+
     /// Immediate if function - returns true_result if criterion is truthy, otherwise otherwise_result
     /// This is similar to the conditional operator in C-like languages (? :)
     ///

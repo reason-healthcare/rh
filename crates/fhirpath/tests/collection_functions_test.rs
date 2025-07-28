@@ -473,3 +473,152 @@ fn test_children_function() {
         panic!("Expected collection result, got: {result:?}");
     }
 }
+
+#[test]
+fn test_descendants_function() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+
+    let tree_data = json!({
+        "patient": {
+            "name": {
+                "given": ["John", "William"],
+                "family": "Doe"
+            },
+            "age": 30,
+            "active": true,
+            "address": {
+                "line": ["123 Main St", "Apt 4B"],
+                "city": "Springfield",
+                "state": "IL",
+                "postalCode": "62701",
+                "country": {
+                    "code": "US",
+                    "display": "United States"
+                }
+            }
+        },
+        "empty_object": {},
+        "simple_value": "test"
+    });
+
+    let context = EvaluationContext::new(tree_data);
+
+    // Test descendants() on complex nested object
+    let expr = parser.parse("patient.descendants()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Collection(items) = result {
+        // Should contain all descendants: name object, given array, family string, age, active, address object,
+        // line array, city, state, postalCode, country object, code, display, plus all array elements
+        assert!(
+            items.len() >= 10,
+            "Expected at least 10 descendants, got {}",
+            items.len()
+        );
+
+        // Check that we have some key expected values
+        let contains_john = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "John"));
+        let contains_william = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "William"));
+        let contains_doe = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "Doe"));
+        let contains_30 = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::Integer(i) if *i == 30));
+        let contains_true = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::Boolean(b) if *b));
+        let contains_springfield = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "Springfield"));
+        let contains_us = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "US"));
+
+        assert!(contains_john, "Should contain 'John' from nested array");
+        assert!(
+            contains_william,
+            "Should contain 'William' from nested array"
+        );
+        assert!(contains_doe, "Should contain 'Doe' from nested object");
+        assert!(contains_30, "Should contain age 30");
+        assert!(contains_true, "Should contain active true");
+        assert!(
+            contains_springfield,
+            "Should contain 'Springfield' from deeply nested object"
+        );
+        assert!(contains_us, "Should contain 'US' from deeply nested object");
+    } else {
+        panic!("Expected collection result, got: {result:?}");
+    }
+
+    // Test descendants() on empty object
+    let expr = parser.parse("empty_object.descendants()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+
+    // Test descendants() on primitive value (should return empty)
+    let expr = parser.parse("simple_value.descendants()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
+
+    // Test descendants() on collection of objects
+    let collection_data = json!({
+        "items": [
+            {
+                "name": "Item1",
+                "details": {
+                    "category": "A",
+                    "price": 10
+                }
+            },
+            {
+                "name": "Item2",
+                "details": {
+                    "category": "B",
+                    "price": 20
+                }
+            }
+        ]
+    });
+
+    let context = EvaluationContext::new(collection_data);
+    let expr = parser.parse("items.descendants()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Collection(items) = result {
+        // Should contain all descendants from both items in the collection
+        assert!(items.len() >= 8); // At least 8 descendants
+
+        let contains_item1 = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "Item1"));
+        let contains_item2 = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "Item2"));
+        let contains_a = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "A"));
+        let contains_b = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::String(s) if s == "B"));
+        let contains_10 = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::Integer(i) if *i == 10));
+        let contains_20 = items
+            .iter()
+            .any(|item| matches!(item, FhirPathValue::Integer(i) if *i == 20));
+
+        assert!(contains_item1, "Should contain 'Item1'");
+        assert!(contains_item2, "Should contain 'Item2'");
+        assert!(contains_a, "Should contain category 'A'");
+        assert!(contains_b, "Should contain category 'B'");
+        assert!(contains_10, "Should contain price 10");
+        assert!(contains_20, "Should contain price 20");
+    } else {
+        panic!("Expected collection result, got: {result:?}");
+    }
+}
