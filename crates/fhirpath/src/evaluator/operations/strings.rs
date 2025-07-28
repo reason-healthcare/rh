@@ -189,6 +189,51 @@ impl StringEvaluator {
         ))
     }
 
+    /// Replace all matches of a regular expression pattern with a substitution string
+    /// FHIRPath: String.replaceMatches(regex: String, substitution: String) -> String
+    pub fn replace_matches(
+        target: &FhirPathValue,
+        regex_pattern: &FhirPathValue,
+        substitution: &FhirPathValue,
+    ) -> Result<FhirPathValue, FhirPathError> {
+        let string = match target {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "replaceMatches() can only be called on String values".to_string(),
+                })
+            }
+        };
+
+        let pattern_str = match regex_pattern {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "replaceMatches() regex parameter must be a String".to_string(),
+                })
+            }
+        };
+
+        let substitution_str = match substitution {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "replaceMatches() substitution parameter must be a String".to_string(),
+                })
+            }
+        };
+
+        // Use regex for pattern replacement
+        match regex::Regex::new(pattern_str) {
+            Ok(re) => Ok(FhirPathValue::String(
+                re.replace_all(string, substitution_str).to_string(),
+            )),
+            Err(e) => Err(FhirPathError::EvaluationError {
+                message: format!("Invalid regex pattern: {e}"),
+            }),
+        }
+    }
+
     /// Convert a string to uppercase
     /// FHIRPath: String.upper() -> String
     pub fn upper(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
@@ -536,5 +581,36 @@ mod tests {
         let substring = FhirPathValue::String("world".to_string());
         let result = StringEvaluator::contains(&input, &substring).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
+     }
+
+    #[test]
+    fn test_replace_matches() {
+        // Test basic regex replacement
+        let input = FhirPathValue::String("The year 2023 was great, and 2024 will be better!".to_string());
+        let regex = FhirPathValue::String(r"\d{4}".to_string());
+        let substitution = FhirPathValue::String("YYYY".to_string());
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        assert_eq!(result, FhirPathValue::String("The year YYYY was great, and YYYY will be better!".to_string()));
+
+        // Test with capture groups
+        let input = FhirPathValue::String("john.doe@example.com".to_string());
+        let regex = FhirPathValue::String(r"(\w+)\.(\w+)@(.+)".to_string());
+        let substitution = FhirPathValue::String("$2, $1 from $3".to_string());
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        assert_eq!(result, FhirPathValue::String("doe, john from example.com".to_string()));
+
+        // Test with word boundaries
+        let input = FhirPathValue::String("cat catastrophe scattered".to_string());
+        let regex = FhirPathValue::String(r"\bcat\b".to_string());
+        let substitution = FhirPathValue::String("dog".to_string());
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        assert_eq!(result, FhirPathValue::String("dog catastrophe scattered".to_string()));
+
+        // Test invalid regex
+        let input = FhirPathValue::String("test".to_string());
+        let invalid_regex = FhirPathValue::String("[".to_string()); // Invalid regex
+        let substitution = FhirPathValue::String("replacement".to_string());
+        let result = StringEvaluator::replace_matches(&input, &invalid_regex, &substitution);
+        assert!(result.is_err());
     }
 }

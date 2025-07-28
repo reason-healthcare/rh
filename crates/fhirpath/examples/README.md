@@ -33,6 +33,9 @@ cargo run -p fhirpath --example arithmetic_operations
 # String functions
 cargo run -p fhirpath --example string_functions
 
+# Replace matches with regex
+cargo run -p fhirpath --example replace_matches_function
+
 # Collection operations
 cargo run -p fhirpath --example collection_operations
 
@@ -64,6 +67,7 @@ RUST_LOG=debug cargo run -p fhirpath --example type_operations
 - **`implies_operations.rs`** - Logical implication operator demonstration
 - **`arithmetic_operations.rs`** - Math operations and numeric expressions
 - **`string_functions.rs`** - String manipulation and functions
+- **`replace_matches_function.rs`** - Regex-based string replacement with capture groups
 - **`collection_operations.rs`** - Working with collections and arrays
 - **`boolean_collection_operations.rs`** - Boolean collection functions (all, allTrue, anyTrue, etc.)
 - **`union_operations.rs`** - Union operations and set logic

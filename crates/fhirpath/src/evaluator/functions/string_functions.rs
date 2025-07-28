@@ -108,6 +108,21 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
         }),
     );
 
+    // replaceMatches() function
+    functions.insert(
+        "replaceMatches".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            if params.len() != 2 {
+                return Err(FhirPathError::InvalidOperation {
+                    message:
+                        "replaceMatches() requires exactly two parameters (regex, substitution)"
+                            .to_string(),
+                });
+            }
+            StringEvaluator::replace_matches(target, &params[0], &params[1])
+        }),
+    );
+
     // split() function
     functions.insert(
         "split".to_string(),
