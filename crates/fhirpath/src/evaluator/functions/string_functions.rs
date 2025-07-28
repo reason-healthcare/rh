@@ -187,4 +187,12 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
             StringEvaluator::contains(target, &params[0])
         }),
     );
+
+    // toChars() function
+    functions.insert(
+        "toChars".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            StringEvaluator::to_chars(target)
+        }),
+    );
 }

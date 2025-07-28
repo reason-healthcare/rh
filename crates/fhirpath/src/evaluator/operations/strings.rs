@@ -438,6 +438,23 @@ impl StringEvaluator {
 
         Ok(FhirPathValue::Boolean(string.contains(substring_str)))
     }
+
+    /// Convert a string to a collection of single-character strings
+    /// FHIRPath: String.toChars() -> Collection[String]
+    pub fn to_chars(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
+        match target {
+            FhirPathValue::String(s) => {
+                let chars: Vec<FhirPathValue> = s
+                    .chars()
+                    .map(|c| FhirPathValue::String(c.to_string()))
+                    .collect();
+                Ok(FhirPathValue::Collection(chars))
+            }
+            _ => Err(FhirPathError::TypeError {
+                message: "toChars() can only be called on String values".to_string(),
+            }),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -581,36 +598,88 @@ mod tests {
         let substring = FhirPathValue::String("world".to_string());
         let result = StringEvaluator::contains(&input, &substring).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
-     }
+    }
 
     #[test]
     fn test_replace_matches() {
         // Test basic regex replacement
-        let input = FhirPathValue::String("The year 2023 was great, and 2024 will be better!".to_string());
+        let input =
+            FhirPathValue::String("The year 2023 was great, and 2024 will be better!".to_string());
         let regex = FhirPathValue::String(r"\d{4}".to_string());
         let substitution = FhirPathValue::String("YYYY".to_string());
         let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
-        assert_eq!(result, FhirPathValue::String("The year YYYY was great, and YYYY will be better!".to_string()));
+        assert_eq!(
+            result,
+            FhirPathValue::String("The year YYYY was great, and YYYY will be better!".to_string())
+        );
 
         // Test with capture groups
         let input = FhirPathValue::String("john.doe@example.com".to_string());
         let regex = FhirPathValue::String(r"(\w+)\.(\w+)@(.+)".to_string());
         let substitution = FhirPathValue::String("$2, $1 from $3".to_string());
         let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
-        assert_eq!(result, FhirPathValue::String("doe, john from example.com".to_string()));
+        assert_eq!(
+            result,
+            FhirPathValue::String("doe, john from example.com".to_string())
+        );
 
         // Test with word boundaries
         let input = FhirPathValue::String("cat catastrophe scattered".to_string());
         let regex = FhirPathValue::String(r"\bcat\b".to_string());
         let substitution = FhirPathValue::String("dog".to_string());
         let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
-        assert_eq!(result, FhirPathValue::String("dog catastrophe scattered".to_string()));
+        assert_eq!(
+            result,
+            FhirPathValue::String("dog catastrophe scattered".to_string())
+        );
 
         // Test invalid regex
         let input = FhirPathValue::String("test".to_string());
         let invalid_regex = FhirPathValue::String("[".to_string()); // Invalid regex
         let substitution = FhirPathValue::String("replacement".to_string());
         let result = StringEvaluator::replace_matches(&input, &invalid_regex, &substitution);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_to_chars() {
+        let input = FhirPathValue::String("hello".to_string());
+        let result = StringEvaluator::to_chars(&input).unwrap();
+        let expected = FhirPathValue::Collection(vec![
+            FhirPathValue::String("h".to_string()),
+            FhirPathValue::String("e".to_string()),
+            FhirPathValue::String("l".to_string()),
+            FhirPathValue::String("l".to_string()),
+            FhirPathValue::String("o".to_string()),
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_to_chars_empty_string() {
+        let input = FhirPathValue::String("".to_string());
+        let result = StringEvaluator::to_chars(&input).unwrap();
+        let expected = FhirPathValue::Collection(vec![]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_to_chars_unicode() {
+        let input = FhirPathValue::String("café".to_string());
+        let result = StringEvaluator::to_chars(&input).unwrap();
+        let expected = FhirPathValue::Collection(vec![
+            FhirPathValue::String("c".to_string()),
+            FhirPathValue::String("a".to_string()),
+            FhirPathValue::String("f".to_string()),
+            FhirPathValue::String("é".to_string()),
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_to_chars_non_string() {
+        let input = FhirPathValue::Integer(42);
+        let result = StringEvaluator::to_chars(&input);
         assert!(result.is_err());
     }
 }

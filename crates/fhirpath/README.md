@@ -154,6 +154,7 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 | `matches(regex)` | ✅ | Regex pattern matching |
 | `matchesFull(regex)` | ✅ | Exact regex pattern matching (implied ^ and $) |
 | `replaceMatches(regex, substitution)` | ✅ | Replace regex matches with substitution (supports capture groups) |
+| `toChars()` | ✅ | Convert string to collection of single-character strings |
 | **Null and empty** | | |
 | Empty collection literal: `{}` | ✅ | `{}` - represents empty collection |
 | Empty collection evaluation | ✅ | Empty results from operations (e.g., out-of-bounds indexing) |
@@ -448,6 +449,7 @@ cargo run --example quantity_conversion --package fhirpath
 cargo run --example matches_function --package fhirpath
 cargo run --example matches_full_function --package fhirpath
 cargo run --example replace_matches_function --package fhirpath
+cargo run --example string_functions_basic --package fhirpath
 cargo run --example unit_conversion_example --package fhirpath
 cargo run --example temperature_conversion_example --package fhirpath  
 cargo run --example datetime_functions_example --package fhirpath
@@ -518,6 +520,8 @@ parser.parse("'hello'.startsWith('he')").unwrap(); // ✅ → Boolean(true)
 parser.parse("'a,b,c'.split(',')").unwrap(); // ✅ → Collection(["a", "b", "c"])
 parser.parse("'Patient 12345'.replaceMatches('\\\\d+', 'XXX')").unwrap(); // ✅ → "Patient XXX"
 parser.parse("'1234567890'.replaceMatches('(\\\\d{3})(\\\\d{3})(\\\\d{4})', '($1) $2-$3')").unwrap(); // ✅ → "(123) 456-7890"
+parser.parse("'hello'.toChars()").unwrap(); // ✅ → Collection(["h", "e", "l", "l", "o"])
+parser.parse("'café'.toChars().count()").unwrap(); // ✅ → Integer(5) - Unicode support
 
 // Math functions
 parser.parse("(-5).abs()").unwrap();         // ✅ → Integer(5) - absolute value
