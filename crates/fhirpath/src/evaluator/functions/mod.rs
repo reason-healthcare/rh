@@ -7,7 +7,9 @@
 //! - Math functions (abs, ceiling, floor, sqrt, etc.)
 //! - DateTime functions (now, today, yearOf, etc.)
 //! - Conversion functions (toBoolean, toInteger, toString, etc.)
+//! - Boolean functions (not, etc.)
 
+pub mod boolean_functions;
 pub mod collection_functions;
 pub mod conversion_functions;
 pub mod datetime_functions;
@@ -67,6 +69,9 @@ impl FunctionRegistry {
 
         // Conversion functions (toBoolean, toInteger, toString, etc.)
         conversion_functions::register_conversion_functions(&mut self.functions);
+
+        // Boolean functions (not, etc.)
+        boolean_functions::register_boolean_functions(&mut self.functions);
     }
 }
 

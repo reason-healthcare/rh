@@ -83,7 +83,7 @@ This document provides a comprehensive overview of all supported operations and 
 #### Boolean Collection Operations
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
-| ❌ | `not()` | `not() : Boolean` | Returns true if the input collection evaluates to false, and false if it evaluates to true |
+| ✅ | `not()` | `not() : Boolean` | Returns true if the input collection evaluates to false, and false if it evaluates to true |
 | ✅ | `all()` | `all() : Boolean` | Test if all items are truthy |
 | ✅ | `allTrue()` | `allTrue() : Boolean` | Test if all items are boolean true |
 | ✅ | `anyTrue()` | `anyTrue() : Boolean` | Test if any item is boolean true |
