@@ -74,15 +74,18 @@ mod tests {
         // Test getResourceKey() function
         let parsed = parser.parse("getResourceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("patient-123".to_string()));
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("Patient/patient-123".to_string())
+        );
     }
 
     #[test]
     fn test_get_resource_key_no_id() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         let patient_no_id = json!({
             "resourceType": "Patient",
             "name": [{
@@ -93,12 +96,12 @@ mod tests {
 
         let parsed = parser.parse("getResourceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 0, "Should return empty collection when no ID");
-            },
-            _ => panic!("Expected empty collection for resource without ID")
+            }
+            _ => panic!("Expected empty collection for resource without ID"),
         }
     }
 
@@ -111,8 +114,11 @@ mod tests {
         // Test getReferenceKey() without type filter
         let parsed = parser.parse("subject.getReferenceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("patient-123".to_string()));
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("Patient/patient-123".to_string())
+        );
     }
 
     #[test]
@@ -124,8 +130,11 @@ mod tests {
         // Test getReferenceKey(Patient) - should match
         let parsed = parser.parse("subject.getReferenceKey('Patient')").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("patient-123".to_string()));
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("Patient/patient-123".to_string())
+        );
     }
 
     #[test]
@@ -135,14 +144,20 @@ mod tests {
         let context = EvaluationContext::new(sample_observation());
 
         // Test getReferenceKey('Organization') - should not match
-        let parsed = parser.parse("subject.getReferenceKey('Organization')").unwrap();
+        let parsed = parser
+            .parse("subject.getReferenceKey('Organization')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 0, "Should return empty collection for non-matching type");
-            },
-            _ => panic!("Expected empty collection for non-matching type")
+                assert_eq!(
+                    items.len(),
+                    0,
+                    "Should return empty collection for non-matching type"
+                );
+            }
+            _ => panic!("Expected empty collection for non-matching type"),
         }
     }
 
@@ -153,38 +168,63 @@ mod tests {
         let context = EvaluationContext::new(sample_observation());
 
         // Test complex expression combining SQL-on-FHIR with standard FHIRPath
-        let parsed = parser.parse("subject.where(reference.exists()).getReferenceKey('Patient')").unwrap();
+        let parsed = parser
+            .parse("subject.where(reference.exists()).getReferenceKey('Patient')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("patient-123".to_string()));
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("Patient/patient-123".to_string())
+        );
     }
 
     #[test]
     fn test_sql_on_fhir_key_consistency() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         // Test that getResourceKey and getReferenceKey return consistent values
         let patient_context = EvaluationContext::new(sample_patient());
         let observation_context = EvaluationContext::new(sample_observation());
 
-        // Get resource key from Patient
+        // Get resource key from Patient (format: ResourceType/id)
         let parsed_resource = parser.parse("getResourceKey()").unwrap();
-        let resource_key = evaluator.evaluate(&parsed_resource, &patient_context).unwrap();
+        let resource_key = evaluator
+            .evaluate(&parsed_resource, &patient_context)
+            .unwrap();
 
-        // Get reference key from Observation pointing to the same Patient
+        // Get reference key from Observation pointing to the same Patient (format: ResourceType/id)
         let parsed_reference = parser.parse("subject.getReferenceKey()").unwrap();
-        let reference_key = evaluator.evaluate(&parsed_reference, &observation_context).unwrap();
+        let reference_key = evaluator
+            .evaluate(&parsed_reference, &observation_context)
+            .unwrap();
 
-        // Keys should be equal
-        assert_eq!(resource_key, reference_key, "Resource key and reference key should be equal");
+        // Both should return the same format and value
+        if let FhirPathValue::String(resource_key_str) = resource_key {
+            if let FhirPathValue::String(reference_key_str) = reference_key {
+                // Both should be "Patient/patient-123"
+                assert_eq!(resource_key_str, "Patient/patient-123");
+                assert_eq!(reference_key_str, "Patient/patient-123");
+
+                // Keys should be identical for consistent SQL joins
+                assert_eq!(
+                    resource_key_str, reference_key_str,
+                    "Resource key and reference key should be identical"
+                );
+            } else {
+                panic!("Expected reference key to be a string");
+            }
+        } else {
+            panic!("Expected resource key to be a string");
+        }
     }
 
     #[test]
     fn test_get_resource_key_on_non_resource() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         let non_resource = json!({
             "value": "not a resource"
         });
@@ -192,7 +232,7 @@ mod tests {
 
         let parsed = parser.parse("getResourceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context);
-        
+
         // Should return an error when called on non-resource
         assert!(result.is_err());
     }
@@ -206,12 +246,16 @@ mod tests {
         // Test getReferenceKey on a non-reference field (should return empty collection)
         let parsed = parser.parse("name.getReferenceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 0, "Should return empty collection for non-reference");
-            },
-            _ => panic!("Expected empty collection for non-reference")
+                assert_eq!(
+                    items.len(),
+                    0,
+                    "Should return empty collection for non-reference"
+                );
+            }
+            _ => panic!("Expected empty collection for non-reference"),
         }
     }
 
@@ -219,7 +263,7 @@ mod tests {
     fn test_get_reference_key_invalid_reference_format() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         let invalid_reference = json!({
             "resourceType": "Observation",
             "id": "obs-1",
@@ -231,12 +275,16 @@ mod tests {
 
         let parsed = parser.parse("subject.getReferenceKey()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 0, "Should return empty collection for invalid reference format");
-            },
-            _ => panic!("Expected empty collection for invalid reference format")
+                assert_eq!(
+                    items.len(),
+                    0,
+                    "Should return empty collection for invalid reference format"
+                );
+            }
+            _ => panic!("Expected empty collection for invalid reference format"),
         }
     }
 
@@ -249,12 +297,20 @@ mod tests {
         // Test getResourceKey with parameters (should error)
         let parsed = parser.parse("getResourceKey('invalid')").unwrap();
         let result = evaluator.evaluate(&parsed, &context);
-        assert!(result.is_err(), "getResourceKey should error when given parameters");
+        assert!(
+            result.is_err(),
+            "getResourceKey should error when given parameters"
+        );
 
         // Test getReferenceKey with too many parameters (should error)
         let observation_context = EvaluationContext::new(sample_observation());
-        let parsed2 = parser.parse("subject.getReferenceKey('Patient', 'extra')").unwrap();
+        let parsed2 = parser
+            .parse("subject.getReferenceKey('Patient', 'extra')")
+            .unwrap();
         let result2 = evaluator.evaluate(&parsed2, &observation_context);
-        assert!(result2.is_err(), "getReferenceKey should error with too many parameters");
+        assert!(
+            result2.is_err(),
+            "getReferenceKey should error with too many parameters"
+        );
     }
 }

@@ -349,16 +349,17 @@ The following table shows operator precedence from highest to lowest:
 | Status | Feature | Notes |
 |--------|---------|--------|
 | **FHIR Variables** | | |
-| ❌ | `%resource` | Not implemented |
+| ✅ | `%resource` | Access to the root resource in current evaluation context |
 | ❌ | `%context` | Not implemented |
 | ❌ | `%rootResource` | Not implemented |
-| ❌ | `%sct` | Not implemented |
-| ❌ | `%loinc` | Not implemented |
+| ✅ | `%sct` | SNOMED CT system URL constant |
+| ✅ | `%loinc` | LOINC system URL constant |
+| ✅ | `%ucum` | UCUM system URL constant |
 | ❌ | `%"vs-[name]"` | Not implemented |
 | ❌ | `%"ext-[name]"` | Not implemented |
 | **Additional Functions** | | |
-| ❌ | `extension(url)` | Not implemented |
-| ❌ | `hasValue()` | Not implemented |
+| ✅ | `extension(url)` | Extract extensions by URL from FHIR resources |
+| ✅ | `hasValue()` | Check if extension or element has a value |
 | ❌ | `getValue()` | Not implemented |
 | ❌ | `trace()` | Not implemented |
 | ❌ | `resolve()` | Not implemented |
@@ -381,8 +382,8 @@ The following table shows operator precedence from highest to lowest:
 
 | Status | Feature | Notes |
 |--------|---------|--------|
-| ❌ | `getResourceKey()` | Not implemented |
-| ❌ | `getReferenceKey(resource?)` | Not implemented |
+| ✅ | `getResourceKey()` | Extract resource key in ResourceType/id format for SQL primary keys |
+| ✅ | `getReferenceKey(resource?)` | Extract reference key in ResourceType/id format for SQL foreign keys with optional type filtering |
 
 ## Implementation Architecture
 

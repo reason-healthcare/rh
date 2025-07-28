@@ -138,20 +138,25 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test finding US Core race extension
-        let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')").unwrap();
+        let parsed = parser
+            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1, "Should find exactly one race extension");
                 // Verify it's the correct extension
                 if let FhirPathValue::Object(ext) = &items[0] {
-                    assert_eq!(ext.get("url").unwrap(), &json!("http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"));
+                    assert_eq!(
+                        ext.get("url").unwrap(),
+                        &json!("http://hl7.org/fhir/us/core/StructureDefinition/us-core-race")
+                    );
                 } else {
                     panic!("Extension should be an object");
                 }
-            },
-            _ => panic!("Should return a collection of extensions")
+            }
+            _ => panic!("Should return a collection of extensions"),
         }
     }
 
@@ -162,14 +167,20 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test finding extensions with partial URL match (should find US Core extensions)
-        let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/')").unwrap();
+        let parsed = parser
+            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 2, "Should find both US Core extensions (race and ethnicity)");
-            },
-            _ => panic!("Should return a collection of extensions")
+                assert_eq!(
+                    items.len(),
+                    2,
+                    "Should find both US Core extensions (race and ethnicity)"
+                );
+            }
+            _ => panic!("Should return a collection of extensions"),
         }
     }
 
@@ -180,14 +191,16 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test finding non-existent extension
-        let parsed = parser.parse("extension('http://nonexistent.org/extension')").unwrap();
+        let parsed = parser
+            .parse("extension('http://nonexistent.org/extension')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 0, "Should find no extensions");
-            },
-            _ => panic!("Should return an empty collection")
+            }
+            _ => panic!("Should return an empty collection"),
         }
     }
 
@@ -200,16 +213,16 @@ mod tests {
         // Test navigating into nested extensions
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race').extension.where(url = 'ombCategory').valueCoding.code").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1, "Should find one race code");
                 assert_eq!(items[0], FhirPathValue::String("2106-3".to_string()));
-            },
+            }
             FhirPathValue::String(code) => {
                 assert_eq!(code, "2106-3");
-            },
-            _ => panic!("Should return race code, got: {:?}", result)
+            }
+            _ => panic!("Should return race code, got: {result:?}"),
         }
     }
 
@@ -222,8 +235,12 @@ mod tests {
         // Test hasValue() on extension with nested extensions (should return true)
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')[0].hasValue()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(true), "Race extension should have value (nested extensions)");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Race extension should have value (nested extensions)"
+        );
     }
 
     #[test]
@@ -233,17 +250,23 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test hasValue() on extension with direct value
-        let parsed = parser.parse("extension('http://example.org/custom-extension')[0].hasValue()").unwrap();
+        let parsed = parser
+            .parse("extension('http://example.org/custom-extension')[0].hasValue()")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(true), "Custom extension should have direct value");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Custom extension should have direct value"
+        );
     }
 
     #[test]
     fn test_has_value_function_empty_extension() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
-        
+
         // Create a patient with an empty extension
         let patient_empty_ext = json!({
             "resourceType": "Patient",
@@ -256,10 +279,16 @@ mod tests {
         });
         let context = EvaluationContext::new(patient_empty_ext);
 
-        let parsed = parser.parse("extension('http://example.org/empty-extension')[0].hasValue()").unwrap();
+        let parsed = parser
+            .parse("extension('http://example.org/empty-extension')[0].hasValue()")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(false), "Empty extension should not have value");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(false),
+            "Empty extension should not have value"
+        );
     }
 
     #[test]
@@ -271,8 +300,12 @@ mod tests {
         // Test %resource variable access
         let parsed = parser.parse("%resource.resourceType").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("Patient".to_string()), "%resource should provide access to root resource");
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("Patient".to_string()),
+            "%resource should provide access to root resource"
+        );
     }
 
     #[test]
@@ -282,18 +315,20 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test complex navigation using %resource
-        let parsed = parser.parse("%resource.name.where(use = 'official').family").unwrap();
+        let parsed = parser
+            .parse("%resource.name.where(use = 'official').family")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1);
                 assert_eq!(items[0], FhirPathValue::String("Smith".to_string()));
-            },
+            }
             FhirPathValue::String(family) => {
                 assert_eq!(family, "Smith");
-            },
-            _ => panic!("Should return family name, got: {:?}", result)
+            }
+            _ => panic!("Should return family name, got: {result:?}"),
         }
     }
 
@@ -306,8 +341,12 @@ mod tests {
         // Test %ucum variable
         let parsed = parser.parse("%ucum").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("http://unitsofmeasure.org".to_string()), "%ucum should return UCUM system URL");
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("http://unitsofmeasure.org".to_string()),
+            "%ucum should return UCUM system URL"
+        );
     }
 
     #[test]
@@ -319,8 +358,12 @@ mod tests {
         // Test %loinc variable in comparison
         let parsed = parser.parse("code.coding.system = %loinc").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(true), "Observation should use LOINC coding system");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Observation should use LOINC coding system"
+        );
     }
 
     #[test]
@@ -332,8 +375,12 @@ mod tests {
         // Test %sct variable
         let parsed = parser.parse("%sct").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::String("http://snomed.info/sct".to_string()), "%sct should return SNOMED CT system URL");
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("http://snomed.info/sct".to_string()),
+            "%sct should return SNOMED CT system URL"
+        );
     }
 
     #[test]
@@ -343,10 +390,16 @@ mod tests {
         let context = EvaluationContext::new(sample_observation_with_extensions());
 
         // Test using multiple extension variables in one expression
-        let parsed = parser.parse("code.coding.where(system = %loinc).exists() and valueQuantity.system = %ucum").unwrap();
+        let parsed = parser
+            .parse("code.coding.where(system = %loinc).exists() and valueQuantity.system = %ucum")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(true), "Should validate both LOINC and UCUM usage");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Should validate both LOINC and UCUM usage"
+        );
     }
 
     #[test]
@@ -356,14 +409,20 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_no_extensions());
 
         // Test extension() function on resource without extensions
-        let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')").unwrap();
+        let parsed = parser
+            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 0, "Should return empty collection when no extensions exist");
-            },
-            _ => panic!("Should return empty collection")
+                assert_eq!(
+                    items.len(),
+                    0,
+                    "Should return empty collection when no extensions exist"
+                );
+            }
+            _ => panic!("Should return empty collection"),
         }
     }
 
@@ -376,14 +435,24 @@ mod tests {
         // Test common validation pattern: extension exists
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race').exists()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Boolean(true), "Race extension should exist");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Race extension should exist"
+        );
 
         // Test non-existent extension
-        let parsed2 = parser.parse("extension('http://nonexistent.org/extension').exists()").unwrap();
+        let parsed2 = parser
+            .parse("extension('http://nonexistent.org/extension').exists()")
+            .unwrap();
         let result2 = evaluator.evaluate(&parsed2, &context).unwrap();
-        
-        assert_eq!(result2, FhirPathValue::Boolean(false), "Non-existent extension should not exist");
+
+        assert_eq!(
+            result2,
+            FhirPathValue::Boolean(false),
+            "Non-existent extension should not exist"
+        );
     }
 
     #[test]
@@ -393,10 +462,16 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test counting extensions
-        let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/').count()").unwrap();
+        let parsed = parser
+            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/').count()")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
-        assert_eq!(result, FhirPathValue::Integer(2), "Should find 2 US Core extensions");
+
+        assert_eq!(
+            result,
+            FhirPathValue::Integer(2),
+            "Should find 2 US Core extensions"
+        );
     }
 
     #[test]
@@ -406,18 +481,20 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Test extracting extension value
-        let parsed = parser.parse("extension('http://example.org/custom-extension').valueString").unwrap();
+        let parsed = parser
+            .parse("extension('http://example.org/custom-extension').valueString")
+            .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1);
                 assert_eq!(items[0], FhirPathValue::String("custom-value".to_string()));
-            },
+            }
             FhirPathValue::String(value) => {
                 assert_eq!(value, "custom-value");
-            },
-            _ => panic!("Should return extension value, got: {:?}", result)
+            }
+            _ => panic!("Should return extension value, got: {result:?}"),
         }
     }
 
@@ -430,16 +507,16 @@ mod tests {
         // Test chaining extension() with standard FHIRPath functions
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race').extension.where(url = 'ombCategory').valueCoding.display.upper()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        
+
         match result {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1);
                 assert_eq!(items[0], FhirPathValue::String("WHITE".to_string()));
-            },
+            }
             FhirPathValue::String(display) => {
                 assert_eq!(display, "WHITE");
-            },
-            _ => panic!("Should return uppercase race display, got: {:?}", result)
+            }
+            _ => panic!("Should return uppercase race display, got: {result:?}"),
         }
     }
 
@@ -457,14 +534,18 @@ mod tests {
                 let result = evaluator.evaluate(&ast, &context);
                 match result {
                     Ok(FhirPathValue::Collection(items)) => {
-                        assert_eq!(items.len(), 0, "Should return empty collection for invalid URL type");
-                    },
+                        assert_eq!(
+                            items.len(),
+                            0,
+                            "Should return empty collection for invalid URL type"
+                        );
+                    }
                     Err(_) => {
                         // Error is also acceptable for invalid argument type
-                    },
-                    _ => panic!("Should return empty collection or error for invalid URL type")
+                    }
+                    _ => panic!("Should return empty collection or error for invalid URL type"),
                 }
-            },
+            }
             Err(_) => {
                 // Parse error is also acceptable for invalid syntax
             }
@@ -478,18 +559,22 @@ mod tests {
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
         // Extension URLs should be case-sensitive
-        let parsed1 = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')").unwrap();
+        let parsed1 = parser
+            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')")
+            .unwrap();
         let result1 = evaluator.evaluate(&parsed1, &context).unwrap();
-        
-        let parsed2 = parser.parse("extension('HTTP://HL7.ORG/FHIR/US/CORE/STRUCTUREDEFINITION/US-CORE-RACE')").unwrap();
+
+        let parsed2 = parser
+            .parse("extension('HTTP://HL7.ORG/FHIR/US/CORE/STRUCTUREDEFINITION/US-CORE-RACE')")
+            .unwrap();
         let result2 = evaluator.evaluate(&parsed2, &context).unwrap();
-        
+
         match (result1, result2) {
             (FhirPathValue::Collection(items1), FhirPathValue::Collection(items2)) => {
                 assert_eq!(items1.len(), 1, "Correct case should find extension");
                 assert_eq!(items2.len(), 0, "Wrong case should not find extension");
-            },
-            _ => panic!("Both should return collections")
+            }
+            _ => panic!("Both should return collections"),
         }
     }
 }

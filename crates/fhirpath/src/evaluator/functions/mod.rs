@@ -78,13 +78,12 @@ impl FunctionRegistry {
     /// Register extension functions from the extension system
     fn register_extension_functions(&mut self) {
         let extension_registry = crate::extensions::ExtensionRegistry::new();
-        
+
         // Get all extension functions and register them
         for (name, func) in extension_registry.get_all_functions() {
             // Convert the extension function signature to the built-in function signature
-            let extension_func: FhirPathFunction = Box::new(move |target, params| {
-                func(target, params)
-            });
+            let extension_func: FhirPathFunction =
+                Box::new(move |target, params| func(target, params));
             self.functions.insert(name, extension_func);
         }
     }

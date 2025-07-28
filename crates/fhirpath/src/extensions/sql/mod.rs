@@ -37,7 +37,7 @@ impl SqlOnFhirExtensions {
         let mut extensions = Self {
             functions: HashMap::new(),
         };
-        
+
         extensions.register_all();
         extensions
     }
@@ -76,11 +76,11 @@ mod tests {
     #[test]
     fn test_sql_on_fhir_extensions_creation() {
         let extensions = SqlOnFhirExtensions::new();
-        
+
         // Should have both functions registered
         assert!(extensions.get_function("getResourceKey").is_some());
         assert!(extensions.get_function("getReferenceKey").is_some());
-        
+
         let function_names = extensions.function_names();
         assert_eq!(function_names.len(), 2);
         assert!(function_names.contains(&&"getResourceKey".to_string()));
@@ -91,7 +91,7 @@ mod tests {
     fn test_function_registration() {
         let extensions = SqlOnFhirExtensions::new();
         let all_functions = extensions.get_all_functions();
-        
+
         assert_eq!(all_functions.len(), 2);
         assert!(all_functions.contains_key("getResourceKey"));
         assert!(all_functions.contains_key("getReferenceKey"));

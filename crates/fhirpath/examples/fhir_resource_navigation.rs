@@ -3,8 +3,8 @@
 //! This example demonstrates practical FHIR resource navigation scenarios
 //! using extension functions and variables for real-world healthcare use cases.
 
+use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🧭 FHIR Resource Navigation with Extensions");
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
                 "extension": [
                     {
-                        "url": "ombCategory", 
+                        "url": "ombCategory",
                         "valueCoding": {
                             "system": "urn:oid:2.16.840.1.113883.6.238",
                             "code": "2186-5",
@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "use": "secondary",
                 "type": {
                     "coding": [{
-                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203", 
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
                         "code": "SS"
                     }]
                 },
@@ -129,23 +129,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Scenario 1: Demographics and Identity
     println!("👤 Scenario 1: Patient Demographics and Identity");
     println!("-----------------------------------------------");
-    
+
     test_expression(&parser, &evaluator, &context,
         "%resource.name.where(use = 'official').given.first() + ' ' + %resource.name.where(use = 'official').family",
         "Get official full name")?;
 
-    test_expression(&parser, &evaluator, &context,
+    test_expression(
+        &parser,
+        &evaluator,
+        &context,
         "%resource.identifier.where(type.coding.code = 'MR').value",
-        "Get medical record number")?;
+        "Get medical record number",
+    )?;
 
-    test_expression(&parser, &evaluator, &context,
+    test_expression(
+        &parser,
+        &evaluator,
+        &context,
         "%resource.telecom.where(system = 'email' and use = 'work').value",
-        "Get work email address")?;
+        "Get work email address",
+    )?;
 
     // Scenario 2: Race and Ethnicity (US Core)
     println!("\n🌍 Scenario 2: Race and Ethnicity Information");
     println!("---------------------------------------------");
-    
+
     test_expression(&parser, &evaluator, &context,
         "extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race').extension.where(url = 'ombCategory').valueCoding.display",
         "Get race category display")?;
@@ -161,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Scenario 3: Extended Demographics
     println!("\n🏠 Scenario 3: Extended Demographics");
     println!("-----------------------------------");
-    
+
     test_expression(&parser, &evaluator, &context,
         "extension('http://example.org/fhir/StructureDefinition/patient-birthPlace').valueAddress.city",
         "Get birth city")?;
@@ -177,7 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Scenario 4: Data Validation and Quality Checks
     println!("\n✅ Scenario 4: Data Validation and Quality Checks");
     println!("-------------------------------------------------");
-    
+
     test_expression(&parser, &evaluator, &context,
         "%resource.name.where(use = 'official').exists() and %resource.identifier.where(type.coding.code = 'MR').exists()",
         "Check required demographics present")?;
@@ -193,10 +201,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Scenario 5: Complex Navigation and Filtering
     println!("\n🔍 Scenario 5: Complex Navigation and Filtering");
     println!("----------------------------------------------");
-    
-    test_expression(&parser, &evaluator, &context,
+
+    test_expression(
+        &parser,
+        &evaluator,
+        &context,
         "%resource.extension.where(url.contains('us-core')).count()",
-        "Count US Core extensions")?;
+        "Count US Core extensions",
+    )?;
 
     test_expression(&parser, &evaluator, &context,
         "%resource.descendants().where($this.system.exists() and $this.system.contains('terminology.hl7.org')).count()",
@@ -209,7 +221,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Scenario 6: Practical Healthcare Workflows
     println!("\n🏥 Scenario 6: Practical Healthcare Workflows");
     println!("--------------------------------------------");
-    
+
     test_expression(&parser, &evaluator, &context,
         "(%resource.name.where(use = 'official').prefix.first() + ' ' + %resource.name.where(use = 'official').given.first() + ' ' + %resource.name.where(use = 'official').family) + ' (' + %resource.gender + ', DOB: ' + %resource.birthDate + ')'",
         "Create patient summary string")?;
@@ -218,14 +230,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "%resource.identifier.where(type.coding.code in ('MR' | 'SS')).select(type.coding.code + ': ' + value)",
         "List key identifiers")?;
 
-    test_expression(&parser, &evaluator, &context,
+    test_expression(
+        &parser,
+        &evaluator,
+        &context,
         "extension().where(hasValue()).url",
-        "List all extensions that have values")?;
+        "List all extensions that have values",
+    )?;
 
     println!("\n✅ FHIR Resource Navigation Examples Complete!");
     println!("These examples demonstrate:");
     println!("• Complex patient demographic extraction");
-    println!("• US Core race and ethnicity handling"); 
+    println!("• US Core race and ethnicity handling");
     println!("• Extended demographic information access");
     println!("• Data validation and quality checks");
     println!("• Complex navigation and filtering patterns");
@@ -245,22 +261,20 @@ fn test_expression(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("  Expression: {expression}");
     println!("  Purpose: {description}");
-    
+
     match parser.parse(expression) {
-        Ok(parsed) => {
-            match evaluator.evaluate(&parsed, context) {
-                Ok(result) => {
-                    println!("  Result: {result:?}\n");
-                },
-                Err(e) => {
-                    println!("  Error: {e:?}\n");
-                }
+        Ok(parsed) => match evaluator.evaluate(&parsed, context) {
+            Ok(result) => {
+                println!("  Result: {result:?}\n");
+            }
+            Err(e) => {
+                println!("  Error: {e:?}\n");
             }
         },
         Err(e) => {
             println!("  Parse Error: {e:?}\n");
         }
     }
-    
+
     Ok(())
 }

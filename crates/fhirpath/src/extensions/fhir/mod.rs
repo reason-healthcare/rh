@@ -60,10 +60,12 @@ use crate::evaluator::EvaluationContext;
 use std::collections::HashMap;
 
 /// Function signature for extension functions
-type ExtensionFunction = Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue> + Send + Sync>;
+type ExtensionFunction =
+    Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue> + Send + Sync>;
 
 /// Variable resolver signature
-type VariableResolver = Box<dyn Fn(&str, &EvaluationContext) -> FhirPathResult<Option<FhirPathValue>> + Send + Sync>;
+type VariableResolver =
+    Box<dyn Fn(&str, &EvaluationContext) -> FhirPathResult<Option<FhirPathValue>> + Send + Sync>;
 
 /// FHIR extension registry
 pub struct FhirExtensions {
@@ -78,7 +80,7 @@ impl FhirExtensions {
             functions: HashMap::new(),
             variables: HashMap::new(),
         };
-        
+
         extensions.register_all();
         extensions
     }
@@ -95,7 +97,11 @@ impl FhirExtensions {
     }
 
     /// Resolve a variable by name
-    pub fn resolve_variable(&self, name: &str, context: &EvaluationContext) -> FhirPathResult<Option<FhirPathValue>> {
+    pub fn resolve_variable(
+        &self,
+        name: &str,
+        context: &EvaluationContext,
+    ) -> FhirPathResult<Option<FhirPathValue>> {
         for resolver in self.variables.values() {
             if let Some(value) = resolver(name, context)? {
                 return Ok(Some(value));
@@ -129,7 +135,7 @@ mod tests {
     #[test]
     fn test_fhir_extensions_creation() {
         let extensions = FhirExtensions::new();
-        
+
         // Should have some functions and variables registered
         assert!(!extensions.functions.is_empty());
         assert!(!extensions.variables.is_empty());
@@ -139,7 +145,7 @@ mod tests {
     fn test_function_registration() {
         let extensions = FhirExtensions::new();
         let function_names = extensions.function_names();
-        
+
         // Should have the FHIR functions
         println!("FHIR functions: {function_names:?}");
         assert!(function_names.iter().any(|name| *name == "extension"));
@@ -149,7 +155,7 @@ mod tests {
     fn test_variable_registration() {
         let extensions = FhirExtensions::new();
         let variable_names = extensions.variable_names();
-        
+
         // Should have the FHIR variables
         println!("FHIR variables: {variable_names:?}");
         assert!(variable_names.iter().any(|name| *name == "resource"));
@@ -163,7 +169,7 @@ mod tests {
             "id": "123"
         });
         let context = EvaluationContext::new(patient);
-        
+
         let result = extensions.resolve_variable("resource", &context).unwrap();
         assert!(result.is_some());
     }
