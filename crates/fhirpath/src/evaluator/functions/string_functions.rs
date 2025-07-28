@@ -94,6 +94,19 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
         }),
     );
 
+    // lastIndexOf() function
+    functions.insert(
+        "lastIndexOf".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            if params.len() != 1 {
+                return Err(FhirPathError::InvalidOperation {
+                    message: "lastIndexOf() requires exactly one parameter".to_string(),
+                });
+            }
+            StringEvaluator::last_index_of(target, &params[0])
+        }),
+    );
+
     // replace() function
     functions.insert(
         "replace".to_string(),

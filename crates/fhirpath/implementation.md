@@ -140,7 +140,7 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `endsWith(suffix)` | `endsWith(suffix: String) : Boolean` | Test if string ends with suffix |
 | ✅ | `contains(substring)` | `contains(substring: String) : Boolean` | Test if string contains substring |
 | ✅ | `indexOf(substring)` | `indexOf(substring: String) : Integer` | Find index of substring |
-| ❌ | `lastIndexOf(substring)` | `lastIndexOf(substring: String) : Integer` | Find 0-based index of substring |
+| ✅ | `lastIndexOf(substring)` | `lastIndexOf(substring: String) : Integer` | Find 0-based index of substring |
 
 #### String Manipulation
 | Status | Function | Signature | Description |

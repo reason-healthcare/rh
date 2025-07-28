@@ -150,6 +150,37 @@ impl StringEvaluator {
         }
     }
 
+    /// Find the index of the last occurrence of a substring
+    /// FHIRPath: String.lastIndexOf(substring: String) -> Integer
+    /// Returns -1 if not found (following FHIRPath specification)
+    pub fn last_index_of(
+        target: &FhirPathValue,
+        substring: &FhirPathValue,
+    ) -> Result<FhirPathValue, FhirPathError> {
+        let string = match target {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "lastIndexOf() can only be called on String values".to_string(),
+                })
+            }
+        };
+
+        let substring_str = match substring {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "lastIndexOf() substring parameter must be a String".to_string(),
+                })
+            }
+        };
+
+        match string.rfind(substring_str) {
+            Some(index) => Ok(FhirPathValue::Integer(index as i64)),
+            None => Ok(FhirPathValue::Integer(-1)),
+        }
+    }
+
     /// Replace all occurrences of a pattern with a replacement string
     /// FHIRPath: String.replace(pattern: String, replacement: String) -> String
     pub fn replace(
@@ -530,6 +561,38 @@ mod tests {
         let substring = FhirPathValue::String("foo".to_string());
         let result = StringEvaluator::index_of(&input, &substring).unwrap();
         assert_eq!(result, FhirPathValue::Integer(-1));
+    }
+
+    #[test]
+    fn test_last_index_of_found() {
+        let input = FhirPathValue::String("hello world world".to_string());
+        let substring = FhirPathValue::String("world".to_string());
+        let result = StringEvaluator::last_index_of(&input, &substring).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(12));
+    }
+
+    #[test]
+    fn test_last_index_of_not_found() {
+        let input = FhirPathValue::String("hello world".to_string());
+        let substring = FhirPathValue::String("foo".to_string());
+        let result = StringEvaluator::last_index_of(&input, &substring).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(-1));
+    }
+
+    #[test]
+    fn test_last_index_of_single_occurrence() {
+        let input = FhirPathValue::String("hello world".to_string());
+        let substring = FhirPathValue::String("world".to_string());
+        let result = StringEvaluator::last_index_of(&input, &substring).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(6));
+    }
+
+    #[test]
+    fn test_last_index_of_empty_substring() {
+        let input = FhirPathValue::String("hello".to_string());
+        let substring = FhirPathValue::String("".to_string());
+        let result = StringEvaluator::last_index_of(&input, &substring).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(5)); // Empty string is found at the end
     }
 
     #[test]
