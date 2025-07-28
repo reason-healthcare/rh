@@ -83,6 +83,7 @@ This document provides a comprehensive overview of all supported operations and 
 #### Boolean Collection Operations
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
+| ❌ | `not()` | `not() : Boolean` | Returns true if the input collection evaluates to false, and false if it evaluates to true |
 | ✅ | `all()` | `all() : Boolean` | Test if all items are truthy |
 | ✅ | `allTrue()` | `allTrue() : Boolean` | Test if all items are boolean true |
 | ✅ | `anyTrue()` | `anyTrue() : Boolean` | Test if any item is boolean true |
@@ -105,6 +106,7 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `intersect(other)` | `intersect(other: collection) : collection` | Items in both collections |
 | ✅ | `exclude(other)` | `exclude(other: collection) : collection` | Items not in other collection |
 | ✅ | `combine(other)` | `combine(other: collection) : collection` | Merge collections preserving duplicates |
+| ❌ | `union(other)` | `union(other: collection) : collection` | Merge collections remove duplicates |
 | ✅ | `subsetOf(other)` | `subsetOf(other: collection) : Boolean` | Test if subset of other |
 | ✅ | `supersetOf(other)` | `supersetOf(other: collection) : Boolean` | Test if superset of other |
 
@@ -138,6 +140,7 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `endsWith(suffix)` | `endsWith(suffix: String) : Boolean` | Test if string ends with suffix |
 | ✅ | `contains(substring)` | `contains(substring: String) : Boolean` | Test if string contains substring |
 | ✅ | `indexOf(substring)` | `indexOf(substring: String) : Integer` | Find index of substring |
+| ❌ | `lastIndexOf(substring)` | `lastIndexOf(substring: String) : Integer` | Find 0-based index of substring |
 
 #### String Manipulation
 | Status | Function | Signature | Description |
@@ -154,6 +157,14 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `matches(regex)` | `matches(regex: String) : Boolean` | Test if string matches regex |
 | ✅ | `matchesFull(regex)` | `matchesFull(regex: String) : Boolean` | Test if entire string matches regex |
 | ✅ | `replaceMatches(regex, substitution)` | `replaceMatches(regex: String, substitution: String) : String` | Replace regex matches with substitution |
+
+#### Additional String Functions 
+| Status | Function | Signature | Description |
+|--------|----------|-----------|-------------|
+| ❌ | `encode(format)` | `encode(format : String) : String` | Encode using format: hex, nase64, urlbase64 |
+| ❌ | `decode(format)` | `decode(format : String) : String` | Decode using format: hex, nase64, urlbase64 |
+| ❌ | `escape(target)` | `escape(target : String) : String` | Escape using target: html or json |
+| ❌ | `unescape(target)` | `unescape(target : String) : String` | Un-escape using target: html or json |
 
 ### Math Functions
 
@@ -240,6 +251,24 @@ This document provides a comprehensive overview of all supported operations and 
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
 | ❌ | `aggregate(aggregator, init?)` | aggregate(aggregator : expression [, init : value]) : value | General-purpose aggregation |
+
+### Reflection `type()`
+| Status | Kind     | Result    | Description |
+|--------|----------|-----------|-------------|
+| ❌ | Primitive Type | `SimpleTypeInfo { namespace: string, name: string, baseType: TypeSpecifier }` | For primitive types such as String and Integer (e.g. `('John' \| 'Mary').type()`) |
+| ❌ | Class Type | `ClassInfo { namespace: string, name: string, baseType: TypeSpecifier, element: List<ClassInfoElement> }` | For class types (e.g. `Patient.maritalStatus.type()`) |
+| ❌ | Collection Type | `ListTypeInfo { elementType: TypeSpecifier }` | For collection types (e.g. `Patient.address.type()`) |
+| ❌ | Anonymous Type | `TupleTypeInfo { element: List<TupleTypeInfoElement> }` | For types that have no associated name (e.g. `Patient.contact.single().type()`) |
+
+
+### Utility
+| Status | Function | Signature | Description |
+|--------|----------|-----------|-------------|
+| ❌ | `trace(name, projection?)` | trace(name : String [, projection: Expression]) : collection | Adds a String representation of the input collection to the diagnostic log, using the name argument as the name in the log. |
+| ❌ | `defineVariable(name, expression)` | defineVariable(name: String [, expr: expression]) | Defines a variable named name that is accessible in subsequent expressions. |
+| ❌ | `lowBoundary(precision)` | lowBoundary([precision: Integer]): Decimal \| Date \| DateTime \| Time | The least possible value of the input to the specified precision. |
+| ❌ | `highBoundary(precision)` | highBoundary([precision: Integer]): Decimal \| Date \| DateTime \| Time | The greatest possible value of the input to the specified precision. |
+| ❌ | `precision()` | precision() : Integer | If the input collection contains a single item, this function will return the number of digits of precision. |
 
 ## Literals
 
