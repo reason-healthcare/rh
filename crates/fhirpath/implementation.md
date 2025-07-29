@@ -251,7 +251,7 @@ This document provides a comprehensive overview of all supported operations and 
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
 | ✅ | `is(type)` | is(type : type specifier) | is() function is supported for backwards compatibility with previous implementations of FHIRPath. See `is` operator |
-| ✅ | `as(type)` | is(type : type specifier) | The as() function is supported for backwards compatibility with previous implementations of FHIRPath. See `as` operator |
+| ✅ | `as(type)` | as(type : type specifier) | The as() function is supported for backwards compatibility with previous implementations of FHIRPath. See `as` operator |
 
 ### Aggregates
 | Status | Function | Signature | Description |

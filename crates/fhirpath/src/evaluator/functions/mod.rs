@@ -16,7 +16,6 @@ pub mod conversion_functions;
 pub mod datetime_functions;
 pub mod math_functions;
 pub mod string_functions;
-pub mod type_functions;
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
@@ -75,9 +74,6 @@ impl FunctionRegistry {
 
         // Boolean functions (not, etc.)
         boolean_functions::register_boolean_functions(&mut self.functions);
-
-        // Type functions (is, as - backward compatibility)
-        type_functions::register_type_functions(&mut self.functions);
     }
 
     /// Register extension functions from the extension system

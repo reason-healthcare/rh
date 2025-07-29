@@ -56,6 +56,13 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 // String operations
 let expr = parser.parse("name.family.upper()").unwrap();
 let result = evaluator.evaluate(&expr, &context).unwrap();
+
+// Type functions for backward compatibility
+let expr = parser.parse("name.is(HumanName)").unwrap();  // Equivalent to: name is HumanName
+let result = evaluator.evaluate(&expr, &context).unwrap();
+
+let expr = parser.parse("name.as(HumanName).family").unwrap();  // Equivalent to: (name as HumanName).family
+let result = evaluator.evaluate(&expr, &context).unwrap();
 ```
 
 [See the examples directory](./examples/) for complete, runnable examples with detailed output and explanations.

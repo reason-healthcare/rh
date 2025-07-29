@@ -208,6 +208,8 @@ impl FhirPathEvaluator {
                     "select" => self.evaluate_select_function(target, parameters, context),
                     "repeat" => self.evaluate_repeat_function(target, parameters, context),
                     "ofType" => self.evaluate_of_type_function(target, parameters, context),
+                    "is" => self.evaluate_is_function(target, parameters, context),
+                    "as" => self.evaluate_as_function(target, parameters, context),
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -540,10 +542,133 @@ impl FhirPathEvaluator {
 
         TypeEvaluator::evaluate_of_type(target, &type_specifier)
     }
+
+    fn evaluate_is_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "is() function requires exactly one parameter (type specifier)"
+                    .to_string(),
+            });
+        }
+
+        // Extract type name from the parameter expression
+        let type_name = match &parameters[0] {
+            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
+            _ => {
+                // Try to evaluate the parameter and extract the type name
+                let param_result = self.evaluate_expression(&parameters[0], context)?;
+                match param_result {
+                    FhirPathValue::String(type_str) => type_str,
+                    _ => {
+                        return Err(FhirPathError::FunctionError {
+                            message: "is() function requires a type specifier as parameter"
+                                .to_string(),
+                        });
+                    }
+                }
+            }
+        };
+
+        // Create a simple TypeSpecifier from the type name
+        let type_specifier = TypeSpecifier {
+            qualified_name: vec![type_name],
+        };
+
+        TypeEvaluator::evaluate_type_operation(target, &TypeOperator::Is, &type_specifier)
+    }
+
+    fn evaluate_as_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "as() function requires exactly one parameter (type specifier)"
+                    .to_string(),
+            });
+        }
+
+        // Extract type name from the parameter expression
+        let type_name = match &parameters[0] {
+            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
+            _ => {
+                // Try to evaluate the parameter and extract the type name
+                let param_result = self.evaluate_expression(&parameters[0], context)?;
+                match param_result {
+                    FhirPathValue::String(type_str) => type_str,
+                    _ => {
+                        return Err(FhirPathError::FunctionError {
+                            message: "as() function requires a type specifier as parameter"
+                                .to_string(),
+                        });
+                    }
+                }
+            }
+        };
+
+        // Create a simple TypeSpecifier from the type name
+        let type_specifier = TypeSpecifier {
+            qualified_name: vec![type_name],
+        };
+
+        TypeEvaluator::evaluate_type_operation(target, &TypeOperator::As, &type_specifier)
+    }
 }
 
 impl Default for FhirPathEvaluator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::FhirPathParser;
+    use serde_json::json;
+
+    #[test]
+    fn test_is_function_basic() {
+        let data = json!({
+            "string_value": "test"
+        });
+
+        let context = EvaluationContext::new(data);
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        let ast = parser
+            .parse("string_value.is(String)")
+            .expect("Failed to parse");
+        let result = evaluator
+            .evaluate(&ast, &context)
+            .expect("Failed to evaluate");
+        assert_eq!(result, FhirPathValue::Boolean(true));
+    }
+
+    #[test]
+    fn test_as_function_basic() {
+        let data = json!({
+            "string_value": "test"
+        });
+
+        let context = EvaluationContext::new(data);
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        let ast = parser
+            .parse("string_value.as(String)")
+            .expect("Failed to parse");
+        let result = evaluator
+            .evaluate(&ast, &context)
+            .expect("Failed to evaluate");
+        assert_eq!(result, FhirPathValue::String("test".to_string()));
     }
 }
