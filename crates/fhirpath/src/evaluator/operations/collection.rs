@@ -413,6 +413,59 @@ impl CollectionEvaluator {
         }
     }
 
+    /// Union operation - merge collections and remove duplicates
+    /// The union function combines the target collection with the parameter collection,
+    /// removing duplicate items. This is like combine() but with deduplication.
+    pub fn union(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        let mut result = Vec::new();
+
+        // Add items from target collection
+        match target {
+            FhirPathValue::Empty => {
+                // Don't add anything from empty target
+            }
+            FhirPathValue::Collection(items) => {
+                result.extend(items.clone());
+            }
+            value => {
+                result.push(value.clone());
+            }
+        }
+
+        // Add items from other collection
+        match other {
+            FhirPathValue::Empty => {
+                // Don't add anything from empty other
+            }
+            FhirPathValue::Collection(items) => {
+                result.extend(items.clone());
+            }
+            value => {
+                result.push(value.clone());
+            }
+        }
+
+        // Remove duplicates - similar to distinct() implementation
+        let mut unique_items = Vec::new();
+        for item in result {
+            if !unique_items
+                .iter()
+                .any(|existing| FhirPathValue::equals_static(existing, &item))
+            {
+                unique_items.push(item);
+            }
+        }
+
+        // Return result based on size
+        if unique_items.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else if unique_items.len() == 1 {
+            Ok(unique_items.into_iter().next().unwrap())
+        } else {
+            Ok(FhirPathValue::Collection(unique_items))
+        }
+    }
+
     /// Check if all items in collection evaluate to true
     pub fn all(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {

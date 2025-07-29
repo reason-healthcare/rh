@@ -221,6 +221,20 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
         }),
     );
 
+    // union() function
+    functions.insert(
+        "union".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            if params.len() != 1 {
+                return Err(FhirPathError::InvalidOperation {
+                    message: "union() requires exactly one parameter (other collection)"
+                        .to_string(),
+                });
+            }
+            CollectionEvaluator::union(target, &params[0])
+        }),
+    );
+
     // subsetOf() function
     functions.insert(
         "subsetOf".to_string(),

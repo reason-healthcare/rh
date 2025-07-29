@@ -106,7 +106,7 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `intersect(other)` | `intersect(other: collection) : collection` | Items in both collections |
 | ✅ | `exclude(other)` | `exclude(other: collection) : collection` | Items not in other collection |
 | ✅ | `combine(other)` | `combine(other: collection) : collection` | Merge collections preserving duplicates |
-| ❌ | `union(other)` | `union(other: collection) : collection` | Merge collections remove duplicates |
+| ✅ | `union(other)` | `union(other: collection) : collection` | Merge collections remove duplicates |
 | ✅ | `subsetOf(other)` | `subsetOf(other: collection) : Boolean` | Test if subset of other |
 | ✅ | `supersetOf(other)` | `supersetOf(other: collection) : Boolean` | Test if superset of other |
 
