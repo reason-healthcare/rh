@@ -247,6 +247,12 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `toQuantity(unit?)` | `toQuantity(unit?: String) : Quantity` | Convert to quantity with optional unit |
 | ✅ | `convertsToQuantity(unit?)` | `convertsToQuantity(unit?: String) : Boolean` | Test if convertible to quantity |
 
+### Type Functions (backward compat.)
+| Status | Function | Signature | Description |
+|--------|----------|-----------|-------------|
+| ✅ | `is(type)` | is(type : type specifier) | is() function is supported for backwards compatibility with previous implementations of FHIRPath. See `is` operator |
+| ✅ | `as(type)` | is(type : type specifier) | The as() function is supported for backwards compatibility with previous implementations of FHIRPath. See `as` operator |
+
 ### Aggregates
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
@@ -363,7 +369,6 @@ The following table shows operator precedence from highest to lowest:
 | ❌ | `getValue()` | Not implemented |
 | ❌ | `trace()` | Not implemented |
 | ❌ | `resolve()` | Not implemented |
-| ✅ | `ofType(Identifier)` | Filter collection by type specifier |
 | ❌ | `elementDefinition()` | Not implemented |
 | ❌ | `slice(structure, name)` | Not implemented |
 | ❌ | `checkModifiers()` | Not implemented |
