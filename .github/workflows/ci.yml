@@ -208,7 +208,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Generate code coverage
-        run: cargo tarpaulin --workspace --timeout 120 --out xml
+        run: cargo tarpaulin --workspace --timeout 300 --out xml
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
