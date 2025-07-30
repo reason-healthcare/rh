@@ -91,11 +91,29 @@ impl TokenGenerator {
         let derive_idents: Vec<_> = derives.iter().map(|d| format_ident!("{}", d)).collect();
 
         // Generate fields
-        let fields: Vec<_> = rust_struct
+        let mut fields: Vec<TokenStream> = Vec::new();
+
+        // Add base definition as flattened field if present
+        if let Some(base_def) = &rust_struct.base_definition {
+            // Extract the base type name from the URL (e.g., "http://hl7.org/fhir/StructureDefinition/Element" -> "Element")
+            let base_type = base_def.split('/').next_back().unwrap_or(base_def);
+            let base_field_name = format_ident!("base");
+            let base_type_ident = format_ident!("{}", base_type);
+
+            fields.push(quote! {
+                #[doc = "Base definition inherited from FHIR specification"]
+                #[serde(flatten)]
+                pub #base_field_name: #base_type_ident
+            });
+        }
+
+        // Add regular fields
+        let regular_fields: Vec<_> = rust_struct
             .fields
             .iter()
             .map(|field| self.generate_field(field))
             .collect();
+        fields.extend(regular_fields);
 
         // Generate visibility
         let vis = if rust_struct.is_public {
@@ -224,16 +242,25 @@ impl TokenGenerator {
             quote! {}
         };
 
+        // Generate serde rename attribute if needed
+        let serde_attrs = if let Some(rename) = &variant.serde_rename {
+            quote! { #[serde(rename = #rename)] }
+        } else {
+            quote! {}
+        };
+
         // Generate variant with optional data
         if let Some(data_type) = &variant.data {
             let data_tokens = self.generate_type(data_type, false);
             quote! {
                 #doc_attrs
+                #serde_attrs
                 #name(#data_tokens)
             }
         } else {
             quote! {
                 #doc_attrs
+                #serde_attrs
                 #name
             }
         }

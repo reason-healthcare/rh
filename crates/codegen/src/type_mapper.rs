@@ -25,12 +25,22 @@ impl<'a> TypeMapper<'a> {
 
     /// Map a FHIR type to a Rust type
     pub fn map_fhir_type(&mut self, fhir_types: &[ElementType], is_array: bool) -> RustType {
+        self.map_fhir_type_with_binding(fhir_types, None, is_array)
+    }
+
+    /// Map a FHIR type to a Rust type, considering binding information for enum generation
+    pub fn map_fhir_type_with_binding(
+        &mut self,
+        fhir_types: &[ElementType],
+        binding: Option<&crate::fhir_types::ElementBinding>,
+        is_array: bool,
+    ) -> RustType {
         if fhir_types.is_empty() {
             return RustType::String; // Default fallback
         }
 
         let primary_type = &fhir_types[0];
-        let rust_type = self.map_single_fhir_type(primary_type);
+        let rust_type = self.map_single_fhir_type_with_binding(primary_type, binding);
 
         if is_array {
             RustType::Vec(Box::new(rust_type))
@@ -39,15 +49,61 @@ impl<'a> TypeMapper<'a> {
         }
     }
 
+    /// Parse ValueSet URL to extract URL and version
+    fn parse_valueset_url(&self, url: &str) -> (String, Option<String>) {
+        if let Some(pipe_pos) = url.find('|') {
+            let base_url = url[..pipe_pos].to_string();
+            let version = url[pipe_pos + 1..].to_string();
+            (base_url, Some(version))
+        } else {
+            (url.to_string(), None)
+        }
+    }
+
+    /// Generate enum for required ValueSet binding
+    fn generate_enum_for_required_binding(
+        &mut self,
+        url: &str,
+        version: Option<&str>,
+    ) -> Option<String> {
+        // Try to generate enum from ValueSet file
+        match self
+            .value_set_manager
+            .generate_enum_from_value_set(url, version)
+        {
+            Ok(enum_name) => Some(enum_name),
+            Err(_) => {
+                // Fallback to placeholder enum
+                Some(self.value_set_manager.generate_placeholder_enum(url))
+            }
+        }
+    }
+
     /// Map a single FHIR ElementType to a Rust type
+    #[allow(dead_code)]
     fn map_single_fhir_type(&mut self, element_type: &ElementType) -> RustType {
+        self.map_single_fhir_type_with_binding(element_type, None)
+    }
+
+    /// Map a single FHIR ElementType to a Rust type, considering binding information
+    fn map_single_fhir_type_with_binding(
+        &mut self,
+        element_type: &ElementType,
+        binding: Option<&crate::fhir_types::ElementBinding>,
+    ) -> RustType {
+        // Handle cases where code is missing - default to String
+        let code = match &element_type.code {
+            Some(c) => c,
+            None => return RustType::String,
+        };
+
         // Check for custom type mappings first
-        if let Some(rust_type) = self.config.type_mappings.get(&element_type.code) {
+        if let Some(rust_type) = self.config.type_mappings.get(code) {
             return self.parse_rust_type_string(rust_type);
         }
 
         // Handle built-in FHIR types
-        match element_type.code.as_str() {
+        match code.as_str() {
             // Primitive types
             "string" | "markdown" | "uri" | "url" | "canonical" | "oid" | "uuid" => {
                 RustType::String
@@ -62,8 +118,26 @@ impl<'a> TypeMapper<'a> {
             // Binary data
             "base64Binary" => RustType::String,
 
-            // Code types
-            "code" => RustType::String,
+            // Code types - check for required binding and generate enum
+            "code" => {
+                if let Some(binding) = binding {
+                    if binding.strength == "required" {
+                        if let Some(value_set_url) = &binding.value_set {
+                            // Parse ValueSet URL and version
+                            let (url, version) = self.parse_valueset_url(value_set_url);
+
+                            // Generate enum for required binding
+                            if let Some(enum_name) =
+                                self.generate_enum_for_required_binding(&url, version.as_deref())
+                            {
+                                return RustType::Custom(enum_name);
+                            }
+                        }
+                    }
+                }
+                // Fall back to String for non-required bindings or when enum generation fails
+                RustType::String
+            }
 
             // Complex types
             "Reference" => self.handle_reference_type(element_type),
@@ -88,6 +162,24 @@ impl<'a> TypeMapper<'a> {
             // Extension type
             "Extension" => RustType::Custom("Extension".to_string()),
 
+            // StructureDefinition sub-types
+            "BackboneElement" => RustType::Custom("BackboneElement".to_string()),
+            "ElementDefinition" => RustType::Custom("ElementDefinition".to_string()),
+
+            // Handle FHIRPath system types
+            typ if typ.starts_with("http://hl7.org/fhirpath/System.") => {
+                let system_type = typ
+                    .strip_prefix("http://hl7.org/fhirpath/System.")
+                    .unwrap_or("String");
+                match system_type {
+                    "String" => RustType::String,
+                    "Integer" => RustType::Integer,
+                    "Boolean" => RustType::Boolean,
+                    "Decimal" => RustType::Float,
+                    _ => RustType::String,
+                }
+            }
+
             // Resource types - use the type name directly
             resource_type if self.is_resource_type(resource_type) => {
                 RustType::Custom(resource_type.to_string())
@@ -96,8 +188,7 @@ impl<'a> TypeMapper<'a> {
             // Unknown type - default to string
             _ => {
                 eprintln!(
-                    "Warning: Unknown FHIR type '{}', defaulting to String",
-                    element_type.code
+                    "Warning: Unknown FHIR type '{code}', defaulting to String"
                 );
                 RustType::String
             }
@@ -105,23 +196,14 @@ impl<'a> TypeMapper<'a> {
     }
 
     /// Handle Reference types with target profiles
-    fn handle_reference_type(&mut self, element_type: &ElementType) -> RustType {
-        if let Some(target_profiles) = &element_type.target_profile {
-            if target_profiles.len() == 1 {
-                // Single target profile - create a typed reference
-                let target = self.extract_resource_name(&target_profiles[0]);
-                return RustType::Custom(format!("Reference<{target}>"));
-            } else if target_profiles.len() > 1 {
-                // Multiple target profiles - use generic reference
-                return RustType::Custom("Reference".to_string());
-            }
-        }
-
-        // No target profile specified - use generic reference
+    fn handle_reference_type(&mut self, _element_type: &ElementType) -> RustType {
+        // For now, just use a generic Reference type
+        // In the future, we could generate different Reference types for different targets
         RustType::Custom("Reference".to_string())
     }
 
     /// Extract resource name from a profile URL
+    #[allow(dead_code)]
     fn extract_resource_name(&self, profile_url: &str) -> String {
         profile_url
             .split('/')
@@ -211,7 +293,7 @@ mod tests {
         let mut mapper = TypeMapper::new(&config, &mut value_set_manager);
 
         let string_type = ElementType {
-            code: "string".to_string(),
+            code: Some("string".to_string()),
             target_profile: None,
         };
 
@@ -221,7 +303,7 @@ mod tests {
         ));
 
         let boolean_type = ElementType {
-            code: "boolean".to_string(),
+            code: Some("boolean".to_string()),
             target_profile: None,
         };
 

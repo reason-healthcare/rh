@@ -28,6 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         name: "Patient".to_string(),
         title: Some("Patient".to_string()),
         status: "active".to_string(),
+        description: Some("A person who is the subject of healthcare services".to_string()),
+        purpose: Some("Patient resource for healthcare management".to_string()),
         kind: "resource".to_string(),
         is_abstract: false,
         base_type: "DomainResource".to_string(),

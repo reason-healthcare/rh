@@ -13,6 +13,10 @@ The `codegen` crate provides comprehensive functionality for:
 - **Automatic Extraction**: Extract and process StructureDefinitions from package tarballs
 - **Configuration**: Flexible configuration for type mappings and output settings
 
+## Roadmap
+
+* Better support for dealing with package dependencies
+
 ## Quick Start
 
 Add to your `Cargo.toml`:

@@ -1,4 +1,4 @@
-//! Rust-specific data structures for code generation
+//! Rust-specific types and structures for code generation
 //!
 //! This module contains data structures that represent generated Rust code elements
 //! such as structs, fields, enums, and their associated metadata.
@@ -11,6 +11,7 @@ pub struct RustStruct {
     pub fields: Vec<RustField>,
     pub derives: Vec<String>,
     pub is_public: bool,
+    pub base_definition: Option<String>,
 }
 
 impl RustStruct {
@@ -19,8 +20,14 @@ impl RustStruct {
             name,
             doc_comment: None,
             fields: Vec::new(),
-            derives: vec!["Debug".to_string(), "Clone".to_string()],
+            derives: vec![
+                "Debug".to_string(),
+                "Clone".to_string(),
+                "Deserialize".to_string(),
+                "Serialize".to_string(),
+            ],
             is_public: true,
+            base_definition: None,
         }
     }
 
@@ -134,6 +141,7 @@ pub struct RustEnumVariant {
     pub name: String,
     pub doc_comment: Option<String>,
     pub data: Option<RustType>,
+    pub serde_rename: Option<String>,
 }
 
 impl RustEnumVariant {
@@ -142,11 +150,17 @@ impl RustEnumVariant {
             name,
             doc_comment: None,
             data: None,
+            serde_rename: None,
         }
     }
 
     pub fn with_data(mut self, data: RustType) -> Self {
         self.data = Some(data);
+        self
+    }
+
+    pub fn with_serde_rename(mut self, rename: String) -> Self {
+        self.serde_rename = Some(rename);
         self
     }
 }

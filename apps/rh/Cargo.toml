@@ -14,6 +14,7 @@ description = "Unified CLI for FHIR processing tools"
 # Workspace dependencies
 serde = { workspace = true }
 serde_json = { workspace = true }
+chrono = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

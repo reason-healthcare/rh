@@ -16,12 +16,19 @@ extensions/
 ├── mod.rs                      # Extension registry and coordination
 ├── fhir/                       # FHIR-specific extensions
 │   ├── mod.rs                  # FHIR extension registry
+│   ├── values.rs               # FHIR-specific data types (Reference, CodeableConcept, etc.)
 │   ├── variables.rs            # FHIR variables (%resource, %context, etc.)
 │   ├── functions.rs            # FHIR functions (extension(), resolve(), etc.)
 │   └── navigation.rs           # FHIR resource navigation
-└── sql_on_fhir/               # SQL-on-FHIR extensions
-    ├── mod.rs                  # SQL-on-FHIR registry
-    └── functions.rs            # SQL-on-FHIR functions
+├── sql_on_fhir/               # SQL-on-FHIR extensions
+│   ├── mod.rs                  # SQL-on-FHIR registry
+│   ├── values.rs               # SQL-on-FHIR specific types (if needed)
+│   └── functions.rs            # SQL-on-FHIR functions
+└── custom_healthcare/         # Example custom extension
+    ├── mod.rs                  # Custom extension registry
+    ├── values.rs               # Custom healthcare data types
+    ├── functions.rs            # Custom functions
+    └── variables.rs            # Custom variables
 ```
 
 ## Creating a New Extension Module
@@ -30,101 +37,599 @@ extensions/
 
 1. Create a new directory under `extensions/` for your domain (e.g., `custom_healthcare/`)
 2. Add a `mod.rs` file to define the module registry
-3. Create individual files for different types of functionality (functions, variables, operators)
+3. Create individual files for different types of functionality:
+   - `values.rs` - Custom data types specific to your domain
+   - `functions.rs` - Custom functions that work with your types
+   - `variables.rs` - Custom variables and constants
+   - `operators.rs` - Custom operators (if needed)
 
-### Step 2: Define Functions
+### Step 2: Define Custom Data Types
 
-Use the following template for function modules:
+Each extension can define its own data types in a `values.rs` file. These types extend the base `FhirPathValue` enum additively, meaning they work alongside the core types without replacing them.
+
+Use the following template for extension-specific types:
 
 ```rust
-//! Custom extension functions for [DOMAIN_NAME]
+//! Custom data types for [DOMAIN_NAME] extensions
 //!
-//! This module provides [DESCRIPTION] functionality for FHIRPath expressions.
+//! This module defines domain-specific data types that extend the base FhirPathValue
+//! enum. These types are used in conjunction with the core types, not as replacements.
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
+use serde_json::Value;
 use std::collections::HashMap;
 
-/// Function signature for FHIRPath extension functions
-type ExtensionFunction = Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue>>;
-
-/// Register all [DOMAIN] extension functions
-pub fn register_functions(functions: &mut HashMap<String, ExtensionFunction>) {
-    // Example function registration
-    functions.insert(
-        "customFunction".to_string(),
-        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            custom_function(target, params)
-        }),
-    );
+/// Extension-specific value types for [DOMAIN]
+/// 
+/// These types extend the base FhirPathValue enum for domain-specific use cases.
+/// They are designed to be additive - working alongside core types.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DomainValue {
+    /// FHIR Reference type with reference and display
+    Reference { 
+        reference: String, 
+        display: Option<String> 
+    },
+    
+    /// FHIR CodeableConcept with coding array and text
+    CodeableConcept {
+        coding: Vec<Coding>,
+        text: Option<String>,
+    },
+    
+    /// FHIR Coding with system, code, and display
+    Coding {
+        system: Option<String>,
+        code: Option<String>,
+        display: Option<String>,
+    },
+    
+    /// FHIR Identifier with system and value
+    Identifier { 
+        system: Option<String>, 
+        value: String,
+        use_: Option<String>,
+    },
+    
+    /// FHIR Period with start and end
+    Period {
+        start: Option<String>,
+        end: Option<String>,
+    },
+    
+    /// FHIR Range with low and high values
+    Range {
+        low: Option<FhirPathValue>,
+        high: Option<FhirPathValue>,
+    },
 }
 
-/// Example custom function implementation
-/// 
-/// # Arguments
-/// * `target` - The target value the function is called on
-/// * `params` - Array of parameter values passed to the function
-/// 
-/// # Returns
-/// * `Ok(FhirPathValue)` - The result of the function
-/// * `Err(FhirPathError)` - Error if the function fails
-fn custom_function(
-    target: &FhirPathValue,
-    params: &[FhirPathValue],
-) -> FhirPathResult<FhirPathValue> {
-    // Validate parameters
-    if params.len() != 1 {
-        return Err(FhirPathError::InvalidOperation {
-            message: "customFunction() requires exactly one parameter".to_string(),
-        });
-    }
-
-    // Example implementation - customize as needed
-    match target {
-        FhirPathValue::String(s) => {
-            // Process string target
-            Ok(FhirPathValue::String(format!("processed: {}", s)))
+impl DomainValue {
+    /// Convert extension type to core FhirPathValue
+    /// This allows extension types to participate in core FHIRPath operations
+    pub fn to_fhir_path_value(self) -> FhirPathValue {
+        match self {
+            DomainValue::Reference { reference, display } => {
+                let mut obj = serde_json::Map::new();
+                obj.insert("reference".to_string(), Value::String(reference));
+                if let Some(d) = display {
+                    obj.insert("display".to_string(), Value::String(d));
+                }
+                FhirPathValue::Object(Value::Object(obj))
+            }
+            DomainValue::Coding { system, code, display } => {
+                let mut obj = serde_json::Map::new();
+                if let Some(s) = system {
+                    obj.insert("system".to_string(), Value::String(s));
+                }
+                if let Some(c) = code {
+                    obj.insert("code".to_string(), Value::String(c));
+                }
+                if let Some(d) = display {
+                    obj.insert("display".to_string(), Value::String(d));
+                }
+                FhirPathValue::Object(Value::Object(obj))
+            }
+            DomainValue::Identifier { system, value, use_ } => {
+                let mut obj = serde_json::Map::new();
+                if let Some(s) = system {
+                    obj.insert("system".to_string(), Value::String(s));
+                }
+                obj.insert("value".to_string(), Value::String(value));
+                if let Some(u) = use_ {
+                    obj.insert("use".to_string(), Value::String(u));
+                }
+                FhirPathValue::Object(Value::Object(obj))
+            }
+            // ... handle other types similarly
+            _ => FhirPathValue::Empty, // Fallback for unhandled types
         }
-        _ => Err(FhirPathError::TypeError {
-            message: "customFunction() can only be called on String values".to_string(),
-        }),
+    }
+    
+    /// Try to create extension type from core FhirPathValue
+    /// This enables automatic recognition of extension types from JSON/Objects
+    pub fn from_fhir_path_value(value: &FhirPathValue) -> Option<Self> {
+        match value {
+            FhirPathValue::Object(obj) => Self::from_json_object(obj),
+            _ => None,
+        }
+    }
+    
+    /// Create extension type from JSON object
+    pub fn from_json_object(obj: &Value) -> Option<Self> {
+        if let Value::Object(map) = obj {
+            // Detect FHIR Reference pattern
+            if map.contains_key("reference") {
+                let reference = map.get("reference")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let display = map.get("display")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                return Some(DomainValue::Reference { reference, display });
+            }
+            
+            // Detect FHIR Identifier pattern
+            if map.contains_key("value") && (map.contains_key("system") || map.contains_key("use")) {
+                let system = map.get("system")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let value = map.get("value")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let use_ = map.get("use")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                return Some(DomainValue::Identifier { system, value, use_ });
+            }
+            
+            // Detect FHIR Coding pattern
+            if map.contains_key("system") || map.contains_key("code") || map.contains_key("display") {
+                let system = map.get("system")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let code = map.get("code")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let display = map.get("display")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                return Some(DomainValue::Coding { system, code, display });
+            }
+        }
+        None
+    }
+    
+    /// Get string representation for debugging and display
+    pub fn to_string_representation(&self) -> String {
+        match self {
+            DomainValue::Reference { reference, display } => {
+                match display {
+                    Some(d) => format!("{} ({})", reference, d),
+                    None => reference.clone(),
+                }
+            }
+            DomainValue::Coding { system, code, display } => {
+                match (system, code, display) {
+                    (Some(s), Some(c), Some(d)) => format!("{}|{}|{}", s, c, d),
+                    (Some(s), Some(c), None) => format!("{}|{}", s, c),
+                    (None, Some(c), Some(d)) => format!("{}|{}", c, d),
+                    (None, Some(c), None) => c.clone(),
+                    _ => "".to_string(),
+                }
+            }
+            DomainValue::Identifier { system, value, .. } => {
+                match system {
+                    Some(s) => format!("{}|{}", s, value),
+                    None => value.clone(),
+                }
+            }
+            _ => format!("{:?}", self), // Fallback to debug representation
+        }
+    }
+    
+    /// Check equality with another domain value
+    pub fn equals(&self, other: &DomainValue) -> bool {
+        match (self, other) {
+            (
+                DomainValue::Reference { reference: r1, display: d1 },
+                DomainValue::Reference { reference: r2, display: d2 },
+            ) => r1 == r2 && d1 == d2,
+            (
+                DomainValue::Coding { system: s1, code: c1, display: d1 },
+                DomainValue::Coding { system: s2, code: c2, display: d2 },
+            ) => s1 == s2 && c1 == c2 && d1 == d2,
+            (
+                DomainValue::Identifier { system: s1, value: v1, use_: u1 },
+                DomainValue::Identifier { system: s2, value: v2, use_: u2 },
+            ) => s1 == s2 && v1 == v2 && u1 == u2,
+            _ => false,
+        }
+    }
+}
+
+/// Type registry for extension-specific types
+/// 
+/// This allows the extension system to recognize and work with custom types
+/// alongside the core FhirPathValue types.
+pub struct DomainTypeRegistry {
+    type_constructors: HashMap<String, fn(&[FhirPathValue]) -> FhirPathResult<DomainValue>>,
+    type_checkers: HashMap<String, fn(&FhirPathValue) -> bool>,
+}
+
+impl DomainTypeRegistry {
+    pub fn new() -> Self {
+        let mut registry = Self {
+            type_constructors: HashMap::new(),
+            type_checkers: HashMap::new(),
+        };
+        registry.register_default_types();
+        registry
+    }
+    
+    fn register_default_types(&mut self) {
+        // Register type constructors
+        self.type_constructors.insert(
+            "Reference".to_string(),
+            |params| {
+                if params.is_empty() || params.len() > 2 {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: "Reference() requires 1 or 2 parameters (reference, optional display)".to_string(),
+                    });
+                }
+                
+                let reference = match &params[0] {
+                    FhirPathValue::String(s) => s.clone(),
+                    _ => return Err(FhirPathError::TypeError {
+                        message: "Reference() first parameter must be a string".to_string(),
+                    }),
+                };
+                
+                let display = if params.len() > 1 {
+                    match &params[1] {
+                        FhirPathValue::String(s) => Some(s.clone()),
+                        FhirPathValue::Empty => None,
+                        _ => return Err(FhirPathError::TypeError {
+                            message: "Reference() second parameter must be a string or empty".to_string(),
+                        }),
+                    }
+                } else {
+                    None
+                };
+                
+                Ok(DomainValue::Reference { reference, display })
+            }
+        );
+        
+        // Register type checkers
+        self.type_checkers.insert(
+            "Reference".to_string(),
+            |value| {
+                if let Some(domain_val) = DomainValue::from_fhir_path_value(value) {
+                    matches!(domain_val, DomainValue::Reference { .. })
+                } else {
+                    false
+                }
+            }
+        );
+    }
+    
+    /// Check if a value is of a specific extension type
+    pub fn is_type(&self, value: &FhirPathValue, type_name: &str) -> bool {
+        if let Some(checker) = self.type_checkers.get(type_name) {
+            checker(value)
+        } else {
+            false
+        }
+    }
+    
+    /// Construct a new extension type from parameters
+    pub fn construct_type(&self, type_name: &str, params: &[FhirPathValue]) -> FhirPathResult<Option<DomainValue>> {
+        if let Some(constructor) = self.type_constructors.get(type_name) {
+            constructor(params).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
-    fn test_custom_function() {
-        let target = FhirPathValue::String("test".to_string());
-        let params = vec![FhirPathValue::String("param".to_string())];
+    fn test_reference_creation_and_conversion() {
+        let reference = DomainValue::Reference {
+            reference: "Patient/123".to_string(),
+            display: Some("John Doe".to_string()),
+        };
         
-        let result = custom_function(&target, &params).unwrap();
-        assert_eq!(result, FhirPathValue::String("processed: test".to_string()));
+        let fhir_value = reference.to_fhir_path_value();
+        let back_to_domain = DomainValue::from_fhir_path_value(&fhir_value).unwrap();
+        
+        assert!(matches!(back_to_domain, DomainValue::Reference { .. }));
     }
 
     #[test]
-    fn test_custom_function_wrong_type() {
-        let target = FhirPathValue::Integer(42);
-        let params = vec![FhirPathValue::String("param".to_string())];
+    fn test_coding_string_representation() {
+        let coding = DomainValue::Coding {
+            system: Some("http://loinc.org".to_string()),
+            code: Some("15074-8".to_string()),
+            display: Some("Blood glucose".to_string()),
+        };
         
-        let result = custom_function(&target, &params);
-        assert!(result.is_err());
+        let string_rep = coding.to_string_representation();
+        assert_eq!(string_rep, "http://loinc.org|15074-8|Blood glucose");
     }
 
     #[test]
-    fn test_custom_function_wrong_param_count() {
-        let target = FhirPathValue::String("test".to_string());
-        let params = vec![]; // No parameters
+    fn test_type_registry() {
+        let registry = DomainTypeRegistry::new();
         
-        let result = custom_function(&target, &params);
-        assert!(result.is_err());
+        let params = vec![
+            FhirPathValue::String("Patient/123".to_string()),
+            FhirPathValue::String("John Doe".to_string()),
+        ];
+        
+        let result = registry.construct_type("Reference", &params).unwrap();
+        assert!(result.is_some());
     }
 }
 ```
 
-### Step 3: Define Variables
+### Step 3: Define Functions
+
+Create a `functions.rs` file with custom function implementations. Functions can work with both core and extension-specific types defined in your `values.rs` file:
+
+```rust
+//! Custom functions for [DOMAIN_NAME] extensions
+//!
+//! Functions that work with both core FhirPathValue types and extension-specific
+//! types defined in values.rs
+
+use crate::error::*;
+use crate::evaluator::context::EvaluationContext;
+use crate::evaluator::types::FhirPathValue;
+use super::values::{DomainValue, DomainTypeRegistry};
+
+/// Get the reference URL from a FHIR Reference
+/// Usage: reference.getReference()
+pub fn get_reference(
+    context: &EvaluationContext,
+    input: &[FhirPathValue],
+    _args: &[FhirPathValue],
+) -> FhirPathResult<Vec<FhirPathValue>> {
+    let mut results = Vec::new();
+    
+    for value in input {
+        // Try to convert to domain-specific type first
+        if let Some(domain_value) = DomainValue::from_fhir_path_value(value) {
+            match domain_value {
+                DomainValue::Reference { reference, .. } => {
+                    results.push(FhirPathValue::String(reference));
+                }
+                _ => {
+                    // Not a reference type, return empty
+                }
+            }
+        } else {
+            // Fallback to generic object handling
+            if let FhirPathValue::Object(obj) = value {
+                if let Some(ref_value) = obj.get("reference") {
+                    if let Some(ref_str) = ref_value.as_str() {
+                        results.push(FhirPathValue::String(ref_str.to_string()));
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(results)
+}
+
+/// Get the display text from a FHIR Reference  
+/// Usage: reference.getDisplay()
+pub fn get_display(
+    context: &EvaluationContext,
+    input: &[FhirPathValue],
+    _args: &[FhirPathValue],
+) -> FhirPathResult<Vec<FhirPathValue>> {
+    let mut results = Vec::new();
+    
+    for value in input {
+        if let Some(domain_value) = DomainValue::from_fhir_path_value(value) {
+            match domain_value {
+                DomainValue::Reference { display: Some(display), .. } => {
+                    results.push(FhirPathValue::String(display));
+                }
+                DomainValue::Coding { display: Some(display), .. } => {
+                    results.push(FhirPathValue::String(display));
+                }
+                _ => {
+                    // No display available
+                }
+            }
+        }
+    }
+    
+    Ok(results)
+}
+
+/// Create a new FHIR Reference
+/// Usage: Reference('Patient/123', 'John Doe') or Reference('Patient/123')  
+pub fn create_reference(
+    context: &EvaluationContext,
+    input: &[FhirPathValue],
+    args: &[FhirPathValue],
+) -> FhirPathResult<Vec<FhirPathValue>> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(FhirPathError::InvalidOperation {
+            message: "Reference() requires 1 or 2 arguments (reference, optional display)".to_string(),
+        });
+    }
+    
+    let registry = DomainTypeRegistry::new();
+    
+    if let Some(domain_ref) = registry.construct_type("Reference", args)? {
+        let fhir_value = domain_ref.to_fhir_path_value();
+        Ok(vec![fhir_value])
+    } else {
+        Err(FhirPathError::InvalidOperation {
+            message: "Failed to create Reference".to_string(),
+        })
+    }
+}
+
+/// Check if a value matches a specific coding system
+/// Usage: coding.hasSystem('http://loinc.org')
+pub fn has_system(
+    context: &EvaluationContext,
+    input: &[FhirPathValue],
+    args: &[FhirPathValue],
+) -> FhirPathResult<Vec<FhirPathValue>> {
+    if args.len() != 1 {
+        return Err(FhirPathError::InvalidOperation {
+            message: "hasSystem() requires exactly 1 argument (system URL)".to_string(),
+        });
+    }
+    
+    let target_system = match &args[0] {
+        FhirPathValue::String(s) => s,
+        _ => return Err(FhirPathError::TypeError {
+            message: "hasSystem() argument must be a string".to_string(),
+        }),
+    };
+    
+    for value in input {
+        if let Some(domain_value) = DomainValue::from_fhir_path_value(value) {
+            match domain_value {
+                DomainValue::Coding { system: Some(system), .. } => {
+                    if &system == target_system {
+                        return Ok(vec![FhirPathValue::Boolean(true)]);
+                    }
+                }
+                _ => continue,
+            }
+        }
+    }
+    
+    Ok(vec![FhirPathValue::Boolean(false)])
+}
+
+/// Get all coding systems from a CodeableConcept
+/// Usage: codeableConcept.getSystems()
+pub fn get_systems(
+    context: &EvaluationContext,
+    input: &[FhirPathValue],
+    _args: &[FhirPathValue],
+) -> FhirPathResult<Vec<FhirPathValue>> {
+    let mut results = Vec::new();
+    
+    for value in input {
+        if let Some(domain_value) = DomainValue::from_fhir_path_value(value) {
+            match domain_value {
+                DomainValue::CodeableConcept { coding, .. } => {
+                    for code in coding {
+                        if let Some(system) = code.system {
+                            results.push(FhirPathValue::String(system));
+                        }
+                    }
+                }
+                DomainValue::Coding { system: Some(system), .. } => {
+                    results.push(FhirPathValue::String(system));
+                }
+                _ => continue,
+            }
+        }
+    }
+    
+    Ok(results)
+}
+
+/// Function registry for domain-specific functions
+pub struct DomainFunctionRegistry {
+    functions: std::collections::HashMap<String, fn(&EvaluationContext, &[FhirPathValue], &[FhirPathValue]) -> FhirPathResult<Vec<FhirPathValue>>>,
+}
+
+impl DomainFunctionRegistry {
+    pub fn new() -> Self {
+        let mut registry = Self {
+            functions: std::collections::HashMap::new(),
+        };
+        
+        // Register functions
+        registry.functions.insert("getReference".to_string(), get_reference);
+        registry.functions.insert("getDisplay".to_string(), get_display);
+        registry.functions.insert("Reference".to_string(), create_reference);
+        registry.functions.insert("hasSystem".to_string(), has_system);
+        registry.functions.insert("getSystems".to_string(), get_systems);
+        
+        registry
+    }
+    
+    pub fn get_function(&self, name: &str) -> Option<&fn(&EvaluationContext, &[FhirPathValue], &[FhirPathValue]) -> FhirPathResult<Vec<FhirPathValue>>> {
+        self.functions.get(name)
+    }
+    
+    pub fn has_function(&self, name: &str) -> bool {
+        self.functions.contains_key(name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_get_reference_function() {
+        let context = EvaluationContext::default();
+        
+        // Create a reference object
+        let ref_obj = json!({
+            "reference": "Patient/123",
+            "display": "John Doe"
+        });
+        
+        let input = vec![FhirPathValue::Object(ref_obj)];
+        let result = get_reference(&context, &input, &[]).unwrap();
+        
+        assert_eq!(result.len(), 1);
+        if let FhirPathValue::String(ref_str) = &result[0] {
+            assert_eq!(ref_str, "Patient/123");
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_create_reference_function() {
+        let context = EvaluationContext::default();
+        
+        let args = vec![
+            FhirPathValue::String("Patient/456".to_string()),
+            FhirPathValue::String("Jane Doe".to_string()),
+        ];
+        
+        let result = create_reference(&context, &[], &args).unwrap();
+        assert_eq!(result.len(), 1);
+        
+        // Verify the created reference has the right structure
+        if let FhirPathValue::Object(obj) = &result[0] {
+            assert_eq!(obj.get("reference").unwrap().as_str().unwrap(), "Patient/456");
+            assert_eq!(obj.get("display").unwrap().as_str().unwrap(), "Jane Doe");
+        } else {
+            panic!("Expected object result");
+        }
+    }
+}
+```
+
+### Step 4: Define Variables
 
 For custom variables (like `%resource`, `%context`), use this template:
 
@@ -180,25 +685,31 @@ mod tests {
 }
 ```
 
-### Step 4: Create Module Registry
+### Step 5: Create Module Registry
 
-Create a `mod.rs` file for your extension module:
+Create a `mod.rs` file for your extension module that brings together all components:
 
 ```rust
 //! [DOMAIN_NAME] Extensions for FHIRPath
 //!
 //! This module provides [DOMAIN] specific functionality including:
+//! - Custom data types defined in values.rs 
 //! - Custom functions for [DOMAIN] operations
 //! - Domain-specific variables and constants
 //! - Specialized navigation and data processing
 
-pub mod functions;
+pub mod values;
+pub mod functions;  
 pub mod variables;
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
 use crate::evaluator::EvaluationContext;
 use std::collections::HashMap;
+
+// Re-export key types for easier access
+pub use values::{DomainValue, DomainTypeRegistry};
+pub use functions::DomainFunctionRegistry;
 
 /// Function signature for extension functions
 type ExtensionFunction = Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue>>;
@@ -207,9 +718,16 @@ type ExtensionFunction = Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPat
 type VariableResolver = Box<dyn Fn(&str, &EvaluationContext) -> FhirPathResult<Option<FhirPathValue>>>;
 
 /// Extension registry for [DOMAIN] functionality
+/// 
+/// This registry coordinates all extension components:
+/// - Type system (values.rs)
+/// - Function library (functions.rs)  
+/// - Variable resolvers (variables.rs)
 pub struct DomainExtensions {
     functions: HashMap<String, ExtensionFunction>,
     variables: HashMap<String, VariableResolver>,
+    type_registry: DomainTypeRegistry,
+    function_registry: DomainFunctionRegistry,
 }
 
 impl DomainExtensions {
@@ -218,6 +736,8 @@ impl DomainExtensions {
         let mut extensions = Self {
             functions: HashMap::new(),
             variables: HashMap::new(),
+            type_registry: DomainTypeRegistry::new(),
+            function_registry: DomainFunctionRegistry::new(),
         };
         
         extensions.register_all();
@@ -234,6 +754,21 @@ impl DomainExtensions {
     pub fn get_function(&self, name: &str) -> Option<&ExtensionFunction> {
         self.functions.get(name)
     }
+    
+    /// Get a function from the function registry
+    pub fn get_registry_function(&self, name: &str) -> Option<&fn(&EvaluationContext, &[FhirPathValue], &[FhirPathValue]) -> FhirPathResult<Vec<FhirPathValue>>> {
+        self.function_registry.get_function(name)
+    }
+
+    /// Check if a value is of a specific extension type
+    pub fn is_extension_type(&self, value: &FhirPathValue, type_name: &str) -> bool {
+        self.type_registry.is_type(value, type_name)
+    }
+    
+    /// Construct a new extension type from parameters
+    pub fn construct_extension_type(&self, type_name: &str, params: &[FhirPathValue]) -> FhirPathResult<Option<DomainValue>> {
+        self.type_registry.construct_type(type_name, params)
+    }
 
     /// Resolve a variable by name
     pub fn resolve_variable(&self, name: &str, context: &EvaluationContext) -> FhirPathResult<Option<FhirPathValue>> {
@@ -244,6 +779,11 @@ impl DomainExtensions {
         }
         Ok(None)
     }
+    
+    /// Try to convert a core FhirPathValue to an extension-specific type
+    pub fn try_convert_to_extension_type(&self, value: &FhirPathValue) -> Option<DomainValue> {
+        DomainValue::from_fhir_path_value(value)
+    }
 }
 
 impl Default for DomainExtensions {
@@ -253,7 +793,7 @@ impl Default for DomainExtensions {
 }
 ```
 
-### Step 5: Integration with Main FHIRPath
+### Step 6: Integration with Main FHIRPath
 
 To integrate your extension with the main FHIRPath implementation:
 
