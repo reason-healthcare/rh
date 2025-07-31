@@ -18,6 +18,7 @@ mod validator;
     long_about = "A comprehensive toolkit for working with FHIR resources, including:\n\
     • Code generation from FHIR StructureDefinitions\n\
     • FHIRPath expression parsing and evaluation\n\
+    • JSON syntax and FHIR resource validation\n\
     • FHIR package management\n\
     • Type-safe Rust code generation"
 )]

@@ -2,7 +2,7 @@
 
 The **RH CLI** is a unified command-line interface that provides comprehensive functionality for working with FHIR (Fast Healthcare Interoperability Resources) data. It combines code generation, FHIRPath expression evaluation, and package management capabilities into a single, easy-to-use tool.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Build the CLI
@@ -17,11 +17,14 @@ cargo run -p rh -- codegen generate -i examples/patient.json -o examples/patient
 # Evaluate a FHIRPath expression
 cargo run -p rh -- fhirpath eval "Patient.name.family" -d examples/patient.json
 
+# Validate JSON syntax
+cargo run -p rh -- validate json -i examples/patient.json
+
 # Start an interactive FHIRPath REPL
 cargo run -p rh -- fhirpath repl
 ```
 
-## 📋 Command Overview
+## Command Overview
 
 The RH CLI is organized into subcommands, each providing specialized functionality:
 
@@ -33,14 +36,16 @@ rh
 │   ├── batch   # Batch processing
 │   ├── download # Download packages
 │   └── install # Install and generate
-└── fhirpath    # FHIRPath expression operations
-    ├── parse   # Parse expressions
-    ├── eval    # Evaluate expressions
-    ├── repl    # Interactive shell
-    └── test    # Run test suites
+├── fhirpath    # FHIRPath expression operations
+│   ├── parse   # Parse expressions
+│   ├── eval    # Evaluate expressions
+│   ├── repl    # Interactive shell
+│   └── test    # Run test suites
+└── validate    # JSON and FHIR validation
+    └── json    # JSON syntax validation
 ```
 
-## 🔧 Code Generation (`rh codegen`)
+## Code Generation (`rh codegen`)
 
 Generate type-safe Rust code from FHIR StructureDefinitions with full package management support.
 
@@ -88,7 +93,7 @@ cargo run -p rh -- codegen download my.custom.package 1.0.0 \
   --token your-auth-token
 ```
 
-## 🔍 FHIRPath Operations (`rh fhirpath`)
+## FHIRPath Operations (`rh fhirpath`)
 
 Parse, evaluate, and test FHIRPath expressions with comprehensive support for the FHIRPath specification.
 
@@ -193,6 +198,138 @@ cargo run -p rh -- fhirpath test --file tests.json --data patient.json
 ]
 ```
 
+## Validation (`rh validate`)
+
+Validate JSON syntax and FHIR resources with comprehensive error reporting and multiple output formats.
+
+### JSON Syntax Validation
+
+Validate JSON documents for syntax errors and structural issues:
+
+```bash
+# Validate a single JSON file
+cargo run -p rh -- validate json --input patient.json
+
+# Validate from stdin
+echo '{"resourceType": "Patient", "id": "123"}' | cargo run -p rh -- validate json
+
+# JSON output format
+cargo run -p rh -- validate json --input patient.json --format json
+
+# Multiple JSON documents (NDJSON)
+cargo run -p rh -- validate json --input bundle.ndjson --multiple
+
+# Custom validation parameters
+cargo run -p rh -- validate json --input deep.json --max-depth 50
+
+# Strict mode (exit with error code on validation failure)
+cargo run -p rh -- validate json --input data.json --strict
+```
+
+### Validation Options
+
+- `--input, -i`: Input file path (reads from stdin if not provided)
+- `--format, -f`: Output format (`text` or `json`)
+- `--multiple`: Process as NDJSON (multiple JSON documents)
+- `--max-depth`: Maximum allowed nesting depth (default: 100)
+- `--stats`: Show detailed statistics for valid JSON
+- `--strict`: Exit with non-zero code on validation failure
+
+### Output Examples
+
+**Text Format (Default):**
+```
+✅ JSON is valid
+```
+
+**Error Reporting:**
+```
+❌ JSON validation failed with 1 error(s):
+  1. JSON syntax error: expected ',' or ']' at line 5, column 12
+```
+
+**Multiple Document Summary:**
+```
+📋 Validation Summary:
+  Total documents: 8
+  ✅ Valid: 6
+  ❌ Invalid: 2
+
+❌ Invalid documents:
+  Line 4: 1 error(s)
+    - JSON syntax error: key must be a string at line 1, column 2
+```
+
+**JSON Format:**
+```json
+{
+  "valid": true,
+  "errors": []
+}
+```
+
+### Validation Examples
+
+**Basic Validation:**
+```bash
+# Valid JSON
+echo '{"resourceType": "Patient", "id": "123"}' | cargo run -p rh -- validate json
+# Output: ✅ JSON is valid
+
+# Invalid JSON
+echo '{"resourceType": "Patient", "id":}' | cargo run -p rh -- validate json
+# Output: ❌ JSON validation failed with 1 error(s):
+#   1. JSON syntax error: expected value at line 1, column 32
+```
+
+**Multiple Document Processing:**
+```bash
+# Create test NDJSON file
+cat > test.ndjson << EOF
+{"resourceType": "Patient", "id": "1"}
+{"resourceType": "Observation", "id": "2"}
+{invalid json}
+{"resourceType": "Organization", "id": "3"}
+EOF
+
+# Validate with summary
+cargo run -p rh -- validate json --input test.ndjson --multiple
+# Output:
+# 📋 Validation Summary:
+#   Total documents: 4
+#   ✅ Valid: 3
+#   ❌ Invalid: 1
+```
+
+**Structured Output:**
+```bash
+# JSON format for integration with other tools
+echo '{"test": "value"}' | cargo run -p rh -- validate json --format json
+# Output:
+# {
+#   "valid": true,
+#   "errors": []
+# }
+```
+
+**Depth Validation:**
+```bash
+# Test nesting limits
+echo '{"a":{"b":{"c":{"d":"too deep"}}}}' | cargo run -p rh -- validate json --max-depth 2
+# Output: ❌ JSON validation failed with 1 error(s):
+#   1. Schema validation error: Maximum nesting depth of 2 exceeded at depth 3
+```
+
+**Batch Processing:**
+```bash
+# Validate multiple FHIR resources with strict error handling
+cargo run -p rh -- validate json \
+  --input fhir-bundle.ndjson \
+  --multiple \
+  --format json \
+  --strict
+```
+
 ## 🛠️ Global Options
 
 All commands support global options for enhanced control:
@@ -213,7 +350,7 @@ cargo run -p rh -- --verbose fhirpath eval "Patient.name"
 cargo run -p rh -- --version
 ```
 
-## 📝 Configuration
+## Configuration
 
 ### Codegen Configuration
 
@@ -236,7 +373,7 @@ Create this file using:
 cargo run -p rh -- codegen init
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 The RH CLI is built using:
 
@@ -258,11 +395,12 @@ src/
 
 The CLI leverages these workspace crates:
 
-- **`codegen`** - FHIR code generation and package management
-- **`fhirpath`** - FHIRPath parsing and evaluation
-- **`common`** - Shared utilities and error handling
+- **`rh-codegen`** - FHIR code generation and package management
+- **`rh-fhirpath`** - FHIRPath parsing and evaluation
+- **`rh-validator`** - JSON syntax and FHIR resource validation
+- **`rh-common`** - Shared utilities and error handling
 
-## 🚀 Performance
+## Performance
 
 ### Async Operations
 
@@ -278,7 +416,7 @@ Network operations (package downloads) are fully async and support:
 - Efficient AST representation for FHIRPath expressions
 - Minimal memory footprint for CLI operations
 
-## 🔍 Examples
+## Examples
 
 ### End-to-End Workflow
 
@@ -292,10 +430,16 @@ cargo run -p rh -- codegen download hl7.fhir.r4.core 4.0.1 -o ./packages/
 # 3. Install and generate types
 cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./my-fhir-project/
 
-# 4. Test FHIRPath expressions against generated types
+# 4. Validate FHIR resources for JSON syntax
+cargo run -p rh -- validate json --input ./examples/patient.json --stats
+
+# 5. Validate multiple resources from a bundle
+cargo run -p rh -- validate json --input ./examples/bundle.ndjson --multiple --format json
+
+# 6. Test FHIRPath expressions against generated types
 cargo run -p rh -- fhirpath eval "Patient.name.family" --data ./examples/patient.json
 
-# 5. Start interactive exploration
+# 7. Start interactive exploration
 cargo run -p rh -- fhirpath repl --data ./examples/patient.json
 ```
 
@@ -324,7 +468,24 @@ cargo run -p rh -- codegen download my.org.custom.fhir 2.1.0 \
   --output ./packages/
 ```
 
-## 🧪 Testing
+### Validation Pipeline
+
+```bash
+# Complete validation workflow
+# 1. Validate JSON syntax first
+cargo run -p rh -- validate json --input raw-data.ndjson --multiple --strict
+
+# 2. Process valid JSON through other tools
+if [ $? -eq 0 ]; then
+    echo "JSON validation passed, processing..."
+    cargo run -p rh -- fhirpath eval "Bundle.entry.resource.resourceType" --data raw-data.ndjson
+else
+    echo "JSON validation failed, check your data"
+    exit 1
+fi
+```
+
+## Testing
 
 Run the CLI's tests:
 
@@ -339,13 +500,14 @@ cargo test -p rh -- --nocapture
 cargo test -p rh test_codegen_commands
 ```
 
-## 📚 Related Documentation
+## Related Documentation
 
-- **[FHIR Code Generation](../../crates/codegen/README.md)** - Library documentation for code generation
-- **[FHIRPath](../../crates/fhirpath/README.md)** - Library documentation for FHIRPath operations
+- **[FHIR Code Generation](../../crates/rh-codegen/README.md)** - Library documentation for code generation
+- **[FHIRPath](../../crates/rh-fhirpath/README.md)** - Library documentation for FHIRPath operations
+- **[FHIR Validator](../../crates/rh-validator/README.md)** - Library documentation for validation
 - **[Workspace Overview](../../README.md)** - Main project documentation
 
-## 🤝 Contributing
+## Contributing
 
 This CLI is part of the larger FHIR Rust monorepo. See the main [CONTRIBUTING.md](../../CONTRIBUTING.md) for development guidelines.
 
@@ -365,7 +527,3 @@ Follow the workspace coding standards:
 - Run `cargo clippy` for linting
 - Include comprehensive error handling with `anyhow`
 - Add logging with `tracing` for debugging support
-
----
-
-The RH CLI provides a unified, powerful interface for all FHIR operations. Whether you're generating type-safe Rust code, exploring data with FHIRPath, or managing FHIR packages, RH has you covered with a consistent, well-documented command structure.
