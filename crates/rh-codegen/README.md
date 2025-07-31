@@ -52,17 +52,20 @@ fn main() -> CodegenResult<()> {
 ### Package Downloading
 
 ```rust
-use codegen::{PackageDownloader, PackageDownloadConfig};
+use rh_loader::{PackageLoader, LoaderConfig};
+use std::path::Path;
 
-fn download_fhir_package() -> CodegenResult<()> {
-    let config = PackageDownloadConfig {
+async fn download_fhir_package() -> Result<(), Box<dyn std::error::Error>> {
+    let config = LoaderConfig {
         registry_url: "https://packages.fhir.org".to_string(),
-        token: None,
-        output_dir: "./packages".to_string(),
+        auth_token: None,
+        timeout_seconds: 30,
+        max_retries: 3,
+        verify_checksums: false,
     };
     
-    let downloader = PackageDownloader::new(config)?;
-    downloader.download("hl7.fhir.r4.core", "4.0.1").await?;
+    let loader = PackageLoader::new(config)?;
+    loader.download_package("hl7.fhir.r4.core", "4.0.1", Path::new("./packages")).await?;
     
     Ok(())
 }
@@ -271,14 +274,18 @@ The library supports downloading FHIR packages from npm-style registries:
 ### Example: Package Download and Processing
 
 ```rust
-use codegen::{PackageDownloader, CodeGenerator, PackageDownloadConfig, CodegenConfig};
+use rh_codegen::{CodeGenerator, CodegenConfig};
+use rh_loader::{PackageLoader, LoaderConfig};
+use std::path::Path;
 
-async fn process_fhir_package() -> CodegenResult<()> {
-    // Configure package downloader
-    let download_config = PackageDownloadConfig {
+async fn process_fhir_package() -> Result<(), Box<dyn std::error::Error>> {
+    // Configure package loader
+    let loader_config = LoaderConfig {
         registry_url: "https://packages.fhir.org".to_string(),
-        token: None,
-        output_dir: "./packages".to_string(),
+        auth_token: None,
+        timeout_seconds: 30,
+        max_retries: 3,
+        verify_checksums: false,
     };
     
     // Configure code generator
@@ -286,11 +293,12 @@ async fn process_fhir_package() -> CodegenResult<()> {
     let mut generator = CodeGenerator::new(codegen_config);
     
     // Download package
-    let downloader = PackageDownloader::new(download_config)?;
-    let package_path = downloader.download("hl7.fhir.r4.core", "4.0.1").await?;
+    let loader = PackageLoader::new(loader_config)?;
+    let _manifest = loader.download_package("hl7.fhir.r4.core", "4.0.1", Path::new("./packages")).await?;
     
     // Extract and process StructureDefinitions
-    let structure_defs = downloader.extract_structure_definitions(&package_path)?;
+    // Note: You would need to implement structure definition extraction from the downloaded package
+    // let structure_defs = extract_structure_definitions_from_package(Path::new("./packages"))?;
     
     // Generate Rust types for each StructureDefinition
     for structure_def in structure_defs {
@@ -318,9 +326,9 @@ The crate is organized into modular components:
   - Token generation and file output
   - Type caching to avoid regenerating identical structs
 
-- **`download.rs`**: Package downloading functionality  
-  - `PackageDownloader`: HTTP client for registry interaction
-  - `PackageDownloadConfig`: Configuration for registry access
+- **`rh-loader`**: Package downloading functionality (separate crate)
+  - `PackageLoader`: HTTP client for registry interaction
+  - `LoaderConfig`: Configuration for registry access
   - Tarball download and extraction
   - Registry response parsing
 

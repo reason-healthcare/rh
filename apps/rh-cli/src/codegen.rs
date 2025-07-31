@@ -7,8 +7,11 @@ use anyhow::Result;
 use clap::Subcommand;
 use tracing::{error, info, warn};
 
-use rh_codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
+use rh_codegen::{CodeGenerator, CodegenConfig};
 use rh_common::utils;
+use rh_loader::PackageLoader;
+
+use crate::download;
 
 #[derive(Subcommand)]
 pub enum CodegenCommands {
@@ -58,48 +61,31 @@ pub enum CodegenCommands {
         #[clap(long)]
         value_set_dir: Option<PathBuf>,
     },
-    /// Download FHIR package from registry
-    Download {
-        /// Package name (e.g., "hl7.fhir.r4.core")
-        package: String,
 
-        /// Package version (e.g., "4.0.1")
-        version: String,
-
-        /// Output directory for downloaded package
-        #[clap(short, long, default_value = "./packages")]
-        output: PathBuf,
-
-        /// Registry URL
-        #[clap(long, default_value = "https://packages.fhir.org")]
-        registry: String,
-
-        /// Authentication token for private registries
-        #[clap(long)]
-        token: Option<String>,
-    },
     /// Install FHIR package and generate types
     Install {
         /// Package name (e.g., "hl7.fhir.r4.core")
         package: String,
-
         /// Package version (e.g., "4.0.1")
         version: String,
 
-        /// Output directory for generated Rust files
+        /// Package directory for downloaded packages (defaults to ~/.fhir/packages)
+        #[clap(long)]
+        package_dir: Option<PathBuf>,
+
+        /// Output directory for generated types
         #[clap(short, long, default_value = "./generated")]
         output: PathBuf,
 
-        /// Path to the configuration file
+        /// Configuration file path
         #[clap(short, long, default_value = "codegen.json")]
         config: PathBuf,
 
-        /// Directory containing ValueSet JSON files for enum generation
-        /// (defaults to the package directory)
+        /// Directory containing value set definitions
         #[clap(long)]
         value_set_dir: Option<PathBuf>,
 
-        /// Generate a complete Rust crate with Cargo.toml and proper module structure
+        /// Generate a complete Rust crate with Cargo.toml
         #[clap(long)]
         generate_crate: bool,
 
@@ -110,6 +96,10 @@ pub enum CodegenCommands {
         /// Authentication token for private registries
         #[clap(long)]
         token: Option<String>,
+
+        /// Overwrite package if it already exists
+        #[clap(long)]
+        overwrite: bool,
     },
 }
 
@@ -141,34 +131,36 @@ pub async fn handle_command(cmd: CodegenCommands) -> Result<()> {
                 value_set_dir.as_deref(),
             )?;
         }
-        CodegenCommands::Download {
-            package,
-            version,
-            output,
-            registry,
-            token,
-        } => {
-            download_package(&package, &version, &output, &registry, token.as_deref()).await?;
-        }
+
         CodegenCommands::Install {
             package,
             version,
+            package_dir,
             output,
             config,
             value_set_dir,
             generate_crate,
             registry,
             token,
+            overwrite,
         } => {
+            let pkg_dir = match package_dir {
+                Some(dir) => dir,
+                None => PackageLoader::get_default_packages_dir().map_err(|e| {
+                    anyhow::anyhow!("Failed to get default packages directory: {}", e)
+                })?,
+            };
             install_package(InstallParams {
                 package: &package,
                 version: &version,
+                package_dir: &pkg_dir,
                 output: &output,
                 config_path: &config,
                 value_set_dir: value_set_dir.as_deref(),
                 generate_crate,
                 registry: &registry,
                 token: token.as_deref(),
+                overwrite,
             })
             .await?;
         }
@@ -434,34 +426,6 @@ fn matches_pattern(filename: &str, pattern: &str) -> bool {
     }
 
     filename == pattern
-}
-
-/// Download FHIR package from registry
-async fn download_package(
-    package: &str,
-    version: &str,
-    output: &Path,
-    registry: &str,
-    token: Option<&str>,
-) -> Result<()> {
-    info!(
-        "Downloading package {}@{} from {}",
-        package, version, registry
-    );
-
-    let download_config = PackageDownloadConfig {
-        registry_url: registry.to_string(),
-        auth_token: token.map(|t| t.to_string()),
-        timeout_seconds: 30,
-    };
-
-    let downloader = PackageDownloader::new(download_config)?;
-    downloader
-        .download_package(package, version, output)
-        .await?;
-
-    info!("Successfully downloaded package to {:?}", output);
-    Ok(())
 }
 
 /// Parameters for crate generation
@@ -749,36 +713,35 @@ fn generate_readme_md(
     content
 }
 
-/// Parameters for package installation
+/// Parameters for installing FHIR packages and generating types
 struct InstallParams<'a> {
     package: &'a str,
     version: &'a str,
+    package_dir: &'a Path,
     output: &'a Path,
     config_path: &'a Path,
     value_set_dir: Option<&'a Path>,
     generate_crate: bool,
     registry: &'a str,
     token: Option<&'a str>,
+    overwrite: bool,
 }
 
-/// Install FHIR package and generate types  
+/// Install FHIR package and generate types
 async fn install_package(params: InstallParams<'_>) -> Result<()> {
     info!(
         "Installing package {}@{} and generating types",
         params.package, params.version
     );
 
-    // First download the package to a temporary directory
-    let temp_dir = std::env::temp_dir().join(format!(
-        "fhir-package-{}-{}",
-        params.package, params.version
-    ));
-    download_package(
+    // Download the package to the package directory
+    download::download_package_to_dir(
         params.package,
         params.version,
-        &temp_dir,
+        params.package_dir,
         params.registry,
         params.token,
+        params.overwrite,
     )
     .await?;
 
@@ -792,7 +755,10 @@ async fn install_package(params: InstallParams<'_>) -> Result<()> {
     };
 
     // Determine the ValueSet directory - default to package directory if not specified
-    let package_dir = temp_dir.join("package");
+    let package_dir = params
+        .package_dir
+        .join(format!("{}#{}", params.package, params.version))
+        .join("package");
     let effective_value_set_dir = if let Some(value_set_dir) = params.value_set_dir {
         value_set_dir
     } else {
@@ -804,8 +770,11 @@ async fn install_package(params: InstallParams<'_>) -> Result<()> {
             );
             &package_dir
         } else {
-            info!("Using temp directory for ValueSets: {}", temp_dir.display());
-            &temp_dir
+            info!(
+                "Using package directory for ValueSets: {}",
+                params.package_dir.display()
+            );
+            params.package_dir
         }
     };
 
@@ -828,7 +797,7 @@ async fn install_package(params: InstallParams<'_>) -> Result<()> {
     // Find all StructureDefinition JSON files in the package directory
     if !package_dir.exists() {
         warn!("Package directory not found, scanning temp directory directly");
-        process_json_files(&mut generator, &temp_dir, &types_output)?;
+        process_json_files(&mut generator, params.package_dir, &types_output)?;
     } else {
         process_json_files(&mut generator, &package_dir, &types_output)?;
     }
@@ -914,10 +883,7 @@ async fn install_package(params: InstallParams<'_>) -> Result<()> {
         info!("Generated complete Rust crate structure");
     }
 
-    // Clean up temporary directory
-    if temp_dir.exists() {
-        fs::remove_dir_all(&temp_dir)?;
-    }
+    // Package remains in persistent directory for future use
 
     info!("Successfully installed package and generated types");
     Ok(())

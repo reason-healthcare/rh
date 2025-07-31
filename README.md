@@ -17,6 +17,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
 | 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
+| 🚀 | [rh-loader](crates/rh-loader/README.md)  | FHIR package loader from npm-style registries |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
@@ -41,7 +42,9 @@ cargo build
 │   ├── rh-codegen/            # FHIR code generation library
 │   ├── rh-common/             # Shared utilities and error handling
 │   ├── rh-core/               # Core functionality
-│   └── rh-fhirpath/           # FHIRPath expression parser and evaluator
+│   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
+│   ├── rh-loader/             # FHIR package loader from npm-style registries
+│   └── rh-validator/          # FHIR resource validation library
 ├── apps/                   # Executable applications
 │   └── rh-cli/                # Unified cross-platform CLI for FHIR
 ├── setup.sh                # Development setup script

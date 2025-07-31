@@ -6,7 +6,6 @@
 pub use rh_common::{CommonError, Config};
 
 mod config;
-pub mod download;
 mod fhir_types;
 mod generator;
 mod rust_types;
@@ -14,9 +13,10 @@ mod token_generator;
 mod type_mapper;
 mod value_sets;
 
-// Re-export download types for convenience
-pub use download::{
-    PackageDist, PackageDownloadConfig, PackageDownloader, PackageManifest, RegistryResponse,
+// Re-export loader types for convenience
+pub use rh_loader::{
+    LoaderConfig as PackageDownloadConfig, LoaderError, LoaderResult, PackageDist,
+    PackageLoader as PackageDownloader, PackageManifest,
 };
 
 // Re-export modular code generation types
@@ -40,20 +40,8 @@ pub enum CodegenError {
     #[error("Code generation failed: {message}")]
     Generation { message: String },
 
-    #[error("HTTP request failed: {0}")]
-    Http(#[from] reqwest::Error),
-
-    #[error("URL parsing failed: {0}")]
-    UrlParse(#[from] url::ParseError),
-
-    #[error("Package not found: {package}@{version}")]
-    PackageNotFound { package: String, version: String },
-
-    #[error("Invalid package manifest: {message}")]
-    InvalidManifest { message: String },
-
-    #[error("Archive extraction failed: {message}")]
-    ArchiveError { message: String },
+    #[error("Loader error: {0}")]
+    Loader(#[from] rh_loader::LoaderError),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

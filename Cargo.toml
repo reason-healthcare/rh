@@ -1,15 +1,9 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/*",
-    "apps/*",
-]
+members = ["crates/*", "apps/*"]
 
 # Optional: exclude specific directories if needed
-exclude = [
-    "target",
-    "docs",
-]
+exclude = ["target", "docs"]
 
 # Workspace-wide dependencies that can be shared across all crates
 [workspace.dependencies]
@@ -43,7 +37,7 @@ url = "2.0"
 nom = "7.1"
 regex = "1.0"
 
-# Date and time handling  
+# Date and time handling
 chrono = { version = "0.4", features = ["serde"] }
 
 # Archive handling

@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use tracing::error;
 
 mod codegen;
+mod download;
 mod fhirpath;
 mod validator;
 
@@ -16,10 +17,10 @@ mod validator;
 #[clap(version)]
 #[clap(
     long_about = "A comprehensive toolkit for working with FHIR resources, including:\n\
+    • FHIR package downloading and management\n\
     • Code generation from FHIR StructureDefinitions\n\
     • FHIRPath expression parsing and evaluation\n\
     • JSON syntax and FHIR resource validation\n\
-    • FHIR package management\n\
     • Type-safe Rust code generation"
 )]
 struct Cli {
@@ -36,6 +37,10 @@ enum Commands {
     /// Generate Rust types from FHIR StructureDefinitions
     #[clap(subcommand)]
     Codegen(codegen::CodegenCommands),
+
+    /// Download FHIR packages from npm-style registries
+    #[clap(subcommand)]
+    Download(download::DownloadCommands),
 
     /// Parse and evaluate FHIRPath expressions
     #[clap(subcommand)]
@@ -66,6 +71,12 @@ async fn main() -> Result<()> {
         Commands::Codegen(cmd) => {
             if let Err(e) = codegen::handle_command(cmd).await {
                 error!("Codegen error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Download(cmd) => {
+            if let Err(e) = download::handle_command(cmd).await {
+                error!("Download error: {}", e);
                 std::process::exit(1);
             }
         }

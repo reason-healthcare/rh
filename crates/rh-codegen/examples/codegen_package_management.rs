@@ -2,7 +2,8 @@
 ///
 /// This example demonstrates how to download and install FHIR packages
 /// from npm-style registries and generate Rust types.
-use rh_codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
+use rh_codegen::{CodeGenerator, CodegenConfig};
+use rh_loader::{LoaderConfig, PackageLoader};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -10,17 +11,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 1: Download a FHIR package
     println!("📦 Setting up FHIR package download...");
 
-    let download_config = PackageDownloadConfig {
+    let loader_config = LoaderConfig {
         registry_url: "https://packages.fhir.org".to_string(),
         auth_token: None,
         timeout_seconds: 30,
+        max_retries: 3,
+        verify_checksums: false,
+        overwrite_existing: false,
     };
 
-    let _downloader = PackageDownloader::new(download_config)?;
+    let _loader = PackageLoader::new(loader_config)?;
 
     // Note: In a real application, you would download actual packages
     // For this example, we'll show the configuration
-    println!("✅ Package downloader configured for registry: https://packages.fhir.org");
+    println!("✅ Package loader configured for registry: https://packages.fhir.org");
 
     // Example 2: Set up code generation configuration
     println!("🔧 Setting up code generation...");
@@ -41,10 +45,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 3: Working with custom registries
     println!("🔐 Example: Custom registry configuration");
 
-    let custom_config = PackageDownloadConfig {
+    let custom_config = LoaderConfig {
         registry_url: "https://my-custom-fhir-registry.com".to_string(),
         auth_token: Some("your-auth-token".to_string()),
         timeout_seconds: 60,
+        max_retries: 5,
+        verify_checksums: true,
+        overwrite_existing: false,
     };
 
     println!("Configuration for custom registry:");
@@ -66,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /*
     println!("📥 Downloading FHIR R4 core package...");
     let extract_path = Path::new("./packages");
-    downloader.download_package(
+    loader.download_package(
         "hl7.fhir.r4.core",
         "4.0.1",
         extract_path

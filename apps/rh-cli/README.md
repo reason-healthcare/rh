@@ -81,14 +81,26 @@ cargo run -p rh -- codegen batch -c codegen.json
 Download and install FHIR packages from npm-style registries:
 
 ```bash
-# Download a package
-cargo run -p rh -- codegen download hl7.fhir.r4.core 4.0.1 -o ./packages/
+# Download a package (to default ~/.fhir/packages directory)
+cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1
+
+# Download to custom location
+cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 -o ./custom-packages/
+
+# List available versions for a package
+cargo run -p rh -- download list hl7.fhir.r4.core
+
+# Get latest version only
+cargo run -p rh -- download list hl7.fhir.r4.core --latest
 
 # Install package and generate types
 cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
 
+# Overwrite existing package
+cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 --overwrite
+
 # Use custom registry with authentication
-cargo run -p rh -- codegen download my.custom.package 1.0.0 \
+cargo run -p rh -- download package my.custom.package 1.0.0 \
   --registry https://my-fhir-registry.com \
   --token your-auth-token
 ```
@@ -395,9 +407,10 @@ src/
 
 The CLI leverages these workspace crates:
 
-- **`rh-codegen`** - FHIR code generation and package management
+- **`rh-codegen`** - FHIR code generation from StructureDefinitions
 - **`rh-fhirpath`** - FHIRPath parsing and evaluation
 - **`rh-validator`** - JSON syntax and FHIR resource validation
+- **`rh-loader`** - FHIR package downloading from npm-style registries
 - **`rh-common`** - Shared utilities and error handling
 
 ## Performance
@@ -424,8 +437,8 @@ Network operations (package downloads) are fully async and support:
 # 1. Initialize a new project
 cargo run -p rh -- codegen init --output-dir ./my-fhir-project
 
-# 2. Download FHIR core package
-cargo run -p rh -- codegen download hl7.fhir.r4.core 4.0.1 -o ./packages/
+# 2. Download FHIR core package (to ~/.fhir/packages)
+cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1
 
 # 3. Install and generate types
 cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./my-fhir-project/
@@ -462,10 +475,10 @@ cargo run -p rh -- codegen batch --config ./codegen.json
 # Work with private FHIR package registries
 export FHIR_TOKEN="your-auth-token"
 
-cargo run -p rh -- codegen download my.org.custom.fhir 2.1.0 \
+cargo run -p rh -- download package my.org.custom.fhir 2.1.0 \
   --registry https://fhir-packages.my-org.com \
   --token $FHIR_TOKEN \
-  --output ./packages/
+  --output ./custom-packages/
 ```
 
 ### Validation Pipeline
@@ -505,6 +518,7 @@ cargo test -p rh test_codegen_commands
 - **[FHIR Code Generation](../../crates/rh-codegen/README.md)** - Library documentation for code generation
 - **[FHIRPath](../../crates/rh-fhirpath/README.md)** - Library documentation for FHIRPath operations
 - **[FHIR Validator](../../crates/rh-validator/README.md)** - Library documentation for validation
+- **[FHIR Loader](../../crates/rh-loader/README.md)** - Library documentation for package downloading
 - **[Workspace Overview](../../README.md)** - Main project documentation
 
 ## Contributing
