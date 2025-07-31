@@ -158,7 +158,7 @@ This document provides a comprehensive overview of all supported operations and 
 | ✅ | `matchesFull(regex)` | `matchesFull(regex: String) : Boolean` | Test if entire string matches regex |
 | ✅ | `replaceMatches(regex, substitution)` | `replaceMatches(regex: String, substitution: String) : String` | Replace regex matches with substitution |
 
-#### Additional String Functions 
+#### Additional String Functions
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
 | ❌ | `encode(format)` | `encode(format : String) : String` | Encode using format: hex, nase64, urlbase64 |
@@ -356,8 +356,8 @@ The following table shows operator precedence from highest to lowest:
 |--------|---------|--------|
 | **FHIR Variables** | | |
 | ✅ | `%resource` | Access to the root resource in current evaluation context |
-| ❌ | `%context` | Not implemented |
-| ❌ | `%rootResource` | Not implemented |
+| ✅ | `%context` | Not implemented |
+| ✅ | `%rootResource` | Not implemented |
 | ✅ | `%sct` | SNOMED CT system URL constant |
 | ✅ | `%loinc` | LOINC system URL constant |
 | ✅ | `%ucum` | UCUM system URL constant |

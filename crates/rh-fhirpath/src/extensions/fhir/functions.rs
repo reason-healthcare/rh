@@ -127,6 +127,24 @@ fn has_value_function(
     }
 
     match target {
+        // Handle collections - must contain exactly one value
+        FhirPathValue::Collection(items) => {
+            if items.len() == 1 {
+                has_value_function(&items[0], params)
+            } else {
+                Ok(FhirPathValue::Boolean(false))
+            }
+        }
+        // FHIR primitives that have values
+        FhirPathValue::String(_)
+        | FhirPathValue::Integer(_)
+        | FhirPathValue::Number(_)
+        | FhirPathValue::Boolean(_)
+        | FhirPathValue::Date(_)
+        | FhirPathValue::DateTime(_)
+        | FhirPathValue::Time(_)
+        | FhirPathValue::Long(_) => Ok(FhirPathValue::Boolean(true)),
+        // FHIR complex types (like extensions) - check for value[x] fields
         FhirPathValue::Object(obj) => {
             // Check for any value[x] field
             let has_direct_value = if let Some(obj_map) = obj.as_object() {
@@ -146,8 +164,14 @@ fn has_value_function(
                 }
             }
 
-            Ok(FhirPathValue::Boolean(has_direct_value))
+            if has_direct_value {
+                Ok(FhirPathValue::Boolean(true))
+            } else {
+                Ok(FhirPathValue::Boolean(false))
+            }
         }
+        // Empty values and other types don't have values
+        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
         _ => Ok(FhirPathValue::Boolean(false)),
     }
 }

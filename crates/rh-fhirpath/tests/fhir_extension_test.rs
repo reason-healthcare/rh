@@ -292,6 +292,81 @@ mod tests {
     }
 
     #[test]
+    fn test_context_id_has_value() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test %context.id.hasValue() - should return true for primitive with value
+        let parsed = parser.parse("%context.id.hasValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Context id should have value (primitive string with value)"
+        );
+    }
+
+    #[test]
+    fn test_has_value_with_multiple_items() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test hasValue() on collection with multiple items - should return empty
+        let parsed = parser.parse("name.hasValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(false),
+            "Collection with multiple items should return false for hasValue()"
+        );
+    }
+
+    #[test]
+    fn test_has_value_with_single_item_collection() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test hasValue() on collection with single item - should return true for primitive
+        let parsed = parser.parse("gender.hasValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Single item collection with primitive should have value"
+        );
+    }
+
+    #[test]
+    fn test_has_value_with_empty_collection() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create a patient with no telecom
+        let patient_no_telecom = json!({
+            "resourceType": "Patient",
+            "id": "patient-no-telecom",
+            "name": [{"family": "Test"}]
+        });
+        let context = EvaluationContext::new(patient_no_telecom);
+
+        // Test hasValue() on non-existent field - should return empty
+        let parsed = parser.parse("telecom.hasValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(false),
+            "Empty/non-existent field should return false for hasValue()"
+        );
+    }
+
+    #[test]
     fn test_resource_variable() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
