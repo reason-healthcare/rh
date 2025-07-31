@@ -10,8 +10,20 @@
 
 Cross-platform and lightning-fast, and running nativelly cross platform, RH eliminates the overhead of heavy virtual machines like the JVM or .NET. RH can even be compiled to **WebAssembly** for seamless integration into web applications and embedded environments.
 
+## Components
 
-## 🚀 Quick Start
+| Status | Component | Description |
+|--------|-----------|-------------|
+| 🚀 | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
+| 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
+| 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
+| 🔜 | rh-validator  | FHIR validator |
+| 🔜 | rh-fsh  | FHIR Shorthand converter |
+| 🔜 | rh-publisher  | FHIR Package publisher and related tools |
+| 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
+| 🔜 | rh-cql  | CQL tools |
+
+## Quick Start
 
 ```bash
 # Clone and build the entire workspace
@@ -21,30 +33,23 @@ cargo build
 ```
 
 
-## 📁 Workspace Structure
+## Workspace Structure
 
 ```
 .
 ├── Cargo.toml              # Workspace root configuration
 ├── crates/                 # Library crates
-│   ├── codegen/              # 🔧 FHIR code generation library (rh-codegen)
-│   ├── common/               # 📦 Shared utilities and error handling (rh-common)
-│   ├── core/                 # 🏗️ Core functionality (rh-core)
-│   └── fhirpath/             # 🔍 FHIRPath expression parser and evaluator (rh-fhirpath)
+│   ├── rh-codegen/            # FHIR code generation library
+│   ├── rh-common/             # Shared utilities and error handling
+│   ├── rh-core/               # Core functionality
+│   └── rh-fhirpath/           # FHIRPath expression parser and evaluator
 ├── apps/                   # Executable applications
-│   └── rh/                 # 🎯 Unified cross-platform CLI for FHIR
-├── setup.sh                # 🔨 Development setup script
-└── build.sh                # 🏭 Build script for CI/CD
+│   └── rh-cli/                # Unified cross-platform CLI for FHIR
+├── setup.sh                # Development setup script
+└── build.sh                # Build script for CI/CD
 ```
 
-For detailed usage examples and comprehensive documentation, see:
-
-- **[Rust Code Generation](crates/codegen/README.md)** - Rust code generation from any FHIR Package.
-- **[FHIRPath](crates/fhirpath/README.md)** - FHIRPath engine, highly extensible and comprehensive
-- **[RH CLI](apps/rh/README.md)** - Ergonomic CLI for FHIR with awesome UX
-
-
-## 🛠️ Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -87,11 +92,16 @@ Run tests for a specific package:
 cargo test -p <package-name>
 ```
 
+NOTE: You can also use `just`
+```bash
+just --help
+```
+
 ### Development Commands
 
 All functionality is available through the unified `rh` CLI.
 
-**For complete CLI documentation and examples, see the [RH CLI documentation](apps/rh/README.md)**
+**For complete CLI documentation and examples, see the [RH CLI documentation](apps/rh-cli/README.md)**
 
 **Unified CLI (recommended):**
 ```bash
@@ -132,7 +142,7 @@ Run tests:
 cargo tes
 ```
 
-## 📦 Dependency Management
+## Dependency Management
 
 ### Workspace Dependencies
 
@@ -162,7 +172,7 @@ Add directly to the crate's `Cargo.toml`, e.g.:
 regex = "1.0"
 ```
 
-## 🔄 Development Workflow
+## Development Workflow
 
 1. **Setup**: Run `./setup.sh` once to configure your environment
 2. **Development**: Work in individual crates with full workspace support
@@ -170,7 +180,7 @@ regex = "1.0"
 4. **Building**: `cargo build` builds everything with optimized dependencies
 5. **Linting**: `cargo clippy` checks all code for best practices
 
-## 🚀 Release Management
+## Release Management
 
 The workspace supports coordinated releases of all crates or individual crate releases as needed. Use semantic versioning and update `Cargo.toml` files accordingly.
 
