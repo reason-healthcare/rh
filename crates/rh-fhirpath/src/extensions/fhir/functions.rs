@@ -28,6 +28,14 @@ pub fn register_functions(functions: &mut HashMap<String, ExtensionFunction>) {
             has_value_function(target, params)
         }),
     );
+
+    // getValue() function to get the underlying system value for FHIR primitives
+    functions.insert(
+        "getValue".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            get_value_function(target, params)
+        }),
+    );
 }
 
 /// Extension function that retrieves extensions by URL
@@ -176,6 +184,55 @@ fn has_value_function(
     }
 }
 
+/// Get the underlying system value for FHIR primitives
+fn get_value_function(
+    target: &FhirPathValue,
+    params: &[FhirPathValue],
+) -> FhirPathResult<FhirPathValue> {
+    // Validate parameters
+    if !params.is_empty() {
+        return Err(FhirPathError::InvalidOperation {
+            message: "getValue() takes no parameters".to_string(),
+        });
+    }
+
+    match target {
+        // Handle collections - must contain exactly one value
+        FhirPathValue::Collection(items) => {
+            if items.len() == 1 {
+                get_value_function(&items[0], params)
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        // FHIR primitives that have values - return the value itself
+        FhirPathValue::String(_)
+        | FhirPathValue::Integer(_)
+        | FhirPathValue::Number(_)
+        | FhirPathValue::Boolean(_)
+        | FhirPathValue::Date(_)
+        | FhirPathValue::DateTime(_)
+        | FhirPathValue::Time(_)
+        | FhirPathValue::Long(_)
+        | FhirPathValue::Quantity { .. } => Ok(target.clone()),
+        // FHIR complex types (like extensions) - check for value[x] fields
+        FhirPathValue::Object(obj) => {
+            // Look for value[x] fields and return the first one found
+            if let Some(obj_map) = obj.as_object() {
+                for (key, value) in obj_map {
+                    if key.starts_with("value") {
+                        return Ok(FhirPathValue::from_json(value));
+                    }
+                }
+            }
+            // No value[x] field found
+            Ok(FhirPathValue::Empty)
+        }
+        // Empty values and other types don't have values
+        _ => Ok(FhirPathValue::Empty),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,5 +346,87 @@ mod tests {
         let target_empty = crate::evaluator::types::FhirPathValue::from_json(&extension_empty);
         let result_empty = has_value_function(&target_empty, &params).unwrap();
         assert_eq!(result_empty, FhirPathValue::Boolean(false));
+    }
+
+    #[test]
+    fn test_get_value_function_with_value() {
+        let params = vec![];
+
+        // Extension with direct value field should return the value
+        let extension = json!({
+            "url": "http://example.org/test",
+            "valueString": "test-value"
+        });
+
+        let target = crate::evaluator::types::FhirPathValue::from_json(&extension);
+        let result = get_value_function(&target, &params).unwrap();
+        assert_eq!(result, FhirPathValue::String("test-value".to_string()));
+
+        // Extension with no value* fields should return empty
+        let extension_empty = json!({
+            "url": "http://example.org/test"
+        });
+
+        let target_empty = crate::evaluator::types::FhirPathValue::from_json(&extension_empty);
+        let result_empty = get_value_function(&target_empty, &params).unwrap();
+        assert_eq!(result_empty, FhirPathValue::Empty);
+    }
+
+    #[test]
+    fn test_get_value_function_with_primitives() {
+        let params = vec![];
+
+        // String primitive should return itself
+        let string_value = FhirPathValue::String("test".to_string());
+        let result = get_value_function(&string_value, &params).unwrap();
+        assert_eq!(result, FhirPathValue::String("test".to_string()));
+
+        // Integer primitive should return itself
+        let int_value = FhirPathValue::Integer(42);
+        let result = get_value_function(&int_value, &params).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(42));
+
+        // Boolean primitive should return itself
+        let bool_value = FhirPathValue::Boolean(true);
+        let result = get_value_function(&bool_value, &params).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+
+        // Quantity primitive should return itself
+        let quantity_value = FhirPathValue::Quantity {
+            value: 42.0,
+            unit: Some("kg".to_string()),
+        };
+        let result = get_value_function(&quantity_value, &params).unwrap();
+        assert_eq!(
+            result,
+            FhirPathValue::Quantity {
+                value: 42.0,
+                unit: Some("kg".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn test_get_value_function_with_collections() {
+        let params = vec![];
+
+        // Single-item collection should return the value of the item
+        let single_item =
+            FhirPathValue::Collection(vec![FhirPathValue::String("test".to_string())]);
+        let result = get_value_function(&single_item, &params).unwrap();
+        assert_eq!(result, FhirPathValue::String("test".to_string()));
+
+        // Multi-item collection should return empty
+        let multi_item = FhirPathValue::Collection(vec![
+            FhirPathValue::String("test1".to_string()),
+            FhirPathValue::String("test2".to_string()),
+        ]);
+        let result = get_value_function(&multi_item, &params).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
+
+        // Empty collection should return empty
+        let empty_collection = FhirPathValue::Collection(vec![]);
+        let result = get_value_function(&empty_collection, &params).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
     }
 }

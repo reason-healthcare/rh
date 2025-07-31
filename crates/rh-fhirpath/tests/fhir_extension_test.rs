@@ -367,6 +367,162 @@ mod tests {
     }
 
     #[test]
+    fn test_get_value_function_with_context_id() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test %context.id.getValue() - should return the primitive value
+        let parsed = parser.parse("%context.id.getValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("patient-with-extensions".to_string()),
+            "Context id getValue() should return the string value"
+        );
+    }
+
+    #[test]
+    fn test_get_value_function_with_extension() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test getValue() on extension with direct value
+        let parsed = parser
+            .parse("extension('http://example.org/custom-extension')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::String("custom-value".to_string()),
+            "Extension getValue() should return the valueString"
+        );
+    }
+
+    #[test]
+    fn test_get_value_function_with_multiple_items() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+        let context = EvaluationContext::new(sample_patient_with_extensions());
+
+        // Test getValue() on collection with multiple items - should return empty
+        let parsed = parser.parse("name.getValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Empty,
+            "Collection with multiple items should return empty for getValue()"
+        );
+    }
+
+    #[test]
+    fn test_get_value_function_with_empty_extension() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create a patient with an empty extension
+        let patient_empty_ext = json!({
+            "resourceType": "Patient",
+            "id": "patient-empty-ext",
+            "extension": [{
+                "url": "http://example.org/empty-extension"
+                // No value* properties or nested extensions
+            }],
+            "name": [{"family": "Test"}]
+        });
+        let context = EvaluationContext::new(patient_empty_ext);
+
+        let parsed = parser
+            .parse("extension('http://example.org/empty-extension')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Empty,
+            "Empty extension should return empty for getValue()"
+        );
+    }
+
+    #[test]
+    fn test_get_value_function_with_various_primitives() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create a comprehensive test resource with various primitive types
+        let test_resource = json!({
+            "resourceType": "Patient",
+            "id": "test-primitives",
+            "active": true,
+            "birthDate": "1990-01-01",
+            "extension": [{
+                "url": "http://example.org/integer-ext",
+                "valueInteger": 42
+            }, {
+                "url": "http://example.org/decimal-ext",
+                "valueDecimal": 2.5
+            }, {
+                "url": "http://example.org/boolean-ext",
+                "valueBoolean": false
+            }, {
+                "url": "http://example.org/datetime-ext",
+                "valueDateTime": "2023-12-01T10:30:00Z"
+            }]
+        });
+        let context = EvaluationContext::new(test_resource);
+
+        // Test string primitive (id)
+        let parsed = parser.parse("id.getValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::String("test-primitives".to_string()));
+
+        // Test boolean primitive (active)
+        let parsed = parser.parse("active.getValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(true));
+
+        // Test date primitive (birthDate)
+        let parsed = parser.parse("birthDate.getValue()").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::String("1990-01-01".to_string()));
+
+        // Test integer extension
+        let parsed = parser
+            .parse("extension('http://example.org/integer-ext')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(42));
+
+        // Test decimal extension
+        let parsed = parser
+            .parse("extension('http://example.org/decimal-ext')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Number(2.5));
+
+        // Test boolean extension
+        let parsed = parser
+            .parse("extension('http://example.org/boolean-ext')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Boolean(false));
+
+        // Test datetime extension
+        let parsed = parser
+            .parse("extension('http://example.org/datetime-ext')[0].getValue()")
+            .unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(
+            result,
+            FhirPathValue::String("2023-12-01T10:30:00Z".to_string())
+        );
+    }
+
+    #[test]
     fn test_resource_variable() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
