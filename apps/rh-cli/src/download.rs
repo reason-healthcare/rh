@@ -6,6 +6,11 @@ use tracing::info;
 use rh_loader::{LoaderConfig, PackageLoader};
 
 /// Download FHIR packages from npm-style registries
+///
+/// Authentication is handled via the RH_REGISTRY_TOKEN environment variable.
+/// Set this variable to your bearer token for private registries:
+///
+/// export RH_REGISTRY_TOKEN="your-token-here"
 #[derive(Subcommand)]
 pub enum DownloadCommands {
     /// Download a FHIR package from registry
@@ -24,10 +29,6 @@ pub enum DownloadCommands {
         #[clap(long, default_value = "https://packages.fhir.org")]
         registry: String,
 
-        /// Authentication token for private registries
-        #[clap(long)]
-        token: Option<String>,
-
         /// Overwrite package if it already exists
         #[clap(long)]
         overwrite: bool,
@@ -41,10 +42,6 @@ pub enum DownloadCommands {
         #[clap(long, default_value = "https://packages.fhir.org")]
         registry: String,
 
-        /// Authentication token for private registries
-        #[clap(long)]
-        token: Option<String>,
-
         /// Show only the latest version
         #[clap(long)]
         latest: bool,
@@ -52,13 +49,15 @@ pub enum DownloadCommands {
 }
 
 pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
+    // Get token from environment variable
+    let token = std::env::var("RH_REGISTRY_TOKEN").ok();
+
     match cmd {
         DownloadCommands::Package {
             package,
             version,
             output,
             registry,
-            token,
             overwrite,
         } => {
             let output_dir = match output {
@@ -80,7 +79,6 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
         DownloadCommands::List {
             package,
             registry,
-            token,
             latest,
         } => {
             list_package_versions(&package, &registry, token.as_deref(), latest).await?;
@@ -165,8 +163,16 @@ pub async fn download_package_to_dir(
     version: &str,
     output: &std::path::Path,
     registry: &str,
-    token: Option<&str>,
     overwrite: bool,
 ) -> Result<()> {
-    download_package(package, version, output, registry, token, overwrite).await
+    let token = std::env::var("RH_REGISTRY_TOKEN").ok();
+    download_package(
+        package,
+        version,
+        output,
+        registry,
+        token.as_deref(),
+        overwrite,
+    )
+    .await
 }

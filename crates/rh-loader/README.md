@@ -205,7 +205,7 @@ use std::path::Path;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = LoaderConfig {
         registry_url: "https://my-private-registry.com".to_string(),
-        auth_token: Some(std::env::var("FHIR_TOKEN")?),
+        auth_token: Some(std::env::var("RH_REGISTRY_TOKEN")?),
         timeout_seconds: 120,
         max_retries: 5,
         verify_checksums: true,
@@ -215,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let config_with_overwrite = LoaderConfig {
         registry_url: "https://my-private-registry.com".to_string(),
-        auth_token: Some(std::env::var("FHIR_TOKEN")?),
+        auth_token: Some(std::env::var("RH_REGISTRY_TOKEN")?),
         timeout_seconds: 120,
         max_retries: 5,
         verify_checksums: true,
@@ -379,7 +379,7 @@ fn load_config() -> LoaderConfig {
     LoaderConfig {
         registry_url: std::env::var("FHIR_REGISTRY_URL")
             .unwrap_or_else(|_| "https://packages.fhir.org".to_string()),
-        auth_token: std::env::var("FHIR_TOKEN").ok(),
+        auth_token: std::env::var("RH_REGISTRY_TOKEN").ok(),
         timeout_seconds: std::env::var("FHIR_TIMEOUT")
             .unwrap_or_else(|_| "30".to_string())
             .parse()

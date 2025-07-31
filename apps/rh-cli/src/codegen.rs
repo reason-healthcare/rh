@@ -93,10 +93,6 @@ pub enum CodegenCommands {
         #[clap(long, default_value = "https://packages.fhir.org")]
         registry: String,
 
-        /// Authentication token for private registries
-        #[clap(long)]
-        token: Option<String>,
-
         /// Overwrite package if it already exists
         #[clap(long)]
         overwrite: bool,
@@ -141,7 +137,6 @@ pub async fn handle_command(cmd: CodegenCommands) -> Result<()> {
             value_set_dir,
             generate_crate,
             registry,
-            token,
             overwrite,
         } => {
             let pkg_dir = match package_dir {
@@ -150,6 +145,7 @@ pub async fn handle_command(cmd: CodegenCommands) -> Result<()> {
                     anyhow::anyhow!("Failed to get default packages directory: {}", e)
                 })?,
             };
+            let token = std::env::var("RH_REGISTRY_TOKEN").ok();
             install_package(InstallParams {
                 package: &package,
                 version: &version,
@@ -740,7 +736,6 @@ async fn install_package(params: InstallParams<'_>) -> Result<()> {
         params.version,
         params.package_dir,
         params.registry,
-        params.token,
         params.overwrite,
     )
     .await?;

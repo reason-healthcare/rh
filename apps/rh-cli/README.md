@@ -24,6 +24,23 @@ cargo run -p rh -- validate json -i examples/patient.json
 cargo run -p rh -- fhirpath repl
 ```
 
+## Environment Variables
+
+The RH CLI uses environment variables for configuration:
+
+- **`RH_REGISTRY_TOKEN`** - Authentication token for private FHIR package registries
+- **`RUST_LOG`** - Controls logging level (e.g., `info`, `debug`, `trace`)
+
+### Authentication Example
+
+```bash
+# Set authentication token for private registries
+export RH_REGISTRY_TOKEN="your-bearer-token-here"
+
+# Download from private registry
+cargo run -p rh -- download package my.private.package 1.0.0 --registry https://private-registry.com
+```
+
 ## Command Overview
 
 The RH CLI is organized into subcommands, each providing specialized functionality:
@@ -99,10 +116,10 @@ cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
 # Overwrite existing package
 cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 --overwrite
 
-# Use custom registry with authentication
+# Use custom registry with authentication (set token via environment variable)
+export RH_REGISTRY_TOKEN="your-auth-token"
 cargo run -p rh -- download package my.custom.package 1.0.0 \
-  --registry https://my-fhir-registry.com \
-  --token your-auth-token
+  --registry https://my-fhir-registry.com
 ```
 
 ## FHIRPath Operations (`rh fhirpath`)
@@ -473,11 +490,10 @@ cargo run -p rh -- codegen batch --config ./codegen.json
 
 ```bash
 # Work with private FHIR package registries
-export FHIR_TOKEN="your-auth-token"
+export RH_REGISTRY_TOKEN="your-auth-token"
 
 cargo run -p rh -- download package my.org.custom.fhir 2.1.0 \
   --registry https://fhir-packages.my-org.com \
-  --token $FHIR_TOKEN \
   --output ./custom-packages/
 ```
 
