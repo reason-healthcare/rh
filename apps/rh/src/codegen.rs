@@ -7,8 +7,8 @@ use anyhow::Result;
 use clap::Subcommand;
 use tracing::{error, info, warn};
 
-use codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
-use common::utils;
+use rh_codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
+use rh_common::utils;
 
 #[derive(Subcommand)]
 pub enum CodegenCommands {
@@ -160,16 +160,16 @@ pub async fn handle_command(cmd: CodegenCommands) -> Result<()> {
             registry,
             token,
         } => {
-            install_package(
-                &package,
-                &version,
-                &output,
-                &config,
-                value_set_dir.as_deref(),
+            install_package(InstallParams {
+                package: &package,
+                version: &version,
+                output: &output,
+                config_path: &config,
+                value_set_dir: value_set_dir.as_deref(),
                 generate_crate,
-                &registry,
-                token.as_deref(),
-            )
+                registry: &registry,
+                token: token.as_deref(),
+            })
             .await?;
         }
     }
@@ -260,7 +260,7 @@ fn generate_single(
                 }
             }
         }
-        Err(codegen::CodegenError::Generation { message })
+        Err(rh_codegen::CodegenError::Generation { message })
             if message.contains("Skipping LogicalModel") =>
         {
             warn!("{}", message);
@@ -367,7 +367,7 @@ fn process_single_file(
     // Generate the code
     match generator.generate_to_file(&structure_def, &output_path) {
         Ok(()) => Ok(output_path),
-        Err(codegen::CodegenError::Generation { message })
+        Err(rh_codegen::CodegenError::Generation { message })
             if message.contains("Skipping LogicalModel") =>
         {
             // LogicalModels are skipped, but this isn't an error for batch processing
@@ -464,49 +464,52 @@ async fn download_package(
     Ok(())
 }
 
+/// Parameters for crate generation
+struct CrateGenerationParams<'a> {
+    output: &'a Path,
+    types_dir: &'a Path,
+    package: &'a str,
+    version: &'a str,
+    canonical_url: &'a str,
+    author: &'a str,
+    description: &'a str,
+    command_invoked: &'a str,
+}
+
 /// Generate a complete Rust crate structure with Cargo.toml, lib.rs, and README.md
-fn generate_crate_structure(
-    output: &Path,
-    types_dir: &Path,
-    package: &str,
-    version: &str,
-    canonical_url: &str,
-    author: &str,
-    description: &str,
-    command_invoked: &str,
-) -> Result<()> {
+fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     // Generate statistics by counting generated files
-    let stats = generate_crate_statistics(types_dir)?;
+    let stats = generate_crate_statistics(params.types_dir)?;
 
     // Generate Cargo.toml
-    let cargo_toml_content = generate_cargo_toml(package, version);
-    let cargo_toml_path = output.join("Cargo.toml");
+    let cargo_toml_content = generate_cargo_toml(params.package, params.version);
+    let cargo_toml_path = params.output.join("Cargo.toml");
     fs::write(&cargo_toml_path, cargo_toml_content)?;
     info!("Generated: {}", cargo_toml_path.display());
 
     // Generate lib.rs
-    let lib_rs_content = generate_lib_rs(types_dir)?;
-    let lib_rs_path = output.join("lib.rs");
+    let lib_rs_content = generate_lib_rs(params.types_dir)?;
+    let lib_rs_path = params.output.join("lib.rs");
     fs::write(&lib_rs_path, lib_rs_content)?;
     info!("Generated: {}", lib_rs_path.display());
 
     // Generate README.md
     let readme_content = generate_readme_md(
-        package,
-        version,
-        canonical_url,
-        author,
-        description,
-        command_invoked,
+        params.package,
+        params.version,
+        params.canonical_url,
+        params.author,
+        params.description,
+        params.command_invoked,
         &stats,
     );
-    let readme_path = output.join("README.md");
+    let readme_path = params.output.join("README.md");
     fs::write(&readme_path, readme_content)?;
     info!("Generated: {}", readme_path.display());
 
     // Generate mod.rs in the types directory
-    let mod_rs_content = generate_types_mod_rs(types_dir)?;
-    let mod_rs_path = types_dir.join("mod.rs");
+    let mod_rs_content = generate_types_mod_rs(params.types_dir)?;
+    let mod_rs_path = params.types_dir.join("mod.rs");
     fs::write(&mod_rs_path, mod_rs_content)?;
     info!("Generated: {}", mod_rs_path.display());
 
@@ -516,14 +519,14 @@ fn generate_crate_structure(
 /// Generate Cargo.toml content for the FHIR crate
 fn generate_cargo_toml(package: &str, version: &str) -> String {
     // Convert FHIR package name to a valid Rust crate name
-    let crate_name = package.replace('.', "_").replace('-', "_");
+    let crate_name = package.replace(['.', '-'], "_");
 
     format!(
         r#"[package]
-name = "{}"
+name = "{crate_name}"
 version = "0.1.0"
 edition = "2021"
-description = "Generated FHIR types from {} package version {}"
+description = "Generated FHIR types from {package} package version {version}"
 authors = ["FHIR Code Generator"]
 license = "MIT OR Apache-2.0"
 
@@ -535,10 +538,9 @@ serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
 
 [lib]
-name = "{}"
+name = "{crate_name}"
 path = "lib.rs"
-"#,
-        crate_name, package, version, crate_name
+"#
     )
 }
 
@@ -547,16 +549,16 @@ fn generate_lib_rs(_types_dir: &Path) -> Result<String> {
     let mut lib_content = String::new();
 
     // Add crate-level documentation
-    lib_content.push_str(&format!(
+    lib_content.push_str(
         r#"//! Generated FHIR types
 //!
 //! This crate contains generated Rust types for FHIR resources.
 //! All types include serde serialization support.
 
-pub use serde::{{Deserialize, Serialize}};
+pub use serde::{Deserialize, Serialize};
 
-"#
-    ));
+"#,
+    );
 
     // Add types module
     lib_content.push_str("pub mod types;\n");
@@ -576,7 +578,7 @@ fn generate_types_mod_rs(types_dir: &Path) -> Result<String> {
         for entry in fs::read_dir(types_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     if stem != "mod" {
                         rs_files.push(stem.to_string());
@@ -591,14 +593,14 @@ fn generate_types_mod_rs(types_dir: &Path) -> Result<String> {
 
     // Generate module declarations
     for module_name in &rs_files {
-        content.push_str(&format!("pub mod {};\n", module_name));
+        content.push_str(&format!("pub mod {module_name};\n"));
     }
 
     // Add re-exports
     if !rs_files.is_empty() {
         content.push('\n');
         for module_name in &rs_files {
-            content.push_str(&format!("pub use {}::*;\n", module_name));
+            content.push_str(&format!("pub use {module_name}::*;\n"));
         }
     }
 
@@ -611,6 +613,7 @@ struct CrateStatistics {
     num_structs: usize,
     num_enums: usize,
     total_types: usize,
+    #[allow(dead_code)]
     canonical_url: String,
 }
 
@@ -624,7 +627,7 @@ fn generate_crate_statistics(types_dir: &Path) -> Result<CrateStatistics> {
         for entry in fs::read_dir(types_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     if stem != "mod" {
                         // Count each .rs file as a struct (main type)
@@ -646,7 +649,7 @@ fn generate_crate_statistics(types_dir: &Path) -> Result<CrateStatistics> {
         for entry in fs::read_dir(&enums_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     if stem != "mod" {
                         num_enums += 1;
@@ -676,35 +679,34 @@ fn generate_readme_md(
     command_invoked: &str,
     stats: &CrateStatistics,
 ) -> String {
-    let crate_name = package.replace('.', "_").replace('-', "_");
+    let crate_name = package.replace(['.', '-'], "_");
     let mut content = String::new();
 
-    content.push_str(&format!("# {}\n\n", crate_name));
-    content.push_str(&format!("**Generated FHIR Types for {}**\n\n", package));
-    content.push_str(&format!("This crate contains automatically generated Rust types for FHIR (Fast Healthcare Interoperability Resources) based on the `{}` package.\n\n", package));
+    content.push_str(&format!("# {crate_name}\n\n"));
+    content.push_str(&format!("**Generated FHIR Types for {package}**\n\n"));
+    content.push_str(&format!("This crate contains automatically generated Rust types for FHIR (Fast Healthcare Interoperability Resources) based on the `{package}` package.\n\n"));
 
     content.push_str("## ⚠️ Important Notice\n\n");
     content
         .push_str("**This crate was automatically generated using the RH codegen CLI tool.**\n\n");
     content.push_str(&format!(
-        "- **Generator command**:\n```bash\n{}\n```\n\n",
-        command_invoked
+        "- **Generator command**:\n```bash\n{command_invoked}\n```\n\n"
     ));
     content.push_str(&format!("- **Generation timestamp**: {}\n\n", Local::now()));
 
     content.push_str("## 📦 Package Information\n\n");
 
-    content.push_str(&format!("* **Package Name** {}\n", package));
-    content.push_str(&format!("* **Package Author** {}\n", author));
-    content.push_str(&format!("* **Version** {}\n", version));
-    content.push_str(&format!("* **Canonical URL** `{}`\n\n", canonical_url));
+    content.push_str(&format!("* **Package Name** {package}\n"));
+    content.push_str(&format!("* **Package Author** {author}\n"));
+    content.push_str(&format!("* **Version** {version}\n"));
+    content.push_str(&format!("* **Canonical URL** `{canonical_url}`\n\n"));
 
     content.push_str(&format!(
         "**📊 There are {} structs, {} enums, with a total of {} types**\n\n",
         stats.num_structs, stats.num_enums, stats.total_types
     ));
 
-    content.push_str(&format!("## 📚 Description\n\n{}", description));
+    content.push_str(&format!("## 📚 Description\n\n{description}"));
 
     content.push_str("\n\n");
 
@@ -712,12 +714,12 @@ fn generate_readme_md(
     content.push_str("Add this crate to your `Cargo.toml`:\n\n");
     content.push_str("```toml\n");
     content.push_str("[dependencies]\n");
-    content.push_str(&format!("{} = \"0.1.0\"\n", crate_name));
+    content.push_str(&format!("{crate_name} = \"0.1.0\"\n"));
     content.push_str("```\n\n");
 
     content.push_str("Example usage:\n\n");
     content.push_str("```rust\n");
-    content.push_str(&format!("use {}::*;\n", crate_name));
+    content.push_str(&format!("use {crate_name}::*;\n"));
     content.push_str("use serde_json;\n\n");
     content.push_str("// All types include serde serialization support\n");
     content.push_str("let json_data = r#\"{\\\"resourceType\\\": \\\"Patient\\\", \\\"id\\\": \\\"example\\\"}\"#;\n");
@@ -747,29 +749,42 @@ fn generate_readme_md(
     content
 }
 
-/// Install FHIR package and generate types  
-async fn install_package(
-    package: &str,
-    version: &str,
-    output: &Path,
-    config_path: &Path,
-    value_set_dir: Option<&Path>,
+/// Parameters for package installation
+struct InstallParams<'a> {
+    package: &'a str,
+    version: &'a str,
+    output: &'a Path,
+    config_path: &'a Path,
+    value_set_dir: Option<&'a Path>,
     generate_crate: bool,
-    registry: &str,
-    token: Option<&str>,
-) -> Result<()> {
+    registry: &'a str,
+    token: Option<&'a str>,
+}
+
+/// Install FHIR package and generate types  
+async fn install_package(params: InstallParams<'_>) -> Result<()> {
     info!(
         "Installing package {}@{} and generating types",
-        package, version
+        params.package, params.version
     );
 
     // First download the package to a temporary directory
-    let temp_dir = std::env::temp_dir().join(format!("fhir-package-{package}-{version}"));
-    download_package(package, version, &temp_dir, registry, token).await?;
+    let temp_dir = std::env::temp_dir().join(format!(
+        "fhir-package-{}-{}",
+        params.package, params.version
+    ));
+    download_package(
+        params.package,
+        params.version,
+        &temp_dir,
+        params.registry,
+        params.token,
+    )
+    .await?;
 
     // Load the codegen configuration
-    let config = if config_path.exists() {
-        let config_content = fs::read_to_string(config_path)?;
+    let config = if params.config_path.exists() {
+        let config_content = fs::read_to_string(params.config_path)?;
         serde_json::from_str(&config_content)?
     } else {
         warn!("Configuration file not found, using default settings");
@@ -778,7 +793,7 @@ async fn install_package(
 
     // Determine the ValueSet directory - default to package directory if not specified
     let package_dir = temp_dir.join("package");
-    let effective_value_set_dir = if let Some(value_set_dir) = value_set_dir {
+    let effective_value_set_dir = if let Some(value_set_dir) = params.value_set_dir {
         value_set_dir
     } else {
         // Default to using the package directory for ValueSets
@@ -799,15 +814,15 @@ async fn install_package(
         CodeGenerator::new_with_value_set_directory(config, effective_value_set_dir);
 
     // Create output directory
-    fs::create_dir_all(output)?;
+    fs::create_dir_all(params.output)?;
 
     // Determine the actual output directory for types
-    let types_output = if generate_crate {
-        let types_dir = output.join("types");
+    let types_output = if params.generate_crate {
+        let types_dir = params.output.join("types");
         fs::create_dir_all(&types_dir)?;
         types_dir
     } else {
-        output.to_path_buf()
+        params.output.to_path_buf()
     };
 
     // Find all StructureDefinition JSON files in the package directory
@@ -819,10 +834,10 @@ async fn install_package(
     }
 
     // Generate ValueSet enums in a separate enums directory
-    let enums_dir = if generate_crate {
+    let enums_dir = if params.generate_crate {
         types_output.join("enums")
     } else {
-        output.join("enums")
+        params.output.join("enums")
     };
     generator
         .generate_enum_files(&enums_dir)
@@ -835,7 +850,7 @@ async fn install_package(
     info!("Generated ValueSet enums to: {}", enums_dir.display());
 
     // Generate crate structure if requested
-    if generate_crate {
+    if params.generate_crate {
         // Build the command string for documentation
         let mut command_parts = vec![
             "cargo".to_string(),
@@ -844,19 +859,19 @@ async fn install_package(
             "rh".to_string(),
             "codegen".to_string(),
             "install".to_string(),
-            package.to_string(),
-            version.to_string(),
+            params.package.to_string(),
+            params.version.to_string(),
             "--output".to_string(),
-            output.to_string_lossy().to_string(),
+            params.output.to_string_lossy().to_string(),
             "--generate-crate".to_string(),
         ];
 
-        if registry != "https://packages.fhir.org" {
+        if params.registry != "https://packages.fhir.org" {
             command_parts.push("--registry".to_string());
-            command_parts.push(registry.to_string());
+            command_parts.push(params.registry.to_string());
         }
 
-        if token.is_some() {
+        if params.token.is_some() {
             command_parts.push("--token".to_string());
             command_parts.push("<TOKEN>".to_string());
         }
@@ -886,16 +901,16 @@ async fn install_package(
 
         info!("Using canonical URL from package.json: {}", canonical);
 
-        generate_crate_structure(
-            output,
-            &types_output,
-            package,
-            version,
-            canonical,
+        generate_crate_structure(CrateGenerationParams {
+            output: params.output,
+            types_dir: &types_output,
+            package: params.package,
+            version: params.version,
+            canonical_url: canonical,
             author,
             description,
-            &command_invoked,
-        )?;
+            command_invoked: &command_invoked,
+        })?;
         info!("Generated complete Rust crate structure");
     }
 

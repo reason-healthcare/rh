@@ -8,7 +8,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use tracing::{error, info};
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 
 /// Convert FhirPathValue to JSON Value for serialization
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {

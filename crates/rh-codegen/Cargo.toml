@@ -28,7 +28,7 @@ flate2 = { workspace = true }
 tracing = { workspace = true }
 
 # Local workspace crates
-rh-common = { path = "../common" }
+rh-common = { path = "../rh-common" }
 
 [dev-dependencies]
 tempfile = "3.0"
