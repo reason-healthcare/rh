@@ -1,7 +1,6 @@
 # RH - Rust Healthcare Toolkit
 
 [![CI](https://github.com/reason-healthcare/rh/workflows/CI/badge.svg)](https://github.com/reason-healthcare/rh/actions)
-[![codecov](https://codecov.io/gh/reason-healthcare/rh/branch/main/graph/badge.svg)](https://codecov.io/gh/reason-healthcare/rh)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 
@@ -17,7 +16,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🚀 | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
 | 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
-| 🔜 | rh-validator  | FHIR validator |
+| 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
@@ -108,7 +107,7 @@ All functionality is available through the unified `rh` CLI.
 # Code generation
 cargo run -p rh -- codegen --help
 
-# FHIRPath operations  
+# FHIRPath operations
 cargo run -p rh -- fhirpath --help
 ```
 

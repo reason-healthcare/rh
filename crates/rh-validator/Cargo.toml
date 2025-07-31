@@ -1,0 +1,32 @@
+[package]
+name = "rh-validator"
+version = "0.1.0"
+edition = "2021"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Comprehensive FHIR validation library with JSON syntax validation, resource conformance checking, and profile-based validation capabilities"
+keywords = [
+    "fhir",
+    "healthcare",
+    "validation",
+    "json",
+    "hl7",
+    "interoperability",
+    "medical",
+]
+categories = ["parsing", "data-structures", "healthcare", "validation"]
+
+[dependencies]
+# Workspace dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Local workspace crates
+rh-common = { path = "../rh-common" }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -4,6 +4,7 @@ use tracing::error;
 
 mod codegen;
 mod fhirpath;
+mod validator;
 
 /// rh - Unified CLI for FHIR processing tools
 ///
@@ -38,6 +39,10 @@ enum Commands {
     /// Parse and evaluate FHIRPath expressions
     #[clap(subcommand)]
     Fhirpath(fhirpath::FhirpathCommands),
+
+    /// Validate JSON syntax and FHIR resources
+    #[clap(subcommand)]
+    Validate(validator::ValidatorCommands),
 }
 
 #[tokio::main]
@@ -66,6 +71,12 @@ async fn main() -> Result<()> {
         Commands::Fhirpath(cmd) => {
             if let Err(e) = fhirpath::handle_command(cmd).await {
                 error!("FHIRPath error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Validate(cmd) => {
+            if let Err(e) = validator::handle_command(cmd).await {
+                error!("Validator error: {}", e);
                 std::process::exit(1);
             }
         }

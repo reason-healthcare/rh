@@ -26,3 +26,4 @@ rustyline = { workspace = true }
 rh-common = { path = "../../crates/rh-common" }
 rh-codegen = { path = "../../crates/rh-codegen" }
 rh-fhirpath = { path = "../../crates/rh-fhirpath" }
+rh-validator = { path = "../../crates/rh-validator" }
