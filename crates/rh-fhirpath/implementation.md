@@ -379,7 +379,7 @@ The following table shows operator precedence from highest to lowest:
 | ❌ | `htmlChecks` | Not implemented |
 | **Paths and polymorphic items** | | |
 | ✅ | Polymorphic field access (value[x]) | `Observation.value` for `valueString`, `valueQuantity` etc. |
-| ❌ | Type-specific polymorphic access | `Observation.valueString`, `Observation.valueQuantity` |
+| ✅ | Type-specific polymorphic access | `Observation.valueString`, `Observation.valueQuantity` |
 | ❌ | Resource type navigation | Navigation based on resource type context |
 | ❌ | Profile-aware navigation | Navigation based on profile constraints |
 
