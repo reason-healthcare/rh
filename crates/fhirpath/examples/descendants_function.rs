@@ -5,7 +5,7 @@
 //! Unlike children() which only returns immediate children, descendants() traverses the
 //! entire tree structure.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {
@@ -82,7 +82,7 @@ fn main() -> anyhow::Result<()> {
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
         "   Patient.descendants() contains {} items",
-        if let fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
+        if let rh_fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
             items.len()
         } else {
             0
@@ -102,7 +102,7 @@ fn main() -> anyhow::Result<()> {
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
         "   address.descendants() contains {} items",
-        if let fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
+        if let rh_fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
             items.len()
         } else {
             0
@@ -164,7 +164,7 @@ fn main() -> anyhow::Result<()> {
     let result = evaluator.evaluate(&expr, &context)?;
     println!(
         "   data.descendants() contains {} items",
-        if let fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
+        if let rh_fhirpath::evaluator::types::FhirPathValue::Collection(items) = &result {
             items.len()
         } else {
             0

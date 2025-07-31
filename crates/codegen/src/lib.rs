@@ -3,7 +3,7 @@
 //! This library provides functionality to generate Rust code from FHIR (Fast Healthcare
 //! Interoperability Resources) StructureDefinition files.
 
-pub use common::{CommonError, Config};
+pub use rh_common::{CommonError, Config};
 
 mod config;
 pub mod download;

@@ -4,7 +4,7 @@
 //! The combine function merges two collections into a single collection without eliminating
 //! duplicate values, preserving all items from both collections.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

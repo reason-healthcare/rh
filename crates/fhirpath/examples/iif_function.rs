@@ -4,7 +4,7 @@
 //! The iif function is an immediate if, also known as a conditional operator (like C's ? : operator).
 //! It evaluates the criterion and returns true-result if the criterion is truthy, otherwise returns otherwise-result.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

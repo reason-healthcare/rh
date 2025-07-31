@@ -4,7 +4,7 @@
 //! including Kelvin, Celsius, and Fahrenheit units with automatic
 //! conversion during arithmetic operations.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

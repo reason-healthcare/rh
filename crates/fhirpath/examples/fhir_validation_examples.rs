@@ -3,7 +3,7 @@
 //! This example demonstrates how to use FHIR extensions for data validation,
 //! quality checks, and ensuring FHIR resource compliance.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

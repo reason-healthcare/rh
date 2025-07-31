@@ -3,7 +3,7 @@
 //! This example demonstrates the `ofType(type)` function in FHIRPath expressions.
 //! The ofType function filters collections, returning only items that match the specified type.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

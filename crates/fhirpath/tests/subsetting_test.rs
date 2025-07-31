@@ -4,7 +4,7 @@
 /// single(), first(), last(), tail(), skip(), take(), intersect(), exclude()
 #[cfg(test)]
 mod subsetting_tests {
-    use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+    use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
     use serde_json::{json, Value};
 
     /// Helper function to evaluate FHIRPath expression against JSON data

@@ -3,7 +3,7 @@
 /// This example demonstrates how to work with collections and arrays
 /// in FHIRPath expressions.
 use anyhow::Result;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<()> {

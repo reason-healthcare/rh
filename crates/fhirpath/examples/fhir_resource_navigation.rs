@@ -3,7 +3,7 @@
 //! This example demonstrates practical FHIR resource navigation scenarios
 //! using extension functions and variables for real-world healthcare use cases.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

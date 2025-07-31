@@ -7,7 +7,7 @@
 //! - Multiple items return empty collection
 //! - Non-boolean values return empty collection
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {

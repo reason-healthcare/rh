@@ -2,7 +2,7 @@
 ///
 /// This example demonstrates how to download and install FHIR packages
 /// from npm-style registries and generate Rust types.
-use codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
+use rh_codegen::{CodeGenerator, CodegenConfig, PackageDownloadConfig, PackageDownloader};
 use std::collections::HashMap;
 
 #[tokio::main]

@@ -3,7 +3,7 @@
 //! The length() function returns the number of characters in a string as an Integer.
 //! The toChars() function converts a string into a collection of single-character strings.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {

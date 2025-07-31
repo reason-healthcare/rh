@@ -3,7 +3,7 @@
 //! This example demonstrates FHIRPath array indexing functionality,
 //! showing how to access elements from collections using index notation.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -4,7 +4,7 @@
 //! The combine function merges the input and other collections into a single collection
 //! without eliminating duplicate values, maintaining no specific order.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 /// Create a test context with various collections for combining

@@ -32,7 +32,7 @@ cargo run -p rh -- fhirpath repl
 ### Rust
 
 ```rust
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
+use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
 use serde_json::json;
 
 let patient = json!({

@@ -4,7 +4,7 @@
 //! The union function merges the input and other collections into a single collection
 //! while eliminating duplicate values, like combine() but with deduplication.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 /// Create a test context with various collections for union operations

@@ -14,7 +14,7 @@
 //! Individual extension modules can be enabled/disabled via feature flags.
 //!
 //! ```rust
-//! use fhirpath::{FhirPathEvaluator, FhirPathParser, EvaluationContext};
+//! use rh_fhirpath::{FhirPathEvaluator, FhirPathParser, EvaluationContext};
 //! use serde_json::json;
 //!
 //! let parser = FhirPathParser::new();

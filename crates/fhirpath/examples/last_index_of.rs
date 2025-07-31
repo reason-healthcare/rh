@@ -3,7 +3,7 @@
 //! The lastIndexOf() function finds the 0-based index of the last occurrence
 //! of a substring within a string. Returns -1 if not found.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {

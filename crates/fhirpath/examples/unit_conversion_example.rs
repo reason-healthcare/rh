@@ -3,7 +3,7 @@
 //! This example demonstrates the enhanced unit conversion capabilities
 //! of the FHIRPath library using a custom unit conversion system.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

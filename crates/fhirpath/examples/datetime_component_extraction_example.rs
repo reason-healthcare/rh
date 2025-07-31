@@ -3,7 +3,7 @@
 //! This example shows how to use FHIRPath's component extraction functions
 //! to extract specific parts from Date, DateTime, and Time values.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -53,7 +53,7 @@ fn test_all_examples_build() {
         .arg("build")
         .arg("--examples")
         .arg("-p")
-        .arg("fhirpath")
+        .arg("rh-fhirpath")
         .current_dir(workspace_root)
         .output()
         .expect("Failed to execute cargo build --examples");
@@ -86,7 +86,7 @@ fn test_all_examples_run_without_error() {
         let output = Command::new("cargo")
             .arg("run")
             .arg("-p")
-            .arg("fhirpath")
+            .arg("rh-fhirpath")
             .arg("--example")
             .arg(example)
             .current_dir(workspace_root)

@@ -856,7 +856,7 @@ Create integration tests in `tests/` directory:
 
 ```rust
 // tests/extension_integration_test.rs
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 #[test]
@@ -882,7 +882,7 @@ Create example files in `examples/` directory to demonstrate extension usage:
 //!
 //! This example shows how to use the custom extensions for [DOMAIN] operations.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {

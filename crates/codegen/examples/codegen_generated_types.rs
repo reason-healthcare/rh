@@ -2,7 +2,7 @@
 ///
 /// This example shows how to generate Rust types from FHIR StructureDefinitions
 /// and demonstrates what the generated code workflow looks like.
-use codegen::{CodeGenerator, CodegenConfig, StructureDefinition};
+use rh_codegen::{CodeGenerator, CodegenConfig, StructureDefinition};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

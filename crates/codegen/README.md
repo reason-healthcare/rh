@@ -4,7 +4,7 @@ A Rust library for generating type-safe Rust code from FHIR StructureDefinition 
 
 ## Overview
 
-The `codegen` crate provides comprehensive functionality for:
+The `rh-codegen` crate provides comprehensive functionality for:
 
 - **FHIR Type Generation**: Parse FHIR StructureDefinition JSON files and generate corresponding Rust struct definitions
 - **Type Safety**: Generate type-safe enums for required value set bindings  

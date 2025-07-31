@@ -8,7 +8,7 @@
 //! - Filtering with collection functions
 //! - Performance and edge case scenarios
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn create_complex_test_data() -> EvaluationContext {

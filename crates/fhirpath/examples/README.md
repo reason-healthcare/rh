@@ -145,7 +145,7 @@ To add a new FHIRPath example:
 
 use anyhow::Result;
 use serde_json::json;
-use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
+use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
 
 fn main() -> Result<()> {
     println!("🎯 FHIRPath [Feature Name] Operations Examples");

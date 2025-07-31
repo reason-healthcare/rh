@@ -3,7 +3,7 @@
 //! Comprehensive tests for the ofType(type) function that filters collections based on type.
 //! The ofType function returns only those items in a collection that match the specified type.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 /// Create a test context with mixed type collection

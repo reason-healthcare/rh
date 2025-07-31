@@ -1,6 +1,6 @@
 //! Simple union operations verification
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

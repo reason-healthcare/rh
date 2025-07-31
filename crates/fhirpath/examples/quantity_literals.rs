@@ -4,7 +4,7 @@
 //! Quantity literals represent values with units (UCUM or calendar durations) and are
 //! essential for healthcare calculations involving measurements, dosages, and time periods.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() {

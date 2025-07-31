@@ -3,7 +3,7 @@
 //! The replaceMatches() function replaces all matches of a regular expression pattern
 //! with a substitution string, supporting capture groups and advanced regex features.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> anyhow::Result<()> {

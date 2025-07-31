@@ -3,7 +3,7 @@
 /// This example demonstrates how to use FHIRPath expressions to navigate
 /// and extract data from real FHIR resources.
 use anyhow::Result;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<()> {

@@ -1,4 +1,4 @@
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() {
@@ -181,10 +181,10 @@ fn evaluate_expression(
     evaluator: &FhirPathEvaluator,
     context: &EvaluationContext,
     expression: &str,
-) -> Result<fhirpath::FhirPathValue, fhirpath::FhirPathError> {
+) -> Result<rh_fhirpath::FhirPathValue, rh_fhirpath::FhirPathError> {
     match parser.parse(expression) {
         Ok(expr) => evaluator.evaluate(&expr, context),
-        Err(e) => Err(fhirpath::FhirPathError::TypeError {
+        Err(e) => Err(rh_fhirpath::FhirPathError::TypeError {
             message: format!("Parse error: {e:?}"),
         }),
     }

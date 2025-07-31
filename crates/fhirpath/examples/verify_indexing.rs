@@ -2,7 +2,7 @@
 //!
 //! This test helps debug why name[1].given[0] fails while name[0].given[0] works
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     // Let's check what type this result is
                     match &result {
-                        fhirpath::FhirPathValue::Object(obj) => {
+                        rh_fhirpath::FhirPathValue::Object(obj) => {
                             println!("   📊 It's an Object");
                             if let Some(given_val) = obj.get("given") {
                                 println!("   📊 given field = {given_val:?}");

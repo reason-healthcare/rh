@@ -1,5 +1,5 @@
 use anyhow::Result;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 /// Demonstrates tree navigation alternatives since FHIRPath descendants() function is not implemented.

@@ -2,7 +2,7 @@
 //!
 //! Tests for parsing various FHIRPath expressions without evaluation
 
-use fhirpath::FhirPathParser;
+use rh_fhirpath::FhirPathParser;
 
 #[test]
 fn test_basic_expression_parsing() {

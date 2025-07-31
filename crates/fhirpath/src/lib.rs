@@ -7,7 +7,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
+//! use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
 //! use serde_json::json;
 //!
 //! let parser = FhirPathParser::new();

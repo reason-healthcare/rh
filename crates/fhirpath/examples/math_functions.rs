@@ -4,7 +4,7 @@
 //! Math functions are essential for healthcare calculations like BMI, dosage calculations,
 //! statistical analysis, and data normalization.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() {

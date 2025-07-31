@@ -2,7 +2,7 @@
 //!
 //! This example shows how to parse and work with date, datetime, and time literals in FHIRPath expressions.
 
-use fhirpath::FhirPathParser;
+use rh_fhirpath::FhirPathParser;
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

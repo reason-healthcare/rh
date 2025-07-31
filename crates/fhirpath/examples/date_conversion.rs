@@ -3,7 +3,7 @@
 //! This example shows how to use toDate(), convertsToDate(), toDateTime(), and convertsToDateTime()
 //! functions in FHIRPath expressions.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

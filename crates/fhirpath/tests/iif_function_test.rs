@@ -4,7 +4,7 @@
 //! The iif function is an immediate if, also known as a conditional operator (like C's ? : operator).
 //! It evaluates the criterion and returns true-result if truthy, otherwise returns otherwise-result.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 /// Create a test context with various values for iif testing

@@ -390,9 +390,10 @@ impl CodeGenerator {
         let is_optional = element.min.unwrap_or(0) == 0;
 
         // Determine if this field is an array (max = "*" or > 1)
-        let is_array = element.max.as_ref().is_some_and(|max| {
-            max == "*" || max.parse::<u32>().unwrap_or(1) > 1
-        });
+        let is_array = element
+            .max
+            .as_ref()
+            .is_some_and(|max| max == "*" || max.parse::<u32>().unwrap_or(1) > 1);
 
         // Get the field type
         let field_type = if let Some(element_types) = &element.element_type {
@@ -607,9 +608,7 @@ impl CodeGenerator {
             // Parse the tokens into a syntax tree and format it
             let syntax_tree =
                 syn::parse2(combined_tokens).map_err(|e| CodegenError::Generation {
-                    message: format!(
-                        "Failed to parse generated enum tokens for {enum_name}: {e}"
-                    ),
+                    message: format!("Failed to parse generated enum tokens for {enum_name}: {e}"),
                 })?;
 
             let formatted_code = prettyplease::unparse(&syntax_tree);

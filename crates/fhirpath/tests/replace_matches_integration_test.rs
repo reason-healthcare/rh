@@ -1,4 +1,4 @@
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 #[test]
@@ -20,8 +20,8 @@ fn test_replace_matches_integration() {
     // Check if we got the expected result
     println!("Result: {result:?}");
     // The result should be a String with the replacements made
-    assert!(matches!(result, fhirpath::FhirPathValue::String(_)));
-    if let fhirpath::FhirPathValue::String(s) = result {
+    assert!(matches!(result, rh_fhirpath::FhirPathValue::String(_)));
+    if let rh_fhirpath::FhirPathValue::String(s) = result {
         assert_eq!(s, "Patient ID: XXX, Visit: XXX");
     }
 }

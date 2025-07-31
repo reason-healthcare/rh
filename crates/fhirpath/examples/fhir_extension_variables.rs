@@ -3,7 +3,7 @@
 //! This example demonstrates how to use FHIR-specific extension variables
 //! like %resource, %ucum, %sct, and %loinc in FHIRPath expressions.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

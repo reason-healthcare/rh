@@ -4,7 +4,7 @@
 //! in FHIRPath, showing how to convert various value types to Time and
 //! check if values can be converted to Time.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -105,9 +105,7 @@ impl ValueSetManager {
         let value_set = match self.load_value_set(value_set_url, version) {
             Ok(vs) => vs,
             Err(err) => {
-                eprintln!(
-                    "Warning: Could not load ValueSet '{value_set_url}': {err}"
-                );
+                eprintln!("Warning: Could not load ValueSet '{value_set_url}': {err}");
                 return Err(format!("ValueSet not found: {value_set_url}"));
             }
         };
@@ -201,7 +199,8 @@ impl ValueSetManager {
                     .map_err(|e| format!("Failed to read file '{}': {}", file_path.display(), e))?;
 
                 let value_set: ValueSet = serde_json::from_str(&content)
-                     .map_err(|e| format!("Failed to parse ValueSet JSON: {e}"))?;                return Ok(value_set);
+                    .map_err(|e| format!("Failed to parse ValueSet JSON: {e}"))?;
+                return Ok(value_set);
             }
         }
 
@@ -235,7 +234,8 @@ impl ValueSetManager {
                     .map_err(|e| format!("Failed to read file '{}': {}", file_path.display(), e))?;
 
                 let code_system: CodeSystem = serde_json::from_str(&content)
-                     .map_err(|e| format!("Failed to parse CodeSystem JSON: {e}"))?;                return Ok(code_system);
+                    .map_err(|e| format!("Failed to parse CodeSystem JSON: {e}"))?;
+                return Ok(code_system);
             }
         }
 

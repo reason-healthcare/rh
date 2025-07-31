@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+    use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
     use serde_json::json;
 
     /// Sample Patient with US Core race and ethnicity extensions

@@ -3,7 +3,7 @@
 //! A quick demonstration of basic mathematical functions in FHIRPath.
 //! This example shows the most commonly used math functions with simple, clear examples.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() {

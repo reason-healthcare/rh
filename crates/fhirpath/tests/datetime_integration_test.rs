@@ -1,7 +1,7 @@
 //! Integration tests for FHIRPath date/time functions
 
 use chrono::{DateTime, Local, NaiveDate, NaiveTime, Timelike, Utc};
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 #[test]

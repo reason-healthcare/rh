@@ -6,7 +6,7 @@
 //! - Cycle detection and prevention
 //! - Edge cases and empty collections
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn create_hierarchy_context() -> EvaluationContext {

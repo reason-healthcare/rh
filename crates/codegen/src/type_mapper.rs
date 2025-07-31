@@ -187,9 +187,7 @@ impl<'a> TypeMapper<'a> {
 
             // Unknown type - default to string
             _ => {
-                eprintln!(
-                    "Warning: Unknown FHIR type '{code}', defaulting to String"
-                );
+                eprintln!("Warning: Unknown FHIR type '{code}', defaulting to String");
                 RustType::String
             }
         }

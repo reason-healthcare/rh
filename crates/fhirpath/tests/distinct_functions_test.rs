@@ -6,7 +6,7 @@
 //! - Edge cases and empty collections
 //! - Mixed data types
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn create_test_context() -> EvaluationContext {

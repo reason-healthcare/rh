@@ -1,7 +1,7 @@
 //! Tests for datetime precision parsing and evaluation
 
-use fhirpath::ast::DateTimePrecision;
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::ast::DateTimePrecision;
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 #[cfg(test)]
@@ -29,8 +29,8 @@ mod datetime_precision_tests {
             println!("✓ Parsed precision literal: {input} -> {result}");
 
             // Verify it's the expected precision type
-            if let fhirpath::ast::Expression::Term(fhirpath::ast::Term::Literal(
-                fhirpath::ast::Literal::DateTimePrecision(precision),
+            if let rh_fhirpath::ast::Expression::Term(rh_fhirpath::ast::Term::Literal(
+                rh_fhirpath::ast::Literal::DateTimePrecision(precision),
             )) = result.root
             {
                 assert_eq!(precision, expected, "Precision mismatch for {input}");
@@ -61,8 +61,8 @@ mod datetime_precision_tests {
             println!("✓ Parsed precision literal (plural): {input} -> {result}");
 
             // Verify it's the expected precision type
-            if let fhirpath::ast::Expression::Term(fhirpath::ast::Term::Literal(
-                fhirpath::ast::Literal::DateTimePrecision(precision),
+            if let rh_fhirpath::ast::Expression::Term(rh_fhirpath::ast::Term::Literal(
+                rh_fhirpath::ast::Literal::DateTimePrecision(precision),
             )) = result.root
             {
                 assert_eq!(precision, expected, "Precision mismatch for {input}");
@@ -169,7 +169,7 @@ mod datetime_precision_tests {
 
     #[test]
     fn test_datetime_precision_display() {
-        use fhirpath::ast::DateTimePrecision;
+        use rh_fhirpath::ast::DateTimePrecision;
 
         // Test Display implementation
         assert_eq!(format!("{}", DateTimePrecision::Year), "year");

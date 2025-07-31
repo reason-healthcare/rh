@@ -3,7 +3,7 @@
 //! This example demonstrates FHIRPath's `subsetOf()` and `supersetOf()` collection functions
 //! for testing set relationships between collections.
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

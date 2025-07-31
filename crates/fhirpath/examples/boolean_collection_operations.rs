@@ -7,7 +7,7 @@
 //! - allFalse() - checks if all items are boolean false values
 //! - anyFalse() - checks if any item is boolean false
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

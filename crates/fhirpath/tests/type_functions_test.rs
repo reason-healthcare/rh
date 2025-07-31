@@ -3,7 +3,7 @@
 /// Tests for the is() and as() functions that provide backward compatibility
 /// with the 'is' and 'as' operators. These functions provide the same functionality
 /// as their operator counterparts but in callable function form.
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 #[test]

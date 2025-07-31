@@ -8,7 +8,7 @@
 //! - Edge cases and error conditions
 //! - Performance scenarios with large collections
 
-use fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn create_membership_test_data() -> EvaluationContext {
