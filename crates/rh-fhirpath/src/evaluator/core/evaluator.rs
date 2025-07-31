@@ -250,6 +250,21 @@ impl FhirPathEvaluator {
                 if let Some(value) = obj.get(member) {
                     Ok(FhirPathValue::from_json(value))
                 } else {
+                    // Check for FHIR choice type polymorphic access (e.g., value[x])
+                    if let Some(obj_map) = obj.as_object() {
+                        // Look for fields that start with the member name (e.g., "value" matches "valueBoolean")
+                        for (key, value) in obj_map {
+                            if key.starts_with(member) && key.len() > member.len() {
+                                // Check if the next character after the member name is uppercase
+                                // This ensures "value" matches "valueBoolean" but not "valueFoo" with lowercase
+                                if let Some(next_char) = key.chars().nth(member.len()) {
+                                    if next_char.is_uppercase() {
+                                        return Ok(FhirPathValue::from_json(value));
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Ok(FhirPathValue::Empty)
                 }
             }

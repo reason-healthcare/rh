@@ -366,7 +366,7 @@ The following table shows operator precedence from highest to lowest:
 | **Additional Functions** | | |
 | ✅ | `extension(url)` | Extract extensions by URL from FHIR resources |
 | ✅ | `hasValue()` | Check if extension or element has a value |
-| ❌ | `getValue()` | Not implemented |
+| ✅ | `getValue()` | Not implemented |
 | ❌ | `trace()` | Not implemented |
 | ❌ | `resolve()` | Not implemented |
 | ❌ | `elementDefinition()` | Not implemented |
@@ -378,7 +378,7 @@ The following table shows operator precedence from highest to lowest:
 | ❌ | `subsumedBy(code)` | Not implemented |
 | ❌ | `htmlChecks` | Not implemented |
 | **Paths and polymorphic items** | | |
-| ❌ | Polymorphic field access (value[x]) | `Observation.value` for `valueString`, `valueQuantity` etc. |
+| ✅ | Polymorphic field access (value[x]) | `Observation.value` for `valueString`, `valueQuantity` etc. |
 | ❌ | Type-specific polymorphic access | `Observation.valueString`, `Observation.valueQuantity` |
 | ❌ | Resource type navigation | Navigation based on resource type context |
 | ❌ | Profile-aware navigation | Navigation based on profile constraints |

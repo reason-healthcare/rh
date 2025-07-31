@@ -523,6 +523,199 @@ mod tests {
     }
 
     #[test]
+    fn test_fhir_choice_type_polymorphic_access() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create an Observation with valueBoolean (choice type)
+        let observation = json!({
+            "resourceType": "Observation",
+            "id": "obs-boolean",
+            "status": "final",
+            "code": {
+                "coding": [{
+                    "system": "http://loinc.org",
+                    "code": "15074-8",
+                    "display": "Glucose"
+                }]
+            },
+            "valueBoolean": true
+        });
+        let context = EvaluationContext::new(observation);
+
+        // Test accessing choice type with base name (value instead of valueBoolean)
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Boolean(true),
+            "Should be able to access choice type valueBoolean with base name 'value'"
+        );
+    }
+
+    #[test]
+    fn test_fhir_choice_type_with_different_types() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Test with valueString
+        let observation_string = json!({
+            "resourceType": "Observation",
+            "id": "obs-string",
+            "status": "final",
+            "valueString": "Normal"
+        });
+        let context = EvaluationContext::new(observation_string);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::String("Normal".to_string()));
+
+        // Test with valueInteger
+        let observation_integer = json!({
+            "resourceType": "Observation",
+            "id": "obs-integer",
+            "status": "final",
+            "valueInteger": 42
+        });
+        let context = EvaluationContext::new(observation_integer);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(42));
+
+        // Test with valueDecimal
+        let observation_decimal = json!({
+            "resourceType": "Observation",
+            "id": "obs-decimal",
+            "status": "final",
+            "valueDecimal": 98.6
+        });
+        let context = EvaluationContext::new(observation_decimal);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Number(98.6));
+    }
+
+    #[test]
+    fn test_fhir_choice_type_no_match() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Create an Observation without any value[x] field
+        let observation = json!({
+            "resourceType": "Observation",
+            "id": "obs-no-value",
+            "status": "final",
+            "code": {
+                "coding": [{
+                    "system": "http://loinc.org",
+                    "code": "15074-8"
+                }]
+            }
+        });
+        let context = EvaluationContext::new(observation);
+
+        // Test accessing non-existent choice type
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        assert_eq!(
+            result,
+            FhirPathValue::Empty,
+            "Should return empty when no matching choice type field exists"
+        );
+    }
+
+    #[test]
+    fn test_fhir_choice_type_edge_cases() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Test with multiple choice type fields (should return the first match)
+        let observation_multiple = json!({
+            "resourceType": "Observation",
+            "id": "obs-multiple",
+            "status": "final",
+            "valueBoolean": true,
+            "valueString": "This should not be returned"
+        });
+        let context = EvaluationContext::new(observation_multiple);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        // Should return the first match found (order may vary based on JSON object iteration)
+        assert!(matches!(
+            result,
+            FhirPathValue::Boolean(true) | FhirPathValue::String(_)
+        ));
+
+        // Test accessing field that doesn't follow choice type pattern
+        let patient = json!({
+            "resourceType": "Patient",
+            "id": "patient-test",
+            "valuex": "lowercase-should-not-match"
+        });
+        let context = EvaluationContext::new(patient);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
+
+        // Test accessing exact field name still works
+        let parsed = parser.parse("%resource.valuex").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(
+            result,
+            FhirPathValue::String("lowercase-should-not-match".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fhir_choice_type_with_complex_objects() {
+        let parser = FhirPathParser::new();
+        let evaluator = FhirPathEvaluator::new();
+
+        // Test with valueQuantity (complex object)
+        let observation_quantity = json!({
+            "resourceType": "Observation",
+            "id": "obs-quantity",
+            "status": "final",
+            "valueQuantity": {
+                "value": 150.0,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+            }
+        });
+        let context = EvaluationContext::new(observation_quantity);
+
+        let parsed = parser.parse("%resource.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+
+        match result {
+            FhirPathValue::Object(obj) => {
+                assert_eq!(
+                    obj.get("value").unwrap(),
+                    &serde_json::Value::Number(serde_json::Number::from_f64(150.0).unwrap())
+                );
+                assert_eq!(
+                    obj.get("unit").unwrap(),
+                    &serde_json::Value::String("mmHg".to_string())
+                );
+            }
+            _ => panic!("Expected Object value for valueQuantity"),
+        }
+
+        // Test accessing nested field through choice type
+        let parsed = parser.parse("%resource.value.value").unwrap();
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Number(150.0));
+    }
+
+    #[test]
     fn test_resource_variable() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
