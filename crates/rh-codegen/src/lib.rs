@@ -6,7 +6,8 @@
 pub use rh_common::{CommonError, Config};
 
 mod config;
-mod fhir_types;
+pub mod crate_generator;
+pub mod fhir_types;
 mod generator;
 mod rust_types;
 mod token_generator;
@@ -21,9 +22,15 @@ pub use rh_loader::{
 
 // Re-export modular code generation types
 pub use config::CodegenConfig;
+pub use crate_generator::{
+    generate_crate_structure, parse_package_metadata, CrateGenerationParams, CrateStatistics,
+};
 pub use fhir_types::{ElementBinding, ElementDefinition, ElementType, StructureDefinition};
-pub use generator::CodeGenerator;
-pub use rust_types::{RustEnum, RustField, RustModule, RustStruct, RustType};
+pub use generator::{CodeGenerator, FhirTypeCategory};
+pub use rust_types::{
+    RustEnum, RustField, RustMethodParam, RustModule, RustStruct, RustTrait, RustTraitMethod,
+    RustType,
+};
 pub use token_generator::TokenGenerator;
 pub use type_mapper::TypeMapper;
 pub use value_sets::{ValueSetConcept, ValueSetManager};

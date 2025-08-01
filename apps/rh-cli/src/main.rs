@@ -15,14 +15,7 @@ mod validator;
 #[clap(name = "rh")]
 #[clap(about = "Unified CLI for FHIR processing tools")]
 #[clap(version)]
-#[clap(
-    long_about = "A comprehensive toolkit for working with FHIR resources, including:\n\
-    • FHIR package downloading and management\n\
-    • Code generation from FHIR StructureDefinitions\n\
-    • FHIRPath expression parsing and evaluation\n\
-    • JSON syntax and FHIR resource validation\n\
-    • Type-safe Rust code generation"
-)]
+#[clap(long_about = "RH CLI - A comprehensive command-line toolkit for working with FHIR")]
 struct Cli {
     /// Enable verbose logging
     #[clap(short, long, global = true)]
@@ -34,11 +27,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Generate Rust types from FHIR StructureDefinitions
-    #[clap(subcommand)]
-    Codegen(codegen::CodegenCommands),
+    /// Generate organized Rust crates from FHIR Packages
+    Codegen(codegen::CodegenArgs),
 
-    /// Download FHIR packages from npm-style registries
+    /// Download and install FHIR packages from npm-style registries
     #[clap(subcommand)]
     Download(download::DownloadCommands),
 
@@ -46,7 +38,7 @@ enum Commands {
     #[clap(subcommand)]
     Fhirpath(fhirpath::FhirpathCommands),
 
-    /// Validate JSON syntax and FHIR resources
+    /// Validate FHIR resources
     #[clap(subcommand)]
     Validate(validator::ValidatorCommands),
 }

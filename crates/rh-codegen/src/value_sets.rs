@@ -44,7 +44,8 @@ impl ValueSetManager {
             .split('/')
             .next_back()
             .unwrap_or("UnknownValueSet")
-            .split('-')
+            .split(&['-', '.'][..])
+            .filter(|part| !part.is_empty())
             .map(|part| {
                 let mut chars = part.chars();
                 match chars.next() {

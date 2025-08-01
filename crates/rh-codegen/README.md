@@ -13,9 +13,48 @@ The `rh-codegen` crate provides comprehensive functionality for:
 - **Automatic Extraction**: Extract and process StructureDefinitions from package tarballs
 - **Configuration**: Flexible configuration for type mappings and output settings
 
-## Roadmap
+## Crate Generation
 
-* Better support for dealing with package dependencies
+When generating a crate, the following idomiatic Rust layout will be created:
+```
+fhir-model/
+├── Cargo.toml
+├── src/
+│   ├── lib.rs
+│   ├── bindings/
+│   │   ├── mod.rs
+│   │   ├── observation_status.rs
+│   │   ├── allergy_category.rs
+│   │   ├── encounter_class.rs
+│   │   └── ...
+│   ├── datatypes/
+│   │   ├── mod.rs
+│   │   ├── narrative.rs
+│   │   ├── extension.rs
+│   │   ├── coding.rs
+│   │   └── codeable_concept.rs
+│   │   └── ...
+│   ├── primitives/
+│   │   ├── mod.rs
+│   │   ├── string.rs
+│   │   ├── boolean.rs
+│   │   └── date_time.rs
+│   │   └── ...
+│   ├── resource/
+│   │   ├── mod.rs
+│   │   ├── observation.rs
+│   │   ├── patient.rs
+│   │   └── bundle.rs
+│   │   └── ...
+│   ├── traits/
+│   │   ├── mod.rs
+│   │   ├── resource.rs
+│   │   ├── domain_resource.rs
+│   │   ├── has_extensions.rs
+│   │   └── has_coding.rs
+│   │   └── ...
+│   └── value.rs
+```
 
 ## Quick Start
 

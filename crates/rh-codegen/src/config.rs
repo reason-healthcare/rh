@@ -33,7 +33,6 @@ impl Default for CodegenConfig {
         type_mappings.insert("uri".to_string(), "String".to_string());
         type_mappings.insert("url".to_string(), "String".to_string());
         type_mappings.insert("canonical".to_string(), "String".to_string());
-        type_mappings.insert("code".to_string(), "String".to_string());
         type_mappings.insert("oid".to_string(), "String".to_string());
         type_mappings.insert("id".to_string(), "String".to_string());
         type_mappings.insert("markdown".to_string(), "String".to_string());

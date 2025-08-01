@@ -70,3 +70,5 @@ node_modules/
 # Temporary folders
 tmp/
 temp/
+
+crates/rh-loader/packages

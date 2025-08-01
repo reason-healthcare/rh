@@ -22,6 +22,13 @@ use anyhow::Result;
 use serde_json::Value;
 use thiserror::Error;
 
+pub mod setup;
+pub mod validator;
+
+// Re-export commonly used types for backward compatibility
+pub use setup::{FhirPackageMapping, FhirSetup, FhirValidationError};
+pub use validator::FhirValidator;
+
 /// Validation errors that can occur during JSON validation
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ValidationError {

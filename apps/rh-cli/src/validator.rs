@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
-use rh_validator::{JsonValidator, ValidationResult};
+use rh_validator::{FhirValidator, JsonValidator, ValidationResult};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -14,6 +14,8 @@ use tracing::{info, warn};
 pub enum ValidatorCommands {
     /// Validate JSON syntax in a file or from stdin
     Json(JsonArgs),
+    /// Validate FHIR resource type against FHIR specifications
+    Fhir(FhirArgs),
 }
 
 #[derive(Args)]
@@ -43,6 +45,41 @@ pub struct JsonArgs {
     strict: bool,
 }
 
+#[derive(Args)]
+pub struct FhirArgs {
+    /// Input file path (reads from stdin if not provided)
+    #[clap(short, long)]
+    input: Option<PathBuf>,
+
+    /// FHIR version to validate against
+    #[clap(long, default_value = "4.0.1")]
+    version: String,
+
+    /// Output format (text, json)
+    #[clap(short, long, default_value = "text")]
+    format: OutputFormat,
+
+    /// Validate multiple FHIR resources (NDJSON format)
+    #[clap(long)]
+    multiple: bool,
+
+    /// Show detailed statistics for valid FHIR resources
+    #[clap(long)]
+    stats: bool,
+
+    /// Exit with non-zero code if validation fails
+    #[clap(long)]
+    strict: bool,
+
+    /// Custom package directory for FHIR packages
+    #[clap(long)]
+    package_dir: Option<PathBuf>,
+
+    /// Force regeneration of Rust crate even if it already exists
+    #[clap(long)]
+    regenerate: bool,
+}
+
 #[derive(Clone, Debug)]
 enum OutputFormat {
     Text,
@@ -67,6 +104,7 @@ impl std::str::FromStr for OutputFormat {
 pub async fn handle_command(cmd: ValidatorCommands) -> Result<()> {
     match cmd {
         ValidatorCommands::Json(args) => handle_json_validation(args).await,
+        ValidatorCommands::Fhir(args) => handle_fhir_validation(args).await,
     }
 }
 
@@ -105,6 +143,70 @@ async fn handle_json_validation(args: JsonArgs) -> Result<()> {
         let result = validator
             .validate(&content)
             .context("Failed to validate JSON")?;
+
+        match args.format {
+            OutputFormat::Text => {
+                print_single_result_text(&result, args.stats);
+            }
+            OutputFormat::Json => {
+                print_single_result_json(&result)?;
+            }
+        }
+
+        !result.is_valid()
+    };
+
+    if has_errors && args.strict {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+async fn handle_fhir_validation(args: FhirArgs) -> Result<()> {
+    // Create FHIR validator with custom settings
+    let mut validator = if let Some(package_dir) = &args.package_dir {
+        FhirValidator::with_package_dir(package_dir)
+    } else {
+        FhirValidator::new().context("Failed to create FHIR validator")?
+    };
+
+    validator = validator.with_default_version(&args.version);
+
+    // Read input content
+    let content = read_input(&args.input).context("Failed to read input")?;
+
+    if content.trim().is_empty() {
+        warn!("Input is empty");
+        if args.strict {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    let has_errors = if args.multiple {
+        // Validate multiple FHIR resources (NDJSON)
+        let results = validator
+            .validate_multiple(&content, Some(&args.version))
+            .await
+            .context("Failed to validate multiple FHIR resources")?;
+
+        match args.format {
+            OutputFormat::Text => {
+                print_multiple_results_text(&results, args.stats);
+            }
+            OutputFormat::Json => {
+                print_multiple_results_json(&results)?;
+            }
+        }
+
+        results.iter().any(|(_, result)| !result.is_valid())
+    } else {
+        // Validate single FHIR resource
+        let result = validator
+            .validate_with_version(&content, &args.version)
+            .await
+            .context("Failed to validate FHIR resource")?;
 
         match args.format {
             OutputFormat::Text => {

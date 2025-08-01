@@ -154,12 +154,10 @@ jobs:
           cargo run -p rh -- --help
           cargo run -p rh -- codegen --help
           cargo run -p rh -- fhirpath --help
+          cargo run -p rh -- download --help
 
-      - name: Test CLI basic functionality
+      - name: Test fhirpath CLI functionality
         run: |
-          # Test codegen init
-          cargo run -p rh -- codegen init --config test-config.json
-
           # Test FHIRPath parsing
           cargo run -p rh -- fhirpath parse "Patient.name"
 

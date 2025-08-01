@@ -3,7 +3,9 @@
 //! This module handles the generation of Rust code tokens from the internal
 //! representation, including structs, enums, and modules.
 
-use crate::rust_types::{RustEnum, RustEnumVariant, RustField, RustModule, RustStruct, RustType};
+use crate::rust_types::{
+    RustEnum, RustEnumVariant, RustField, RustModule, RustStruct, RustType, RustTypeAlias,
+};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
@@ -298,6 +300,148 @@ impl TokenGenerator {
             base_type
         }
     }
+
+    /// Generate tokens for a Rust type alias
+    pub fn generate_type_alias(&self, type_alias: &RustTypeAlias) -> TokenStream {
+        let name = format_ident!("{}", type_alias.name);
+        let target_type = self.generate_type(&type_alias.target_type, false);
+
+        // Generate documentation
+        let doc_attrs = if let Some(doc) = &type_alias.doc_comment {
+            let doc_lines: Vec<_> = doc.lines().collect();
+            let attrs: Vec<TokenStream> = doc_lines
+                .iter()
+                .map(|line| quote! { #[doc = #line] })
+                .collect();
+            quote! { #(#attrs)* }
+        } else {
+            quote! {}
+        };
+
+        // Generate visibility
+        let vis = if type_alias.is_public {
+            quote! { pub }
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            #doc_attrs
+            #vis type #name = #target_type;
+        }
+    }
+
+    /// Generate tokens for a Rust trait
+    pub fn generate_trait(&self, rust_trait: &crate::rust_types::RustTrait) -> TokenStream {
+        let trait_name = format_ident!("{}", rust_trait.name);
+
+        // Generate documentation
+        let doc = if let Some(doc_comment) = &rust_trait.doc_comment {
+            let doc_lines: Vec<_> = doc_comment.lines().collect();
+            quote! {
+                #(#[doc = #doc_lines])*
+            }
+        } else {
+            quote! {}
+        };
+
+        // Generate super traits
+        let super_traits = if !rust_trait.super_traits.is_empty() {
+            let super_trait_idents: Vec<_> = rust_trait
+                .super_traits
+                .iter()
+                .map(|s| format_ident!("{}", s))
+                .collect();
+            quote! { : #(#super_trait_idents)+* }
+        } else {
+            quote! {}
+        };
+
+        // Generate trait methods
+        let methods: Vec<TokenStream> = rust_trait
+            .methods
+            .iter()
+            .map(|method| self.generate_trait_method(method))
+            .collect();
+
+        quote! {
+            #doc
+            pub trait #trait_name #super_traits {
+                #(#methods)*
+            }
+        }
+    }
+
+    /// Generate tokens for a trait method
+    fn generate_trait_method(&self, method: &crate::rust_types::RustTraitMethod) -> TokenStream {
+        let method_name = format_ident!("{}", method.name);
+
+        // Generate documentation
+        let doc = if let Some(doc_comment) = &method.doc_comment {
+            let doc_lines: Vec<_> = doc_comment.lines().collect();
+            quote! {
+                #(#[doc = #doc_lines])*
+            }
+        } else {
+            quote! {}
+        };
+
+        // Generate parameters
+        let params: Vec<TokenStream> = method
+            .params
+            .iter()
+            .map(|param| {
+                let param_name = format_ident!("{}", param.name);
+                let param_type = self.generate_type(&param.param_type, false);
+
+                match (param.is_ref, param.is_mut) {
+                    (true, true) => quote! { #param_name: &mut #param_type },
+                    (true, false) => quote! { #param_name: &#param_type },
+                    (false, _) => quote! { #param_name: #param_type },
+                }
+            })
+            .collect();
+
+        // Add implicit &self parameter for trait methods
+        let self_param = quote! { &self };
+        let all_params = if params.is_empty() {
+            vec![self_param]
+        } else {
+            let mut all = vec![self_param];
+            all.extend(params);
+            all
+        };
+
+        // Generate return type
+        let return_type = if let Some(ret_type) = &method.return_type {
+            let return_tokens = self.generate_type(ret_type, false);
+            quote! { -> #return_tokens }
+        } else {
+            quote! {}
+        };
+
+        // Generate method body for default implementations
+        if method.is_default {
+            let body = if let Some(body_code) = &method.default_body {
+                let body_tokens: TokenStream = body_code
+                    .parse()
+                    .unwrap_or_else(|_| quote! { unimplemented!() });
+                quote! { { #body_tokens } }
+            } else {
+                quote! { { unimplemented!() } }
+            };
+
+            quote! {
+                #doc
+                fn #method_name(#(#all_params),*) #return_type #body
+            }
+        } else {
+            quote! {
+                #doc
+                fn #method_name(#(#all_params),*) #return_type;
+            }
+        }
+    }
 }
 
 impl Default for TokenGenerator {
@@ -346,5 +490,22 @@ mod tests {
         assert!(code.contains("Variant1"));
         assert!(code.contains("Variant2"));
         assert!(code.contains("String"));
+    }
+
+    #[test]
+    fn test_generate_type_alias() {
+        let generator = TokenGenerator::new();
+
+        let type_alias = RustTypeAlias::new("uri".to_string(), RustType::String)
+            .with_doc("FHIR URI primitive type".to_string());
+
+        let tokens = generator.generate_type_alias(&type_alias);
+        let code = tokens.to_string();
+
+        // Print the actual generated code for debugging
+        println!("Generated type alias code: {code}");
+
+        assert!(code.contains("type uri = String"));
+        assert!(code.contains("FHIR URI primitive type"));
     }
 }

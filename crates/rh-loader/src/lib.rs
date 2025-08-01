@@ -183,6 +183,16 @@ impl PackageLoader {
         Ok(Self { client, config })
     }
 
+    pub fn is_package_downloaded(
+        &self,
+        package_name: &str,
+        version: &str,
+        output_dir: &Path,
+    ) -> LoaderResult<bool> {
+        let package_dir = self.get_package_directory(output_dir, package_name, version);
+        Ok(package_dir.exists())
+    }
+
     /// Download a FHIR package and extract it to the specified directory
     pub async fn download_package(
         &self,

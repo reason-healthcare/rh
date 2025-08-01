@@ -329,8 +329,7 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 
 ### Phase 2: FHIR Basics (In Progress)
 - [ ] Resource type validation
-- [ ] FHIR version detection
-- [ ] Basic field validation
+- [ ] Element validation
 - [ ] Reference format checking
 
 ### Phase 3: Profile Validation (Planned)

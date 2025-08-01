@@ -156,23 +156,3 @@ async fn list_package_versions(
 
     Ok(())
 }
-
-/// Public function for downloading packages that can be used by other modules
-pub async fn download_package_to_dir(
-    package: &str,
-    version: &str,
-    output: &std::path::Path,
-    registry: &str,
-    overwrite: bool,
-) -> Result<()> {
-    let token = std::env::var("RH_REGISTRY_TOKEN").ok();
-    download_package(
-        package,
-        version,
-        output,
-        registry,
-        token.as_deref(),
-        overwrite,
-    )
-    .await
-}
