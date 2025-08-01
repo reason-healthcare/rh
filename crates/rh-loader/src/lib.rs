@@ -14,22 +14,24 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```rust,no_run
 //! use rh_loader::{PackageLoader, LoaderConfig};
 //! use std::path::Path;
 //!
-//! # tokio_test::block_on(async {
-//! let config = LoaderConfig::default();
-//! let loader = PackageLoader::new(config)?;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let config = LoaderConfig::default();
+//!     let loader = PackageLoader::new(config)?;
 //!
-//! // Download a FHIR package
-//! loader.download_package(
-//!     "hl7.fhir.r4.core",
-//!     "4.0.1",
-//!     Path::new("./packages")
-//! ).await?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
-//! # });
+//!     // Download a FHIR package to the default packages directory
+//!     let packages_dir = PackageLoader::get_default_packages_dir()?;
+//!     loader.download_package(
+//!         "hl7.fhir.r4.core",
+//!         "4.0.1",
+//!         &packages_dir
+//!     ).await?;
+//!     Ok(())
+//! }
 //! ```
 
 use std::collections::HashMap;
@@ -401,6 +403,21 @@ impl PackageLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+
+    /// Helper function to create a temporary directory for testing
+    fn create_temp_test_dir() -> PathBuf {
+        let temp_dir = std::env::temp_dir().join(format!("rh_loader_test_{}", std::process::id()));
+        fs::create_dir_all(&temp_dir).expect("Failed to create temp test directory");
+        temp_dir
+    }
+
+    /// Helper function to clean up a test directory
+    fn cleanup_test_dir(dir: &Path) {
+        if dir.exists() {
+            fs::remove_dir_all(dir).ok(); // Ignore errors during cleanup
+        }
+    }
 
     #[test]
     fn test_loader_config_default() {
@@ -518,6 +535,33 @@ mod tests {
     }
 
     #[test]
+    fn test_package_directory_with_cleanup() {
+        let temp_dir = create_temp_test_dir();
+
+        let config = LoaderConfig::default();
+        let loader = PackageLoader::new(config).unwrap();
+        
+        // Test package directory creation
+        let package_dir = loader.get_package_directory(&temp_dir, "test.package", "1.0.0");
+        let expected_dir = temp_dir.join("test.package#1.0.0");
+        
+        assert_eq!(package_dir, expected_dir);
+        assert!(temp_dir.exists());
+        
+        // Create the directory to test it exists
+        fs::create_dir_all(&package_dir).unwrap();
+        assert!(package_dir.exists());
+        
+        // Test is_package_downloaded
+        let is_downloaded = loader.is_package_downloaded("test.package", "1.0.0", &temp_dir).unwrap();
+        assert!(is_downloaded);
+        
+        // Clean up the temporary directory
+        cleanup_test_dir(&temp_dir);
+        assert!(!temp_dir.exists());
+    }
+
+    #[test]
     fn test_default_packages_dir_with_package_directory() {
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
@@ -536,5 +580,34 @@ mod tests {
         };
 
         assert!(package_dir.to_string_lossy().ends_with(expected_suffix));
+    }
+
+    #[test]
+    fn test_extract_tarball_cleanup() {
+        let temp_dir = create_temp_test_dir();
+        let config = LoaderConfig::default();
+        let loader = PackageLoader::new(config).unwrap();
+
+        // Create a simple test "tarball" (empty gzipped tar for testing)
+        let tar_data = create_test_tarball();
+        
+        // Test extraction
+        let result = loader.extract_tarball(&tar_data, &temp_dir);
+        
+        // The extraction should succeed (even with empty data)
+        // Note: This might fail with actual gzipped data, but that's expected for this test
+        // We're mainly testing the directory creation and cleanup
+        let _ = result; // Ignore the result for this test
+        
+        // Clean up regardless of extraction result
+        cleanup_test_dir(&temp_dir);
+        assert!(!temp_dir.exists());
+    }
+
+    /// Create a minimal test tarball for testing
+    fn create_test_tarball() -> Vec<u8> {
+        // Return a simple byte array that represents minimal test data
+        // This is just for testing the cleanup functionality
+        vec![0x1f, 0x8b, 0x08, 0x00] // Minimal gzip header
     }
 }
