@@ -7,7 +7,7 @@ use tracing::{info, warn};
 
 use rh_codegen::{
     generate_crate_structure, parse_package_metadata, CodeGenerator, CodegenConfig,
-    CrateGenerationParams, FhirTypeCategory,
+    CrateGenerationParams,
 };
 use rh_loader::{LoaderConfig, PackageLoader};
 
@@ -203,26 +203,14 @@ fn process_json_files_organized(
                         structure_def.name, structure_def.id
                     );
 
-                    let category = generator.classify_fhir_structure_def(&structure_def);
-                    let subdir = match category {
-                        FhirTypeCategory::Resource => "resource",
-                        FhirTypeCategory::DataType => "datatypes",
-                        FhirTypeCategory::Primitive => "primitives",
-                    };
-
-                    let type_output_dir = output_dir.join("src").join(subdir);
-                    fs::create_dir_all(&type_output_dir)?;
-
-                    let file_name = generator.to_filename(&structure_def);
-                    let output_file = type_output_dir.join(&file_name);
-
-                    match generator.generate_to_file(&structure_def, &output_file) {
+                    // Use the library function to generate structure and traits
+                    match rh_codegen::generate_organized_directories_with_traits(
+                        generator,
+                        &structure_def,
+                        output_dir,
+                    ) {
                         Ok(()) => {
-                            info!(
-                                "Generated {} to: {}",
-                                structure_def.name,
-                                output_file.display()
-                            );
+                            info!("Generated {} with traits", structure_def.name);
                         }
                         Err(e) => {
                             warn!("Failed to generate {}: {}", structure_def.name, e);

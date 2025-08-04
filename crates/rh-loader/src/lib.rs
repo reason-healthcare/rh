@@ -540,22 +540,24 @@ mod tests {
 
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
-        
+
         // Test package directory creation
         let package_dir = loader.get_package_directory(&temp_dir, "test.package", "1.0.0");
         let expected_dir = temp_dir.join("test.package#1.0.0");
-        
+
         assert_eq!(package_dir, expected_dir);
         assert!(temp_dir.exists());
-        
+
         // Create the directory to test it exists
         fs::create_dir_all(&package_dir).unwrap();
         assert!(package_dir.exists());
-        
+
         // Test is_package_downloaded
-        let is_downloaded = loader.is_package_downloaded("test.package", "1.0.0", &temp_dir).unwrap();
+        let is_downloaded = loader
+            .is_package_downloaded("test.package", "1.0.0", &temp_dir)
+            .unwrap();
         assert!(is_downloaded);
-        
+
         // Clean up the temporary directory
         cleanup_test_dir(&temp_dir);
         assert!(!temp_dir.exists());
@@ -590,15 +592,15 @@ mod tests {
 
         // Create a simple test "tarball" (empty gzipped tar for testing)
         let tar_data = create_test_tarball();
-        
+
         // Test extraction
         let result = loader.extract_tarball(&tar_data, &temp_dir);
-        
+
         // The extraction should succeed (even with empty data)
         // Note: This might fail with actual gzipped data, but that's expected for this test
         // We're mainly testing the directory creation and cleanup
         let _ = result; // Ignore the result for this test
-        
+
         // Clean up regardless of extraction result
         cleanup_test_dir(&temp_dir);
         assert!(!temp_dir.exists());
