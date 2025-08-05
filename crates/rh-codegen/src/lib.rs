@@ -28,6 +28,7 @@ pub use generators::crate_generator::{
 };
 pub use generators::file_generator::FhirTypeCategory;
 pub use generators::token_generator::TokenGenerator;
+pub use generators::utils::GeneratorUtils;
 pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType};
 pub use type_mapper::TypeMapper;
 pub use value_sets::{ValueSetConcept, ValueSetManager};
@@ -106,12 +107,12 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     }
 
     // 2. Generate the specific resource trait with choice type methods
-    let resource_name = sanitize_module_name(&structure_def.name);
-    let specific_trait_file = traits_dir.join(format!("{resource_name}.rs"));
+    let trait_filename = trait_filename_from_name(&structure_def.name);
+    let specific_trait_file = traits_dir.join(format!("{trait_filename}.rs"));
     match generator.generate_trait_to_file(structure_def, &specific_trait_file) {
         Ok(()) => {
             // Update traits/mod.rs to include both traits
-            update_traits_mod_file(&traits_dir, &resource_name)?;
+            update_traits_mod_file(&traits_dir, &trait_filename)?;
         }
         Err(e) => return Err(e),
     }
@@ -119,17 +120,22 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     Ok(())
 }
 
-/// Update the traits/mod.rs file to include the resource module
-fn sanitize_module_name(name: &str) -> String {
-    name.to_lowercase()
+/// Convert a FHIR structure definition name to a proper snake_case filename for traits
+fn trait_filename_from_name(name: &str) -> String {
+    // First handle spaces, dashes, dots, and other separators
+    let cleaned = name
         .replace([' ', '-', '.'], "_")
         .replace(['(', ')', '[', ']'], "")
-        .replace(['/', '\\', ':'], "_")
+        .replace(['/', '\\', ':'], "_");
+
+    // Then apply snake_case conversion for CamelCase
+    GeneratorUtils::to_snake_case(&cleaned)
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '_')
         .collect()
 }
 
+/// Update the traits/mod.rs file to include the resource module
 fn update_traits_mod_file(traits_dir: &std::path::Path, resource_name: &str) -> CodegenResult<()> {
     let mod_file = traits_dir.join("mod.rs");
     if !mod_file.exists() {
