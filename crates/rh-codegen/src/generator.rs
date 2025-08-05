@@ -795,21 +795,32 @@ mod tests {
             "Trait should be named 'Patient'"
         );
 
-        // Check that common FHIR methods are present
+        // Check that the Patient trait properly inherits from DomainResource
+        assert!(
+            patient_trait
+                .super_traits
+                .contains(&"DomainResource".to_string()),
+            "Patient trait should inherit from DomainResource"
+        );
+
+        // The Patient trait should NOT have methods that are inherited from parent traits
         let has_extensions = patient_trait.methods.iter().any(|m| m.name == "extensions");
         assert!(
-            has_extensions,
-            "Patient trait should have extensions method"
+            !has_extensions,
+            "Patient trait should NOT have extensions method - it should be inherited from Resource"
         );
 
         let has_narrative = patient_trait.methods.iter().any(|m| m.name == "narrative");
         assert!(
-            has_narrative,
-            "Patient trait should have narrative method (DomainResource)"
+            !has_narrative,
+            "Patient trait should NOT have narrative method - it should be inherited from DomainResource"
         );
 
         let has_id = patient_trait.methods.iter().any(|m| m.name == "id");
-        assert!(has_id, "Patient trait should have id method (Resource)");
+        assert!(
+            !has_id,
+            "Patient trait should NOT have id method - it should be inherited from Resource"
+        );
 
         // Note: The new trait generator focuses on resource-level methods rather than
         // field-specific methods like 'active' and 'name', which are handled by struct implementations
