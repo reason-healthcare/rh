@@ -42,12 +42,12 @@ impl<'a> FieldGenerator<'a> {
     ) -> CodegenResult<Vec<RustField>> {
         // Get the field name from the path (last segment)
         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
-        
+
         // Check if this is a choice type (ends with [x])
         if field_name.ends_with("[x]") {
             return self.create_choice_type_fields(element);
         }
-        
+
         // Regular field - create single field
         if let Some(field) = self.create_single_field_from_element(element)? {
             Ok(vec![field])
@@ -64,7 +64,7 @@ impl<'a> FieldGenerator<'a> {
         let mut fields = Vec::new();
         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
         let base_name = field_name.strip_suffix("[x]").unwrap_or(field_name);
-        
+
         // Determine if this field is optional (min = 0)
         let is_optional = element.min.unwrap_or(0) == 0;
 
@@ -79,9 +79,9 @@ impl<'a> FieldGenerator<'a> {
                 if let Some(type_code) = &element_type.code {
                     // Create field name: base_name + type_code in snake_case
                     let type_suffix = Self::type_code_to_snake_case(type_code);
-                    let field_name = format!("{}_{}", base_name, type_suffix);
+                    let field_name = format!("{base_name}_{type_suffix}");
                     let rust_field_name = Self::to_rust_field_name(&field_name);
-                    
+
                     // Map the type
                     let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
                     let field_type = type_mapper.map_fhir_type_with_binding(
@@ -89,25 +89,28 @@ impl<'a> FieldGenerator<'a> {
                         element.binding.as_ref(),
                         is_array,
                     );
-                    
+
                     // Create the field
                     let mut field = RustField::new(rust_field_name.clone(), field_type);
                     field.is_optional = is_optional;
-                    
+
                     // Add documentation
                     field.doc_comment = DocumentationGenerator::generate_choice_field_documentation(
-                        element, type_code
+                        element, type_code,
                     );
-                    
+
                     // Add serde rename for the original FHIR field name with type suffix
-                    let serde_name = format!("{}{}", base_name, Self::capitalize_first_char(type_code));
+                    let serde_name = format!(
+                        "{base_name}{type_code_capitalized}",
+                        type_code_capitalized = Self::capitalize_first_char(type_code)
+                    );
                     field = field.with_serde_rename(serde_name);
-                    
+
                     fields.push(field);
                 }
             }
         }
-        
+
         Ok(fields)
     }
 
@@ -190,7 +193,7 @@ impl<'a> FieldGenerator<'a> {
             .enumerate()
             .map(|(i, c)| {
                 if c.is_uppercase() && i > 0 {
-                    format!("_{}", c.to_lowercase())
+                    format!("_{c}", c = c.to_lowercase())
                 } else {
                     c.to_lowercase().to_string()
                 }
@@ -230,13 +233,13 @@ impl<'a> FieldGenerator<'a> {
     }
 
     /// Convert FHIR type code to snake_case for field suffix
-    fn type_code_to_snake_case(type_code: &str) -> String {
+    pub fn type_code_to_snake_case(type_code: &str) -> String {
         type_code
             .chars()
             .enumerate()
             .map(|(i, c)| {
                 if c.is_uppercase() && i > 0 {
-                    format!("_{}", c.to_lowercase())
+                    format!("_{c}", c = c.to_lowercase())
                 } else {
                     c.to_lowercase().to_string()
                 }
@@ -275,9 +278,8 @@ impl<'a> FieldGenerator<'a> {
                         let nested_struct_name = if path_parts.len() == 2 {
                             // Direct nested struct (e.g., Bundle.entry -> BundleEntry)
                             format!(
-                                "{}{}",
-                                parent_struct_name,
-                                NameGenerator::to_pascal_case(field_name)
+                                "{parent_struct_name}{field_pascal}",
+                                field_pascal = NameGenerator::to_pascal_case(field_name)
                             )
                         } else {
                             // Sub-nested struct (e.g., Bundle.entry.search -> BundleEntrySearch)
@@ -305,9 +307,8 @@ impl<'a> FieldGenerator<'a> {
             if path_parts.len() == 2 {
                 // Direct nested struct (e.g., Bundle.entry -> BundleEntry)
                 format!(
-                    "{}{}",
-                    parent_struct_name,
-                    NameGenerator::to_pascal_case(path_parts[1])
+                    "{parent_struct_name}{part_pascal}",
+                    part_pascal = NameGenerator::to_pascal_case(path_parts[1])
                 )
             } else {
                 // Sub-nested struct (e.g., Bundle.entry.search -> BundleEntrySearch)
@@ -319,8 +320,8 @@ impl<'a> FieldGenerator<'a> {
             }
         } else {
             format!(
-                "{}Unknown",
-                NameGenerator::to_valid_rust_identifier(&element.path)
+                "{path_identifier}Unknown",
+                path_identifier = NameGenerator::to_valid_rust_identifier(&element.path)
             )
         };
 
@@ -353,6 +354,45 @@ impl<'a> FieldGenerator<'a> {
             .is_some_and(|max| max == "*" || max.parse::<u32>().unwrap_or(1) > 1);
 
         (is_optional, is_array)
+    }
+
+    /// Extract choice type information from a StructureDefinition
+    /// Returns a vector of (base_name, type_codes) tuples for each choice type found
+    pub fn extract_choice_types_from_structure(
+        structure_def: &crate::fhir_types::StructureDefinition,
+    ) -> Vec<(String, Vec<String>)> {
+        let mut choice_types = Vec::new();
+
+        // Get elements from differential or snapshot
+        let elements = if let Some(differential) = &structure_def.differential {
+            &differential.element
+        } else if let Some(snapshot) = &structure_def.snapshot {
+            &snapshot.element
+        } else {
+            return choice_types; // No elements to process
+        };
+
+        for element in elements {
+            // Check if this is a choice type field (ends with [x])
+            let field_name = element.path.split('.').next_back().unwrap_or("unknown");
+            if field_name.ends_with("[x]") {
+                let base_name = field_name.strip_suffix("[x]").unwrap_or(field_name);
+
+                // Extract type codes from element types
+                if let Some(element_types) = &element.element_type {
+                    let type_codes: Vec<String> = element_types
+                        .iter()
+                        .filter_map(|et| et.code.clone())
+                        .collect();
+
+                    if !type_codes.is_empty() {
+                        choice_types.push((base_name.to_string(), type_codes));
+                    }
+                }
+            }
+        }
+
+        choice_types
     }
 }
 
@@ -543,15 +583,17 @@ mod tests {
         let config = CodegenConfig::default();
         let type_cache = HashMap::new();
         let mut value_set_manager = ValueSetManager::new();
-        
+
         let mut field_generator = FieldGenerator::new(&config, &type_cache, &mut value_set_manager);
-        
+
         // Create a test element definition for a choice type
         let element = ElementDefinition {
             id: Some("Observation.effective[x]".to_string()),
             path: "Observation.effective[x]".to_string(),
             short: Some("Clinically relevant time/time-period for observation".to_string()),
-            definition: Some("The time or time-period the observed value is asserted as being true.".to_string()),
+            definition: Some(
+                "The time or time-period the observed value is asserted as being true.".to_string(),
+            ),
             min: Some(0),
             max: Some("1".to_string()),
             element_type: Some(vec![
@@ -576,26 +618,40 @@ mod tests {
             pattern: None,
             binding: None,
         };
-        
+
         // Generate fields
-        let fields = field_generator.create_fields_from_element(&element).unwrap();
-        
+        let fields = field_generator
+            .create_fields_from_element(&element)
+            .unwrap();
+
         // Verify that multiple fields were generated
-        assert_eq!(fields.len(), 4, "Should generate 4 fields for 4 choice types");
-        
+        assert_eq!(
+            fields.len(),
+            4,
+            "Should generate 4 fields for 4 choice types"
+        );
+
         // Verify field names
         let field_names: Vec<&str> = fields.iter().map(|f| f.name.as_str()).collect();
         assert!(field_names.contains(&"effective_date_time"));
         assert!(field_names.contains(&"effective_period"));
         assert!(field_names.contains(&"effective_timing"));
         assert!(field_names.contains(&"effective_instant"));
-        
+
         // Verify serde rename attributes
-        assert!(fields[0].serde_attributes.contains(&"rename = \"effectiveDateTime\"".to_string()));
-        assert!(fields[1].serde_attributes.contains(&"rename = \"effectivePeriod\"".to_string()));
-        assert!(fields[2].serde_attributes.contains(&"rename = \"effectiveTiming\"".to_string()));
-        assert!(fields[3].serde_attributes.contains(&"rename = \"effectiveInstant\"".to_string()));
-        
+        assert!(fields[0]
+            .serde_attributes
+            .contains(&"rename = \"effectiveDateTime\"".to_string()));
+        assert!(fields[1]
+            .serde_attributes
+            .contains(&"rename = \"effectivePeriod\"".to_string()));
+        assert!(fields[2]
+            .serde_attributes
+            .contains(&"rename = \"effectiveTiming\"".to_string()));
+        assert!(fields[3]
+            .serde_attributes
+            .contains(&"rename = \"effectiveInstant\"".to_string()));
+
         // Verify all fields are optional
         for field in &fields {
             assert!(field.is_optional, "Choice type fields should be optional");
@@ -610,15 +666,17 @@ mod tests {
         let config = CodegenConfig::default();
         let type_cache = HashMap::new();
         let mut value_set_manager = ValueSetManager::new();
-        
+
         let mut field_generator = FieldGenerator::new(&config, &type_cache, &mut value_set_manager);
-        
+
         // Create a test element definition for a choice type
         let element = ElementDefinition {
             id: Some("Observation.value[x]".to_string()),
             path: "Observation.value[x]".to_string(),
             short: Some("Actual result".to_string()),
-            definition: Some("The information determined as a result of making the observation.".to_string()),
+            definition: Some(
+                "The information determined as a result of making the observation.".to_string(),
+            ),
             min: Some(0),
             max: Some("1".to_string()),
             element_type: Some(vec![
@@ -635,17 +693,27 @@ mod tests {
             pattern: None,
             binding: None,
         };
-        
+
         // Generate fields
-        let fields = field_generator.create_fields_from_element(&element).unwrap();
-        
+        let fields = field_generator
+            .create_fields_from_element(&element)
+            .unwrap();
+
         // Verify that documentation includes type information
         assert_eq!(fields.len(), 2);
-        
+
         let quantity_field = &fields[0];
         let string_field = &fields[1];
-        
-        assert!(quantity_field.doc_comment.as_ref().unwrap().contains("(Quantity)"));
-        assert!(string_field.doc_comment.as_ref().unwrap().contains("(string)"));
+
+        assert!(quantity_field
+            .doc_comment
+            .as_ref()
+            .unwrap()
+            .contains("(Quantity)"));
+        assert!(string_field
+            .doc_comment
+            .as_ref()
+            .unwrap()
+            .contains("(string)"));
     }
 }

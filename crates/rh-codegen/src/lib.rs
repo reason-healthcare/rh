@@ -69,7 +69,7 @@ pub fn generate_organized_directories_with_traits<P: AsRef<std::path::Path>>(
     // Skip if status is retired
     if structure_def.status == "retired" {
         return Err(CodegenError::Generation {
-            message: format!("Skipping retired StructureDefinition '{}' - retired StructureDefinitions are not generated as Rust types", structure_def.name)
+            message: format!("Skipping retired StructureDefinition '{name}' - retired StructureDefinitions are not generated as Rust types", name = structure_def.name)
         });
     }
 
@@ -88,47 +88,81 @@ pub fn generate_organized_directories_with_traits<P: AsRef<std::path::Path>>(
 /// Generate Resource trait for a specific structure definition
 pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     generator: &mut CodeGenerator,
-    _structure_def: &StructureDefinition,
+    structure_def: &StructureDefinition,
     base_output_dir: P,
 ) -> CodegenResult<()> {
     let traits_dir = base_output_dir.as_ref().join("src").join("traits");
     std::fs::create_dir_all(&traits_dir)?;
 
-    let trait_file = traits_dir.join("resource.rs");
+    // Generate both the generic Resource trait and the specific resource trait
+
+    // 1. Generate the generic Resource trait
+    let generic_trait_file = traits_dir.join("resource.rs");
     match generator.generate_resource_trait() {
         Ok(trait_content) => {
-            std::fs::write(&trait_file, trait_content)?;
-
-            // Update traits/mod.rs to include the resource trait
-            update_traits_mod_file(&traits_dir)?;
-
-            Ok(())
+            std::fs::write(&generic_trait_file, trait_content)?;
         }
-        Err(e) => Err(e),
+        Err(e) => return Err(e),
     }
+
+    // 2. Generate the specific resource trait with choice type methods
+    let resource_name = sanitize_module_name(&structure_def.name);
+    let specific_trait_file = traits_dir.join(format!("{resource_name}.rs"));
+    match generator.generate_trait_to_file(structure_def, &specific_trait_file) {
+        Ok(()) => {
+            // Update traits/mod.rs to include both traits
+            update_traits_mod_file(&traits_dir, &resource_name)?;
+        }
+        Err(e) => return Err(e),
+    }
+
+    Ok(())
 }
 
 /// Update the traits/mod.rs file to include the resource module
-fn update_traits_mod_file(traits_dir: &std::path::Path) -> CodegenResult<()> {
+fn sanitize_module_name(name: &str) -> String {
+    name.to_lowercase()
+        .replace([' ', '-', '.'], "_")
+        .replace(['(', ')', '[', ']'], "")
+        .replace(['/', '\\', ':'], "_")
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '_')
+        .collect()
+}
+
+fn update_traits_mod_file(traits_dir: &std::path::Path, resource_name: &str) -> CodegenResult<()> {
     let mod_file = traits_dir.join("mod.rs");
     if !mod_file.exists() {
-        // Create initial mod.rs
-        let mod_content = r#"//! FHIR traits for common functionality
+        // Create initial mod.rs with both generic resource and specific resource modules
+        let mod_content = format!(
+            "//! FHIR traits for common functionality
 //!
 //! This module contains traits that define common interfaces for FHIR types.
 
 pub mod resource;
-"#;
+pub mod {resource_name};
+"
+        );
         std::fs::write(&mod_file, mod_content)?;
     } else {
-        // Check if mod.rs already contains the resource module declaration
+        // Check if mod.rs already contains the module declarations
         let existing_content = std::fs::read_to_string(&mod_file)?;
+        let mut new_content = existing_content.clone();
+
         if !existing_content.contains("pub mod resource;") {
-            // If it doesn't have the module declaration, add it
-            let new_content = existing_content.trim_end().to_string() + "\npub mod resource;\n";
+            new_content = new_content.trim_end().to_string() + "\npub mod resource;\n";
+        }
+
+        let specific_module_line = format!("pub mod {resource_name};");
+        if !existing_content.contains(&specific_module_line) {
+            new_content =
+                new_content.trim_end().to_string() + &format!("\npub mod {resource_name};\n");
+        }
+
+        // Only write if content changed
+        if new_content != existing_content {
             std::fs::write(&mod_file, new_content)?;
         }
-        // If it already has the module declaration, we don't need to do anything
     }
 
     Ok(())
@@ -219,4 +253,152 @@ mod tests {
             assert!(!error_message.contains("retired"));
         }
     }
+}
+
+/// Format the generated crate using rustfmt
+pub fn format_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
+    let crate_path = crate_path.as_ref();
+
+    println!("Formatting generated crate at: {}", crate_path.display());
+
+    // Try cargo fmt first, fallback to rustfmt directly if it fails
+    let output = std::process::Command::new("cargo")
+        .arg("fmt")
+        .arg("--all")
+        .current_dir(crate_path)
+        .output()
+        .map_err(|e| CodegenError::Generation {
+            message: format!("Failed to run cargo fmt: {e}"),
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        // If cargo fmt fails due to no targets, try formatting the lib.rs directly
+        if stderr.contains("Failed to find targets") || stderr.contains("no targets") {
+            println!("⚠️  cargo fmt found no targets, trying direct rustfmt...");
+
+            let lib_rs = crate_path.join("src").join("lib.rs");
+            if lib_rs.exists() {
+                let rustfmt_output = std::process::Command::new("rustfmt")
+                    .arg("--edition")
+                    .arg("2021")
+                    .arg(&lib_rs)
+                    .output()
+                    .map_err(|e| CodegenError::Generation {
+                        message: format!("Failed to run rustfmt directly: {e}"),
+                    })?;
+
+                if !rustfmt_output.status.success() {
+                    let rustfmt_stderr = String::from_utf8_lossy(&rustfmt_output.stderr);
+                    return Err(CodegenError::Generation {
+                        message: format!("rustfmt failed: {rustfmt_stderr}"),
+                    });
+                }
+
+                println!("✅ Formatting completed successfully (using rustfmt directly)");
+                return Ok(());
+            }
+        }
+
+        return Err(CodegenError::Generation {
+            message: format!("cargo fmt failed: {stderr}"),
+        });
+    }
+
+    println!("✅ Formatting completed successfully");
+    Ok(())
+}
+
+/// Run clippy on the generated crate to check for warnings and errors
+pub fn check_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
+    let crate_path = crate_path.as_ref();
+
+    println!(
+        "Running clippy on generated crate at: {}",
+        crate_path.display()
+    );
+
+    let output = std::process::Command::new("cargo")
+        .arg("clippy")
+        .arg("--lib") // Only check the library target
+        .arg("--")
+        .arg("-D")
+        .arg("warnings")
+        .current_dir(crate_path)
+        .output()
+        .map_err(|e| CodegenError::Generation {
+            message: format!("Failed to run cargo clippy: {e}"),
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        println!("⚠️  Clippy found issues:");
+        println!("{stdout}");
+        println!("{stderr}");
+        return Err(CodegenError::Generation {
+            message: "cargo clippy found issues - see output above".to_string(),
+        });
+    }
+
+    println!("✅ Clippy check completed successfully");
+    Ok(())
+}
+
+/// Check if the generated crate compiles successfully
+pub fn compile_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
+    let crate_path = crate_path.as_ref();
+
+    println!(
+        "Checking compilation of generated crate at: {}",
+        crate_path.display()
+    );
+
+    let output = std::process::Command::new("cargo")
+        .arg("check")
+        .arg("--lib") // Only check the library target
+        .current_dir(crate_path)
+        .output()
+        .map_err(|e| CodegenError::Generation {
+            message: format!("Failed to run cargo check: {e}"),
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        println!("❌ Compilation failed:");
+        println!("{stdout}");
+        println!("{stderr}");
+        return Err(CodegenError::Generation {
+            message: "cargo check failed - see output above".to_string(),
+        });
+    }
+
+    println!("✅ Compilation check completed successfully");
+    Ok(())
+}
+
+/// Run a complete quality check pipeline on the generated crate
+pub fn run_quality_checks<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
+    let crate_path = crate_path.as_ref();
+
+    println!("🔧 Running quality checks on generated crate...");
+
+    // 1. Format the code
+    format_generated_crate(crate_path)?;
+
+    // 2. Check compilation
+    compile_generated_crate(crate_path)?;
+
+    // 3. Run clippy (but don't fail on warnings for now)
+    match check_generated_crate(crate_path) {
+        Ok(()) => println!("✅ All quality checks passed!"),
+        Err(e) => {
+            println!("⚠️  Quality checks completed with warnings: {e}");
+            println!("📝 Note: Warnings don't prevent code generation but should be reviewed");
+        }
+    }
+
+    Ok(())
 }

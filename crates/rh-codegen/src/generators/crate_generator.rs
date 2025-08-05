@@ -186,9 +186,13 @@ fn generate_module_files(
         generate_mod_rs_for_directory(primitives_dir, "FHIR primitive types")?;
     fs::write(primitives_dir.join("mod.rs"), primitives_mod_content)?;
 
-    // Generate traits/mod.rs (placeholder for now)
-    let traits_mod_content = generate_traits_mod_rs()?;
-    fs::write(traits_dir.join("mod.rs"), traits_mod_content)?;
+    // Generate traits/mod.rs (placeholder for now, but don't overwrite existing content)
+    let traits_mod_path = traits_dir.join("mod.rs");
+    if !traits_mod_path.exists() || fs::read_to_string(&traits_mod_path)?.len() < 500 {
+        // If file is small, it's likely just placeholder
+        let traits_mod_content = generate_traits_mod_rs()?;
+        fs::write(traits_mod_path, traits_mod_content)?;
+    }
 
     // Generate bindings/mod.rs for ValueSet enums
     let bindings_mod_content =

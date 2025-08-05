@@ -283,7 +283,14 @@ impl RustTrait {
     }
 
     pub fn add_method(&mut self, method: RustTraitMethod) {
-        self.methods.push(method);
+        // Check if a method with this name already exists
+        if !self
+            .methods
+            .iter()
+            .any(|existing| existing.name == method.name)
+        {
+            self.methods.push(method);
+        }
     }
 
     pub fn with_super_trait(mut self, super_trait: String) -> Self {

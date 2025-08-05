@@ -279,5 +279,16 @@ fn process_json_files_organized(
         }
     }
 
+    // Run quality checks on the generated crate
+    info!("Running quality checks on generated crate...");
+    match rh_codegen::run_quality_checks(output_dir) {
+        Ok(()) => {
+            info!("✅ Quality checks completed successfully");
+        }
+        Err(e) => {
+            warn!("⚠️  Quality checks completed with issues: {}", e);
+        }
+    }
+
     Ok(())
 }

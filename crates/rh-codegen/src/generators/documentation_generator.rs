@@ -36,14 +36,17 @@ impl DocumentationGenerator {
         // Add source information
         doc_lines.push("".to_string());
         doc_lines.push("**Source:**".to_string());
-        doc_lines.push(format!("- URL: {}", structure_def.url));
+        doc_lines.push(format!("- URL: {url}", url = structure_def.url));
 
         if let Some(version) = &structure_def.version {
             doc_lines.push(format!("- Version: {version}"));
         }
 
-        doc_lines.push(format!("- Kind: {}", structure_def.kind));
-        doc_lines.push(format!("- Type: {}", structure_def.base_type));
+        doc_lines.push(format!("- Kind: {kind}", kind = structure_def.kind));
+        doc_lines.push(format!(
+            "- Type: {base_type}",
+            base_type = structure_def.base_type
+        ));
 
         if let Some(base_def) = &structure_def.base_definition {
             doc_lines.push(format!("- Base Definition: {base_def}"));
@@ -80,7 +83,7 @@ impl DocumentationGenerator {
         };
 
         // Add type-specific suffix
-        Some(format!("{} ({})", base_doc, type_code))
+        Some(format!("{base_doc} ({type_code})"))
     }
 
     /// Generate documentation for a primitive element struct
@@ -113,7 +116,7 @@ impl DocumentationGenerator {
         if let Some(description) = &structure_def.description {
             description.clone()
         } else {
-            format!("FHIR primitive type: {}", structure_def.name)
+            format!("FHIR primitive type: {name}", name = structure_def.name)
         }
     }
 
@@ -127,15 +130,18 @@ impl DocumentationGenerator {
         let mut lines = vec![
             "".to_string(),
             "**Source:**".to_string(),
-            format!("- URL: {}", structure_def.url),
+            format!("- URL: {url}", url = structure_def.url),
         ];
 
         if let Some(version) = &structure_def.version {
             lines.push(format!("- Version: {version}"));
         }
 
-        lines.push(format!("- Kind: {}", structure_def.kind));
-        lines.push(format!("- Type: {}", structure_def.base_type));
+        lines.push(format!("- Kind: {kind}", kind = structure_def.kind));
+        lines.push(format!(
+            "- Type: {base_type}",
+            base_type = structure_def.base_type
+        ));
 
         if let Some(base_def) = &structure_def.base_definition {
             lines.push(format!("- Base Definition: {base_def}"));
@@ -152,7 +158,7 @@ impl DocumentationGenerator {
         let title = if let Some(title) = &structure_def.title {
             format!("{title} Trait")
         } else {
-            format!("{} Trait", structure_def.name)
+            format!("{name} Trait", name = structure_def.name)
         };
         doc_lines.push(title);
 

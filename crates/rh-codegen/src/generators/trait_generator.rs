@@ -121,6 +121,9 @@ impl TraitGenerator {
         rust_trait: &mut RustTrait,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<()> {
+        // Add choice type methods first
+        self.add_choice_type_trait_methods(rust_trait, structure_def)?;
+
         // Get elements from differential or snapshot
         let elements = if let Some(differential) = &structure_def.differential {
             &differential.element
@@ -154,12 +157,125 @@ impl TraitGenerator {
 
             // Only process direct fields (no nested fields)
             if !field_path.contains('.') {
+                // Skip choice type fields since we handle them separately
+                let field_name = element.path.split('.').next_back().unwrap_or("");
+                if field_name.ends_with("[x]") {
+                    continue;
+                }
+
                 // Check if this element should have a trait method
                 if self.should_create_trait_method_for_element(element) {
                     if let Some(method) = self.create_trait_method_from_element(element)? {
                         rust_trait.add_method(method);
                     }
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Add choice type trait methods that provide convenient access to choice type values
+    pub fn add_choice_type_trait_methods(
+        &mut self,
+        rust_trait: &mut RustTrait,
+        structure_def: &StructureDefinition,
+    ) -> CodegenResult<()> {
+        use crate::generators::FieldGenerator;
+
+        let choice_types = FieldGenerator::extract_choice_types_from_structure(structure_def);
+
+        for (base_name, type_codes) in choice_types {
+            // Create method that returns the actual value from whichever variant is set
+            let method_name = base_name.clone();
+            let snake_case_method = GeneratorUtils::to_rust_field_name(&method_name);
+
+            // Create a simpler approach - just return the formatted value as a string
+            let mut method_body_lines = Vec::new();
+            for (index, type_code) in type_codes.iter().enumerate() {
+                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let field_name = format!("{base_name}_{field_suffix}");
+                let rust_field_name = GeneratorUtils::to_rust_field_name(&field_name);
+
+                if index == 0 {
+                    method_body_lines
+                        .push(format!("if let Some(val) = &self.{rust_field_name} {{"));
+                    method_body_lines.push("    Some(format!(\"{:?}\", val))".to_string());
+                } else {
+                    method_body_lines.push(format!(
+                        "}} else if let Some(val) = &self.{rust_field_name} {{"
+                    ));
+                    method_body_lines.push("    Some(format!(\"{:?}\", val))".to_string());
+                }
+            }
+            method_body_lines.push("} else {".to_string());
+            method_body_lines.push("    None".to_string());
+            method_body_lines.push("}".to_string());
+
+            let method_body = method_body_lines.join("\n        ");
+
+            // Return type: Option<String> - simplified to just the formatted value
+            let return_type = RustType::Option(Box::new(RustType::String));
+
+            let method = RustTraitMethod::new(snake_case_method.clone())
+                .with_doc(format!(
+                    "Gets the {base_name} value from whichever variant is set"
+                ))
+                .with_return_type(return_type)
+                .with_default_implementation(format!("        {method_body}"));
+
+            rust_trait.add_method(method);
+
+            // Add a helper method that just checks if any variant is set
+            let has_method_name = format!("has_{snake_case_method}");
+            let mut has_method_body_lines = Vec::new();
+            for (index, type_code) in type_codes.iter().enumerate() {
+                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let field_name = format!("{base_name}_{field_suffix}");
+                let rust_field_name = GeneratorUtils::to_rust_field_name(&field_name);
+
+                if index == 0 {
+                    has_method_body_lines.push(format!("self.{rust_field_name}.is_some()"));
+                } else {
+                    has_method_body_lines.push(format!(" || self.{rust_field_name}.is_some()"));
+                }
+            }
+
+            let has_method_body = has_method_body_lines.join("");
+
+            let has_method = RustTraitMethod::new(has_method_name)
+                .with_doc(format!("Returns true if any {base_name} variant is set"))
+                .with_return_type(RustType::Boolean)
+                .with_default_implementation(format!("        {has_method_body}"));
+
+            rust_trait.add_method(has_method);
+
+            // Also add individual getter methods for each specific type for type safety
+            for type_code in &type_codes {
+                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let typed_method_name = format!("{base_name}_{field_suffix}");
+                let typed_rust_method_name = GeneratorUtils::to_rust_field_name(&typed_method_name);
+
+                // Map FHIR type to Rust type
+                let rust_type = match type_code.as_str() {
+                    "string" | "code" | "id" | "markdown" | "uri" | "url" | "canonical"
+                    | "dateTime" | "date" | "time" | "instant" => RustType::String,
+                    "boolean" => RustType::Boolean,
+                    "integer" | "positiveInt" | "unsignedInt" => RustType::Integer,
+                    "decimal" => RustType::Float,
+                    _ => RustType::Custom(GeneratorUtils::capitalize_first_letter(type_code)),
+                };
+
+                let typed_return_type = RustType::Option(Box::new(rust_type));
+
+                let typed_method = RustTraitMethod::new(typed_rust_method_name.clone())
+                    .with_doc(format!("Gets the {base_name} value as {type_code}"))
+                    .with_return_type(typed_return_type)
+                    .with_default_implementation(format!(
+                        "        self.{typed_rust_method_name}.clone()"
+                    ));
+
+                rust_trait.add_method(typed_method);
             }
         }
 
