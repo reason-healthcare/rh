@@ -124,6 +124,44 @@ impl<'a> FileIoManager<'a> {
         file_generator.generate_trait_file_from_trait(rust_trait, output_path)
     }
 
+    /// Check if a cached struct name is a direct nested struct of the parent struct
+    /// This prevents issues like Element collecting ElementDefinition nested structs
+    fn is_direct_nested_struct(parent_name: &str, cached_name: &str) -> bool {
+        // Must start with parent name
+        if !cached_name.starts_with(parent_name) {
+            return false;
+        }
+
+        // Must have something after the parent name
+        if cached_name.len() <= parent_name.len() {
+            return false;
+        }
+
+        // Get the remainder after the parent name
+        let remainder = &cached_name[parent_name.len()..];
+
+        // Special cases: if the remainder is exactly one of these complete words,
+        // it suggests this is a separate entity, not a nested struct
+        // For example: "ElementDefinition" should not be a nested struct of "Element"
+        let standalone_entities = [
+            "Definition", // ElementDefinition is separate from Element
+        ];
+
+        if standalone_entities.contains(&remainder) {
+            return false;
+        }
+
+        // If remainder starts with one of these words, it's likely a separate entity
+        // For example: "ElementDefinitionBinding" starts with "Definition" so it's not a child of "Element"
+        for entity in &standalone_entities {
+            if remainder.starts_with(entity) {
+                return false;
+            }
+        }
+
+        true
+    }
+
     /// Collect nested structs from the type cache that are related to a main struct
     pub fn collect_nested_structs(
         struct_name: &str,
@@ -132,8 +170,10 @@ impl<'a> FileIoManager<'a> {
         let mut nested_structs = vec![];
 
         // Find all nested structs that start with the main struct name
+        // but ensure they are direct children, not just sharing a prefix
         for (cached_name, cached_struct) in type_cache {
-            if cached_name != struct_name && cached_name.starts_with(struct_name) {
+            if cached_name != struct_name && Self::is_direct_nested_struct(struct_name, cached_name)
+            {
                 nested_structs.push(cached_struct.clone());
             }
         }
@@ -390,5 +430,114 @@ mod tests {
             std::mem::size_of_val(&file_io_manager),
             std::mem::size_of::<FileIoManager>()
         );
+    }
+
+    #[test]
+    fn test_nested_struct_collection_fix() {
+        use crate::rust_types::RustStruct;
+        use std::collections::HashMap;
+
+        let mut type_cache = HashMap::new();
+
+        // Create main structs
+        let element_struct = RustStruct::new("Element".to_string());
+        let element_definition_struct = RustStruct::new("ElementDefinition".to_string());
+
+        // Create nested structs for Element
+        let element_extension_struct = RustStruct::new("ElementExtension".to_string());
+        let element_binding_struct = RustStruct::new("ElementBinding".to_string());
+
+        // Create nested structs for ElementDefinition (these should NOT be collected for Element)
+        let element_definition_binding_struct =
+            RustStruct::new("ElementDefinitionBinding".to_string());
+        let element_definition_constraint_struct =
+            RustStruct::new("ElementDefinitionConstraint".to_string());
+        let element_definition_type_struct = RustStruct::new("ElementDefinitionType".to_string());
+
+        // Add all structs to cache
+        type_cache.insert("Element".to_string(), element_struct);
+        type_cache.insert("ElementDefinition".to_string(), element_definition_struct);
+        type_cache.insert("ElementExtension".to_string(), element_extension_struct);
+        type_cache.insert("ElementBinding".to_string(), element_binding_struct);
+        type_cache.insert(
+            "ElementDefinitionBinding".to_string(),
+            element_definition_binding_struct,
+        );
+        type_cache.insert(
+            "ElementDefinitionConstraint".to_string(),
+            element_definition_constraint_struct,
+        );
+        type_cache.insert(
+            "ElementDefinitionType".to_string(),
+            element_definition_type_struct,
+        );
+
+        // Test collecting nested structs for Element
+        let element_nested = FileIoManager::collect_nested_structs("Element", &type_cache);
+
+        // Element should only collect ElementExtension and ElementBinding,
+        // NOT ElementDefinition* structs
+        assert_eq!(
+            element_nested.len(),
+            2,
+            "Element should have 2 nested structs"
+        );
+
+        let element_nested_names: Vec<String> =
+            element_nested.iter().map(|s| s.name.clone()).collect();
+        assert!(element_nested_names.contains(&"ElementExtension".to_string()));
+        assert!(element_nested_names.contains(&"ElementBinding".to_string()));
+        assert!(!element_nested_names.contains(&"ElementDefinitionBinding".to_string()));
+        assert!(!element_nested_names.contains(&"ElementDefinitionConstraint".to_string()));
+        assert!(!element_nested_names.contains(&"ElementDefinitionType".to_string()));
+        assert!(!element_nested_names.contains(&"ElementDefinition".to_string()));
+
+        // Test collecting nested structs for ElementDefinition
+        let element_definition_nested =
+            FileIoManager::collect_nested_structs("ElementDefinition", &type_cache);
+
+        // ElementDefinition should collect all ElementDefinition* structs
+        assert_eq!(
+            element_definition_nested.len(),
+            3,
+            "ElementDefinition should have 3 nested structs"
+        );
+
+        let element_definition_nested_names: Vec<String> = element_definition_nested
+            .iter()
+            .map(|s| s.name.clone())
+            .collect();
+        assert!(element_definition_nested_names.contains(&"ElementDefinitionBinding".to_string()));
+        assert!(
+            element_definition_nested_names.contains(&"ElementDefinitionConstraint".to_string())
+        );
+        assert!(element_definition_nested_names.contains(&"ElementDefinitionType".to_string()));
+        assert!(!element_definition_nested_names.contains(&"ElementExtension".to_string()));
+        assert!(!element_definition_nested_names.contains(&"ElementBinding".to_string()));
+
+        // Test some edge cases to ensure the logic is robust
+
+        // Test that Bundle correctly collects BundleEntry but not BundleDefinition (if it existed)
+        type_cache.insert("Bundle".to_string(), RustStruct::new("Bundle".to_string()));
+        type_cache.insert(
+            "BundleEntry".to_string(),
+            RustStruct::new("BundleEntry".to_string()),
+        );
+        type_cache.insert(
+            "BundleLink".to_string(),
+            RustStruct::new("BundleLink".to_string()),
+        );
+
+        let bundle_nested = FileIoManager::collect_nested_structs("Bundle", &type_cache);
+        assert_eq!(
+            bundle_nested.len(),
+            2,
+            "Bundle should have 2 nested structs"
+        );
+
+        let bundle_nested_names: Vec<String> =
+            bundle_nested.iter().map(|s| s.name.clone()).collect();
+        assert!(bundle_nested_names.contains(&"BundleEntry".to_string()));
+        assert!(bundle_nested_names.contains(&"BundleLink".to_string()));
     }
 }

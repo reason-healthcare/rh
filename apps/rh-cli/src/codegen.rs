@@ -11,6 +11,20 @@ use rh_codegen::{
 };
 use rh_loader::{LoaderConfig, PackageLoader};
 
+/// Check if a directory exists and is not empty
+fn is_directory_non_empty(path: &Path) -> Result<bool> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    if !path.is_dir() {
+        return Ok(false);
+    }
+
+    let mut entries = fs::read_dir(path)?;
+    Ok(entries.next().is_some())
+}
+
 #[derive(Args)]
 pub struct CodegenArgs {
     /// Package name (e.g., "hl7.fhir.r4.core")
@@ -33,6 +47,10 @@ pub struct CodegenArgs {
     /// Overwrite package if it already exists
     #[arg(long)]
     pub overwrite: bool,
+
+    /// Force overwrite of non-empty output directory
+    #[arg(long)]
+    pub force: bool,
 }
 
 pub async fn handle_command(args: CodegenArgs) -> Result<()> {
@@ -68,6 +86,21 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
 
     let output_path = Path::new(&args.output);
 
+    // Check if output directory exists and is not empty before doing any work
+    if is_directory_non_empty(output_path)? {
+        if !args.force {
+            return Err(anyhow::anyhow!(
+                "Output directory '{}' is not empty. Use --force to overwrite existing files.",
+                output_path.display()
+            ));
+        } else {
+            warn!(
+                "Will remove existing contents of output directory: {}",
+                output_path.display()
+            );
+        }
+    }
+
     // Set up package directory
     let pkg_dir = if let Some(dir) = args.package_dir {
         PathBuf::from(dir)
@@ -100,6 +133,17 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     // Create generator with ValueSet directory
     let mut generator = CodeGenerator::new_with_value_set_directory(config, effective_package_dir);
 
+    // Remove existing output directory if --force was specified and directory was non-empty
+    if args.force && is_directory_non_empty(output_path)? {
+        info!(
+            "Removing existing contents of output directory: {}",
+            output_path.display()
+        );
+        if output_path.exists() {
+            fs::remove_dir_all(output_path)?;
+        }
+    }
+
     // Create output directory
     fs::create_dir_all(output_path)?;
 
@@ -120,7 +164,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
 
     // Generate complete crate structure
     let command_invoked = format!(
-        "rh codegen {} {} --output {}{}{}",
+        "rh codegen {} {} --output {}{}{}{}",
         args.package,
         version,
         args.output,
@@ -129,7 +173,8 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
         } else {
             String::new()
         },
-        if args.overwrite { " --overwrite" } else { "" }
+        if args.overwrite { " --overwrite" } else { "" },
+        if args.force { " --force" } else { "" }
     );
 
     let (canonical, author, description) =
