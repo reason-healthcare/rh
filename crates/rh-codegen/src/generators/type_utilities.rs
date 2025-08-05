@@ -87,6 +87,21 @@ impl TypeUtilities {
         structure_def.kind == "logical"
     }
 
+    /// Check if a FHIR type should be skipped due to underscore prefix
+    /// Files beginning with underscore are typically auto-generated or temporary
+    pub fn should_skip_underscore_prefixed(structure_def: &StructureDefinition) -> bool {
+        use crate::generators::name_generator::NameGenerator;
+        
+        // Check if the original name or id starts with underscore
+        if structure_def.name.starts_with('_') || structure_def.id.starts_with('_') {
+            return true;
+        }
+        
+        // Check if the generated struct name would start with underscore
+        let generated_name = NameGenerator::generate_struct_name(structure_def);
+        generated_name.starts_with('_')
+    }
+
     /// Get the base type hierarchy for a structure definition
     pub fn get_base_type_hierarchy(structure_def: &StructureDefinition) -> Vec<String> {
         let mut hierarchy = vec![structure_def.base_type.clone()];
@@ -418,6 +433,90 @@ mod tests {
 
         assert!(TypeUtilities::is_logical_model(&logical_model));
         assert!(!TypeUtilities::should_generate_struct(&logical_model));
+    }
+
+    #[test]
+    fn test_underscore_prefixed_detection() {
+        // Test structure with underscore prefixed name
+        let underscore_name_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "normal-id".to_string(),
+            url: "http://example.org/fhir/StructureDefinition/_11179object_class".to_string(),
+            name: "_11179object_class".to_string(),
+            title: Some("Auto-generated class".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            description: Some("An auto-generated resource".to_string()),
+            purpose: None,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        // Test structure with underscore prefixed id
+        let underscore_id_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "_temp_generated".to_string(),
+            url: "http://example.org/fhir/StructureDefinition/temp-generated".to_string(),
+            name: "temp-generated".to_string(),
+            title: Some("Temporary resource".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            description: Some("A temporary resource".to_string()),
+            purpose: None,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        // Test structure with numeric prefix (gets underscore in generated name)
+        let numeric_prefix_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "11179-objectClass".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/11179-objectClass".to_string(),
+            name: "ObjectClass".to_string(),
+            title: Some("Object Class extension".to_string()),
+            status: "active".to_string(),
+            kind: "complex-type".to_string(),
+            is_abstract: false,
+            description: Some("A concept that represents a set of ideas".to_string()),
+            purpose: None,
+            base_type: "Extension".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/Extension".to_string()),
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        // Test normal structure (no underscore prefix)
+        let normal_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "Patient".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+            name: "Patient".to_string(),
+            title: Some("Patient".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            description: Some("A patient resource".to_string()),
+            purpose: None,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        assert!(TypeUtilities::should_skip_underscore_prefixed(&underscore_name_structure));
+        assert!(TypeUtilities::should_skip_underscore_prefixed(&underscore_id_structure));
+        assert!(TypeUtilities::should_skip_underscore_prefixed(&numeric_prefix_structure));
+        assert!(!TypeUtilities::should_skip_underscore_prefixed(&normal_structure));
     }
 
     #[test]

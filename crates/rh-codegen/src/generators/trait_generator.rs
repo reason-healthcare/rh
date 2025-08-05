@@ -3,7 +3,7 @@
 //! This module handles the generation of Rust traits from FHIR StructureDefinitions.
 
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{utils::GeneratorUtils, DocumentationGenerator};
+use crate::generators::{utils::GeneratorUtils, DocumentationGenerator, TypeUtilities};
 use crate::rust_types::{RustTrait, RustTraitMethod, RustType};
 use crate::{CodegenError, CodegenResult};
 
@@ -37,6 +37,16 @@ impl TraitGenerator {
             return Err(CodegenError::Generation {
                 message: format!(
                     "Skipping example StructureDefinition '{}'",
+                    structure_def.name
+                ),
+            });
+        }
+
+        // Skip files that begin with underscore (auto-generated/temporary files)
+        if TypeUtilities::should_skip_underscore_prefixed(structure_def) {
+            return Err(CodegenError::Generation {
+                message: format!(
+                    "Skipping underscore-prefixed StructureDefinition '{}' - underscore prefixed files are ignored",
                     structure_def.name
                 ),
             });

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{utils::GeneratorUtils, DocumentationGenerator, FieldGenerator};
+use crate::generators::{utils::GeneratorUtils, DocumentationGenerator, FieldGenerator, TypeUtilities};
 use crate::rust_types::{RustField, RustStruct, RustType};
 use crate::value_sets::ValueSetManager;
 use crate::{CodegenError, CodegenResult};
@@ -52,6 +52,16 @@ impl<'a> StructGenerator<'a> {
             return Err(CodegenError::Generation {
                 message: format!(
                     "Skipping example StructureDefinition '{}'",
+                    structure_def.name
+                ),
+            });
+        }
+
+        // Skip files that begin with underscore (auto-generated/temporary files)
+        if TypeUtilities::should_skip_underscore_prefixed(structure_def) {
+            return Err(CodegenError::Generation {
+                message: format!(
+                    "Skipping underscore-prefixed StructureDefinition '{}' - underscore prefixed files are ignored",
                     structure_def.name
                 ),
             });
@@ -356,5 +366,49 @@ impl<'a> StructGenerator<'a> {
         let mut field_generator =
             FieldGenerator::new(self.config, self.type_cache, self.value_set_manager);
         field_generator.create_field_from_element(element)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::CodegenConfig;
+
+    #[test]
+    fn test_underscore_prefixed_structure_skipping() {
+        let config = CodegenConfig::default();
+        let mut type_cache = HashMap::new();
+        let mut value_set_manager = ValueSetManager::new();
+        let mut generator = StructGenerator::new(&config, &mut type_cache, &mut value_set_manager);
+
+        // Test structure with underscore prefixed name
+        let underscore_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "normal-id".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/_11179object_class".to_string(),
+            name: "_11179object_class".to_string(),
+            title: Some("Auto-generated class".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: false,
+            description: Some("An auto-generated resource".to_string()),
+            purpose: None,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        // Test that underscore-prefixed structures are rejected
+        let result = generator.generate_struct(&underscore_structure);
+        assert!(result.is_err());
+
+        if let Err(CodegenError::Generation { message }) = result {
+            assert!(message.contains("underscore prefixed files are ignored"));
+            assert!(message.contains("_11179object_class"));
+        } else {
+            panic!("Expected CodegenError::Generation for underscore-prefixed structure");
+        }
     }
 }
