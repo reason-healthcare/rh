@@ -60,6 +60,9 @@ impl TraitGenerator {
         rust_trait.doc_comment =
             DocumentationGenerator::generate_trait_documentation(structure_def);
 
+        // Add inheritance relationship if present
+        self.add_inheritance_relationship(&mut rust_trait, structure_def)?;
+
         // Add common FHIR methods based on the type
         self.add_common_fhir_trait_methods(&mut rust_trait, structure_def)?;
 
@@ -69,34 +72,51 @@ impl TraitGenerator {
         Ok(rust_trait)
     }
 
+    /// Add inheritance relationship if the StructureDefinition has a base definition
+    fn add_inheritance_relationship(
+        &mut self,
+        rust_trait: &mut RustTrait,
+        structure_def: &StructureDefinition,
+    ) -> CodegenResult<()> {
+        if let Some(base_def) = &structure_def.base_definition {
+            // Extract trait name from base definition URL
+            // e.g., "http://hl7.org/fhir/StructureDefinition/Resource" -> "Resource"
+            if let Some(parent_trait_name) = self.extract_trait_name_from_url(base_def) {
+                // Only add inheritance for known FHIR base types
+                if self.is_valid_fhir_base_type(&parent_trait_name) {
+                    rust_trait.super_traits.push(parent_trait_name);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Extract trait name from FHIR StructureDefinition URL
+    fn extract_trait_name_from_url(&self, url: &str) -> Option<String> {
+        // FHIR URLs typically look like: "http://hl7.org/fhir/StructureDefinition/Resource"
+        url.split('/').next_back().map(|s| s.to_string())
+    }
+
+    /// Check if the given type name is a valid FHIR base type for inheritance
+    fn is_valid_fhir_base_type(&self, type_name: &str) -> bool {
+        matches!(
+            type_name,
+            "Resource" | "DomainResource" | "Element" | "BackboneElement" | "Extension"
+        )
+    }
+
     /// Add common FHIR trait methods based on the structure type
     pub fn add_common_fhir_trait_methods(
         &mut self,
         rust_trait: &mut RustTrait,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<()> {
-        // All FHIR resources should have extensions
-        let extensions_method = RustTraitMethod::new("extensions".to_string())
-            .with_doc("Gets the extensions for this resource".to_string())
-            .with_return_type(RustType::Vec(Box::new(RustType::Custom(
-                "Extension".to_string(),
-            ))));
+        // Check if this trait inherits from Resource (directly or indirectly)
+        let inherits_from_resource = self.trait_inherits_from_resource(rust_trait);
 
-        rust_trait.add_method(extensions_method);
-
-        // DomainResource types should have narrative
-        if structure_def.base_type == "DomainResource" || structure_def.name == "DomainResource" {
-            let narrative_method = RustTraitMethod::new("narrative".to_string())
-                .with_doc("Gets the narrative for this domain resource".to_string())
-                .with_return_type(RustType::Option(Box::new(RustType::Custom(
-                    "Narrative".to_string(),
-                ))));
-
-            rust_trait.add_method(narrative_method);
-        }
-
-        // Resource types should have id and meta
-        if structure_def.kind == "resource" || structure_def.base_type == "Resource" {
+        // Only add basic resource methods if this IS the Resource trait itself
+        if structure_def.name == "Resource" {
+            // Resource types should have id and meta
             let id_method = RustTraitMethod::new("id".to_string())
                 .with_doc("Gets the logical ID of this resource".to_string())
                 .with_return_type(RustType::Option(Box::new(RustType::String)));
@@ -110,9 +130,58 @@ impl TraitGenerator {
                 ))));
 
             rust_trait.add_method(meta_method);
+
+            // All FHIR resources should have extensions
+            let extensions_method = RustTraitMethod::new("extensions".to_string())
+                .with_doc("Gets the extensions for this resource".to_string())
+                .with_return_type(RustType::Vec(Box::new(RustType::Custom(
+                    "Extension".to_string(),
+                ))));
+
+            rust_trait.add_method(extensions_method);
+        } else if !inherits_from_resource {
+            // If this is not Resource and doesn't inherit from Resource, add basic methods
+            // This handles non-resource types like Element, Extension, etc.
+            let extensions_method = RustTraitMethod::new("extensions".to_string())
+                .with_doc("Gets the extensions for this resource".to_string())
+                .with_return_type(RustType::Vec(Box::new(RustType::Custom(
+                    "Extension".to_string(),
+                ))));
+
+            rust_trait.add_method(extensions_method);
+        }
+
+        // DomainResource should add narrative (this is specific to DomainResource)
+        if structure_def.name == "DomainResource" {
+            let narrative_method = RustTraitMethod::new("narrative".to_string())
+                .with_doc("Gets the narrative for this domain resource".to_string())
+                .with_return_type(RustType::Option(Box::new(RustType::Custom(
+                    "Narrative".to_string(),
+                ))));
+
+            rust_trait.add_method(narrative_method);
         }
 
         Ok(())
+    }
+
+    /// Check if a trait inherits from Resource either directly or indirectly
+    fn trait_inherits_from_resource(&self, rust_trait: &RustTrait) -> bool {
+        // Direct inheritance
+        if rust_trait.super_traits.contains(&"Resource".to_string()) {
+            return true;
+        }
+
+        // Indirect inheritance through DomainResource
+        if rust_trait
+            .super_traits
+            .contains(&"DomainResource".to_string())
+        {
+            return true;
+        }
+
+        // Could extend this for other inheritance chains if needed
+        false
     }
 
     /// Add trait methods based on the specific elements in the structure definition
@@ -166,13 +235,93 @@ impl TraitGenerator {
                 // Check if this element should have a trait method
                 if self.should_create_trait_method_for_element(element) {
                     if let Some(method) = self.create_trait_method_from_element(element)? {
-                        rust_trait.add_method(method);
+                        // Avoid adding methods that are already defined in parent traits
+                        if !self.method_conflicts_with_inheritance(&method, rust_trait) {
+                            rust_trait.add_method(method);
+                        }
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    /// Check if a method conflicts with methods defined in parent traits
+    fn method_conflicts_with_inheritance(
+        &self,
+        method: &RustTraitMethod,
+        rust_trait: &RustTrait,
+    ) -> bool {
+        // Check all methods that would be inherited through the trait hierarchy
+        let inherited_methods = self.get_all_inherited_methods(rust_trait);
+
+        inherited_methods.contains(&method.name)
+    }
+
+    /// Get all method names that are inherited through the trait hierarchy
+    fn get_all_inherited_methods(
+        &self,
+        rust_trait: &RustTrait,
+    ) -> std::collections::HashSet<String> {
+        let mut inherited_methods = std::collections::HashSet::new();
+
+        // Define methods for each trait type
+        let base_resource_methods = [
+            "id",
+            "meta",
+            "extensions",
+            "implicit_rules",
+            "language",
+            "extension",
+            "resource_type",
+            "has_id",
+            "has_meta",
+        ];
+        let domain_resource_methods = ["narrative"];
+
+        // Recursively collect inherited methods
+        self.collect_inherited_methods_recursive(
+            rust_trait,
+            &mut inherited_methods,
+            &base_resource_methods,
+            &domain_resource_methods,
+        );
+
+        inherited_methods
+    }
+
+    /// Recursively collect all inherited method names
+    fn collect_inherited_methods_recursive(
+        &self,
+        rust_trait: &RustTrait,
+        inherited_methods: &mut std::collections::HashSet<String>,
+        base_resource_methods: &[&str],
+        domain_resource_methods: &[&str],
+    ) {
+        for super_trait in &rust_trait.super_traits {
+            match super_trait.as_str() {
+                "Resource" => {
+                    // Add all Resource methods
+                    for method in base_resource_methods {
+                        inherited_methods.insert(method.to_string());
+                    }
+                }
+                "DomainResource" => {
+                    // DomainResource inherits from Resource, so add both
+                    for method in base_resource_methods {
+                        inherited_methods.insert(method.to_string());
+                    }
+                    for method in domain_resource_methods {
+                        inherited_methods.insert(method.to_string());
+                    }
+                }
+                _ => {
+                    // For other custom traits, we could extend this logic
+                    // For now, we handle the main FHIR hierarchy
+                }
+            }
+        }
     }
 
     /// Add choice type trait methods that provide convenient access to choice type values
