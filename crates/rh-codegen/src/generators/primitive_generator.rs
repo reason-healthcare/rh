@@ -30,13 +30,38 @@ impl<'a> PrimitiveGenerator<'a> {
         // Map FHIR primitive types to Rust types
         let rust_primitive_type = Self::map_fhir_primitive_to_rust_type(&structure_def.name);
 
+        // Convert to PascalCase and add "Type" suffix
+        let type_alias_name = format!(
+            "{}Type",
+            Self::fhir_primitive_to_pascal_case(&structure_def.name)
+        );
+
         // Create type alias with documentation
-        let mut type_alias = RustTypeAlias::new(structure_def.name.clone(), rust_primitive_type);
+        let mut type_alias = RustTypeAlias::new(type_alias_name, rust_primitive_type);
         let doc =
             DocumentationGenerator::generate_primitive_type_alias_documentation(structure_def);
         type_alias = type_alias.with_doc(doc);
 
         Ok(type_alias)
+    }
+
+    /// Convert FHIR primitive name to PascalCase, handling camelCase inputs
+    fn fhir_primitive_to_pascal_case(name: &str) -> String {
+        match name {
+            // Handle special cases that need custom conversion
+            "dateTime" => "DateTime".to_string(),
+            "positiveInt" => "PositiveInt".to_string(),
+            "unsignedInt" => "UnsignedInt".to_string(),
+            "base64Binary" => "Base64Binary".to_string(),
+            // For simple lowercase names, just capitalize
+            _ => {
+                let mut chars = name.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            }
+        }
     }
 
     /// Generate a primitive type struct with special FHIR primitive type semantics
@@ -218,8 +243,65 @@ mod tests {
         assert!(result.is_ok());
 
         let type_alias = result.unwrap();
-        assert_eq!(type_alias.name, "boolean");
+        assert_eq!(type_alias.name, "BooleanType");
         assert!(matches!(type_alias.target_type, RustType::Boolean));
+    }
+
+    #[test]
+    fn test_primitive_type_naming_convention() {
+        use crate::config::CodegenConfig;
+
+        let config = CodegenConfig::default();
+        let mut type_cache = HashMap::new();
+        let primitive_generator = PrimitiveGenerator::new(&config, &mut type_cache);
+
+        // Test various primitive type naming conventions
+        let test_cases = vec![
+            ("string", "StringType"),
+            ("integer", "IntegerType"),
+            ("boolean", "BooleanType"),
+            ("decimal", "DecimalType"),
+            ("uri", "UriType"),
+            ("dateTime", "DateTimeType"),
+            ("time", "TimeType"),
+            ("instant", "InstantType"),
+            ("positiveInt", "PositiveIntType"),
+        ];
+
+        for (input_name, expected_name) in test_cases {
+            let structure_def = StructureDefinition {
+                resource_type: "StructureDefinition".to_string(),
+                id: input_name.to_string(),
+                url: format!("http://hl7.org/fhir/StructureDefinition/{input_name}"),
+                name: input_name.to_string(),
+                title: Some(input_name.to_string()),
+                status: "active".to_string(),
+                kind: "primitive-type".to_string(),
+                is_abstract: false,
+                description: Some(format!("FHIR {input_name} primitive type")),
+                purpose: None,
+                base_type: input_name.to_string(),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Element".to_string(),
+                ),
+                version: None,
+                differential: None,
+                snapshot: None,
+            };
+
+            let result = primitive_generator.generate_primitive_type_alias(&structure_def);
+            assert!(
+                result.is_ok(),
+                "Failed to generate type alias for {input_name}"
+            );
+
+            let type_alias = result.unwrap();
+            assert_eq!(
+                type_alias.name, expected_name,
+                "Expected {expected_name} for {input_name}, got {}",
+                type_alias.name
+            );
+        }
     }
 
     #[test]

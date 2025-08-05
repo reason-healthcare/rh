@@ -652,10 +652,10 @@ mod tests {
 
         let uri_type_alias = type_alias_result.unwrap();
 
-        // Check that the type alias name is not capitalized
+        // Check that the type alias name follows the new PascalCase Type suffix convention
         assert_eq!(
-            uri_type_alias.name, "uri",
-            "Primitive type alias name should not be capitalized"
+            uri_type_alias.name, "UriType",
+            "Primitive type alias should use PascalCase with Type suffix"
         );
 
         // Check that the type alias target is String for uri
