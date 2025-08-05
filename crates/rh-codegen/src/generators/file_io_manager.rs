@@ -145,6 +145,7 @@ impl<'a> FileIoManager<'a> {
         // For example: "ElementDefinition" should not be a nested struct of "Element"
         let standalone_entities = [
             "Definition", // ElementDefinition is separate from Element
+            "definition", // Elementdefinition is separate from Element (case-insensitive)
         ];
 
         if standalone_entities.contains(&remainder) {
@@ -152,7 +153,7 @@ impl<'a> FileIoManager<'a> {
         }
 
         // If remainder starts with one of these words, it's likely a separate entity
-        // For example: "ElementDefinitionBinding" starts with "Definition" so it's not a child of "Element"
+        // For example: "ElementDefinitionBinding" or "ElementdefinitionBinding" starts with "Definition"/"definition" so it's not a child of "Element"
         for entity in &standalone_entities {
             if remainder.starts_with(entity) {
                 return false;
@@ -472,6 +473,26 @@ mod tests {
             element_definition_type_struct,
         );
 
+        // Add lowercase version of ElementDefinition structs (as they appear in real FHIR data)
+        let elementdefinition_binding_struct =
+            RustStruct::new("ElementdefinitionBinding".to_string());
+        type_cache.insert(
+            "ElementdefinitionBinding".to_string(),
+            elementdefinition_binding_struct,
+        );
+        let elementdefinition_constraint_struct =
+            RustStruct::new("ElementdefinitionConstraint".to_string());
+        type_cache.insert(
+            "ElementdefinitionConstraint".to_string(),
+            elementdefinition_constraint_struct,
+        );
+        let elementdefinition_type_struct =
+            RustStruct::new("ElementdefinitionType".to_string());
+        type_cache.insert(
+            "ElementdefinitionType".to_string(),
+            elementdefinition_type_struct,
+        );
+
         // Test collecting nested structs for Element
         let element_nested = FileIoManager::collect_nested_structs("Element", &type_cache);
 
@@ -491,16 +512,21 @@ mod tests {
         assert!(!element_nested_names.contains(&"ElementDefinitionConstraint".to_string()));
         assert!(!element_nested_names.contains(&"ElementDefinitionType".to_string()));
         assert!(!element_nested_names.contains(&"ElementDefinition".to_string()));
+        // Test that lowercase versions are also excluded
+        assert!(!element_nested_names.contains(&"ElementdefinitionBinding".to_string()));
+        assert!(!element_nested_names.contains(&"ElementdefinitionConstraint".to_string()));
+        assert!(!element_nested_names.contains(&"ElementdefinitionType".to_string()));
 
         // Test collecting nested structs for ElementDefinition
         let element_definition_nested =
             FileIoManager::collect_nested_structs("ElementDefinition", &type_cache);
 
-        // ElementDefinition should collect all ElementDefinition* structs
+        // ElementDefinition should collect all ElementDefinition* structs (uppercase), 
+        // but NOT Elementdefinition* structs (lowercase) because they are separate entities
         assert_eq!(
             element_definition_nested.len(),
             3,
-            "ElementDefinition should have 3 nested structs"
+            "ElementDefinition should have 3 nested structs (only uppercase)"
         );
 
         let element_definition_nested_names: Vec<String> = element_definition_nested
@@ -512,6 +538,12 @@ mod tests {
             element_definition_nested_names.contains(&"ElementDefinitionConstraint".to_string())
         );
         assert!(element_definition_nested_names.contains(&"ElementDefinitionType".to_string()));
+        // Test that lowercase versions are NOT collected by ElementDefinition because they are separate entities
+        assert!(!element_definition_nested_names.contains(&"ElementdefinitionBinding".to_string()));
+        assert!(
+            !element_definition_nested_names.contains(&"ElementdefinitionConstraint".to_string())
+        );
+        assert!(!element_definition_nested_names.contains(&"ElementdefinitionType".to_string()));
         assert!(!element_definition_nested_names.contains(&"ElementExtension".to_string()));
         assert!(!element_definition_nested_names.contains(&"ElementBinding".to_string()));
 
