@@ -6,7 +6,9 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{utils::GeneratorUtils, DocumentationGenerator, FieldGenerator, TypeUtilities};
+use crate::generators::{
+    utils::GeneratorUtils, DocumentationGenerator, FieldGenerator, TypeUtilities,
+};
 use crate::rust_types::{RustField, RustStruct, RustType};
 use crate::value_sets::ValueSetManager;
 use crate::{CodegenError, CodegenResult};
@@ -394,7 +396,9 @@ mod tests {
             description: Some("An auto-generated resource".to_string()),
             purpose: None,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             version: None,
             differential: None,
             snapshot: None,

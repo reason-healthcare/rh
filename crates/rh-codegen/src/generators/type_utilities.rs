@@ -91,12 +91,12 @@ impl TypeUtilities {
     /// Files beginning with underscore are typically auto-generated or temporary
     pub fn should_skip_underscore_prefixed(structure_def: &StructureDefinition) -> bool {
         use crate::generators::name_generator::NameGenerator;
-        
+
         // Check if the original name or id starts with underscore
         if structure_def.name.starts_with('_') || structure_def.id.starts_with('_') {
             return true;
         }
-        
+
         // Check if the generated struct name would start with underscore
         let generated_name = NameGenerator::generate_struct_name(structure_def);
         generated_name.starts_with('_')
@@ -450,7 +450,9 @@ mod tests {
             description: Some("An auto-generated resource".to_string()),
             purpose: None,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             version: None,
             differential: None,
             snapshot: None,
@@ -469,7 +471,9 @@ mod tests {
             description: Some("A temporary resource".to_string()),
             purpose: None,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             version: None,
             differential: None,
             snapshot: None,
@@ -507,16 +511,26 @@ mod tests {
             description: Some("A patient resource".to_string()),
             purpose: None,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             version: None,
             differential: None,
             snapshot: None,
         };
 
-        assert!(TypeUtilities::should_skip_underscore_prefixed(&underscore_name_structure));
-        assert!(TypeUtilities::should_skip_underscore_prefixed(&underscore_id_structure));
-        assert!(TypeUtilities::should_skip_underscore_prefixed(&numeric_prefix_structure));
-        assert!(!TypeUtilities::should_skip_underscore_prefixed(&normal_structure));
+        assert!(TypeUtilities::should_skip_underscore_prefixed(
+            &underscore_name_structure
+        ));
+        assert!(TypeUtilities::should_skip_underscore_prefixed(
+            &underscore_id_structure
+        ));
+        assert!(TypeUtilities::should_skip_underscore_prefixed(
+            &numeric_prefix_structure
+        ));
+        assert!(!TypeUtilities::should_skip_underscore_prefixed(
+            &normal_structure
+        ));
     }
 
     #[test]

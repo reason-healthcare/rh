@@ -365,6 +365,7 @@ fn generate_readme_md(
     content.push_str("```\n\n");
 
     content.push_str("Example usage:\n\n");
+    content.push_str("### Deserializing from JSON\n\n");
     content.push_str("```rust\n");
     content.push_str(&format!("use {crate_name}::*;\n"));
     content.push_str("use serde_json;\n\n");
@@ -372,6 +373,34 @@ fn generate_readme_md(
     content.push_str("let json_data = r#\"{\\\"resourceType\\\": \\\"Patient\\\", \\\"id\\\": \\\"example\\\"}\"#;\n");
     content.push_str("let patient: Patient = serde_json::from_str(json_data)?;\n\n");
     content.push_str("println!(\"Patient ID: {}\", patient.id.unwrap_or_default());\n");
+    content.push_str("```\n\n");
+
+    content.push_str("### Creating resources procedurally\n\n");
+    content.push_str("```rust\n");
+    content.push_str(&format!("use {crate_name}::*;\n"));
+    content.push_str("use serde_json;\n\n");
+    content.push_str("// Create a new Patient resource\n");
+    content.push_str("let patient = Patient {\n");
+    content.push_str("    id: Some(\"patient-123\".to_string()),\n");
+    content.push_str("    meta: None,\n");
+    content.push_str("    implicit_rules: None,\n");
+    content.push_str("    language: None,\n");
+    content.push_str("    text: None,\n");
+    content.push_str("    contained: vec![],\n");
+    content.push_str("    extension: vec![],\n");
+    content.push_str("    modifier_extension: vec![],\n");
+    content.push_str("    active: Some(true),\n");
+    content.push_str("    name: vec![HumanName {\n");
+    content.push_str("        family: Some(\"Doe\".to_string()),\n");
+    content.push_str("        given: vec![\"John\".to_string()],\n");
+    content.push_str("        ..Default::default()\n");
+    content.push_str("    }],\n");
+    content.push_str("    gender: Some(AdministrativeGender::Male),\n");
+    content.push_str("    ..Default::default()\n");
+    content.push_str("};\n\n");
+    content.push_str("// Serialize to JSON\n");
+    content.push_str("let json = serde_json::to_string_pretty(&patient)?;\n");
+    content.push_str("println!(\"Patient JSON: {}\", json);\n");
     content.push_str("```\n\n");
 
     content.push_str("## 🏗️ Structure\n\n");
