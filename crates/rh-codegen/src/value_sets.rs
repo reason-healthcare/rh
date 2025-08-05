@@ -251,14 +251,14 @@ impl ValueSetManager {
         value_set_url: &str,
     ) -> RustEnum {
         let mut rust_enum = RustEnum::new(enum_name.to_string());
-        rust_enum.doc_comment = Some(format!("Generated enum for ValueSet: {value_set_url}"));
+        rust_enum.doc_comment = Some(format!(" Generated enum for ValueSet: {value_set_url}"));
 
         for concept in contains {
             let variant_name = ValueSetConcept::new(concept.code.clone()).to_variant_name();
             let mut variant = RustEnumVariant::new(variant_name);
 
             if let Some(display) = &concept.display {
-                variant.doc_comment = Some(display.clone());
+                variant.doc_comment = Some(format!(" {}", display.clone()));
             }
 
             // Add serde annotation to map to the original code
@@ -278,14 +278,14 @@ impl ValueSetManager {
         value_set_url: &str,
     ) -> RustEnum {
         let mut rust_enum = RustEnum::new(enum_name.to_string());
-        rust_enum.doc_comment = Some(format!("Generated enum for ValueSet: {value_set_url}"));
+        rust_enum.doc_comment = Some(format!(" Generated enum for ValueSet: {value_set_url}"));
 
         for concept in concepts {
             let variant_name = ValueSetConcept::new(concept.code.clone()).to_variant_name();
             let mut variant = RustEnumVariant::new(variant_name);
 
             if let Some(display) = &concept.display {
-                variant.doc_comment = Some(display.clone());
+                variant.doc_comment = Some(format!(" {}", display.clone()));
             }
 
             // Add serde annotation to map to the original code
@@ -303,7 +303,7 @@ impl ValueSetManager {
 
         if !self.is_cached(value_set_url) {
             let mut rust_enum = RustEnum::new(enum_name.clone());
-            rust_enum.doc_comment = Some(format!("Generated enum for ValueSet: {value_set_url}"));
+            rust_enum.doc_comment = Some(format!(" Generated enum for ValueSet: {value_set_url}"));
 
             // Add a placeholder variant
             rust_enum.add_variant(RustEnumVariant::new("Unknown".to_string()));

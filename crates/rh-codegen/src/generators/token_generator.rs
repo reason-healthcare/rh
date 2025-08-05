@@ -76,7 +76,7 @@ impl TokenGenerator {
                     let formatted_line = if line.trim().is_empty() {
                         "".to_string()
                     } else {
-                        format!(" {}", line)
+                        format!(" {line}")
                     };
                     quote! { #[doc = #formatted_line] }
                 })
@@ -154,7 +154,7 @@ impl TokenGenerator {
                     let formatted_line = if line.trim().is_empty() {
                         "".to_string()
                     } else {
-                        format!(" {}", line)
+                        format!(" {line}")
                     };
                     quote! { #[doc = #formatted_line] }
                 })
@@ -358,7 +358,7 @@ impl TokenGenerator {
                     let formatted_line = if line.trim().is_empty() {
                         "".to_string()
                     } else {
-                        format!(" {}", line)
+                        format!(" {line}")
                     };
                     quote! { #[doc = #formatted_line] }
                 })
@@ -408,7 +408,7 @@ impl TokenGenerator {
                     let formatted_line = if line.trim().is_empty() {
                         "".to_string()
                     } else {
-                        format!(" {}", line)
+                        format!(" {line}")
                     };
                     quote! { #[doc = #formatted_line] }
                 })
