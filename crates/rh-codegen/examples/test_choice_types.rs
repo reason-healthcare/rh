@@ -26,14 +26,14 @@ fn main() -> Result<()> {
     let tokens = token_generator.generate_struct(&rust_struct);
     let formatted_code = prettyplease::unparse(&syn::parse2(tokens)?);
 
-    println!("Generated code:\n{}", formatted_code);
+    println!("Generated code:\n{formatted_code}");
 
     // Check that choice type fields were generated
     let field_names: Vec<&str> = rust_struct.fields.iter().map(|f| f.name.as_str()).collect();
 
     println!("\nGenerated fields:");
     for field_name in &field_names {
-        println!("  - {}", field_name);
+        println!("  - {field_name}");
     }
 
     // Verify that choice type fields exist
@@ -48,15 +48,15 @@ fn main() -> Result<()> {
 
     println!("\nChoice type verification:");
     println!("  effective[x] fields:");
-    println!("    effective_date_time: {}", has_effective_date_time);
-    println!("    effective_period: {}", has_effective_period);
-    println!("    effective_timing: {}", has_effective_timing);
-    println!("    effective_instant: {}", has_effective_instant);
+    println!("    effective_date_time: {has_effective_date_time}");
+    println!("    effective_period: {has_effective_period}");
+    println!("    effective_timing: {has_effective_timing}");
+    println!("    effective_instant: {has_effective_instant}");
 
     println!("  value[x] fields:");
-    println!("    value_quantity: {}", has_value_quantity);
-    println!("    value_codeable_concept: {}", has_value_codeable_concept);
-    println!("    value_string: {}", has_value_string);
+    println!("    value_quantity: {has_value_quantity}");
+    println!("    value_codeable_concept: {has_value_codeable_concept}");
+    println!("    value_string: {has_value_string}");
 
     if has_effective_date_time && has_effective_period && has_value_quantity && has_value_string {
         println!("\n✅ Choice type generation working correctly!");

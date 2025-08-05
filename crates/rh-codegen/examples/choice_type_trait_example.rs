@@ -157,7 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nGenerated choice type methods:");
     println!("{}", "=".repeat(80));
     for line in choice_methods {
-        println!("{}", line);
+        println!("{line}");
     }
     println!("{}", "=".repeat(80));
 
