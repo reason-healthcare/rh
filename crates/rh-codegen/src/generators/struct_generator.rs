@@ -161,7 +161,8 @@ impl<'a> StructGenerator<'a> {
 
         // Second pass: Process direct fields (now nested structs are available)
         for element in direct_fields {
-            if let Some(field) = self.create_field_from_element(&element)? {
+            let fields = self.create_fields_from_element(&element)?;
+            for field in fields {
                 rust_struct.add_field(field);
             }
         }
@@ -313,7 +314,8 @@ impl<'a> StructGenerator<'a> {
 
                     // Only process direct fields (no further nesting for now)
                     if !sub_field_path.contains('.') {
-                        if let Some(field) = self.create_field_from_element(element)? {
+                        let fields = self.create_fields_from_element(element)?;
+                        for field in fields {
                             sub_nested_struct.add_field(field);
                         }
                     }
@@ -327,7 +329,8 @@ impl<'a> StructGenerator<'a> {
 
         // Then, process direct fields (now sub-nested structs are available)
         for element in direct_fields {
-            if let Some(field) = self.create_field_from_element(&element)? {
+            let fields = self.create_fields_from_element(&element)?;
+            for field in fields {
                 nested_struct.add_field(field);
             }
         }
@@ -368,6 +371,16 @@ impl<'a> StructGenerator<'a> {
         let mut field_generator =
             FieldGenerator::new(self.config, self.type_cache, self.value_set_manager);
         field_generator.create_field_from_element(element)
+    }
+
+    /// Create RustField(s) from an ElementDefinition (supports choice types)
+    pub fn create_fields_from_element(
+        &mut self,
+        element: &crate::fhir_types::ElementDefinition,
+    ) -> CodegenResult<Vec<RustField>> {
+        let mut field_generator =
+            FieldGenerator::new(self.config, self.type_cache, self.value_set_manager);
+        field_generator.create_fields_from_element(element)
     }
 }
 

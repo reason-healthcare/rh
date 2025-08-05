@@ -65,6 +65,24 @@ impl DocumentationGenerator {
         }
     }
 
+    /// Generate documentation for a choice type field
+    pub fn generate_choice_field_documentation(
+        element: &ElementDefinition,
+        type_code: &str,
+    ) -> Option<String> {
+        // Create documentation that indicates this is a specific type variant of a choice field
+        let base_doc = if let Some(short) = &element.short {
+            short.clone()
+        } else if let Some(definition) = &element.definition {
+            definition.clone()
+        } else {
+            "Choice type field".to_string()
+        };
+
+        // Add type-specific suffix
+        Some(format!("{} ({})", base_doc, type_code))
+    }
+
     /// Generate documentation for a primitive element struct
     pub fn generate_primitive_element_documentation(primitive_name: &str) -> String {
         format!(
