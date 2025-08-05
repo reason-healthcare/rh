@@ -15,7 +15,7 @@ The `rh-codegen` crate provides comprehensive functionality for:
 
 ## Crate Generation
 
-When generating a crate, the following idomiatic Rust layout will be created:
+When generating a crate, the following idiomatic Rust layout will be created:
 ```
 fhir-model/
 ├── Cargo.toml
@@ -62,13 +62,15 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-codegen = { path = "../codegen" }
+rh-codegen = { path = "../path/to/rh-codegen" }
+# Or if using from the workspace root:
+# rh-codegen = { path = "crates/rh-codegen" }
 ```
 
 ### Basic Usage
 
 ```rust
-use codegen::{CodeGenerator, CodegenConfig, CodegenResult};
+use rh_codegen::{CodeGenerator, CodegenConfig, CodegenResult};
 use std::path::Path;
 
 fn main() -> CodegenResult<()> {
@@ -85,47 +87,6 @@ fn main() -> CodegenResult<()> {
     generator.write_to_file(&tokens, Path::new("patient.rs"))?;
 
     Ok(())
-}
-```
-
-### Package Downloading
-
-```rust
-use rh_loader::{PackageLoader, LoaderConfig};
-use std::path::Path;
-
-async fn download_fhir_package() -> Result<(), Box<dyn std::error::Error>> {
-    let config = LoaderConfig {
-        registry_url: "https://packages.fhir.org".to_string(),
-        auth_token: None,
-        timeout_seconds: 30,
-        max_retries: 3,
-        verify_checksums: false,
-    };
-    
-    let loader = PackageLoader::new(config)?;
-    loader.download_package("hl7.fhir.r4.core", "4.0.1", Path::new("./packages")).await?;
-    
-    Ok(())
-}
-```
-
-## Configuration
-
-Create a `codegen.json` configuration file:
-
-```json
-{
-  "output_dir": "src/generated",
-  "module_name": "fhir_types", 
-  "with_serde": true,
-  "with_docs": true,
-  "type_mappings": {
-    "string": "String",
-    "integer": "i32", 
-    "boolean": "bool",
-    "decimal": "f64"
-  }
 }
 ```
 
@@ -354,16 +315,25 @@ async fn process_fhir_package() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Library Architecture
 
-The crate is organized into modular components:
+The crate is organized into modular components with specialized generators:
 
 ### Core Modules
 
-- **`generator.rs`**: Core type generation functionality
-  - `CodeGenerator`: Main struct for generating Rust types with built-in caching
+- **`generator.rs`**: Main orchestrating code generator
+  - `CodeGenerator`: Coordinates specialized sub-generators with built-in caching
   - `CodegenConfig`: Configuration for type generation
-  - FHIR structure definitions and element parsing
-  - Token generation and file output
-  - Type caching to avoid regenerating identical structs
+  - Type and enum caching to avoid regenerating identical structures
+
+- **`generators/`**: Specialized generation modules
+  - `TokenGenerator`: Core token generation using proc-macro2 and quote
+  - `StructGenerator`: FHIR struct to Rust struct generation
+  - `TraitGenerator`: FHIR resource trait generation
+  - `EnumGenerator`: Value set enum generation
+  - `FieldGenerator`: Struct field generation with type mapping
+  - `CrateGenerator`: Full crate structure generation
+  - `FileGenerator`: File organization and writing
+  - `NameGenerator`: Rust-idiomatic naming conventions
+  - `TypeUtilities`: Type analysis and mapping utilities
 
 - **`rh-loader`**: Package downloading functionality (separate crate)
   - `PackageLoader`: HTTP client for registry interaction
@@ -389,17 +359,19 @@ The crate is organized into modular components:
 All functions return `CodegenResult<T>` which is an alias for `anyhow::Result<T>`:
 
 ```rust
-use codegen::{CodegenResult, CodegenError};
+use rh_codegen::{CodegenResult, CodeGenerator, CodegenConfig};
 
-fn my_function() -> CodegenResult<String> {
-    // Use ? operator for error propagation
-    let config = CodegenConfig::load("config.json")?;
+fn my_function() -> CodegenResult<()> {
+    // Create configuration
+    let config = CodegenConfig::default();
     
-    // Add context to errors
-    let generator = CodeGenerator::new(config)
-        .context("Failed to create code generator")?;
+    // Create generator
+    let generator = CodeGenerator::new(config);
     
-    Ok("Success".to_string())
+    // Use the generator for code generation tasks
+    // ... generator operations
+    
+    Ok(())
 }
 ```
 
@@ -414,11 +386,12 @@ fn my_function() -> CodegenResult<String> {
 - FHIR primitive type mappings
 - Enum generation for required value set bindings
 - serde rename for snake_case fields
-- Documentation generation
+- Documentation generation with proper Rust doc comment formatting
 - FHIR package downloading from npm-style registries
 - Automatic extraction and processing of package tarballs
 - Authentication support for private registries
 - Type caching to avoid duplicate generation
+- Modular generator architecture for maintainability
 
 ### 🔄 In Progress
 
@@ -452,11 +425,11 @@ The tests cover:
 
 ## CLI Tool
 
-This library is used by the `fhir-codegen` CLI tool in `apps/fhir-codegen/`. See the CLI documentation for command-line usage examples.
+This library is used by the `rh-cli` CLI tool in `apps/rh-cli/`. See the CLI documentation for command-line usage examples.
 
 ## Contributing
 
-To contribute to the codegen library:
+To contribute to the rh-codegen library:
 
 1. **Code Style**: Follow the project's Rust conventions (see `.github/copilot-instructions.md`)
 2. **Testing**: Add tests for new functionality
@@ -468,16 +441,16 @@ To contribute to the codegen library:
 
 ```bash
 # Run tests
-cargo test -p codegen
+cargo test -p rh-codegen
 
 # Check formatting  
-cargo fmt -p codegen
+cargo fmt -p rh-codegen
 
 # Run clippy
-cargo clippy -p codegen --all-targets --all-features
+cargo clippy -p rh-codegen --all-targets --all-features
 
 # Generate documentation
-cargo doc -p codegen --open
+cargo doc -p rh-codegen --open
 ```
 
 The generated code is designed to be idiomatic Rust that integrates seamlessly with the serde ecosystem for JSON serialization and deserialization.
