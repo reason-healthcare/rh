@@ -66,6 +66,13 @@ pub fn generate_organized_directories_with_traits<P: AsRef<std::path::Path>>(
     structure_def: &StructureDefinition,
     base_output_dir: P,
 ) -> CodegenResult<()> {
+    // Skip if status is retired
+    if structure_def.status == "retired" {
+        return Err(CodegenError::Generation {
+            message: format!("Skipping retired StructureDefinition '{}' - retired StructureDefinitions are not generated as Rust types", structure_def.name)
+        });
+    }
+
     // First generate the main structure
     generator.generate_to_organized_directories(structure_def, &base_output_dir)?;
 
@@ -125,4 +132,87 @@ pub mod resource;
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CodeGenerator, CodegenConfig};
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_skip_retired_structure_definition() {
+        let mut generator = CodeGenerator::new(CodegenConfig::default());
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create a mock retired StructureDefinition
+        let retired_structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "test-retired".to_string(),
+            url: "http://example.org/StructureDefinition/TestRetired".to_string(),
+            version: Some("1.0.0".to_string()),
+            name: "TestRetired".to_string(),
+            title: Some("Test Retired Structure".to_string()),
+            status: "retired".to_string(),  // This is the key field
+            description: Some("A retired test structure".to_string()),
+            purpose: None,
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            differential: None,
+            snapshot: None,
+        };
+
+        // Attempt to generate - should return an error about retired status
+        let result = generate_organized_directories_with_traits(
+            &mut generator,
+            &retired_structure_def,
+            temp_dir.path()
+        );
+
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("retired"));
+        assert!(error_message.contains("TestRetired"));
+    }
+
+    #[test]
+    fn test_process_active_structure_definition() {
+        let mut generator = CodeGenerator::new(CodegenConfig::default());
+        let temp_dir = TempDir::new().unwrap();
+        
+        // Create a mock active StructureDefinition
+        let active_structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "test-active".to_string(),
+            url: "http://example.org/StructureDefinition/TestActive".to_string(),
+            version: Some("1.0.0".to_string()),
+            name: "TestActive".to_string(),
+            title: Some("Test Active Structure".to_string()),
+            status: "active".to_string(),  // This should allow processing
+            description: Some("An active test structure".to_string()),
+            purpose: None,
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            differential: None,
+            snapshot: None,
+        };
+
+        // Attempt to generate - should succeed (even though it might fail later due to missing data)
+        let result = generate_organized_directories_with_traits(
+            &mut generator,
+            &active_structure_def,
+            temp_dir.path()
+        );
+
+        // We expect this to either succeed or fail for a different reason (not retired status)
+        if let Err(error) = result {
+            let error_message = error.to_string();
+            // Should not be failing due to retired status
+            assert!(!error_message.contains("retired"));
+        }
+    }
 }

@@ -248,6 +248,12 @@ fn process_json_files_organized(
                         structure_def.name, structure_def.id
                     );
 
+                    // Skip if status is retired
+                    if structure_def.status == "retired" {
+                        info!("Skipping retired StructureDefinition: {}", structure_def.name);
+                        continue;
+                    }
+
                     // Use the library function to generate structure and traits
                     match rh_codegen::generate_organized_directories_with_traits(
                         generator,
