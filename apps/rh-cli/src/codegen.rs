@@ -250,7 +250,10 @@ fn process_json_files_organized(
 
                     // Skip if status is retired
                     if structure_def.status == "retired" {
-                        info!("Skipping retired StructureDefinition: {}", structure_def.name);
+                        info!(
+                            "Skipping retired StructureDefinition: {}",
+                            structure_def.name
+                        );
                         continue;
                     }
 

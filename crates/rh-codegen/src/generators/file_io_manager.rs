@@ -486,8 +486,7 @@ mod tests {
             "ElementdefinitionConstraint".to_string(),
             elementdefinition_constraint_struct,
         );
-        let elementdefinition_type_struct =
-            RustStruct::new("ElementdefinitionType".to_string());
+        let elementdefinition_type_struct = RustStruct::new("ElementdefinitionType".to_string());
         type_cache.insert(
             "ElementdefinitionType".to_string(),
             elementdefinition_type_struct,
@@ -521,7 +520,7 @@ mod tests {
         let element_definition_nested =
             FileIoManager::collect_nested_structs("ElementDefinition", &type_cache);
 
-        // ElementDefinition should collect all ElementDefinition* structs (uppercase), 
+        // ElementDefinition should collect all ElementDefinition* structs (uppercase),
         // but NOT Elementdefinition* structs (lowercase) because they are separate entities
         assert_eq!(
             element_definition_nested.len(),

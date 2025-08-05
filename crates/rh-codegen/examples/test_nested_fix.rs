@@ -3,9 +3,9 @@
 //! This test generates Element and ElementDefinition structures to ensure
 //! that nested structs are correctly assigned to their parent files.
 
+use anyhow::Result;
 use rh_codegen::{CodeGenerator, CodegenConfig};
 use std::path::Path;
-use anyhow::Result;
 
 fn main() -> Result<()> {
     let config = CodegenConfig::default();
@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 
     // Generate Element - this should only contain Element and its direct children
     generator.generate_to_organized_directories(&element_structure, &src_dir)?;
-    
+
     // Generate ElementDefinition - this should only contain ElementDefinition and its direct children
     generator.generate_to_organized_directories(&element_definition_structure, &src_dir)?;
 
@@ -72,12 +72,17 @@ fn create_element_definition_structure_definition() -> rh_codegen::fhir_types::S
         name: "ElementDefinition".to_string(),
         title: Some("ElementDefinition".to_string()),
         status: "active".to_string(),
-        description: Some("Captures constraints on each element within the resource, profile, or extension.".to_string()),
+        description: Some(
+            "Captures constraints on each element within the resource, profile, or extension."
+                .to_string(),
+        ),
         purpose: None,
         kind: "complex-type".to_string(),
         is_abstract: false,
         base_type: "BackboneElement".to_string(),
-        base_definition: Some("http://hl7.org/fhir/StructureDefinition/BackboneElement".to_string()),
+        base_definition: Some(
+            "http://hl7.org/fhir/StructureDefinition/BackboneElement".to_string(),
+        ),
         version: Some("4.0.1".to_string()),
         differential: None,
         snapshot: None,

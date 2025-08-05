@@ -144,7 +144,7 @@ mod tests {
     fn test_skip_retired_structure_definition() {
         let mut generator = CodeGenerator::new(CodegenConfig::default());
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create a mock retired StructureDefinition
         let retired_structure_def = StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
@@ -153,13 +153,15 @@ mod tests {
             version: Some("1.0.0".to_string()),
             name: "TestRetired".to_string(),
             title: Some("Test Retired Structure".to_string()),
-            status: "retired".to_string(),  // This is the key field
+            status: "retired".to_string(), // This is the key field
             description: Some("A retired test structure".to_string()),
             purpose: None,
             kind: "resource".to_string(),
             is_abstract: false,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             differential: None,
             snapshot: None,
         };
@@ -168,7 +170,7 @@ mod tests {
         let result = generate_organized_directories_with_traits(
             &mut generator,
             &retired_structure_def,
-            temp_dir.path()
+            temp_dir.path(),
         );
 
         assert!(result.is_err());
@@ -181,7 +183,7 @@ mod tests {
     fn test_process_active_structure_definition() {
         let mut generator = CodeGenerator::new(CodegenConfig::default());
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create a mock active StructureDefinition
         let active_structure_def = StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
@@ -190,13 +192,15 @@ mod tests {
             version: Some("1.0.0".to_string()),
             name: "TestActive".to_string(),
             title: Some("Test Active Structure".to_string()),
-            status: "active".to_string(),  // This should allow processing
+            status: "active".to_string(), // This should allow processing
             description: Some("An active test structure".to_string()),
             purpose: None,
             kind: "resource".to_string(),
             is_abstract: false,
             base_type: "DomainResource".to_string(),
-            base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
             differential: None,
             snapshot: None,
         };
@@ -205,7 +209,7 @@ mod tests {
         let result = generate_organized_directories_with_traits(
             &mut generator,
             &active_structure_def,
-            temp_dir.path()
+            temp_dir.path(),
         );
 
         // We expect this to either succeed or fail for a different reason (not retired status)
