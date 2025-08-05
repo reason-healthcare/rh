@@ -72,7 +72,14 @@ impl TokenGenerator {
             let doc_lines: Vec<_> = doc.lines().collect();
             let attrs: Vec<TokenStream> = doc_lines
                 .iter()
-                .map(|line| quote! { #[doc = #line] })
+                .map(|line| {
+                    let formatted_line = if line.trim().is_empty() {
+                        "".to_string()
+                    } else {
+                        format!(" {}", line)
+                    };
+                    quote! { #[doc = #formatted_line] }
+                })
                 .collect();
             quote! { #(#attrs)* }
         } else {
@@ -103,7 +110,7 @@ impl TokenGenerator {
             let base_type_ident = format_ident!("{}", base_type);
 
             fields.push(quote! {
-                #[doc = "Base definition inherited from FHIR specification"]
+                #[doc = " Base definition inherited from FHIR specification"]
                 #[serde(flatten)]
                 pub #base_field_name: #base_type_ident
             });
@@ -143,7 +150,14 @@ impl TokenGenerator {
             let doc_lines: Vec<_> = doc.lines().collect();
             let attrs: Vec<TokenStream> = doc_lines
                 .iter()
-                .map(|line| quote! { #[doc = #line] })
+                .map(|line| {
+                    let formatted_line = if line.trim().is_empty() {
+                        "".to_string()
+                    } else {
+                        format!(" {}", line)
+                    };
+                    quote! { #[doc = #formatted_line] }
+                })
                 .collect();
             quote! { #(#attrs)* }
         } else {
@@ -338,9 +352,18 @@ impl TokenGenerator {
         // Generate documentation
         let doc = if let Some(doc_comment) = &rust_trait.doc_comment {
             let doc_lines: Vec<_> = doc_comment.lines().collect();
-            quote! {
-                #(#[doc = #doc_lines])*
-            }
+            let attrs: Vec<TokenStream> = doc_lines
+                .iter()
+                .map(|line| {
+                    let formatted_line = if line.trim().is_empty() {
+                        "".to_string()
+                    } else {
+                        format!(" {}", line)
+                    };
+                    quote! { #[doc = #formatted_line] }
+                })
+                .collect();
+            quote! { #(#attrs)* }
         } else {
             quote! {}
         };
@@ -379,9 +402,18 @@ impl TokenGenerator {
         // Generate documentation
         let doc = if let Some(doc_comment) = &method.doc_comment {
             let doc_lines: Vec<_> = doc_comment.lines().collect();
-            quote! {
-                #(#[doc = #doc_lines])*
-            }
+            let attrs: Vec<TokenStream> = doc_lines
+                .iter()
+                .map(|line| {
+                    let formatted_line = if line.trim().is_empty() {
+                        "".to_string()
+                    } else {
+                        format!(" {}", line)
+                    };
+                    quote! { #[doc = #formatted_line] }
+                })
+                .collect();
+            quote! { #(#attrs)* }
         } else {
             quote! {}
         };
