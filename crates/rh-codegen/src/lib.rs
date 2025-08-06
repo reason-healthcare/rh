@@ -46,7 +46,7 @@ pub use generator::CodeGenerator;
 pub use generators::crate_generator::{
     generate_crate_structure, parse_package_metadata, CrateGenerationParams,
 };
-pub use generators::file_generator::FhirTypeCategory;
+pub use generators::file_generator::{FhirTypeCategory, FileGenerator};
 pub use generators::token_generator::TokenGenerator;
 pub use generators::utils::GeneratorUtils;
 pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType};

@@ -22,6 +22,21 @@ impl<'a> PrimitiveGenerator<'a> {
         Self { config, type_cache }
     }
 
+    /// Generate all primitive type aliases for a combined primitives.rs file
+    pub fn generate_all_primitive_type_aliases(
+        &self,
+        primitive_structure_defs: &[StructureDefinition],
+    ) -> CodegenResult<Vec<RustTypeAlias>> {
+        let mut type_aliases = Vec::new();
+
+        for structure_def in primitive_structure_defs {
+            let type_alias = self.generate_primitive_type_alias(structure_def)?;
+            type_aliases.push(type_alias);
+        }
+
+        Ok(type_aliases)
+    }
+
     /// Generate a type alias for primitive types
     pub fn generate_primitive_type_alias(
         &self,

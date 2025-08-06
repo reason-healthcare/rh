@@ -25,7 +25,7 @@ macro_rules! primitive_string {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::string::StringType>,
+            pub [<$field_name>]: Option<$crate::primitives::StringType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -33,7 +33,7 @@ macro_rules! primitive_string {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::string::StringType,
+            pub [<$field_name>]: $crate::primitives::StringType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -46,7 +46,7 @@ macro_rules! primitive_boolean {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::boolean::BooleanType>,
+            pub [<$field_name>]: Option<$crate::primitives::BooleanType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -54,7 +54,7 @@ macro_rules! primitive_boolean {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::boolean::BooleanType,
+            pub [<$field_name>]: $crate::primitives::BooleanType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -67,7 +67,7 @@ macro_rules! primitive_integer {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::integer::IntegerType>,
+            pub [<$field_name>]: Option<$crate::primitives::IntegerType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -75,7 +75,7 @@ macro_rules! primitive_integer {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::integer::IntegerType,
+            pub [<$field_name>]: $crate::primitives::IntegerType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -88,7 +88,7 @@ macro_rules! primitive_decimal {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::decimal::DecimalType>,
+            pub [<$field_name>]: Option<$crate::primitives::DecimalType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -96,7 +96,7 @@ macro_rules! primitive_decimal {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::decimal::DecimalType,
+            pub [<$field_name>]: $crate::primitives::DecimalType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -109,7 +109,7 @@ macro_rules! primitive_datetime {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::datetime::DateTimeType>,
+            pub [<$field_name>]: Option<$crate::primitives::DateTimeType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -117,7 +117,7 @@ macro_rules! primitive_datetime {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::datetime::DateTimeType,
+            pub [<$field_name>]: $crate::primitives::DateTimeType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -130,7 +130,7 @@ macro_rules! primitive_date {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::date::DateType>,
+            pub [<$field_name>]: Option<$crate::primitives::DateType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -138,7 +138,7 @@ macro_rules! primitive_date {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::date::DateType,
+            pub [<$field_name>]: $crate::primitives::DateType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -151,7 +151,7 @@ macro_rules! primitive_time {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::time::TimeType>,
+            pub [<$field_name>]: Option<$crate::primitives::TimeType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -159,7 +159,7 @@ macro_rules! primitive_time {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::time::TimeType,
+            pub [<$field_name>]: $crate::primitives::TimeType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -172,7 +172,7 @@ macro_rules! primitive_uri {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::uri::UriType>,
+            pub [<$field_name>]: Option<$crate::primitives::UriType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -180,7 +180,7 @@ macro_rules! primitive_uri {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::uri::UriType,
+            pub [<$field_name>]: $crate::primitives::UriType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -193,7 +193,7 @@ macro_rules! primitive_canonical {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::canonical::CanonicalType>,
+            pub [<$field_name>]: Option<$crate::primitives::CanonicalType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -201,7 +201,7 @@ macro_rules! primitive_canonical {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::canonical::CanonicalType,
+            pub [<$field_name>]: $crate::primitives::CanonicalType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -214,7 +214,7 @@ macro_rules! primitive_base64binary {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::base64binary::Base64BinaryType>,
+            pub [<$field_name>]: Option<$crate::primitives::Base64BinaryType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -222,7 +222,7 @@ macro_rules! primitive_base64binary {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::base64binary::Base64BinaryType,
+            pub [<$field_name>]: $crate::primitives::Base64BinaryType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -235,7 +235,7 @@ macro_rules! primitive_instant {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::instant::InstantType>,
+            pub [<$field_name>]: Option<$crate::primitives::InstantType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -243,7 +243,7 @@ macro_rules! primitive_instant {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::instant::InstantType,
+            pub [<$field_name>]: $crate::primitives::InstantType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -298,7 +298,7 @@ macro_rules! primitive_id {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::id::IdType>,
+            pub [<$field_name>]: Option<$crate::primitives::IdType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -306,7 +306,7 @@ macro_rules! primitive_id {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::id::IdType,
+            pub [<$field_name>]: $crate::primitives::IdType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -319,7 +319,7 @@ macro_rules! primitive_oid {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::oid::OidType>,
+            pub [<$field_name>]: Option<$crate::primitives::OidType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -327,7 +327,7 @@ macro_rules! primitive_oid {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::oid::OidType,
+            pub [<$field_name>]: $crate::primitives::OidType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -340,7 +340,7 @@ macro_rules! primitive_uuid {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::uuid::UuidType>,
+            pub [<$field_name>]: Option<$crate::primitives::UuidType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -348,7 +348,7 @@ macro_rules! primitive_uuid {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::uuid::UuidType,
+            pub [<$field_name>]: $crate::primitives::UuidType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -361,7 +361,7 @@ macro_rules! primitive_code {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::code::CodeType>,
+            pub [<$field_name>]: Option<$crate::primitives::CodeType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -369,7 +369,7 @@ macro_rules! primitive_code {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::code::CodeType,
+            pub [<$field_name>]: $crate::primitives::CodeType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -382,7 +382,7 @@ macro_rules! primitive_markdown {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::markdown::MarkdownType>,
+            pub [<$field_name>]: Option<$crate::primitives::MarkdownType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -390,7 +390,7 @@ macro_rules! primitive_markdown {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::markdown::MarkdownType,
+            pub [<$field_name>]: $crate::primitives::MarkdownType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -403,7 +403,7 @@ macro_rules! primitive_url {
     ($field_name:literal, true) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: Option<$crate::primitives::url::UrlType>,
+            pub [<$field_name>]: Option<$crate::primitives::UrlType>,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }
@@ -411,7 +411,7 @@ macro_rules! primitive_url {
     ($field_name:literal, false) => {
         paste::paste! {
             #[doc = concat!("Field: ", $field_name)]
-            pub [<$field_name>]: $crate::primitives::url::UrlType,
+            pub [<$field_name>]: $crate::primitives::UrlType,
             #[doc = concat!("Extension element for the '", $field_name, "' primitive field. Contains metadata and extensions.")]
             pub [<_ $field_name>]: Option<$crate::datatypes::element::Element>,
         }

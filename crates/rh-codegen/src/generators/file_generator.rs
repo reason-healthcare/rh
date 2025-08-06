@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use quote::quote;
+use quote::{format_ident, quote};
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
@@ -39,6 +39,135 @@ impl<'a> FileGenerator<'a> {
             config,
             token_generator,
         }
+    }
+
+    /// Generate a macros.rs file with all FHIR primitive macros
+    pub fn generate_macros_file<P: AsRef<Path>>(&self, output_path: P) -> CodegenResult<()> {
+        let macros_content = include_str!("../macros.rs");
+
+        // Parse and reformat the macros content to ensure proper formatting
+        let syntax_tree =
+            syn::parse_file(macros_content).map_err(|e| CodegenError::Generation {
+                message: format!("Failed to parse macros file: {e}"),
+            })?;
+
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Write to file
+        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+
+        Ok(())
+    }
+
+    /// Generate a lib.rs file for the generated crate
+    pub fn generate_lib_file<P: AsRef<Path>>(&self, output_path: P) -> CodegenResult<()> {
+        let lib_tokens = quote! {
+            //! Generated FHIR Rust bindings
+            //!
+            //! This crate contains Rust types and traits for FHIR resources and data types.
+            //! It includes macros for primitive field generation and maintains FHIR compliance.
+
+            pub mod macros;
+            pub mod primitives;
+            pub mod datatypes;
+            pub mod resource;
+            pub mod traits;
+
+            // Re-export commonly used types
+            pub use primitives::*;
+            pub use macros::*;
+        };
+
+        // Parse the tokens into a syntax tree and format it
+        let syntax_tree = syn::parse2(lib_tokens).map_err(|e| CodegenError::Generation {
+            message: format!("Failed to parse generated lib tokens: {e}"),
+        })?;
+
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Write to file
+        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+
+        Ok(())
+    }
+
+    /// Generate module files (mod.rs) for organized directories
+    pub fn generate_module_file<P: AsRef<Path>>(
+        &self,
+        module_dir: P,
+        module_names: &[String],
+    ) -> CodegenResult<()> {
+        let module_dir = module_dir.as_ref();
+        let mod_file_path = module_dir.join("mod.rs");
+
+        let mut mod_tokens = proc_macro2::TokenStream::new();
+
+        // Add module declarations and re-exports
+        for module_name in module_names {
+            let mod_ident = format_ident!("{}", module_name);
+            mod_tokens.extend(quote! {
+                pub mod #mod_ident;
+                pub use #mod_ident::*;
+            });
+        }
+
+        // Parse the tokens into a syntax tree and format it
+        let syntax_tree = syn::parse2(mod_tokens).map_err(|e| CodegenError::Generation {
+            message: format!("Failed to parse generated mod tokens: {e}"),
+        })?;
+
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Write to file
+        fs::write(mod_file_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+
+        Ok(())
+    }
+
+    /// Generate a combined primitives.rs file with all FHIR primitive type aliases
+    pub fn generate_combined_primitives_file<P: AsRef<Path>>(
+        &self,
+        primitive_structure_defs: &[StructureDefinition],
+        output_path: P,
+    ) -> CodegenResult<()> {
+        let mut all_tokens = proc_macro2::TokenStream::new();
+
+        // Add file-level documentation
+        let doc_comment = quote! {
+            //! FHIR Primitive Types
+            //!
+            //! This module contains type aliases for all FHIR primitive types.
+            //! Companion elements for primitive fields use the base Element type.
+        };
+        all_tokens.extend(doc_comment);
+
+        // Generate imports
+        all_tokens.extend(quote! {
+            use serde::{Deserialize, Serialize};
+        });
+
+        // Generate all primitive type aliases
+        let mut type_cache = std::collections::HashMap::new();
+        let primitive_generator = PrimitiveGenerator::new(self.config, &mut type_cache);
+        let type_aliases =
+            primitive_generator.generate_all_primitive_type_aliases(primitive_structure_defs)?;
+
+        for type_alias in type_aliases {
+            let type_alias_tokens = self.token_generator.generate_type_alias(&type_alias);
+            all_tokens.extend(type_alias_tokens);
+        }
+
+        // Parse the tokens into a syntax tree and format it
+        let syntax_tree = syn::parse2(all_tokens).map_err(|e| CodegenError::Generation {
+            message: format!("Failed to parse generated primitive tokens: {e}"),
+        })?;
+
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Write to file
+        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+
+        Ok(())
     }
 
     /// Generate a Rust struct and write it to the appropriate directory based on FHIR type classification
@@ -165,13 +294,8 @@ impl<'a> FileGenerator<'a> {
             let type_alias_tokens = self.token_generator.generate_type_alias(&type_alias);
             all_tokens.extend(type_alias_tokens);
 
-            // Generate companion Element struct
-            let mut type_cache = std::collections::HashMap::new();
-            let mut primitive_generator = PrimitiveGenerator::new(self.config, &mut type_cache);
-            let element_struct =
-                primitive_generator.generate_primitive_element_struct(structure_def)?;
-            let element_struct_tokens = self.token_generator.generate_struct(&element_struct);
-            all_tokens.extend(element_struct_tokens);
+            // Note: No longer generating individual companion Element structs
+            // All companion fields now use the base Element type directly
         } else {
             // Generate the main struct for non-primitive types
             let mut all_structs = vec![rust_struct.clone()];
@@ -448,5 +572,170 @@ impl<'a> FileGenerator<'a> {
     }
 }"#
         .to_string()
+    }
+
+    /// Generate a complete crate structure with all necessary files and modules
+    pub fn generate_complete_crate<P: AsRef<Path>>(
+        &self,
+        output_dir: P,
+        crate_name: &str,
+        _structures: &[StructureDefinition],
+    ) -> CodegenResult<()> {
+        let output_dir = output_dir.as_ref();
+
+        // Create main directories
+        let src_dir = output_dir.join("src");
+        fs::create_dir_all(&src_dir).map_err(|e| CodegenError::Io(e))?;
+
+        // Create module directories
+        let primitives_dir = src_dir.join("primitives");
+        let datatypes_dir = src_dir.join("datatypes");
+        let resource_dir = src_dir.join("resource");
+        let traits_dir = src_dir.join("traits");
+
+        fs::create_dir_all(&primitives_dir).map_err(|e| CodegenError::Io(e))?;
+        fs::create_dir_all(&datatypes_dir).map_err(|e| CodegenError::Io(e))?;
+        fs::create_dir_all(&resource_dir).map_err(|e| CodegenError::Io(e))?;
+        fs::create_dir_all(&traits_dir).map_err(|e| CodegenError::Io(e))?;
+
+        // Generate main lib.rs
+        self.generate_lib_file(src_dir.join("lib.rs"))?;
+
+        // Generate macros.rs
+        self.generate_macros_file(src_dir.join("macros.rs"))?;
+
+        // Generate combined primitives.rs file
+        // For now, use an empty array since we're focusing on macro inclusion
+        self.generate_combined_primitives_file(&[], primitives_dir.join("mod.rs"))?;
+
+        // Generate a basic Cargo.toml if it doesn't exist
+        let cargo_toml_path = output_dir.join("Cargo.toml");
+        if !cargo_toml_path.exists() {
+            self.generate_cargo_toml(&cargo_toml_path, crate_name)?;
+        }
+
+        // Generate module files for datatypes, resource, and traits directories
+        // These will be populated with actual generated types later
+        self.generate_module_file(&datatypes_dir, &[])?;
+        self.generate_module_file(&resource_dir, &[])?;
+        self.generate_module_file(&traits_dir, &[])?;
+
+        Ok(())
+    }
+
+    /// Generate a basic Cargo.toml for the generated crate
+    fn generate_cargo_toml<P: AsRef<Path>>(
+        &self,
+        cargo_path: P,
+        crate_name: &str,
+    ) -> CodegenResult<()> {
+        let cargo_content = format!(
+            r#"[package]
+name = "{crate_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0"
+"#,
+            crate_name = crate_name
+        );
+
+        fs::write(cargo_path, cargo_content).map_err(|e| CodegenError::Io(e))?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::CodegenConfig;
+    use crate::generators::token_generator::TokenGenerator;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_generate_macros_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let macros_path = temp_dir.path().join("macros.rs");
+
+        let config = CodegenConfig::default();
+        let token_generator = TokenGenerator::new();
+        let file_generator = FileGenerator::new(&config, &token_generator);
+
+        file_generator.generate_macros_file(&macros_path).unwrap();
+
+        assert!(macros_path.exists());
+        let content = fs::read_to_string(&macros_path).unwrap();
+
+        // Check that the file contains our macro definitions
+        assert!(content.contains("macro_rules! primitive_string"));
+        assert!(content.contains("macro_rules! primitive_boolean"));
+        assert!(content.contains("macro_rules! primitive_id"));
+    }
+
+    #[test]
+    fn test_generate_lib_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let lib_path = temp_dir.path().join("lib.rs");
+
+        let config = CodegenConfig::default();
+        let token_generator = TokenGenerator::new();
+        let file_generator = FileGenerator::new(&config, &token_generator);
+
+        file_generator.generate_lib_file(&lib_path).unwrap();
+
+        assert!(lib_path.exists());
+        let content = fs::read_to_string(&lib_path).unwrap();
+
+        // Check that the file contains module declarations
+        assert!(content.contains("pub mod macros;"));
+        assert!(content.contains("pub mod primitives;"));
+        assert!(content.contains("pub mod datatypes;"));
+        assert!(content.contains("pub mod resource;"));
+        assert!(content.contains("pub mod traits;"));
+
+        // Check re-exports
+        assert!(content.contains("pub use primitives::*;"));
+        assert!(content.contains("pub use macros::*;"));
+    }
+
+    #[test]
+    fn test_generate_complete_crate() {
+        let temp_dir = TempDir::new().unwrap();
+        let crate_path = temp_dir.path().join("test-crate");
+
+        let config = CodegenConfig::default();
+        let token_generator = TokenGenerator::new();
+        let file_generator = FileGenerator::new(&config, &token_generator);
+
+        file_generator
+            .generate_complete_crate(
+                &crate_path,
+                "test-crate",
+                &[], // Empty structure definitions
+            )
+            .unwrap();
+
+        // Check that all required files and directories exist
+        assert!(crate_path.join("Cargo.toml").exists());
+        assert!(crate_path.join("src").is_dir());
+        assert!(crate_path.join("src/lib.rs").exists());
+        assert!(crate_path.join("src/macros.rs").exists());
+        assert!(crate_path.join("src/primitives").is_dir());
+        assert!(crate_path.join("src/primitives/mod.rs").exists());
+        assert!(crate_path.join("src/datatypes").is_dir());
+        assert!(crate_path.join("src/datatypes/mod.rs").exists());
+        assert!(crate_path.join("src/resource").is_dir());
+        assert!(crate_path.join("src/resource/mod.rs").exists());
+        assert!(crate_path.join("src/traits").is_dir());
+        assert!(crate_path.join("src/traits/mod.rs").exists());
+
+        // Check Cargo.toml content
+        let cargo_content = fs::read_to_string(crate_path.join("Cargo.toml")).unwrap();
+        assert!(cargo_content.contains("name = \"test-crate\""));
+        assert!(cargo_content.contains("edition = \"2021\""));
+        assert!(cargo_content.contains("serde"));
     }
 }

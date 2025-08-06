@@ -484,8 +484,9 @@ impl<'a> FieldGenerator<'a> {
     }
 
     /// Get the companion element type for a primitive type
-    fn get_companion_element_type(&self, primitive_type: &str) -> String {
-        format!("_{primitive_type}")
+    /// All companion elements now use the base Element type
+    fn get_companion_element_type(&self, _primitive_type: &str) -> String {
+        "Element".to_string()
     }
 
     /// Generate macro calls for primitive fields instead of direct field generation
