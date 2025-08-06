@@ -142,6 +142,11 @@ impl TokenGenerator {
 
     /// Generate tokens for a struct field
     fn generate_field(&self, field: &RustField) -> TokenStream {
+        // Check if this is a macro call field - emit it directly as a macro call
+        if let Some(macro_call) = &field.macro_call {
+            return self.emit_macro_call(macro_call);
+        }
+
         let name = format_ident!("{}", field.name);
         let field_type = self.generate_type(&field.field_type, field.is_optional);
 
@@ -474,6 +479,99 @@ impl TokenGenerator {
             }
         }
     }
+
+    /// Expand a primitive macro call into actual struct fields
+    #[allow(dead_code)]
+    fn expand_primitive_macro(&self, macro_call: &str) -> TokenStream {
+        // Parse the macro call to extract parameters
+        // Expected format: "primitive_type!(field_name, is_optional)"
+
+        // Simple parsing without regex
+        if let Some(start) = macro_call.find('!') {
+            let macro_name = &macro_call[..start];
+
+            // Extract the content between parentheses
+            if let (Some(paren_start), Some(paren_end)) =
+                (macro_call.find('('), macro_call.rfind(')'))
+            {
+                let content = &macro_call[paren_start + 1..paren_end];
+                let parts: Vec<&str> = content.split(',').map(|s| s.trim()).collect();
+
+                if parts.len() == 2 {
+                    let field_name = parts[0].trim_matches('"');
+                    let is_optional = parts[1] == "true";
+
+                    // Map macro names to Rust types
+                    let rust_type = match macro_name {
+                        "primitive_string" => "String",
+                        "primitive_boolean" => "bool",
+                        "primitive_integer" => "i32",
+                        "primitive_decimal" => "f64",
+                        "primitive_datetime" => "String", // Placeholder
+                        "primitive_date" => "String",
+                        "primitive_time" => "String",
+                        "primitive_uri" => "String",
+                        "primitive_canonical" => "String",
+                        "primitive_base64binary" => "String",
+                        "primitive_instant" => "String",
+                        "primitive_positiveint" => "u32",
+                        "primitive_unsignedint" => "u32",
+                        "primitive_id" => "String",
+                        "primitive_oid" => "String",
+                        "primitive_uuid" => "String",
+                        "primitive_code" => "String",
+                        "primitive_markdown" => "String",
+                        "primitive_url" => "String",
+                        _ => "String", // Default fallback
+                    };
+
+                    let field_ident = format_ident!("{}", field_name);
+                    let companion_field_ident = format_ident!("_{}", field_name);
+                    let type_ident = format_ident!("{}", rust_type);
+                    let companion_rename = format!("_{field_name}");
+
+                    // Generate both the main field and companion field
+                    if is_optional {
+                        quote! {
+                            pub #field_ident: Option<#type_ident>,
+                            #[serde(rename = #companion_rename)]
+                            pub #companion_field_ident: Option<serde_json::Value>
+                        }
+                    } else {
+                        quote! {
+                            pub #field_ident: #type_ident,
+                            #[serde(rename = #companion_rename)]
+                            pub #companion_field_ident: Option<serde_json::Value>
+                        }
+                    }
+                } else {
+                    // Fallback: return empty
+                    quote! {}
+                }
+            } else {
+                // Fallback: return empty
+                quote! {}
+            }
+        } else {
+            // Fallback: return empty
+            quote! {}
+        }
+    }
+
+    /// Emit a macro call directly into the generated code
+    fn emit_macro_call(&self, macro_call: &str) -> TokenStream {
+        // The macro_call string should be parseable directly as a macro invocation
+        // For example: "primitive_string!(\"description\", true)"
+
+        match macro_call.parse::<TokenStream>() {
+            Ok(tokens) => tokens,
+            Err(_) => {
+                // If parsing fails, try to construct it manually
+                eprintln!("Warning: Failed to parse macro call: {macro_call}");
+                quote! { /* Invalid macro call: #macro_call */ }
+            }
+        }
+    }
 }
 
 impl Default for TokenGenerator {
@@ -522,6 +620,32 @@ mod tests {
         assert!(code.contains("Variant1"));
         assert!(code.contains("Variant2"));
         assert!(code.contains("String"));
+    }
+
+    #[test]
+    fn test_generate_struct_with_macro_calls() {
+        let generator = TokenGenerator::new();
+
+        let mut rust_struct = RustStruct::new("Patient".to_string());
+
+        // Add a regular field
+        rust_struct.add_field(RustField::new("id".to_string(), RustType::String));
+
+        // Add a field with a macro call
+        let macro_field =
+            RustField::new_macro_call("primitive_boolean!(\"active\", true)".to_string());
+        rust_struct.add_field(macro_field);
+
+        let tokens = generator.generate_struct(&rust_struct);
+        let code = tokens.to_string();
+
+        println!("Generated struct with macro code: {code}");
+
+        assert!(code.contains("struct Patient"));
+        assert!(code.contains("pub id : String"));
+        assert!(code.contains("primitive_boolean !"));
+        assert!(code.contains("\"active\""));
+        assert!(code.contains("true"));
     }
 
     #[test]

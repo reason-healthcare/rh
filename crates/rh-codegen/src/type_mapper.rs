@@ -36,7 +36,7 @@ impl<'a> TypeMapper<'a> {
         is_array: bool,
     ) -> RustType {
         if fhir_types.is_empty() {
-            return RustType::String; // Default fallback
+            return RustType::Custom("StringType".to_string()); // Default fallback to StringType
         }
 
         let primary_type = &fhir_types[0];
@@ -91,10 +91,10 @@ impl<'a> TypeMapper<'a> {
         element_type: &ElementType,
         binding: Option<&crate::fhir_types::ElementBinding>,
     ) -> RustType {
-        // Handle cases where code is missing - default to String
+        // Handle cases where code is missing - default to StringType
         let code = match &element_type.code {
             Some(c) => c,
-            None => return RustType::String,
+            None => return RustType::Custom("StringType".to_string()),
         };
 
         // Check for custom type mappings first
@@ -104,19 +104,29 @@ impl<'a> TypeMapper<'a> {
 
         // Handle built-in FHIR types
         match code.as_str() {
-            // Primitive types
-            "string" | "markdown" | "uri" | "url" | "canonical" | "oid" | "uuid" => {
-                RustType::String
-            }
-            "integer" | "positiveInt" | "unsignedInt" => RustType::Integer,
-            "boolean" => RustType::Boolean,
-            "decimal" => RustType::Float,
+            // Primitive types - use new primitive type aliases
+            "string" => RustType::Custom("StringType".to_string()),
+            "markdown" => RustType::Custom("StringType".to_string()), // markdown is string-based
+            "uri" => RustType::Custom("StringType".to_string()),
+            "url" => RustType::Custom("StringType".to_string()),
+            "canonical" => RustType::Custom("StringType".to_string()),
+            "oid" => RustType::Custom("StringType".to_string()),
+            "uuid" => RustType::Custom("StringType".to_string()),
+            "id" => RustType::Custom("StringType".to_string()),
+            "integer" => RustType::Custom("IntegerType".to_string()),
+            "positiveInt" => RustType::Custom("PositiveIntType".to_string()),
+            "unsignedInt" => RustType::Custom("UnsignedIntType".to_string()),
+            "boolean" => RustType::Custom("BooleanType".to_string()),
+            "decimal" => RustType::Custom("DecimalType".to_string()),
 
-            // Date/time types (represented as strings for now)
-            "date" | "dateTime" | "instant" | "time" => RustType::String,
+            // Date/time types
+            "date" => RustType::Custom("StringType".to_string()), // Will be DateType once we generate it
+            "dateTime" => RustType::Custom("DateTimeType".to_string()),
+            "instant" => RustType::Custom("InstantType".to_string()),
+            "time" => RustType::Custom("TimeType".to_string()),
 
             // Binary data
-            "base64Binary" => RustType::String,
+            "base64Binary" => RustType::Custom("Base64BinaryType".to_string()),
 
             // Code types - check for required binding and generate enum
             "code" => {
@@ -135,8 +145,8 @@ impl<'a> TypeMapper<'a> {
                         }
                     }
                 }
-                // Fall back to String for non-required bindings or when enum generation fails
-                RustType::String
+                // Fall back to StringType for non-required bindings or when enum generation fails
+                RustType::Custom("StringType".to_string())
             }
 
             // Complex types
@@ -172,11 +182,11 @@ impl<'a> TypeMapper<'a> {
                     .strip_prefix("http://hl7.org/fhirpath/System.")
                     .unwrap_or("String");
                 match system_type {
-                    "String" => RustType::String,
-                    "Integer" => RustType::Integer,
-                    "Boolean" => RustType::Boolean,
-                    "Decimal" => RustType::Float,
-                    _ => RustType::String,
+                    "String" => RustType::Custom("StringType".to_string()),
+                    "Integer" => RustType::Custom("IntegerType".to_string()),
+                    "Boolean" => RustType::Custom("BooleanType".to_string()),
+                    "Decimal" => RustType::Custom("DecimalType".to_string()),
+                    _ => RustType::Custom("StringType".to_string()),
                 }
             }
 
@@ -185,10 +195,10 @@ impl<'a> TypeMapper<'a> {
                 RustType::Custom(resource_type.to_string())
             }
 
-            // Unknown type - default to string
+            // Unknown type - default to StringType
             _ => {
-                eprintln!("Warning: Unknown FHIR type '{code}', defaulting to String");
-                RustType::String
+                eprintln!("Warning: Unknown FHIR type '{code}', defaulting to StringType");
+                RustType::Custom("StringType".to_string())
             }
         }
     }
@@ -295,9 +305,10 @@ mod tests {
             target_profile: None,
         };
 
+        let result = mapper.map_single_fhir_type(&string_type);
         assert!(matches!(
-            mapper.map_single_fhir_type(&string_type),
-            RustType::String
+            result,
+            RustType::Custom(ref name) if name == "StringType"
         ));
 
         let boolean_type = ElementType {
@@ -307,7 +318,7 @@ mod tests {
 
         assert!(matches!(
             mapper.map_single_fhir_type(&boolean_type),
-            RustType::Boolean
+            RustType::Custom(ref name) if name == "BooleanType"
         ));
     }
 

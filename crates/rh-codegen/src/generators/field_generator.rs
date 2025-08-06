@@ -48,12 +48,24 @@ impl<'a> FieldGenerator<'a> {
             return self.create_choice_type_fields(element);
         }
 
-        // Regular field - create single field
-        if let Some(field) = self.create_single_field_from_element(element)? {
-            Ok(vec![field])
-        } else {
-            Ok(vec![])
+        // Check if this is a primitive type that should use macro calls
+        if self.config.use_macro_calls {
+            if let Some(macro_field) = self.create_primitive_field_macro_call(element)? {
+                return Ok(vec![macro_field]);
+            }
         }
+
+        // Regular field - create single field and possibly companion field
+        let mut fields = Vec::new();
+        if let Some(field) = self.create_single_field_from_element(element)? {
+            fields.push(field);
+
+            // Check if we need to create a companion field for primitive types
+            if let Some(companion_field) = self.create_companion_field_if_primitive(element)? {
+                fields.push(companion_field);
+            }
+        }
+        Ok(fields)
     }
 
     /// Create multiple fields for FHIR choice types (e.g., value[x], effective[x])
@@ -146,11 +158,11 @@ impl<'a> FieldGenerator<'a> {
                 )
             }
         } else {
-            // No type specified, default to String
+            // No type specified, default to StringType
             if is_array {
-                RustType::Vec(Box::new(RustType::String))
+                RustType::Vec(Box::new(RustType::Custom("StringType".to_string())))
             } else {
-                RustType::String
+                RustType::Custom("StringType".to_string())
             }
         };
 
@@ -394,6 +406,149 @@ impl<'a> FieldGenerator<'a> {
 
         choice_types
     }
+
+    /// Create a companion field for primitive types that handles extensions
+    fn create_companion_field_if_primitive(
+        &mut self,
+        element: &ElementDefinition,
+    ) -> CodegenResult<Option<RustField>> {
+        // Check if this element has a primitive type
+        if let Some(element_types) = &element.element_type {
+            if let Some(first_type) = element_types.first() {
+                if let Some(type_code) = &first_type.code {
+                    // Check if this is a primitive type
+                    if self.is_primitive_type(type_code) {
+                        let field_name = element.path.split('.').next_back().unwrap_or("unknown");
+                        let companion_field_name = format!("_{field_name}");
+                        let rust_companion_field_name =
+                            Self::to_rust_field_name(&companion_field_name);
+
+                        // Map primitive type to companion element type
+                        let companion_element_type = self.get_companion_element_type(type_code);
+
+                        // Companion elements are always optional in FHIR specification
+                        // They contain extensions and metadata for primitive fields
+                        let is_optional = true;
+
+                        // Create the companion field
+                        let mut companion_field = RustField::new(
+                            rust_companion_field_name.clone(),
+                            RustType::Custom(companion_element_type),
+                        );
+                        companion_field.is_optional = is_optional;
+
+                        // Add documentation
+                        companion_field.doc_comment = Some(format!(
+                            "Extension element for the '{field_name}' primitive field. Contains metadata and extensions."
+                        ));
+
+                        // Add serde rename if needed
+                        if rust_companion_field_name != companion_field_name {
+                            companion_field =
+                                companion_field.with_serde_rename(companion_field_name);
+                        }
+
+                        return Ok(Some(companion_field));
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Check if a type code represents a FHIR primitive type
+    fn is_primitive_type(&self, type_code: &str) -> bool {
+        matches!(
+            type_code,
+            "boolean"
+                | "integer"
+                | "positiveInt"
+                | "unsignedInt"
+                | "decimal"
+                | "string"
+                | "code"
+                | "id"
+                | "markdown"
+                | "uri"
+                | "url"
+                | "canonical"
+                | "oid"
+                | "uuid"
+                | "base64Binary"
+                | "xhtml"
+                | "date"
+                | "dateTime"
+                | "time"
+                | "instant"
+        )
+    }
+
+    /// Get the companion element type for a primitive type
+    fn get_companion_element_type(&self, primitive_type: &str) -> String {
+        format!("_{primitive_type}")
+    }
+
+    /// Generate macro calls for primitive fields instead of direct field generation
+    /// This creates a RustField with a macro call that can be embedded in generated code
+    pub fn create_primitive_field_macro_call(
+        &mut self,
+        element: &ElementDefinition,
+    ) -> CodegenResult<Option<RustField>> {
+        // Get the field name from the path (last segment)
+        let field_name = element.path.split('.').next_back().unwrap_or("unknown");
+
+        // Skip choice types for now as they need special handling
+        if field_name.ends_with("[x]") {
+            return Ok(None);
+        }
+
+        // Check if this element has a primitive type
+        if let Some(element_types) = &element.element_type {
+            if let Some(first_type) = element_types.first() {
+                if let Some(type_code) = &first_type.code {
+                    // Check if this is a primitive type
+                    if self.is_primitive_type(type_code) {
+                        // Determine if this field is optional (min = 0)
+                        let is_optional = element.min.unwrap_or(0) == 0;
+
+                        // Generate appropriate macro call based on primitive type
+                        let macro_name = match type_code.as_str() {
+                            "string" => "primitive_string",
+                            "boolean" => "primitive_boolean",
+                            "integer" => "primitive_integer",
+                            "decimal" => "primitive_decimal",
+                            "dateTime" => "primitive_datetime",
+                            "date" => "primitive_date",
+                            "time" => "primitive_time",
+                            "uri" => "primitive_uri",
+                            "canonical" => "primitive_canonical",
+                            "base64Binary" => "primitive_base64binary",
+                            "instant" => "primitive_instant",
+                            "positiveInt" => "primitive_positiveint",
+                            "unsignedInt" => "primitive_unsignedint",
+                            "id" => "primitive_id",
+                            "oid" => "primitive_oid",
+                            "uuid" => "primitive_uuid",
+                            "code" => "primitive_code",
+                            "markdown" => "primitive_markdown",
+                            "url" => "primitive_url",
+                            _ => return Ok(None), // Unknown primitive type
+                        };
+
+                        // Create the macro call
+                        let macro_call = format!("{macro_name}!(\"{field_name}\", {is_optional})");
+
+                        // Create a RustField with the macro call
+                        let field = RustField::new_macro_call(macro_call);
+
+                        return Ok(Some(field));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
 }
 
 #[cfg(test)]
@@ -572,7 +727,134 @@ mod tests {
         let field = field.unwrap();
         assert_eq!(field.name, "active");
         assert!(field.is_optional);
-        assert!(matches!(field.field_type, RustType::Boolean));
+        // The field type should be BooleanType (custom type from the type mapping)
+        assert!(
+            matches!(field.field_type, RustType::Custom(ref type_name) if type_name == "BooleanType")
+        );
+    }
+
+    #[test]
+    fn test_macro_call_generation() {
+        use crate::config::CodegenConfig;
+        use std::collections::HashMap;
+
+        let config = CodegenConfig {
+            use_macro_calls: true, // Enable macro call generation
+            ..CodegenConfig::default()
+        };
+
+        let type_cache = HashMap::new();
+        let mut value_set_manager = ValueSetManager::new();
+        let mut field_generator = FieldGenerator::new(&config, &type_cache, &mut value_set_manager);
+
+        // Test boolean field with macro calls enabled
+        let boolean_element = ElementDefinition {
+            id: Some("Patient.active".to_string()),
+            path: "Patient.active".to_string(),
+            short: Some("Whether this patient record is in active use".to_string()),
+            definition: None,
+            min: Some(0),
+            max: Some("1".to_string()),
+            element_type: Some(vec![ElementType {
+                code: Some("boolean".to_string()),
+                target_profile: None,
+            }]),
+            fixed: None,
+            pattern: None,
+            binding: None,
+        };
+
+        let result = field_generator.create_fields_from_element(&boolean_element);
+        assert!(result.is_ok());
+
+        let fields = result.unwrap();
+        assert_eq!(fields.len(), 1); // Should return one macro call field
+
+        let macro_field = &fields[0];
+        assert_eq!(macro_field.name, "active");
+        assert!(macro_field.macro_call.is_some());
+
+        let macro_call = macro_field.macro_call.as_ref().unwrap();
+        assert_eq!(macro_call, "primitive_boolean!(\"active\", true)");
+    }
+
+    #[test]
+    fn test_companion_fields_always_optional() {
+        use crate::config::CodegenConfig;
+        use std::collections::HashMap;
+
+        let config = CodegenConfig::default();
+        let type_cache = HashMap::new();
+        let mut value_set_manager = ValueSetManager::new();
+        let mut field_generator = FieldGenerator::new(&config, &type_cache, &mut value_set_manager);
+
+        // Test required boolean field (min = 1) - companion should still be optional
+        let required_boolean_element = ElementDefinition {
+            id: Some("Patient.active".to_string()),
+            path: "Patient.active".to_string(),
+            short: Some("Whether this patient record is in active use".to_string()),
+            definition: None,
+            min: Some(1), // Required field
+            max: Some("1".to_string()),
+            element_type: Some(vec![ElementType {
+                code: Some("boolean".to_string()),
+                target_profile: None,
+            }]),
+            fixed: None,
+            pattern: None,
+            binding: None,
+        };
+
+        let result = field_generator.create_fields_from_element(&required_boolean_element);
+        assert!(result.is_ok());
+
+        let fields = result.unwrap();
+        assert_eq!(fields.len(), 2); // Main field + companion field
+
+        let main_field = &fields[0];
+        let companion_field = &fields[1];
+
+        // Main field should be required (not optional) since min = 1
+        assert_eq!(main_field.name, "active");
+        assert!(!main_field.is_optional); // Required field
+
+        // Companion field should ALWAYS be optional regardless of main field
+        assert_eq!(companion_field.name, "_active");
+        assert!(companion_field.is_optional); // Should always be optional
+
+        // Test required string field (min = 1) - companion should still be optional
+        let required_string_element = ElementDefinition {
+            id: Some("Patient.name".to_string()),
+            path: "Patient.name".to_string(),
+            short: Some("Patient name".to_string()),
+            definition: None,
+            min: Some(1), // Required field
+            max: Some("1".to_string()),
+            element_type: Some(vec![ElementType {
+                code: Some("string".to_string()),
+                target_profile: None,
+            }]),
+            fixed: None,
+            pattern: None,
+            binding: None,
+        };
+
+        let result = field_generator.create_fields_from_element(&required_string_element);
+        assert!(result.is_ok());
+
+        let fields = result.unwrap();
+        assert_eq!(fields.len(), 2); // Main field + companion field
+
+        let main_field = &fields[0];
+        let companion_field = &fields[1];
+
+        // Main field should be required (not optional) since min = 1
+        assert_eq!(main_field.name, "name");
+        assert!(!main_field.is_optional); // Required field
+
+        // Companion field should ALWAYS be optional regardless of main field
+        assert_eq!(companion_field.name, "_name");
+        assert!(companion_field.is_optional); // Should always be optional
     }
 
     #[test]

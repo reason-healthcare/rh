@@ -141,6 +141,20 @@ impl<'a> FileGenerator<'a> {
             imports.insert("serde::{Deserialize, Serialize}".to_string());
         }
 
+        // Check if any struct contains macro calls and add necessary imports
+        let has_macro_calls = rust_struct
+            .fields
+            .iter()
+            .any(|field| field.macro_call.is_some())
+            || nested_structs
+                .iter()
+                .any(|s| s.fields.iter().any(|field| field.macro_call.is_some()));
+
+        if has_macro_calls {
+            // Add the macro imports from the current crate
+            imports.insert("crate::{primitive_string, primitive_boolean, primitive_integer, primitive_decimal, primitive_datetime, primitive_date, primitive_time, primitive_uri, primitive_canonical, primitive_base64binary, primitive_instant, primitive_positiveint, primitive_unsignedint, primitive_id, primitive_oid, primitive_uuid, primitive_code, primitive_markdown, primitive_url}".to_string());
+        }
+
         let mut all_tokens = proc_macro2::TokenStream::new();
 
         if structure_def.kind == "primitive-type" {

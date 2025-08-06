@@ -2,6 +2,25 @@
 //!
 //! This library provides functionality for generating Rust types from FHIR (Fast Healthcare
 //! Interoperability Resources) StructureDefinition files.
+//!
+//! ## Macro Call Generation
+//!
+//! The library can generate macro calls for FHIR primitive types instead of regular struct fields.
+//! This provides better handling of FHIR's primitive extension pattern where each primitive field
+//! can have an associated extension element.
+//!
+//! To enable macro call generation, set `use_macro_calls: true` in your `CodegenConfig`:
+//!
+//! ```rust
+//! use rh_codegen::CodegenConfig;
+//!
+//! let mut config = CodegenConfig::default();
+//! config.use_macro_calls = true;
+//! ```
+//!
+//! When enabled, primitive fields like `boolean`, `string`, `integer`, etc. will be generated as
+//! macro calls such as `primitive_boolean!("active", true)` instead of regular struct fields.
+//! These macros automatically generate both the primitive field and its companion extension field.
 
 pub use rh_common::{CommonError, Config};
 
@@ -9,9 +28,10 @@ mod config;
 pub mod fhir_types;
 mod generator;
 pub mod generators;
+pub mod macros;
 mod rust_types;
 mod type_mapper;
-mod value_sets;
+pub mod value_sets;
 
 // Re-export loader types for convenience
 pub use rh_loader::{

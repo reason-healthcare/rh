@@ -50,6 +50,8 @@ pub struct RustField {
     pub is_optional: bool,
     pub is_public: bool,
     pub serde_attributes: Vec<String>,
+    /// If set, this field should be rendered as a macro call instead of a regular field
+    pub macro_call: Option<String>,
 }
 
 impl RustField {
@@ -61,7 +63,37 @@ impl RustField {
             is_optional: false,
             is_public: true,
             serde_attributes: Vec::new(),
+            macro_call: None,
         }
+    }
+
+    /// Create a new field that represents a macro call
+    pub fn new_macro_call(macro_call: String) -> Self {
+        // Extract field name from macro call for display purposes
+        let field_name = Self::extract_field_name_from_macro_call(&macro_call);
+
+        Self {
+            name: field_name,
+            field_type: RustType::Custom("MacroCall".to_string()), // Placeholder type
+            doc_comment: None,
+            is_optional: false,
+            is_public: true,
+            serde_attributes: Vec::new(),
+            macro_call: Some(macro_call),
+        }
+    }
+
+    /// Extract field name from a macro call string
+    fn extract_field_name_from_macro_call(macro_call: &str) -> String {
+        // Parse macro call like: primitive_string!("field_name", true)
+        if let Some(start) = macro_call.find('(') {
+            if let Some(end) = macro_call.find(',') {
+                let content = &macro_call[start + 1..end];
+                let field_name = content.trim().trim_matches('"');
+                return field_name.to_string();
+            }
+        }
+        "unknown_field".to_string()
     }
 
     pub fn optional(mut self) -> Self {
