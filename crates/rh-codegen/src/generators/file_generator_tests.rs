@@ -86,5 +86,6 @@ mod tests {
         assert!(cargo_content.contains("name = \"test-crate\""));
         assert!(cargo_content.contains("edition = \"2021\""));
         assert!(cargo_content.contains("serde"));
+        assert!(cargo_content.contains("paste"));
     }
 }

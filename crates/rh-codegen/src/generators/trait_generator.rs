@@ -116,29 +116,73 @@ impl TraitGenerator {
 
         // Only add basic resource methods if this IS the Resource trait itself
         if structure_def.name == "Resource" {
-            // Resource types should have id and meta
+            // 1. resource_type method - returns the resource type name
+            let resource_type_method = RustTraitMethod::new("resource_type".to_string())
+                .with_doc("Returns the resource type name".to_string())
+                .with_return_type(RustType::Custom("&'static str".to_string()));
+
+            rust_trait.add_method(resource_type_method);
+
+            // 2. id method - gets the logical ID
             let id_method = RustTraitMethod::new("id".to_string())
                 .with_doc("Gets the logical ID of this resource".to_string())
-                .with_return_type(RustType::Option(Box::new(RustType::String)));
+                .with_return_type(RustType::Option(Box::new(RustType::Custom(
+                    "&str".to_string(),
+                ))));
 
             rust_trait.add_method(id_method);
 
+            // 3. has_id convenience method with default implementation
+            let has_id_method = RustTraitMethod::new("has_id".to_string())
+                .with_doc("Checks if this resource has an ID".to_string())
+                .with_return_type(RustType::Boolean)
+                .with_default_implementation("self.id().is_some()".to_string());
+
+            rust_trait.add_method(has_id_method);
+
+            // 4. meta method - gets the metadata
             let meta_method = RustTraitMethod::new("meta".to_string())
                 .with_doc("Gets the metadata about this resource".to_string())
                 .with_return_type(RustType::Option(Box::new(RustType::Custom(
-                    "Meta".to_string(),
+                    "&crate::datatypes::Meta".to_string(),
                 ))));
 
             rust_trait.add_method(meta_method);
 
-            // All FHIR resources should have extensions
+            // 5. has_meta convenience method with default implementation
+            let has_meta_method = RustTraitMethod::new("has_meta".to_string())
+                .with_doc("Checks if this resource has metadata".to_string())
+                .with_return_type(RustType::Boolean)
+                .with_default_implementation("self.meta().is_some()".to_string());
+
+            rust_trait.add_method(has_meta_method);
+
+            // 6. extensions method - gets extensions
             let extensions_method = RustTraitMethod::new("extensions".to_string())
                 .with_doc("Gets the extensions for this resource".to_string())
-                .with_return_type(RustType::Vec(Box::new(RustType::Custom(
-                    "Extension".to_string(),
-                ))));
+                .with_return_type(RustType::Custom(
+                    "&[crate::datatypes::Extension]".to_string(),
+                ));
 
             rust_trait.add_method(extensions_method);
+
+            // 7. implicit_rules method - gets implicit rules
+            let implicit_rules_method = RustTraitMethod::new("implicit_rules".to_string())
+                .with_doc("Gets the implicit rules for this resource".to_string())
+                .with_return_type(RustType::Option(Box::new(RustType::Custom(
+                    "&str".to_string(),
+                ))));
+
+            rust_trait.add_method(implicit_rules_method);
+
+            // 8. language method - gets the language
+            let language_method = RustTraitMethod::new("language".to_string())
+                .with_doc("Gets the language of this resource".to_string())
+                .with_return_type(RustType::Option(Box::new(RustType::Custom(
+                    "&str".to_string(),
+                ))));
+
+            rust_trait.add_method(language_method);
         } else if !inherits_from_resource {
             // If this is not Resource and doesn't inherit from Resource, add basic methods
             // This handles non-resource types like Element, Extension, etc.
@@ -533,46 +577,50 @@ impl TraitGenerator {
 
     /// Generate a comprehensive Resource trait with common FHIR resource methods
     pub fn generate_resource_trait(&mut self) -> CodegenResult<String> {
-        let trait_content = r#"/// Trait for FHIR resources providing common functionality for all resource types.
-///
-/// This trait defines the core interface that all FHIR resources must implement,
-/// providing access to common fields like id, meta, extensions, and basic resource operations.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/Resource
-/// - Kind: resource
-/// - Type: Resource
-pub trait Resource {
-    /// Returns the resource type name
-    fn resource_type(&self) -> &'static str;
+        // Create a synthetic Resource StructureDefinition using the same pattern as others
+        let resource_structure = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "Resource".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/Resource".to_string(),
+            name: "Resource".to_string(),
+            title: Some("Resource".to_string()),
+            status: "active".to_string(),
+            kind: "resource".to_string(),
+            is_abstract: true,
+            description: Some("Base resource definition".to_string()),
+            purpose: Some("This is the base resource type for everything".to_string()),
+            base_type: "Resource".to_string(),
+            base_definition: None, // Resource is the root, no parent
+            version: None,
+            differential: None,
+            snapshot: None,
+        };
 
-    /// Gets the logical ID of this resource
-    fn id(&self) -> Option<&str>;
+        // Generate the trait using the standard pattern
+        let rust_trait = self.generate_trait(&resource_structure)?;
 
-    /// Checks if this resource has an ID
-    fn has_id(&self) -> bool {
-        self.id().is_some()
-    }
+        // Use TokenGenerator to generate the trait code with proper formatting
+        let token_generator = crate::generators::TokenGenerator::new();
+        let mut all_tokens = proc_macro2::TokenStream::new();
 
-    /// Gets the metadata about this resource
-    fn meta(&self) -> Option<&crate::datatypes::Meta>;
+        // Add common imports for traits
+        let import_tokens: proc_macro2::TokenStream = "use std::collections::HashMap;"
+            .parse()
+            .expect("Invalid import statement");
+        all_tokens.extend(import_tokens);
 
-    /// Checks if this resource has metadata
-    fn has_meta(&self) -> bool {
-        self.meta().is_some()
-    }
+        // Generate the trait
+        let trait_tokens = token_generator.generate_trait(&rust_trait);
+        all_tokens.extend(trait_tokens);
 
-    /// Gets the extensions for this resource
-    fn extensions(&self) -> &[crate::datatypes::Extension];
+        // Parse the tokens into a syntax tree and format it properly
+        let syntax_tree = syn::parse2(all_tokens).map_err(|e| crate::CodegenError::Generation {
+            message: format!("Failed to parse generated trait tokens: {e}"),
+        })?;
 
-    /// Gets the implicit rules for this resource
-    fn implicit_rules(&self) -> Option<&str>;
+        let formatted_code = prettyplease::unparse(&syntax_tree);
 
-    /// Gets the language of this resource
-    fn language(&self) -> Option<&str>;
-}"#;
-
-        Ok(trait_content.to_string())
+        Ok(formatted_code)
     }
 
     /// Generate a Resource trait implementation for the Resource struct

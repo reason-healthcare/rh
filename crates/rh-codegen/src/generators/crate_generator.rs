@@ -77,6 +77,11 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     let lib_rs_path = src_dir.join("lib.rs");
     fs::write(&lib_rs_path, lib_rs_content)?;
 
+    // Generate macros.rs with FHIR primitive macros
+    let macros_content = include_str!("../macros.rs");
+    let macros_path = src_dir.join("macros.rs");
+    fs::write(&macros_path, macros_content)?;
+
     // Generate mod.rs files for each module
     generate_module_files(
         &resource_dir,
@@ -122,6 +127,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
+paste = "1.0"
 
 [lib]
 name = "{crate_name}"
@@ -139,6 +145,9 @@ fn generate_lib_rs_idiomatic() -> Result<String> {
 
 pub use serde::{Deserialize, Serialize};
 
+/// FHIR macros for primitive field generation
+pub mod macros;
+
 /// FHIR resource types (Patient, Observation, etc.)
 pub mod resource;
 
@@ -155,6 +164,7 @@ pub mod traits;
 pub mod bindings;
 
 /// Re-export everything for convenience
+pub use macros::*;
 pub use resource::*;
 pub use datatypes::*;
 pub use primitives::*;

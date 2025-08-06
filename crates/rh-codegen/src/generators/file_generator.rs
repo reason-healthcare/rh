@@ -54,7 +54,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
 
         Ok(())
     }
@@ -86,7 +86,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
 
         Ok(())
     }
@@ -119,7 +119,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(mod_file_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+        fs::write(mod_file_path, formatted_code).map_err(CodegenError::Io)?;
 
         Ok(())
     }
@@ -165,7 +165,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(|e| CodegenError::Io(e))?;
+        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
 
         Ok(())
     }
@@ -585,7 +585,7 @@ impl<'a> FileGenerator<'a> {
 
         // Create main directories
         let src_dir = output_dir.join("src");
-        fs::create_dir_all(&src_dir).map_err(|e| CodegenError::Io(e))?;
+        fs::create_dir_all(&src_dir).map_err(CodegenError::Io)?;
 
         // Create module directories
         let primitives_dir = src_dir.join("primitives");
@@ -593,10 +593,10 @@ impl<'a> FileGenerator<'a> {
         let resource_dir = src_dir.join("resource");
         let traits_dir = src_dir.join("traits");
 
-        fs::create_dir_all(&primitives_dir).map_err(|e| CodegenError::Io(e))?;
-        fs::create_dir_all(&datatypes_dir).map_err(|e| CodegenError::Io(e))?;
-        fs::create_dir_all(&resource_dir).map_err(|e| CodegenError::Io(e))?;
-        fs::create_dir_all(&traits_dir).map_err(|e| CodegenError::Io(e))?;
+        fs::create_dir_all(&primitives_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&datatypes_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&resource_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
 
         // Generate main lib.rs
         self.generate_lib_file(src_dir.join("lib.rs"))?;
@@ -638,11 +638,11 @@ edition = "2021"
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-"#,
-            crate_name = crate_name
+paste = "1.0"
+"#
         );
 
-        fs::write(cargo_path, cargo_content).map_err(|e| CodegenError::Io(e))?;
+        fs::write(cargo_path, cargo_content).map_err(CodegenError::Io)?;
         Ok(())
     }
 }
@@ -737,5 +737,6 @@ mod tests {
         assert!(cargo_content.contains("name = \"test-crate\""));
         assert!(cargo_content.contains("edition = \"2021\""));
         assert!(cargo_content.contains("serde"));
+        assert!(cargo_content.contains("paste"));
     }
 }

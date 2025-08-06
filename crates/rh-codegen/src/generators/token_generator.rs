@@ -304,8 +304,21 @@ impl TokenGenerator {
                 quote! { Vec<#inner_tokens> }
             }
             RustType::Custom(name) => {
-                let ident = format_ident!("{}", name);
-                quote! { #ident }
+                // Check if this is a complex type that shouldn't be treated as an identifier
+                if name.contains('&')
+                    || name.contains('<')
+                    || name.contains('>')
+                    || name.contains('[')
+                    || name.contains(']')
+                    || name.contains('\'')
+                {
+                    // Parse as a type expression
+                    let type_tokens: TokenStream = name.parse().expect("Invalid type expression");
+                    quote! { #type_tokens }
+                } else {
+                    let ident = format_ident!("{}", name);
+                    quote! { #ident }
+                }
             }
             RustType::Reference(name) => {
                 let ident = format_ident!("{}", name);
