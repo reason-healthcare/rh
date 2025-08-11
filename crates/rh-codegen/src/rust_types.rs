@@ -375,3 +375,92 @@ impl RustTraitMethod {
         self
     }
 }
+
+/// Represents a Rust trait implementation
+#[derive(Debug, Clone)]
+pub struct RustTraitImpl {
+    /// The name of the trait being implemented
+    pub trait_name: String,
+    /// The name of the struct implementing the trait  
+    pub struct_name: String,
+    /// The methods implemented in this trait impl
+    pub methods: Vec<RustTraitImplMethod>,
+    /// Documentation comment for the impl
+    pub doc_comment: Option<String>,
+}
+
+impl RustTraitImpl {
+    pub fn new(trait_name: String, struct_name: String) -> Self {
+        Self {
+            trait_name,
+            struct_name,
+            methods: Vec::new(),
+            doc_comment: None,
+        }
+    }
+
+    pub fn with_doc(mut self, doc: String) -> Self {
+        self.doc_comment = Some(doc);
+        self
+    }
+
+    pub fn add_method(&mut self, method: RustTraitImplMethod) {
+        self.methods.push(method);
+    }
+
+    pub fn with_method(mut self, method: RustTraitImplMethod) -> Self {
+        self.methods.push(method);
+        self
+    }
+}
+
+/// Represents a method implementation in a trait impl block
+#[derive(Debug, Clone)]
+pub struct RustTraitImplMethod {
+    /// The name of the method
+    pub name: String,
+    /// The parameters of the method (excluding &self)
+    pub params: Vec<RustMethodParam>,
+    /// The return type of the method
+    pub return_type: String,
+    /// The body of the method implementation
+    pub body: String,
+    /// Documentation comment for the method
+    pub doc_comment: Option<String>,
+}
+
+impl RustTraitImplMethod {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            params: Vec::new(),
+            return_type: "()".to_string(),
+            body: "todo!()".to_string(),
+            doc_comment: None,
+        }
+    }
+
+    pub fn with_return_type(mut self, return_type: String) -> Self {
+        self.return_type = return_type;
+        self
+    }
+
+    pub fn with_body(mut self, body: String) -> Self {
+        self.body = body;
+        self
+    }
+
+    pub fn with_doc(mut self, doc: String) -> Self {
+        self.doc_comment = Some(doc);
+        self
+    }
+
+    pub fn add_param(&mut self, param: RustMethodParam) {
+        self.params.push(param);
+    }
+
+    pub fn with_param(mut self, param: RustMethodParam) -> Self {
+        self.params.push(param);
+        self
+    }
+}

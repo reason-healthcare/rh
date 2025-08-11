@@ -585,6 +585,74 @@ impl TokenGenerator {
             }
         }
     }
+
+    /// Generate tokens for a trait implementation block
+    pub fn generate_trait_impl(
+        &self,
+        trait_impl: &crate::rust_types::RustTraitImpl,
+    ) -> TokenStream {
+        let trait_name: TokenStream = trait_impl.trait_name.parse().unwrap_or_else(|_| {
+            eprintln!(
+                "Warning: Failed to parse trait name: {}",
+                trait_impl.trait_name
+            );
+            quote! { InvalidTraitName }
+        });
+
+        let struct_name: TokenStream = trait_impl.struct_name.parse().unwrap_or_else(|_| {
+            eprintln!(
+                "Warning: Failed to parse struct name: {}",
+                trait_impl.struct_name
+            );
+            quote! { InvalidStructName }
+        });
+
+        let methods: Vec<TokenStream> = trait_impl
+            .methods
+            .iter()
+            .map(|method| {
+                let method_name: TokenStream = method.name.parse().unwrap_or_else(|_| {
+                    quote! { invalid_method_name }
+                });
+
+                let return_type: TokenStream = method.return_type.parse().unwrap_or_else(|_| {
+                    quote! { () }
+                });
+
+                let body: TokenStream = method.body.parse().unwrap_or_else(|_| {
+                    quote! { unimplemented!() }
+                });
+
+                // Generate parameters (excluding self which is implicit)
+                let params: Vec<TokenStream> = method
+                    .params
+                    .iter()
+                    .map(|param| {
+                        let param_name: TokenStream = param.name.parse().unwrap_or_else(|_| {
+                            quote! { invalid_param }
+                        });
+                        let param_type_str = param.param_type.to_string();
+                        let param_type: TokenStream = param_type_str.parse().unwrap_or_else(|_| {
+                            quote! { () }
+                        });
+                        quote! { #param_name: #param_type }
+                    })
+                    .collect();
+
+                quote! {
+                    fn #method_name(&self #(, #params)*) -> #return_type {
+                        #body
+                    }
+                }
+            })
+            .collect();
+
+        quote! {
+            impl #trait_name for #struct_name {
+                #(#methods)*
+            }
+        }
+    }
 }
 
 impl Default for TokenGenerator {

@@ -41,6 +41,52 @@ impl ImportManager {
         }
     }
 
+    /// Collect all custom types referenced by a trait and add them to the imports set
+    pub fn collect_custom_types_from_trait(
+        rust_trait: &crate::rust_types::RustTrait,
+        imports: &mut HashSet<String>,
+    ) {
+        // Add imports for super traits
+        for super_trait in &rust_trait.super_traits {
+            if !Self::is_primitive_type(super_trait) {
+                // For super traits that are FHIR resources, import the trait version not the struct
+                let import_path = if Self::is_fhir_resource_type(super_trait) {
+                    format!(
+                        "crate::traits::{}::{}",
+                        crate::generators::utils::GeneratorUtils::to_snake_case(super_trait),
+                        super_trait
+                    )
+                } else {
+                    Self::get_import_path_for_type(super_trait)
+                };
+                imports.insert(import_path);
+            }
+        }
+
+        // Collect custom types from all trait methods
+        for method in &rust_trait.methods {
+            // Collect types from return type
+            if let Some(return_type) = &method.return_type {
+                Self::collect_custom_types_from_type(
+                    return_type,
+                    imports,
+                    &rust_trait.name,
+                    &HashSet::new(), // Traits don't have "structs in file"
+                );
+            }
+
+            // Collect types from parameters (if any)
+            for param in &method.params {
+                Self::collect_custom_types_from_type(
+                    &param.param_type,
+                    imports,
+                    &rust_trait.name,
+                    &HashSet::new(),
+                );
+            }
+        }
+    }
+
     /// Recursively collect custom types from a RustType
     pub fn collect_custom_types_from_type(
         rust_type: &RustType,
@@ -113,11 +159,55 @@ impl ImportManager {
 
         // Check if it's a known primitive type extension
         if Self::is_fhir_primitive_type(type_name) {
-            return format!(
-                "crate::primitives::{}::{}",
-                Self::to_snake_case(type_name),
-                type_name
-            );
+            // Map type names to correct module names - handle both Type and non-Type variants
+            let module_name = match type_name {
+                "StringType" | "String" => "string",
+                "BooleanType" | "Boolean" => "boolean",
+                "IntegerType" | "Integer" => "integer",
+                "DecimalType" | "Decimal" => "decimal",
+                "UriType" | "Uri" => "uri",
+                "UrlType" | "Url" => "url",
+                "CanonicalType" | "Canonical" => "canonical",
+                "OidType" | "Oid" => "oid",
+                "UuidType" | "Uuid" => "uuid",
+                "InstantType" | "Instant" => "instant",
+                "DateType" | "Date" => "date",
+                "DateTimeType" | "DateTime" => "date_time",
+                "TimeType" | "Time" => "time",
+                "CodeType" | "Code" => "code",
+                "IdType" | "Id" => "id",
+                "MarkdownType" | "Markdown" => "markdown",
+                "Base64BinaryType" | "Base64Binary" => "base64binary",
+                "UnsignedIntType" | "UnsignedInt" => "unsigned_int",
+                "PositiveIntType" | "PositiveInt" => "positive_int",
+                "XhtmlType" | "Xhtml" => "xhtml",
+                _ => "unknown_primitive",
+            };
+            // Map the type name to the correct Type variant for import
+            let type_variant = match type_name {
+                "String" => "StringType",
+                "Boolean" => "BooleanType",
+                "Integer" => "IntegerType",
+                "Decimal" => "DecimalType",
+                "Uri" => "UriType",
+                "Url" => "UrlType",
+                "Canonical" => "CanonicalType",
+                "Oid" => "OidType",
+                "Uuid" => "UuidType",
+                "Instant" => "InstantType",
+                "Date" => "DateType",
+                "DateTime" => "DateTimeType",
+                "Time" => "TimeType",
+                "Code" => "CodeType",
+                "Id" => "IdType",
+                "Markdown" => "MarkdownType",
+                "Base64Binary" => "Base64BinaryType",
+                "UnsignedInt" => "UnsignedIntType",
+                "PositiveInt" => "PositiveIntType",
+                "Xhtml" => "XhtmlType",
+                _ => type_name, // Already has Type suffix
+            };
+            return format!("crate::primitives::{module_name}::{type_variant}");
         }
 
         // Check if it's a generated trait
@@ -174,6 +264,122 @@ impl ImportManager {
                 | "domainresource"
                 | "resource"
                 | "metadataresource"
+                // Additional resource types that were missing
+                | "auditevent"
+                | "composition"
+                | "questionnaire"
+                | "requestgroup"
+                | "servicerequest"
+                | "evidencevariable"
+                | "guidanceresponse"
+                | "familymemberhistory"
+                | "evidence"
+                | "provenance"
+                | "group"
+                | "vitalsigns"
+                | "substance"
+                // More resource types from the generated traits
+                | "account"
+                | "adverseevent"
+                | "allergyintolerance"
+                | "appointment"
+                | "appointmentresponse"
+                | "basic"
+                | "binary"
+                | "bodystructure"
+                | "bundle"
+                | "careplan"
+                | "careteam"
+                | "chargeitem"
+                | "chargeitemdefinition"
+                | "claim"
+                | "claimresponse"
+                | "clinicalimpression"
+                | "communication"
+                | "communicationrequest"
+                | "condition"
+                | "consent"
+                | "contract"
+                | "coverage"
+                | "coverageeligibilityrequest"
+                | "coverageeligibilityresponse"
+                | "detectedissue"
+                | "device"
+                | "devicedefinition"
+                | "devicemetric"
+                | "devicerequest"
+                | "deviceusestatement"
+                | "documentmanifest"
+                | "documentreference"
+                | "endpoint"
+                | "enrollmentrequest"
+                | "enrollmentresponse"
+                | "episodeofcare"
+                | "eventdefinition"
+                | "explanationofbenefit"
+                | "flag"
+                | "goal"
+                | "healthcareservice"
+                | "imagingstudy"
+                | "immunization"
+                | "immunizationevaluation"
+                | "immunizationrecommendation"
+                | "insuranceplan"
+                | "invoice"
+                | "linkage"
+                | "list"
+                | "measurereport"
+                | "media"
+                | "medicationadministration"
+                | "medicationdispense"
+                | "medicationknowledge"
+                | "medicationstatement"
+                | "medicinalproduct"
+                | "medicinalproductauthorization"
+                | "medicinalproductcontraindication"
+                | "medicinalproductindication"
+                | "medicinalproductingredient"
+                | "medicinalproductinteraction"
+                | "medicinalproductmanufactured"
+                | "medicinalproductpackaged"
+                | "medicinalproductpharmaceutical"
+                | "medicinalproductundesirableeffect"
+                | "messageheader"
+                | "molecularsequence"
+                | "nutritionorder"
+                | "observationdefinition"
+                | "operationoutcome"
+                | "organizationaffiliation"
+                | "parameters"
+                | "paymentnotice"
+                | "paymentreconciliation"
+                | "person"
+                | "practitionerrole"
+                | "procedure"
+                | "questionnaireresponse"
+                | "relatedperson"
+                | "researchdefinition"
+                | "researchelementdefinition"
+                | "researchstudy"
+                | "researchsubject"
+                | "riskassessment"
+                | "schedule"
+                | "slot"
+                | "specimen"
+                | "specimendefinition"
+                | "structuremap"
+                | "subscription"
+                | "substancenucleicacid"
+                | "substancepolymer"
+                | "substanceprotein"
+                | "substancereferenceinformation"
+                | "substancesourcematerial"
+                | "substancespecification"
+                | "supplydelivery"
+                | "supplyrequest"
+                | "task"
+                | "verificationresult"
+                | "visionprescription"
         )
     }
 
@@ -217,34 +423,65 @@ impl ImportManager {
                 | "expression"
                 | "backboneelement"
                 | "element"
+                // Additional complex datatypes
+                | "parameterdefinition"
+                | "prodcharacteristic"
+                | "productshelflife"
+                | "marketingstatus"
+                | "population"
+                | "substanceamount"
+                | "elementdefinition"
+                // Complex nested types that may be generated
+                | "implementationguidedefinition"
         )
     }
 
     /// Check if a type is a FHIR primitive type
     pub fn is_fhir_primitive_type(type_name: &str) -> bool {
-        // FHIR primitive types that have extensions - using case-insensitive comparison
+        // FHIR primitive types that have extensions - matching actual generated type names
         matches!(
-            type_name.to_lowercase().as_str(),
-            "fhirstring"
-                | "fhirboolean"
-                | "fhirinteger"
-                | "fhirdecimal"
-                | "fhiruri"
-                | "fhirurl"
-                | "fhircanonical"
-                | "fhiroid"
-                | "fhiruuid"
-                | "fhirinstant"
-                | "fhirdate"
-                | "fhirdatetime"
-                | "fhirtime"
-                | "fhircode"
-                | "fhirid"
-                | "fhirmarkdown"
-                | "fhirbase64binary"
-                | "fhirunsignedint"
-                | "fhirpositiveint"
-                | "fhirxhtml"
+            type_name,
+            "StringType"
+                | "BooleanType"
+                | "IntegerType"
+                | "DecimalType"
+                | "UriType"
+                | "UrlType"
+                | "CanonicalType"
+                | "OidType"
+                | "UuidType"
+                | "InstantType"
+                | "DateType"
+                | "DateTimeType"
+                | "TimeType"
+                | "CodeType"
+                | "IdType"
+                | "MarkdownType"
+                | "Base64BinaryType"
+                | "UnsignedIntType"
+                | "PositiveIntType"
+                | "XhtmlType"
+                // Also handle the non-Type variants that appear in trait methods
+                | "String"
+                | "Boolean"
+                | "Integer"
+                | "Decimal"
+                | "Uri"
+                | "Url"
+                | "Canonical"
+                | "Oid"
+                | "Uuid"
+                | "Instant"
+                | "Date"
+                | "DateTime"
+                | "Time"
+                | "Code"
+                | "Id"
+                | "Markdown"
+                | "Base64Binary"
+                | "UnsignedInt"
+                | "PositiveInt"
+                | "Xhtml"
         )
     }
 

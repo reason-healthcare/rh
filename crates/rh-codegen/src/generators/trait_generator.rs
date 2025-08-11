@@ -144,7 +144,7 @@ impl TraitGenerator {
             let meta_method = RustTraitMethod::new("meta".to_string())
                 .with_doc("Gets the metadata about this resource".to_string())
                 .with_return_type(RustType::Option(Box::new(RustType::Custom(
-                    "&crate::datatypes::Meta".to_string(),
+                    "&crate::datatypes::meta::Meta".to_string(),
                 ))));
 
             rust_trait.add_method(meta_method);
@@ -161,7 +161,7 @@ impl TraitGenerator {
             let extensions_method = RustTraitMethod::new("extensions".to_string())
                 .with_doc("Gets the extensions for this resource".to_string())
                 .with_return_type(RustType::Custom(
-                    "&[crate::datatypes::Extension]".to_string(),
+                    "&[crate::datatypes::extension::Extension]".to_string(),
                 ));
 
             rust_trait.add_method(extensions_method);
@@ -449,13 +449,27 @@ impl TraitGenerator {
                 let typed_method_name = format!("{base_name}_{field_suffix}");
                 let typed_rust_method_name = GeneratorUtils::to_rust_field_name(&typed_method_name);
 
-                // Map FHIR type to Rust type
+                // Map FHIR type to Rust type - ensure all primitive types map to String
                 let rust_type = match type_code.as_str() {
                     "string" | "code" | "id" | "markdown" | "uri" | "url" | "canonical"
-                    | "dateTime" | "date" | "time" | "instant" => RustType::String,
+                    | "dateTime" | "date" | "time" | "instant" | "base64Binary" | "oid"
+                    | "uuid" => RustType::String,
                     "boolean" => RustType::Boolean,
                     "integer" | "positiveInt" | "unsignedInt" => RustType::Integer,
                     "decimal" => RustType::Float,
+                    // Specific FHIR primitive types that should map to String
+                    "Date" | "Base64Binary" | "Oid" | "Uuid" => RustType::String,
+                    // Complex FHIR types that should use simple names (imports will handle module resolution)
+                    "Reference" => RustType::Custom("Reference".to_string()),
+                    "Identifier" => RustType::Custom("Identifier".to_string()),
+                    "CodeableConcept" => RustType::Custom("CodeableConcept".to_string()),
+                    "Coding" => RustType::Custom("Coding".to_string()),
+                    "Address" => RustType::Custom("Address".to_string()),
+                    "HumanName" => RustType::Custom("HumanName".to_string()),
+                    "ContactPoint" => RustType::Custom("ContactPoint".to_string()),
+                    "Attachment" => RustType::Custom("Attachment".to_string()),
+                    "Annotation" => RustType::Custom("Annotation".to_string()),
+                    "BackboneElement" => RustType::Custom("BackboneElement".to_string()),
                     _ => RustType::Custom(GeneratorUtils::capitalize_first_letter(type_code)),
                 };
 
@@ -482,7 +496,36 @@ impl TraitGenerator {
     ) -> bool {
         let field_name = element.path.split('.').next_back().unwrap_or("");
 
-        // Create trait methods for commonly accessed FHIR fields
+        // Only create trait methods if:
+        // 1. The field name is meaningful (not internal FHIR fields)
+        // 2. The element has a type definition
+        // 3. It's not a choice type field (handled separately)
+
+        // Skip internal/technical fields
+        if matches!(
+            field_name,
+            "resourceType"
+                | "id"
+                | "meta"
+                | "implicitRules"
+                | "language"
+                | "extension"
+                | "modifierExtension"
+        ) {
+            return false;
+        }
+
+        // Skip choice type fields (they're handled in add_choice_type_trait_methods)
+        if field_name.ends_with("[x]") {
+            return false;
+        }
+
+        // Skip fields without type definitions
+        if element.element_type.is_none() || element.element_type.as_ref().unwrap().is_empty() {
+            return false;
+        }
+
+        // Create trait methods for commonly accessed FHIR fields, but only if they exist in this structure
         matches!(
             field_name,
             "status"
@@ -512,6 +555,8 @@ impl TraitGenerator {
                 | "referenceRange"
                 | "hasMember"
                 | "derivedFrom"
+                | "description"
+                | "title"
         )
     }
 
@@ -523,6 +568,9 @@ impl TraitGenerator {
         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
         let rust_field_name = GeneratorUtils::to_rust_field_name(field_name);
 
+        // Get the resource type from the element path
+        let resource_type = element.path.split('.').next().unwrap_or("");
+
         // Determine if this field is optional (min = 0)
         let is_optional = element.min.unwrap_or(0) == 0;
 
@@ -532,18 +580,67 @@ impl TraitGenerator {
             .as_ref()
             .is_some_and(|max| max == "*" || max.parse::<u32>().unwrap_or(1) > 1);
 
-        // Get the return type based on the element type
+        // Get the return type based on the element type with context-aware mapping
         let return_type = if let Some(element_types) = &element.element_type {
             if let Some(first_type) = element_types.first() {
                 let base_type = if let Some(code) = &first_type.code {
-                    match code.as_str() {
-                        "string" | "code" | "id" | "markdown" | "uri" | "url" | "canonical" => {
-                            RustType::String
+                    // Context-aware type mapping for common FHIR patterns
+                    match (field_name, code.as_str(), resource_type) {
+                        // Name fields on person-like resources should be HumanName
+                        ("name", "HumanName", _)
+                        | ("name", _, "Patient")
+                        | ("name", _, "Person")
+                        | ("name", _, "Practitioner")
+                        | ("name", _, "RelatedPerson") => RustType::Custom("HumanName".to_string()),
+                        // Name fields on other resources are typically strings
+                        ("name", "string", _) => RustType::String,
+                        // Birth date fields should be strings (date primitive maps to string)
+                        ("birthDate", _, _) => RustType::String,
+                        // Standard primitive type mapping
+                        (_, "string", _)
+                        | (_, "code", _)
+                        | (_, "id", _)
+                        | (_, "markdown", _)
+                        | (_, "uri", _)
+                        | (_, "url", _)
+                        | (_, "canonical", _)
+                        | (_, "dateTime", _)
+                        | (_, "date", _)
+                        | (_, "time", _)
+                        | (_, "instant", _)
+                        | (_, "base64Binary", _)
+                        | (_, "oid", _)
+                        | (_, "uuid", _) => RustType::String,
+                        (_, "boolean", _) => RustType::Boolean,
+                        (_, "integer", _) | (_, "positiveInt", _) | (_, "unsignedInt", _) => {
+                            RustType::Integer
                         }
-                        "boolean" => RustType::Boolean,
-                        "integer" | "positiveInt" | "unsignedInt" => RustType::Integer,
-                        "decimal" => RustType::Float,
-                        _ => RustType::Custom(GeneratorUtils::capitalize_first_letter(code)),
+                        (_, "decimal", _) => RustType::Float,
+                        // Specific FHIR primitive types that should map to String
+                        (_, "Date", _)
+                        | (_, "Base64Binary", _)
+                        | (_, "Oid", _)
+                        | (_, "Uuid", _) => RustType::String,
+                        // Complex FHIR types with simple names (imports will handle module resolution)
+                        (_, "Reference", _) => RustType::Custom("Reference".to_string()),
+                        (_, "Identifier", _) => RustType::Custom("Identifier".to_string()),
+                        (_, "CodeableConcept", _) => {
+                            RustType::Custom("CodeableConcept".to_string())
+                        }
+                        (_, "Coding", _) => RustType::Custom("Coding".to_string()),
+                        (_, "Address", _) => RustType::Custom("Address".to_string()),
+                        (_, "HumanName", _) => RustType::Custom("HumanName".to_string()),
+                        (_, "ContactPoint", _) => RustType::Custom("ContactPoint".to_string()),
+                        (_, "Attachment", _) => RustType::Custom("Attachment".to_string()),
+                        (_, "Annotation", _) => RustType::Custom("Annotation".to_string()),
+                        (_, "BackboneElement", _) => {
+                            RustType::Custom("BackboneElement".to_string())
+                        }
+                        (_, "Meta", _) => RustType::Custom("Meta".to_string()),
+                        (_, "Extension", _) => RustType::Custom("Extension".to_string()),
+                        (_, code, _) => {
+                            RustType::Custom(GeneratorUtils::capitalize_first_letter(code))
+                        }
                     }
                 } else {
                     RustType::String

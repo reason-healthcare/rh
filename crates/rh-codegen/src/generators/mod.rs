@@ -27,6 +27,7 @@ pub mod primitive_generator;
 pub mod struct_generator;
 pub mod token_generator;
 pub mod trait_generator;
+pub mod trait_impl_generator;
 pub mod type_utilities;
 pub mod utils;
 
@@ -46,5 +47,6 @@ pub use primitive_generator::PrimitiveGenerator;
 pub use struct_generator::StructGenerator;
 pub use token_generator::TokenGenerator;
 pub use trait_generator::TraitGenerator;
+pub use trait_impl_generator::TraitImplGenerator;
 pub use type_utilities::TypeUtilities;
 pub use utils::GeneratorUtils;

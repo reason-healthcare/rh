@@ -138,38 +138,21 @@ path = "src/lib.rs"
 
 /// Generate lib.rs content with idiomatic module structure
 fn generate_lib_rs_idiomatic() -> Result<String> {
-    let lib_content = r#"//! Generated FHIR types
+    let lib_content = r#"//! Generated FHIR Rust bindings
 //!
-//! This crate contains generated Rust types for FHIR resources organized by category.
-//! All types include serde serialization support.
+//! This crate contains Rust types and traits for FHIR resources and data types.
+//! It includes macros for primitive field generation and maintains FHIR compliance.
 
-pub use serde::{Deserialize, Serialize};
-
-/// FHIR macros for primitive field generation
 pub mod macros;
-
-/// FHIR resource types (Patient, Observation, etc.)
-pub mod resource;
-
-/// FHIR data types (Narrative, Extension, etc.)
-pub mod datatypes;
-
-/// FHIR primitive types (string, boolean, etc.)
 pub mod primitives;
-
-/// FHIR traits for common functionality
+pub mod datatypes;
+pub mod resource;
 pub mod traits;
-
-/// FHIR ValueSet bindings and enums
 pub mod bindings;
 
-/// Re-export everything for convenience
+// Re-export macros and serde traits for convenience
 pub use macros::*;
-pub use resource::*;
-pub use datatypes::*;
-pub use primitives::*;
-pub use traits::*;
-pub use bindings::*;
+pub use serde::{Deserialize, Serialize};
 "#;
 
     Ok(lib_content.to_string())
@@ -241,13 +224,8 @@ fn generate_mod_rs_for_directory(dir: &Path, description: &str) -> Result<String
         content.push_str(&format!("pub mod {module_name};\n"));
     }
 
-    // Add re-exports if we have modules
-    if !rs_files.is_empty() {
-        content.push('\n');
-        for module_name in &rs_files {
-            content.push_str(&format!("pub use {module_name}::*;\n"));
-        }
-    }
+    // Note: No glob re-exports to avoid ambiguous re-export warnings
+    // Individual types can be imported explicitly when needed
 
     Ok(content)
 }

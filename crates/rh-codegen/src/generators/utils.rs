@@ -325,6 +325,20 @@ impl GeneratorUtils {
                 | "domainresource"
                 | "resource"
                 | "metadataresource"
+                // Additional resource types that were missing
+                | "auditevent"
+                | "composition"
+                | "questionnaire"
+                | "requestgroup"
+                | "servicerequest"
+                | "evidencevariable"
+                | "guidanceresponse"
+                | "familymemberhistory"
+                | "evidence"
+                | "provenance"
+                | "group"
+                | "vitalsigns"
+                | "substance"
         )
     }
 
@@ -372,39 +386,39 @@ impl GeneratorUtils {
                 | "parameterdefinition"
                 | "triggerdefinition"
                 | "prodcharacteristic"
-                | "substance"
                 | "productshelflife"
                 | "marketingstatus"
                 | "population"
                 | "substanceamount"
+                | "elementdefinition"
         )
     }
 
     /// Check if a type is a FHIR primitive type
     pub fn is_fhir_primitive_type(type_name: &str) -> bool {
-        // FHIR primitive types that have extensions - using case-insensitive comparison
+        // FHIR primitive types that have extensions - matching actual generated type names
         matches!(
-            type_name.to_lowercase().as_str(),
-            "fhirstring"
-                | "fhirboolean"
-                | "fhirinteger"
-                | "fhirdecimal"
-                | "fhiruri"
-                | "fhirurl"
-                | "fhircanonical"
-                | "fhiroid"
-                | "fhiruuid"
-                | "fhirinstant"
-                | "fhirdate"
-                | "fhirdatetime"
-                | "fhirtime"
-                | "fhircode"
-                | "fhirid"
-                | "fhirmarkdown"
-                | "fhirbase64binary"
-                | "fhirunsignedint"
-                | "fhirpositiveint"
-                | "fhirxhtml"
+            type_name,
+            "StringType"
+                | "BooleanType"
+                | "IntegerType"
+                | "DecimalType"
+                | "UriType"
+                | "UrlType"
+                | "CanonicalType"
+                | "OidType"
+                | "UuidType"
+                | "InstantType"
+                | "DateType"
+                | "DateTimeType"
+                | "TimeType"
+                | "CodeType"
+                | "IdType"
+                | "MarkdownType"
+                | "Base64BinaryType"
+                | "UnsignedIntType"
+                | "PositiveIntType"
+                | "XhtmlType"
         )
     }
 
@@ -445,11 +459,31 @@ impl GeneratorUtils {
 
         // Check if it's a known primitive type extension
         if Self::is_fhir_primitive_type(type_name) {
-            return format!(
-                "crate::primitives::{}::{}",
-                Self::to_snake_case(type_name),
-                type_name
-            );
+            // Map type names to correct module names
+            let module_name = match type_name {
+                "StringType" => "string",
+                "BooleanType" => "boolean",
+                "IntegerType" => "integer",
+                "DecimalType" => "decimal",
+                "UriType" => "uri",
+                "UrlType" => "url",
+                "CanonicalType" => "canonical",
+                "OidType" => "oid",
+                "UuidType" => "uuid",
+                "InstantType" => "instant",
+                "DateType" => "date",
+                "DateTimeType" => "date_time",
+                "TimeType" => "time",
+                "CodeType" => "code",
+                "IdType" => "id",
+                "MarkdownType" => "markdown",
+                "Base64BinaryType" => "base64binary",
+                "UnsignedIntType" => "unsigned_int",
+                "PositiveIntType" => "positive_int",
+                "XhtmlType" => "xhtml",
+                _ => "unknown_primitive",
+            };
+            return format!("crate::primitives::{}::{}", module_name, type_name);
         }
 
         // Check if it's a generated trait

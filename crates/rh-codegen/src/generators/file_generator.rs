@@ -14,6 +14,7 @@ use crate::generators::enum_generator::EnumGenerator;
 use crate::generators::import_manager::ImportManager;
 use crate::generators::primitive_generator::PrimitiveGenerator;
 use crate::generators::token_generator::TokenGenerator;
+use crate::generators::trait_impl_generator::TraitImplGenerator;
 use crate::generators::utils::GeneratorUtils;
 use crate::rust_types::{RustStruct, RustTrait};
 use crate::{CodegenError, CodegenResult};
@@ -72,10 +73,11 @@ impl<'a> FileGenerator<'a> {
             pub mod datatypes;
             pub mod resource;
             pub mod traits;
+            pub mod bindings;
 
-            // Re-export commonly used types
-            pub use primitives::*;
+            // Re-export macros and serde traits for convenience
             pub use macros::*;
+            pub use serde::{Deserialize, Serialize};
         };
 
         // Parse the tokens into a syntax tree and format it
@@ -102,12 +104,11 @@ impl<'a> FileGenerator<'a> {
 
         let mut mod_tokens = proc_macro2::TokenStream::new();
 
-        // Add module declarations and re-exports
+        // Add module declarations only (no re-exports to avoid conflicts)
         for module_name in module_names {
             let mod_ident = format_ident!("{}", module_name);
             mod_tokens.extend(quote! {
                 pub mod #mod_ident;
-                pub use #mod_ident::*;
             });
         }
 
@@ -341,7 +342,13 @@ impl<'a> FileGenerator<'a> {
 
         let mut formatted_code = prettyplease::unparse(&syntax_tree);
 
-        // Add Resource trait impl if this is the Resource struct
+        // Add trait implementations for FHIR resources
+        if structure_def.kind == "resource" {
+            formatted_code.push_str("\n\n");
+            formatted_code.push_str(&self.generate_trait_implementations(structure_def));
+        }
+
+        // Add Resource trait impl if this is the Resource struct (legacy)
         if structure_def.name == "Resource" {
             formatted_code.push_str("\n\n");
             formatted_code.push_str(&self.generate_resource_impl());
@@ -371,11 +378,19 @@ impl<'a> FileGenerator<'a> {
         // Generate import tokens
         let mut all_tokens = proc_macro2::TokenStream::new();
 
-        // Add common imports for traits
-        let import_tokens: proc_macro2::TokenStream = "use std::collections::HashMap;"
-            .parse()
-            .expect("Invalid import statement");
-        all_tokens.extend(import_tokens);
+        // Collect imports needed for this trait
+        let mut imports = std::collections::HashSet::new();
+        ImportManager::collect_custom_types_from_trait(rust_trait, &mut imports);
+
+        // Add import statements
+        for import_path in imports {
+            let import_stmt = format!("use {};", import_path);
+            let import_tokens: proc_macro2::TokenStream =
+                import_stmt.parse().map_err(|e| CodegenError::Generation {
+                    message: format!("Failed to parse import statement '{}': {}", import_stmt, e),
+                })?;
+            all_tokens.extend(import_tokens);
+        }
 
         // Generate the trait
         let trait_tokens = self.token_generator.generate_trait(rust_trait);
@@ -505,11 +520,19 @@ impl<'a> FileGenerator<'a> {
         // Generate import tokens
         let mut all_tokens = proc_macro2::TokenStream::new();
 
-        // Add common imports for traits
-        let import_tokens: proc_macro2::TokenStream = "use std::collections::HashMap;"
-            .parse()
-            .expect("Invalid import statement");
-        all_tokens.extend(import_tokens);
+        // Collect imports needed for this trait
+        let mut imports = std::collections::HashSet::new();
+        ImportManager::collect_custom_types_from_trait(rust_trait, &mut imports);
+
+        // Add import statements
+        for import_path in imports {
+            let import_stmt = format!("use {};", import_path);
+            let import_tokens: proc_macro2::TokenStream =
+                import_stmt.parse().map_err(|e| CodegenError::Generation {
+                    message: format!("Failed to parse import statement '{}': {}", import_stmt, e),
+                })?;
+            all_tokens.extend(import_tokens);
+        }
 
         // Generate the trait tokens
         let trait_tokens = self.token_generator.generate_trait(rust_trait);
@@ -572,6 +595,47 @@ impl<'a> FileGenerator<'a> {
     }
 }"#
         .to_string()
+    }
+
+    /// Generate trait implementations for a FHIR resource
+    fn generate_trait_implementations(&self, structure_def: &StructureDefinition) -> String {
+        let trait_impl_generator = TraitImplGenerator::new();
+        let trait_impls = match trait_impl_generator.generate_trait_impls(structure_def) {
+            Ok(impls) => impls,
+            Err(e) => {
+                eprintln!(
+                    "Warning: Failed to generate trait implementations for {}: {}",
+                    structure_def.name, e
+                );
+                return String::new();
+            }
+        };
+
+        let mut implementations = Vec::new();
+
+        for trait_impl in trait_impls {
+            let impl_tokens = self.token_generator.generate_trait_impl(&trait_impl);
+
+            // Parse and format the implementation
+            match syn::parse2(impl_tokens) {
+                Ok(syntax_tree) => {
+                    let formatted_impl = prettyplease::unparse(&syntax_tree);
+                    implementations.push(formatted_impl);
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: Failed to parse trait implementation for {}: {}",
+                        trait_impl.struct_name, e
+                    );
+                }
+            }
+        }
+
+        if implementations.is_empty() {
+            String::new()
+        } else {
+            format!("// Trait implementations\n{}", implementations.join("\n\n"))
+        }
     }
 
     /// Generate a complete crate structure with all necessary files and modules
@@ -695,10 +759,18 @@ mod tests {
         assert!(content.contains("pub mod datatypes;"));
         assert!(content.contains("pub mod resource;"));
         assert!(content.contains("pub mod traits;"));
+        assert!(content.contains("pub mod bindings;"));
 
-        // Check re-exports
-        assert!(content.contains("pub use primitives::*;"));
+        // Check selective re-exports (only macros and serde)
         assert!(content.contains("pub use macros::*;"));
+        assert!(content.contains("pub use serde::{Deserialize, Serialize};"));
+
+        // Should NOT have glob re-exports for other modules
+        assert!(!content.contains("pub use primitives::*;"));
+        assert!(!content.contains("pub use datatypes::*;"));
+        assert!(!content.contains("pub use resource::*;"));
+        assert!(!content.contains("pub use traits::*;"));
+        assert!(!content.contains("pub use bindings::*;"));
     }
 
     #[test]
