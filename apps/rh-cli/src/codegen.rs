@@ -7,8 +7,9 @@ use tracing::{info, warn};
 
 use rh_codegen::{
     generate_crate_structure, parse_package_metadata, CodeGenerator, CodegenConfig,
-    CrateGenerationParams,
+    CrateGenerationParams, QualityConfig,
 };
+use rh_codegen::quality::run_quality_checks;
 use rh_loader::{LoaderConfig, PackageLoader};
 
 /// Check if a directory exists and is not empty
@@ -281,7 +282,8 @@ fn process_json_files_organized(
 
     // Run quality checks on the generated crate
     info!("Running quality checks on generated crate...");
-    match rh_codegen::run_quality_checks(output_dir) {
+    let quality_config = QualityConfig::default();
+    match run_quality_checks(output_dir, &quality_config) {
         Ok(()) => {
             info!("✅ Quality checks completed successfully");
         }

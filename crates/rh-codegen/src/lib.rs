@@ -29,6 +29,7 @@ pub mod fhir_types;
 mod generator;
 pub mod generators;
 pub mod macros;
+pub mod quality;
 mod rust_types;
 mod type_mapper;
 pub mod value_sets;
@@ -48,6 +49,7 @@ pub use generators::crate_generator::{
 };
 pub use generators::file_generator::{FhirTypeCategory, FileGenerator};
 pub use generators::token_generator::TokenGenerator;
+pub use quality::{format_generated_crate, QualityConfig};
 pub use generators::utils::GeneratorUtils;
 pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType};
 pub use type_mapper::TypeMapper;
@@ -188,154 +190,6 @@ pub mod {resource_name};
         // Only write if content changed
         if new_content != existing_content {
             std::fs::write(&mod_file, new_content)?;
-        }
-    }
-
-    Ok(())
-}
-
-/// Format the generated crate using rustfmt
-pub fn format_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
-    let crate_path = crate_path.as_ref();
-
-    println!("Formatting generated crate at: {}", crate_path.display());
-
-    // Try cargo fmt first, fallback to rustfmt directly if it fails
-    let output = std::process::Command::new("cargo")
-        .arg("fmt")
-        .arg("--all")
-        .current_dir(crate_path)
-        .output()
-        .map_err(|e| CodegenError::Generation {
-            message: format!("Failed to run cargo fmt: {e}"),
-        })?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-
-        // If cargo fmt fails due to no targets, try formatting the lib.rs directly
-        if stderr.contains("Failed to find targets") || stderr.contains("no targets") {
-            println!("⚠️  cargo fmt found no targets, trying direct rustfmt...");
-
-            let lib_rs = crate_path.join("src").join("lib.rs");
-            if lib_rs.exists() {
-                let rustfmt_output = std::process::Command::new("rustfmt")
-                    .arg("--edition")
-                    .arg("2021")
-                    .arg(&lib_rs)
-                    .output()
-                    .map_err(|e| CodegenError::Generation {
-                        message: format!("Failed to run rustfmt directly: {e}"),
-                    })?;
-
-                if !rustfmt_output.status.success() {
-                    let rustfmt_stderr = String::from_utf8_lossy(&rustfmt_output.stderr);
-                    return Err(CodegenError::Generation {
-                        message: format!("rustfmt failed: {rustfmt_stderr}"),
-                    });
-                }
-
-                println!("✅ Formatting completed successfully (using rustfmt directly)");
-                return Ok(());
-            }
-        }
-
-        return Err(CodegenError::Generation {
-            message: format!("cargo fmt failed: {stderr}"),
-        });
-    }
-
-    println!("✅ Formatting completed successfully");
-    Ok(())
-}
-
-/// Run clippy on the generated crate to check for warnings and errors
-pub fn check_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
-    let crate_path = crate_path.as_ref();
-
-    println!(
-        "Running clippy on generated crate at: {}",
-        crate_path.display()
-    );
-
-    let output = std::process::Command::new("cargo")
-        .arg("clippy")
-        .arg("--lib") // Only check the library target
-        .arg("--")
-        .arg("-D")
-        .arg("warnings")
-        .current_dir(crate_path)
-        .output()
-        .map_err(|e| CodegenError::Generation {
-            message: format!("Failed to run cargo clippy: {e}"),
-        })?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        println!("⚠️  Clippy found issues:");
-        println!("{stdout}");
-        println!("{stderr}");
-        return Err(CodegenError::Generation {
-            message: "cargo clippy found issues - see output above".to_string(),
-        });
-    }
-
-    println!("✅ Clippy check completed successfully");
-    Ok(())
-}
-
-/// Check if the generated crate compiles successfully
-pub fn compile_generated_crate<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
-    let crate_path = crate_path.as_ref();
-
-    println!(
-        "Checking compilation of generated crate at: {}",
-        crate_path.display()
-    );
-
-    let output = std::process::Command::new("cargo")
-        .arg("check")
-        .arg("--lib") // Only check the library target
-        .current_dir(crate_path)
-        .output()
-        .map_err(|e| CodegenError::Generation {
-            message: format!("Failed to run cargo check: {e}"),
-        })?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        println!("❌ Compilation failed:");
-        println!("{stdout}");
-        println!("{stderr}");
-        return Err(CodegenError::Generation {
-            message: "cargo check failed - see output above".to_string(),
-        });
-    }
-
-    println!("✅ Compilation check completed successfully");
-    Ok(())
-}
-
-/// Run a complete quality check pipeline on the generated crate
-pub fn run_quality_checks<P: AsRef<std::path::Path>>(crate_path: P) -> CodegenResult<()> {
-    let crate_path = crate_path.as_ref();
-
-    println!("🔧 Running quality checks on generated crate...");
-
-    // 1. Format the code
-    format_generated_crate(crate_path)?;
-
-    // 2. Check compilation
-    compile_generated_crate(crate_path)?;
-
-    // 3. Run clippy (but don't fail on warnings for now)
-    match check_generated_crate(crate_path) {
-        Ok(()) => println!("✅ All quality checks passed!"),
-        Err(e) => {
-            println!("⚠️  Quality checks completed with warnings: {e}");
-            println!("📝 Note: Warnings don't prevent code generation but should be reviewed");
         }
     }
 

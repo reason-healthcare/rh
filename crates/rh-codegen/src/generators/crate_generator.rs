@@ -9,6 +9,8 @@ use std::path::Path;
 use anyhow::Result;
 use chrono::Local;
 
+use crate::quality::{run_quality_checks, QualityConfig};
+
 /// Parameters for crate generation
 #[derive(Debug, Clone)]
 pub struct CrateGenerationParams<'a> {
@@ -103,6 +105,11 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     );
     let readme_path = params.output.join("README.md");
     fs::write(&readme_path, readme_content)?;
+
+    // Run quality checks as a final step
+    let quality_config = QualityConfig::default();
+    run_quality_checks(params.output, &quality_config)
+        .map_err(|e| anyhow::anyhow!("Quality checks failed: {}", e))?;
 
     Ok(())
 }
