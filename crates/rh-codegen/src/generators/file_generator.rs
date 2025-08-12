@@ -24,6 +24,7 @@ use crate::{CodegenError, CodegenResult};
 pub enum FhirTypeCategory {
     Resource,
     DataType,
+    Extension,
     Primitive,
 }
 
@@ -71,6 +72,7 @@ impl<'a> FileGenerator<'a> {
             pub mod macros;
             pub mod primitives;
             pub mod datatypes;
+            pub mod extensions;
             pub mod resource;
             pub mod traits;
             pub mod bindings;
@@ -182,9 +184,16 @@ impl<'a> FileGenerator<'a> {
         let base_dir = base_output_dir.as_ref();
 
         // Determine the appropriate subdirectory based on FHIR type
-        let target_dir = match self.classify_fhir_structure_def(structure_def) {
+        // Also check if the main struct has Extension base (for nested structs)
+        let mut category = self.classify_fhir_structure_def(structure_def);
+        if category != FhirTypeCategory::Extension && Self::has_extension_base(rust_struct) {
+            category = FhirTypeCategory::Extension;
+        }
+
+        let target_dir = match category {
             FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
+            FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
         };
 
@@ -219,6 +228,13 @@ impl<'a> FileGenerator<'a> {
         self.generate_trait_to_file(structure_def, output_path, rust_trait)
     }
 
+    /// Check if a RustStruct has Extension as its base type
+    fn has_extension_base(rust_struct: &RustStruct) -> bool {
+        rust_struct.fields.iter().any(|field| {
+            field.name == "base" && matches!(&field.field_type, crate::rust_types::RustType::Custom(type_name) if type_name == "Extension")
+        })
+    }
+
     /// Classify a FHIR StructureDefinition into the appropriate category
     pub fn classify_fhir_structure_def(
         &self,
@@ -229,13 +245,19 @@ impl<'a> FileGenerator<'a> {
             return FhirTypeCategory::Primitive;
         }
 
-        // Check for known data types
+        // Check for known data types first (including core Extension)
         if GeneratorUtils::is_fhir_datatype(&structure_def.name)
             || structure_def.base_type == "Element"
             || structure_def.base_type == "BackboneElement"
             || structure_def.base_type == "DataType"
+            || structure_def.name == "Extension"
         {
             return FhirTypeCategory::DataType;
+        }
+
+        // Check if it's an Extension-based type (but not the core Extension itself)
+        if structure_def.base_type == "Extension" {
+            return FhirTypeCategory::Extension;
         }
 
         // Check for resources
@@ -654,11 +676,13 @@ impl<'a> FileGenerator<'a> {
         // Create module directories
         let primitives_dir = src_dir.join("primitives");
         let datatypes_dir = src_dir.join("datatypes");
+        let extensions_dir = src_dir.join("extensions");
         let resource_dir = src_dir.join("resource");
         let traits_dir = src_dir.join("traits");
 
         fs::create_dir_all(&primitives_dir).map_err(CodegenError::Io)?;
         fs::create_dir_all(&datatypes_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&extensions_dir).map_err(CodegenError::Io)?;
         fs::create_dir_all(&resource_dir).map_err(CodegenError::Io)?;
         fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
 
@@ -678,9 +702,10 @@ impl<'a> FileGenerator<'a> {
             self.generate_cargo_toml(&cargo_toml_path, crate_name)?;
         }
 
-        // Generate module files for datatypes, resource, and traits directories
+        // Generate module files for datatypes, extensions, resource, and traits directories
         // These will be populated with actual generated types later
         self.generate_module_file(&datatypes_dir, &[])?;
+        self.generate_module_file(&extensions_dir, &[])?;
         self.generate_module_file(&resource_dir, &[])?;
         self.generate_module_file(&traits_dir, &[])?;
 

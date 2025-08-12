@@ -199,8 +199,16 @@ impl<'a> FieldGenerator<'a> {
             name
         };
 
+        // Handle field name conflicts with inherited base field
+        let conflict_resolved_name = if clean_name == "base" {
+            // Rename FHIR 'base' elements to avoid conflict with the inherited base field
+            "base_definition"
+        } else {
+            clean_name
+        };
+
         // Convert to snake_case and handle Rust keywords
-        let snake_case = clean_name
+        let snake_case = conflict_resolved_name
             .chars()
             .enumerate()
             .map(|(i, c)| {

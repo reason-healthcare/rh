@@ -57,6 +57,7 @@ impl<'a> FileIoManager<'a> {
         let target_dir = match self.classify_fhir_structure_def(structure_def) {
             FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
+            FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
         };
 
@@ -143,19 +144,66 @@ impl<'a> FileIoManager<'a> {
         // Special cases: if the remainder is exactly one of these complete words,
         // it suggests this is a separate entity, not a nested struct
         // For example: "ElementDefinition" should not be a nested struct of "Element"
-        let standalone_entities = [
-            "Definition", // ElementDefinition is separate from Element
-            "definition", // Elementdefinition is separate from Element (case-insensitive)
-        ];
+        // But "ImplementationGuideDefinition" IS a nested struct of "ImplementationGuide"
+        // So we need to be more specific about when to exclude "Definition"
 
-        if standalone_entities.contains(&remainder) {
-            return false;
+        // Only exclude "Definition" for known cases where it's a separate FHIR type
+        if remainder == "Definition" {
+            // Known cases where XyzDefinition is a separate FHIR type, not a nested struct of Xyz
+            let separate_definition_parents = [
+                "Element",    // ElementDefinition is separate from Element
+                "Activity",   // ActivityDefinition is separate from Activity
+                "Event",      // EventDefinition is separate from Event
+                "Plan",       // PlanDefinition is separate from Plan
+                "Message",    // MessageDefinition is separate from Message
+                "Operation",  // OperationDefinition is separate from Operation
+                "Search",     // SearchDefinition could be separate from Search
+                "Capability", // CapabilityDefinition could be separate from Capability
+            ];
+
+            if separate_definition_parents.contains(&parent_name) {
+                return false;
+            }
         }
 
-        // If remainder starts with one of these words, it's likely a separate entity
-        // For example: "ElementDefinitionBinding" or "ElementdefinitionBinding" starts with "Definition"/"definition" so it's not a child of "Element"
-        for entity in &standalone_entities {
-            if remainder.starts_with(entity) {
+        // Similarly, only exclude "definition" (lowercase) for the same known cases
+        if remainder == "definition" {
+            let separate_definition_parents = [
+                "Element",
+                "Activity",
+                "Event",
+                "Plan",
+                "Message",
+                "Operation",
+                "Search",
+                "Capability",
+            ];
+
+            if separate_definition_parents
+                .iter()
+                .any(|&p| parent_name.eq_ignore_ascii_case(p))
+            {
+                return false;
+            }
+        }
+
+        // Keep the check for remainders that START with Definition/definition for other cases
+        // but be more careful about it
+        if remainder.starts_with("Definition") || remainder.starts_with("definition") {
+            // Only exclude if this looks like a compound name where Definition is the main type
+            // e.g., "ElementDefinitionBinding" should not be child of "Element"
+            let separate_definition_parents = [
+                "Element",
+                "Activity",
+                "Event",
+                "Plan",
+                "Message",
+                "Operation",
+                "Search",
+                "Capability",
+            ];
+
+            if separate_definition_parents.contains(&parent_name) {
                 return false;
             }
         }
@@ -175,7 +223,26 @@ impl<'a> FileIoManager<'a> {
         for (cached_name, cached_struct) in type_cache {
             if cached_name != struct_name && Self::is_direct_nested_struct(struct_name, cached_name)
             {
+                // Debug output for ImplementationGuide
+                if struct_name == "ImplementationGuide" {
+                    println!(
+                        "DEBUG: Found nested struct '{}' for parent '{}'",
+                        cached_name, struct_name
+                    );
+                }
                 nested_structs.push(cached_struct.clone());
+            }
+        }
+
+        // Debug output for ImplementationGuide
+        if struct_name == "ImplementationGuide" {
+            println!(
+                "DEBUG: Total nested structs for '{}': {}",
+                struct_name,
+                nested_structs.len()
+            );
+            for ns in &nested_structs {
+                println!("DEBUG: - {}", ns.name);
             }
         }
 
@@ -208,6 +275,7 @@ impl<'a> FileIoManager<'a> {
         let target_dir = match file_generator.classify_fhir_structure_def(structure_def) {
             FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
+            FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
         };
 

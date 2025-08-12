@@ -412,6 +412,11 @@ impl RustTraitImpl {
         self.methods.push(method);
         self
     }
+
+    /// Returns true if this trait implementation has no methods
+    pub fn is_empty(&self) -> bool {
+        self.methods.is_empty()
+    }
 }
 
 /// Represents a method implementation in a trait impl block

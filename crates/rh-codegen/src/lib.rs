@@ -49,8 +49,8 @@ pub use generators::crate_generator::{
 };
 pub use generators::file_generator::{FhirTypeCategory, FileGenerator};
 pub use generators::token_generator::TokenGenerator;
-pub use quality::{format_generated_crate, QualityConfig};
 pub use generators::utils::GeneratorUtils;
+pub use quality::{format_generated_crate, QualityConfig};
 pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType};
 pub use type_mapper::TypeMapper;
 pub use value_sets::{ValueSetConcept, ValueSetManager};

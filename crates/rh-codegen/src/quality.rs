@@ -34,19 +34,19 @@ impl Default for QualityConfig {
 /// Run all configured quality checks on a generated crate
 pub fn run_quality_checks(crate_path: &Path, config: &QualityConfig) -> Result<()> {
     println!("🔍 Running quality checks on generated crate...");
-    
+
     if config.run_format {
         run_format_check(crate_path)?;
     }
-    
+
     if config.run_compile_check {
         run_compile_check(crate_path)?;
     }
-    
+
     if config.run_clippy {
         run_clippy_check(crate_path)?;
     }
-    
+
     println!("✅ All quality checks passed");
     Ok(())
 }
@@ -99,7 +99,7 @@ pub fn run_format_check(crate_path: &Path) -> Result<()> {
 /// Run cargo check on the generated crate as a compilation quality gate
 pub fn run_compile_check(crate_path: &Path) -> Result<()> {
     println!("🔧 Running cargo check on generated crate...");
-    
+
     let output = Command::new("cargo")
         .arg("check")
         .current_dir(crate_path)
@@ -109,7 +109,7 @@ pub fn run_compile_check(crate_path: &Path) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        
+
         eprintln!("❌ Cargo check failed for generated crate:");
         if !stdout.is_empty() {
             eprintln!("stdout: {stdout}");
@@ -117,7 +117,7 @@ pub fn run_compile_check(crate_path: &Path) -> Result<()> {
         if !stderr.is_empty() {
             eprintln!("stderr: {stderr}");
         }
-        
+
         return Err(anyhow::anyhow!(
             "Generated crate failed cargo check. See output above for details."
         ));
@@ -130,7 +130,7 @@ pub fn run_compile_check(crate_path: &Path) -> Result<()> {
 /// Run cargo clippy on the generated crate for additional linting
 pub fn run_clippy_check(crate_path: &Path) -> Result<()> {
     println!("📎 Running cargo clippy on generated crate...");
-    
+
     let output = Command::new("cargo")
         .arg("clippy")
         .arg("--all-targets")
@@ -145,7 +145,7 @@ pub fn run_clippy_check(crate_path: &Path) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        
+
         eprintln!("❌ Cargo clippy failed for generated crate:");
         if !stdout.is_empty() {
             eprintln!("stdout: {stdout}");
@@ -153,7 +153,7 @@ pub fn run_clippy_check(crate_path: &Path) -> Result<()> {
         if !stderr.is_empty() {
             eprintln!("stderr: {stderr}");
         }
-        
+
         return Err(anyhow::anyhow!(
             "Generated crate failed cargo clippy. See output above for details."
         ));
@@ -165,8 +165,7 @@ pub fn run_clippy_check(crate_path: &Path) -> Result<()> {
 
 /// Legacy wrapper for backward compatibility
 pub fn format_generated_crate<P: AsRef<Path>>(crate_path: P) -> Result<(), CodegenError> {
-    run_format_check(crate_path.as_ref())
-        .map_err(|e| CodegenError::Generation {
-            message: e.to_string(),
-        })
+    run_format_check(crate_path.as_ref()).map_err(|e| CodegenError::Generation {
+        message: e.to_string(),
+    })
 }

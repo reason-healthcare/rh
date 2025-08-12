@@ -52,12 +52,14 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     // Create subdirectories
     let resource_dir = src_dir.join("resource");
     let datatypes_dir = src_dir.join("datatypes");
+    let extensions_dir = src_dir.join("extensions");
     let primitives_dir = src_dir.join("primitives");
     let traits_dir = src_dir.join("traits");
     let bindings_dir = src_dir.join("bindings");
 
     fs::create_dir_all(&resource_dir)?;
     fs::create_dir_all(&datatypes_dir)?;
+    fs::create_dir_all(&extensions_dir)?;
     fs::create_dir_all(&primitives_dir)?;
     fs::create_dir_all(&traits_dir)?;
     fs::create_dir_all(&bindings_dir)?;
@@ -66,6 +68,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     let stats = generate_crate_statistics_from_organized_dirs(
         &resource_dir,
         &datatypes_dir,
+        &extensions_dir,
         &primitives_dir,
     )?;
 
@@ -88,6 +91,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     generate_module_files(
         &resource_dir,
         &datatypes_dir,
+        &extensions_dir,
         &primitives_dir,
         &traits_dir,
         &bindings_dir,
@@ -153,6 +157,7 @@ fn generate_lib_rs_idiomatic() -> Result<String> {
 pub mod macros;
 pub mod primitives;
 pub mod datatypes;
+pub mod extensions;
 pub mod resource;
 pub mod traits;
 pub mod bindings;
@@ -169,6 +174,7 @@ pub use serde::{Deserialize, Serialize};
 fn generate_module_files(
     resource_dir: &Path,
     datatypes_dir: &Path,
+    extensions_dir: &Path,
     primitives_dir: &Path,
     traits_dir: &Path,
     bindings_dir: &Path,
@@ -180,6 +186,11 @@ fn generate_module_files(
     // Generate datatypes/mod.rs
     let datatypes_mod_content = generate_mod_rs_for_directory(datatypes_dir, "FHIR data types")?;
     fs::write(datatypes_dir.join("mod.rs"), datatypes_mod_content)?;
+
+    // Generate extensions/mod.rs
+    let extensions_mod_content =
+        generate_mod_rs_for_directory(extensions_dir, "FHIR extension types")?;
+    fs::write(extensions_dir.join("mod.rs"), extensions_mod_content)?;
 
     // Generate primitives/mod.rs
     let primitives_mod_content =
@@ -277,13 +288,14 @@ pub trait DomainResource: Resource + HasExtensions {
 fn generate_crate_statistics_from_organized_dirs(
     resource_dir: &Path,
     datatypes_dir: &Path,
+    extensions_dir: &Path,
     primitives_dir: &Path,
 ) -> Result<CrateStatistics> {
     let mut num_structs = 0;
     let num_enums = 0; // Enums would be handled separately
 
     // Count files in each directory
-    for dir in [resource_dir, datatypes_dir, primitives_dir] {
+    for dir in [resource_dir, datatypes_dir, extensions_dir, primitives_dir] {
         if dir.exists() {
             for entry in fs::read_dir(dir)? {
                 let entry = entry?;

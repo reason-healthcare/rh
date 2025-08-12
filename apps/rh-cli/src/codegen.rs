@@ -5,11 +5,11 @@ use anyhow::Result;
 use clap::Args;
 use tracing::{info, warn};
 
+use rh_codegen::quality::run_quality_checks;
 use rh_codegen::{
     generate_crate_structure, parse_package_metadata, CodeGenerator, CodegenConfig,
     CrateGenerationParams, QualityConfig,
 };
-use rh_codegen::quality::run_quality_checks;
 use rh_loader::{LoaderConfig, PackageLoader};
 
 /// Check if a directory exists and is not empty
