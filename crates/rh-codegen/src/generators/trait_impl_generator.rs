@@ -3,6 +3,7 @@
 //! This module handles the generation of trait implementations for FHIR resources.
 
 use crate::fhir_types::StructureDefinition;
+use crate::generators::name_generator::NameGenerator;
 use crate::rust_types::{RustTraitImpl, RustTraitImplMethod};
 use crate::CodegenResult;
 
@@ -27,7 +28,7 @@ impl TraitImplGenerator {
             return Ok(trait_impls);
         }
 
-        let struct_name = structure_def.name.clone();
+        let struct_name = NameGenerator::generate_struct_name(structure_def);
 
         // Generate Resource trait implementation for all resources
         trait_impls.push(self.generate_resource_trait_impl(&struct_name));
@@ -55,7 +56,7 @@ impl TraitImplGenerator {
         // resource_type method
         let resource_type_method = RustTraitImplMethod::new("resource_type".to_string())
             .with_return_type("&'static str".to_string())
-            .with_body(format!("\"{}\"", struct_name));
+            .with_body(format!("\"{struct_name}\""));
         trait_impl.add_method(resource_type_method);
 
         // id method
@@ -276,7 +277,7 @@ impl TraitImplGenerator {
         let field_access = if field_name == "type" {
             "self.type_".to_string()
         } else {
-            format!("self.{}", field_name)
+            format!("self.{field_name}")
         };
 
         // Determine optionality and array nature using same logic as return type
@@ -288,7 +289,7 @@ impl TraitImplGenerator {
 
         if is_array {
             // Array field - just clone
-            format!("{}.clone()", field_access)
+            format!("{field_access}.clone()")
         } else if let Some(type_def) = element
             .element_type
             .as_ref()
@@ -300,30 +301,30 @@ impl TraitImplGenerator {
                     | "dateTime" | "date" | "time" | "instant" | "base64Binary" | "oid"
                     | "uuid" => {
                         if is_optional {
-                            format!("{}.as_ref().map(|s| s.to_string())", field_access)
+                            format!("{field_access}.as_ref().map(|s| s.to_string())")
                         } else {
-                            format!("{}.to_string()", field_access)
+                            format!("{field_access}.to_string()")
                         }
                     }
                     "boolean" => {
                         if is_optional {
-                            format!("{}.map(|b| b.into())", field_access)
+                            format!("{field_access}.map(|b| b.into())")
                         } else {
-                            format!("{}.into()", field_access)
+                            format!("{field_access}.into()")
                         }
                     }
                     "integer" | "positiveInt" | "unsignedInt" => {
                         if is_optional {
-                            format!("{}.map(|i| i.into())", field_access)
+                            format!("{field_access}.map(|i| i.into())")
                         } else {
-                            format!("{}.into()", field_access)
+                            format!("{field_access}.into()")
                         }
                     }
                     "decimal" => {
                         if is_optional {
-                            format!("{}.map(|d| d.into())", field_access)
+                            format!("{field_access}.map(|d| d.into())")
                         } else {
-                            format!("{}.into()", field_access)
+                            format!("{field_access}.into()")
                         }
                     }
                     "CodeableConcept" | "Reference" | "Identifier" | "Coding" | "Address"
@@ -335,21 +336,17 @@ impl TraitImplGenerator {
                     _ => {
                         // For enums and other types
                         if is_optional {
-                            format!("{}.as_ref().map(|v| format!(\"{{:?}}\", v))", field_access)
+                            format!("{field_access}.as_ref().map(|v| format!(\"{{:?}}\", v))")
                         } else {
-                            format!("format!(\"{{:?}}\", {})", field_access)
+                            format!("format!(\"{{:?}}\", {field_access})")
                         }
                     }
                 }
-            } else if is_optional {
-                format!("{}.clone()", field_access)
             } else {
-                format!("{}.clone()", field_access)
+                format!("{field_access}.clone()")
             }
-        } else if is_optional {
-            format!("{}.clone()", field_access)
         } else {
-            format!("{}.clone()", field_access)
+            format!("{field_access}.clone()")
         }
     }
 }

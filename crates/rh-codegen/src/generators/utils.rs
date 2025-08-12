@@ -483,7 +483,7 @@ impl GeneratorUtils {
                 "XhtmlType" => "xhtml",
                 _ => "unknown_primitive",
             };
-            return format!("crate::primitives::{}::{}", module_name, type_name);
+            return format!("crate::primitives::{module_name}::{type_name}");
         }
 
         // Check if it's a generated trait

@@ -384,10 +384,10 @@ impl<'a> FileGenerator<'a> {
 
         // Add import statements
         for import_path in imports {
-            let import_stmt = format!("use {};", import_path);
+            let import_stmt = format!("use {import_path};");
             let import_tokens: proc_macro2::TokenStream =
                 import_stmt.parse().map_err(|e| CodegenError::Generation {
-                    message: format!("Failed to parse import statement '{}': {}", import_stmt, e),
+                    message: format!("Failed to parse import statement '{import_stmt}': {e}"),
                 })?;
             all_tokens.extend(import_tokens);
         }
@@ -526,10 +526,10 @@ impl<'a> FileGenerator<'a> {
 
         // Add import statements
         for import_path in imports {
-            let import_stmt = format!("use {};", import_path);
+            let import_stmt = format!("use {import_path};");
             let import_tokens: proc_macro2::TokenStream =
                 import_stmt.parse().map_err(|e| CodegenError::Generation {
-                    message: format!("Failed to parse import statement '{}': {}", import_stmt, e),
+                    message: format!("Failed to parse import statement '{import_stmt}': {e}"),
                 })?;
             all_tokens.extend(import_tokens);
         }
