@@ -106,8 +106,23 @@ impl TokenGenerator {
         if let Some(base_def) = &rust_struct.base_definition {
             // Extract the base type name from the URL (e.g., "http://hl7.org/fhir/StructureDefinition/Element" -> "Element")
             let base_type = base_def.split('/').next_back().unwrap_or(base_def);
+            // Convert base type to a valid Rust identifier to handle cases with hyphens
+            let base_type = crate::naming::Naming::to_rust_identifier(base_type);
+
+            // For base definitions, ensure proper struct name casing but only for
+            // names that are clearly in all lowercase (like "vitalsigns")
+            let proper_base_type = if base_type
+                .chars()
+                .all(|c| c.is_lowercase() || c.is_numeric())
+            {
+                // Convert all-lowercase names to PascalCase (e.g., "vitalsigns" -> "Vitalsigns")
+                crate::naming::Naming::capitalize_first(&base_type)
+            } else {
+                // Keep names that already have proper casing (e.g., "BackboneElement")
+                base_type
+            };
             let base_field_name = format_ident!("base");
-            let base_type_ident = format_ident!("{}", base_type);
+            let base_type_ident = format_ident!("{}", proper_base_type);
 
             fields.push(quote! {
                 #[doc = " Base definition inherited from FHIR specification"]

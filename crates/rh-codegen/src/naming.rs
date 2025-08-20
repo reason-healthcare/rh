@@ -22,10 +22,21 @@
 //!
 //! // Create a sample structure definition
 //! let structure_def = StructureDefinition {
+//!     resource_type: "StructureDefinition".to_string(),
 //!     name: "Patient".to_string(),
 //!     id: "Patient".to_string(),
+//!     url: "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+//!     version: None,
+//!     title: None,
+//!     status: "active".to_string(),
+//!     description: None,
+//!     purpose: None,
 //!     kind: "resource".to_string(),
-//!     ..Default::default()
+//!     is_abstract: false,
+//!     base_type: "DomainResource".to_string(),
+//!     base_definition: Some("http://hl7.org/fhir/StructureDefinition/DomainResource".to_string()),
+//!     differential: None,
+//!     snapshot: None,
 //! };
 //!
 //! // Generate struct name

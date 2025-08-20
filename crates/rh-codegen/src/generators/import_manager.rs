@@ -24,8 +24,19 @@ impl ImportManager {
                 && base_type != rust_struct.name
                 && !structs_in_file.contains(base_type)
             {
-                // Determine the correct module path for the type
-                let import_path = Self::get_import_path_for_type(base_type);
+                // For base definitions, ensure proper struct name casing but only for
+                // names that are clearly in all lowercase (like "vitalsigns")
+                let proper_base_type = if base_type
+                    .chars()
+                    .all(|c| c.is_lowercase() || c.is_numeric())
+                {
+                    // Convert all-lowercase names to PascalCase (e.g., "vitalsigns" -> "Vitalsigns")
+                    crate::naming::Naming::capitalize_first(base_type)
+                } else {
+                    // Keep names that already have proper casing (e.g., "BackboneElement")
+                    base_type.to_string()
+                };
+                let import_path = Self::get_import_path_for_type(&proper_base_type);
                 imports.insert(import_path);
             }
         }

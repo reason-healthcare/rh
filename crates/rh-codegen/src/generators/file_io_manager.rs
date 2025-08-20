@@ -226,8 +226,7 @@ impl<'a> FileIoManager<'a> {
                 // Debug output for ImplementationGuide
                 if struct_name == "ImplementationGuide" {
                     println!(
-                        "DEBUG: Found nested struct '{}' for parent '{}'",
-                        cached_name, struct_name
+                        "DEBUG: Found nested struct '{cached_name}' for parent '{struct_name}'"
                     );
                 }
                 nested_structs.push(cached_struct.clone());

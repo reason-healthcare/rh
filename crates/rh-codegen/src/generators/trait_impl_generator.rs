@@ -23,7 +23,7 @@ impl TraitImplGenerator {
         // FHIR baseDefinition URLs follow the pattern:
         // http://hl7.org/fhir/StructureDefinition/{ResourceType}
         if base_definition.starts_with("http://hl7.org/fhir/StructureDefinition/") {
-            if let Some(last_segment) = base_definition.split('/').last() {
+            if let Some(last_segment) = base_definition.split('/').next_back() {
                 return Some(last_segment.to_string());
             }
         }
@@ -150,7 +150,7 @@ impl TraitImplGenerator {
         // resource_type method
         let resource_type_method = RustTraitImplMethod::new("resource_type".to_string())
             .with_return_type("&'static str".to_string())
-            .with_body(format!("\"{}\"", resource_type));
+            .with_body(format!("\"{resource_type}\""));
         trait_impl.add_method(resource_type_method);
 
         // id method
@@ -485,7 +485,7 @@ mod tests {
         StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
             id: name.to_lowercase(),
-            url: format!("http://test.com/{}", name),
+            url: format!("http://test.com/{name}"),
             version: Some("1.0.0".to_string()),
             name: name.to_string(),
             title: Some(name.to_string()),
