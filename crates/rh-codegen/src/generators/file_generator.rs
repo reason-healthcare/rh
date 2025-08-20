@@ -200,11 +200,44 @@ impl<'a> FileGenerator<'a> {
         // Ensure the target directory exists
         std::fs::create_dir_all(&target_dir).map_err(CodegenError::Io)?;
 
-        // Generate the file in the appropriate directory
+        // Separate nested structs that are extensions from those that should remain
+        // embedded in the parent file. Extension-like nested structs should be
+        // emitted into the shared `extensions` module instead of duplicated in
+        // resource files.
+        let mut embedded_nested: Vec<RustStruct> = Vec::new();
+        let mut external_extensions: Vec<RustStruct> = Vec::new();
+
+        for nested in nested_structs {
+            if Self::has_extension_base(nested) {
+                external_extensions.push(nested.clone());
+            } else {
+                embedded_nested.push(nested.clone());
+            }
+        }
+
+        // Generate the main file in the appropriate directory (including only
+        // the nested structs that belong with the parent)
         let filename = crate::naming::Naming::filename(structure_def);
         let output_path = target_dir.join(filename);
 
-        self.generate_to_file(structure_def, output_path, rust_struct, nested_structs)
+        let result =
+            self.generate_to_file(structure_def, output_path, rust_struct, &embedded_nested);
+
+        // If there are nested extension structs discovered, write each to the
+        // extensions directory as standalone files to avoid duplicate definitions
+        // across resource files.
+        if !external_extensions.is_empty() {
+            let extensions_dir = base_dir.join("src").join("extensions");
+            std::fs::create_dir_all(&extensions_dir).map_err(CodegenError::Io)?;
+
+            for ext in external_extensions {
+                // Write each extension struct to its own file. If a file already
+                // exists, it will be overwritten (consistent with existing behavior).
+                self.write_struct_only_file(&ext, &extensions_dir)?;
+            }
+        }
+
+        result
     }
 
     /// Generate a trait and write it to the traits directory
@@ -373,7 +406,8 @@ impl<'a> FileGenerator<'a> {
         // Add Resource trait impl if this is the Resource struct (legacy)
         if structure_def.name == "Resource" {
             formatted_code.push_str("\n\n");
-            formatted_code.push_str(&self.generate_resource_impl());
+            let trait_impl = crate::generators::TraitGenerator::new().generate_resource_impl();
+            formatted_code.push_str(&trait_impl);
         }
 
         // Check for file collision and warn if overwriting
@@ -581,42 +615,65 @@ impl<'a> FileGenerator<'a> {
         Ok(())
     }
 
-    /// Generate a Resource trait implementation for the Resource struct
-    fn generate_resource_impl(&self) -> String {
-        r#"impl Resource for Resource {
-    fn resource_type(&self) -> &'static str {
-        "Resource"
-    }
+    /// Write a single struct as its own file into the given directory.
+    /// This is used to emit extension nested structs into the `extensions` module
+    /// to avoid duplicating their definitions inside resource files.
+    fn write_struct_only_file<P: AsRef<Path>>(
+        &self,
+        rust_struct: &RustStruct,
+        dir: P,
+    ) -> CodegenResult<()> {
+        let dir = dir.as_ref();
 
-    fn id(&self) -> Option<&str> {
-        self.id.as_deref()
-    }
+        // Prepare imports for this struct
+        let mut imports = HashSet::new();
+        if self.config.with_serde {
+            imports.insert("serde::{Deserialize, Serialize}".to_string());
+        }
 
-    fn has_id(&self) -> bool {
-        self.id.is_some()
-    }
+        // Collect custom types referenced by this struct
+        let mut structs_in_file = HashSet::new();
+        structs_in_file.insert(rust_struct.name.clone());
+        ImportManager::collect_custom_types_from_struct(
+            rust_struct,
+            &mut imports,
+            &structs_in_file,
+        );
 
-    fn meta(&self) -> Option<&crate::datatypes::Meta> {
-        self.meta.as_ref()
-    }
+        // Generate tokens
+        let mut all_tokens = proc_macro2::TokenStream::new();
 
-    fn has_meta(&self) -> bool {
-        self.meta.is_some()
-    }
+        // Add imports
+        for import in &imports {
+            let import_token: proc_macro2::TokenStream =
+                format!("use {import};").parse().expect("Invalid import");
+            all_tokens.extend(import_token);
+        }
 
-    fn extensions(&self) -> &[crate::datatypes::Extension] {
-        &self.extension.as_deref().unwrap_or(&[])
-    }
+        // Add the struct tokens
+        all_tokens.extend(self.token_generator.generate_struct(rust_struct));
 
-    fn implicit_rules(&self) -> Option<&str> {
-        self.implicit_rules.as_deref()
-    }
+        // Parse and format
+        let syntax_tree = syn::parse2(all_tokens).map_err(|e| CodegenError::Generation {
+            message: format!(
+                "Failed to parse generated tokens for {}: {e}",
+                rust_struct.name
+            ),
+        })?;
 
-    fn language(&self) -> Option<&str> {
-        self.language.as_deref()
-    }
-}"#
-        .to_string()
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Determine filename
+        let filename = format!(
+            "{}.rs",
+            crate::naming::Naming::to_snake_case(&rust_struct.name)
+        );
+        let output_path = dir.join(filename);
+
+        // Write file
+        std::fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
+
+        Ok(())
     }
 
     /// Generate trait implementations for a FHIR resource
