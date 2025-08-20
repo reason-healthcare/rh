@@ -133,6 +133,14 @@ impl ImportManager {
                     structs_in_file,
                 );
             }
+            RustType::Box(inner) => {
+                Self::collect_custom_types_from_type(
+                    inner,
+                    imports,
+                    current_struct_name,
+                    structs_in_file,
+                );
+            }
             RustType::Reference(type_name) => {
                 if !Self::is_primitive_type(type_name)
                     && type_name != current_struct_name

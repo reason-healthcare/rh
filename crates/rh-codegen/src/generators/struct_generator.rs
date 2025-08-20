@@ -160,7 +160,10 @@ impl<'a> StructGenerator<'a> {
         // Second pass: Process direct fields (now nested structs are available)
         for element in direct_fields {
             let fields = self.create_fields_from_element(&element)?;
-            for field in fields {
+            for mut field in fields {
+                // Apply Box wrapper for circular dependencies
+                field.field_type =
+                    Self::apply_box_for_circular_dependencies(field.field_type, &rust_struct.name);
                 rust_struct.add_field(field);
             }
         }
@@ -379,6 +382,52 @@ impl<'a> StructGenerator<'a> {
         let mut field_generator =
             FieldGenerator::new(self.config, self.type_cache, self.value_set_manager);
         field_generator.create_fields_from_element(element)
+    }
+
+    /// Apply Box wrapper to field types to prevent circular dependencies
+    fn apply_box_for_circular_dependencies(
+        field_type: RustType,
+        current_struct_name: &str,
+    ) -> RustType {
+        // Known circular dependency pairs that need Box wrapping
+        let circular_dependencies = [("Identifier", "Reference"), ("Reference", "Identifier")];
+
+        // Check if we need to wrap this type in Box
+        match &field_type {
+            RustType::Custom(type_name) => {
+                for (struct_a, struct_b) in &circular_dependencies {
+                    if (current_struct_name == *struct_a && type_name == *struct_b)
+                        || (current_struct_name == *struct_b && type_name == *struct_a)
+                    {
+                        return RustType::Box(Box::new(field_type));
+                    }
+                }
+                field_type
+            }
+            RustType::Option(inner) => {
+                let boxed_inner = Self::apply_box_for_circular_dependencies(
+                    (**inner).clone(),
+                    current_struct_name,
+                );
+                if let RustType::Box(_) = boxed_inner {
+                    RustType::Option(Box::new(boxed_inner))
+                } else {
+                    field_type
+                }
+            }
+            RustType::Vec(inner) => {
+                let boxed_inner = Self::apply_box_for_circular_dependencies(
+                    (**inner).clone(),
+                    current_struct_name,
+                );
+                if let RustType::Box(_) = boxed_inner {
+                    RustType::Vec(Box::new(boxed_inner))
+                } else {
+                    field_type
+                }
+            }
+            _ => field_type,
+        }
     }
 }
 

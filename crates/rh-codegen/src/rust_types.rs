@@ -121,6 +121,7 @@ pub enum RustType {
     Float,
     Option(Box<RustType>),
     Vec(Box<RustType>),
+    Box(Box<RustType>),
     Custom(String),
     Reference(String),
 }
@@ -135,6 +136,7 @@ impl RustType {
             RustType::Float => "f64".to_string(),
             RustType::Option(inner) => format!("Option<{}>", inner.to_string()),
             RustType::Vec(inner) => format!("Vec<{}>", inner.to_string()),
+            RustType::Box(inner) => format!("Box<{}>", inner.to_string()),
             RustType::Custom(name) => name.clone(),
             RustType::Reference(name) => format!("&{name}"),
         }
