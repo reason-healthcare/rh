@@ -153,7 +153,7 @@ impl ImportManager {
         // Check if it's a known FHIR resource type
         if Self::is_fhir_resource_type(type_name) {
             return format!(
-                "crate::resource::{}::{}",
+                "crate::resources::{}::{}",
                 Self::to_snake_case(type_name),
                 type_name
             );
@@ -569,7 +569,7 @@ mod tests {
         // Test import path generation
         assert_eq!(
             ImportManager::get_import_path_for_type("DomainResource"),
-            "crate::resource::domain_resource::DomainResource"
+            "crate::resources::domain_resource::DomainResource"
         );
         assert_eq!(
             ImportManager::get_import_path_for_type("Identifier"),

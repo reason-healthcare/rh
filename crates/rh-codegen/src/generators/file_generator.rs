@@ -73,7 +73,7 @@ impl<'a> FileGenerator<'a> {
             pub mod primitives;
             pub mod datatypes;
             pub mod extensions;
-            pub mod resource;
+            pub mod resources;
             pub mod traits;
             pub mod bindings;
 
@@ -839,7 +839,7 @@ mod tests {
         assert!(content.contains("pub mod macros;"));
         assert!(content.contains("pub mod primitives;"));
         assert!(content.contains("pub mod datatypes;"));
-        assert!(content.contains("pub mod resource;"));
+        assert!(content.contains("pub mod resources;"));
         assert!(content.contains("pub mod traits;"));
         assert!(content.contains("pub mod bindings;"));
 

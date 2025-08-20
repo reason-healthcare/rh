@@ -91,7 +91,7 @@ Contains FHIR ValueSet enums and code bindings such as:
 - **EncounterStatus** - Current state of the encounter
 - All other FHIR ValueSet enumerations and code system bindings
 
-### `src/resource/`
+### `src/resources/`
 Contains FHIR resource types such as:
 - **Patient** - Demographics and administrative information
 - **Observation** - Measurements and assertions  
@@ -168,7 +168,7 @@ pub use primitives::*;
 pub use traits::*;
 ```
 
-### Example `src/resource/mod.rs`
+### Example `src/resources/mod.rs`
 
 ```rust
 //! FHIR resource types
@@ -260,7 +260,7 @@ src/
 ### Generated Patient Resource
 
 ```rust
-// src/resource/patient.rs
+// src/resources/patient.rs
 use crate::datatypes::{Extension, HumanName, Identifier};
 use crate::primitives::boolean;
 use crate::bindings::AdministrativeGender;

@@ -55,7 +55,7 @@ impl<'a> FileIoManager<'a> {
 
         // Determine the appropriate subdirectory based on FHIR type
         let target_dir = match self.classify_fhir_structure_def(structure_def) {
-            FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
+            FhirTypeCategory::Resource => base_dir.join("src").join("resources"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
             FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
@@ -272,7 +272,7 @@ impl<'a> FileIoManager<'a> {
 
         // Determine the appropriate subdirectory based on FHIR type
         let target_dir = match file_generator.classify_fhir_structure_def(structure_def) {
-            FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
+            FhirTypeCategory::Resource => base_dir.join("src").join("resources"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
             FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
@@ -449,7 +449,7 @@ mod tests {
         let expected_path = temp_dir
             .path()
             .join("src")
-            .join("resource")
+            .join("resources")
             .join("patient.rs");
         assert_eq!(output_path, expected_path);
     }

@@ -935,7 +935,7 @@ mod tests {
         // Test import path generation
         assert_eq!(
             ImportManager::get_import_path_for_type("DomainResource"),
-            "crate::resource::domain_resource::DomainResource"
+            "crate::resources::domain_resource::DomainResource"
         );
         assert_eq!(
             ImportManager::get_import_path_for_type("Identifier"),

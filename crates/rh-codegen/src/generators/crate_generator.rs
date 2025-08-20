@@ -50,7 +50,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     fs::create_dir_all(&src_dir)?;
 
     // Create subdirectories
-    let resource_dir = src_dir.join("resource");
+    let resource_dir = src_dir.join("resources");
     let datatypes_dir = src_dir.join("datatypes");
     let extensions_dir = src_dir.join("extensions");
     let primitives_dir = src_dir.join("primitives");
@@ -158,7 +158,7 @@ pub mod macros;
 pub mod primitives;
 pub mod datatypes;
 pub mod extensions;
-pub mod resource;
+pub mod resources;
 pub mod traits;
 pub mod bindings;
 
@@ -419,7 +419,7 @@ fn generate_readme_md(
         "This crate uses an idiomatic Rust module structure organized by FHIR type category:\n\n",
     );
     content.push_str(
-        "- **`src/resource/`** - FHIR resource types (Patient, Observation, Bundle, etc.)\n",
+        "- **`src/resources/`** - FHIR resource types (Patient, Observation, Bundle, etc.)\n",
     );
     content.push_str(
         "- **`src/datatypes/`** - FHIR data types (Narrative, Extension, Coding, etc.)\n",

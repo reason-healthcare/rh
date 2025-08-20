@@ -44,7 +44,7 @@ mod tests {
         assert!(content.contains("pub mod macros;"));
         assert!(content.contains("pub mod primitives;"));
         assert!(content.contains("pub mod datatypes;"));
-        assert!(content.contains("pub mod resource;"));
+        assert!(content.contains("pub mod resources;"));
         assert!(content.contains("pub mod traits;"));
         
         // Check re-exports
@@ -76,8 +76,8 @@ mod tests {
         assert!(crate_path.join("src/primitives/mod.rs").exists());
         assert!(crate_path.join("src/datatypes").is_dir());
         assert!(crate_path.join("src/datatypes/mod.rs").exists());
-        assert!(crate_path.join("src/resource").is_dir());
-        assert!(crate_path.join("src/resource/mod.rs").exists());
+        assert!(crate_path.join("src/resources").is_dir());
+        assert!(crate_path.join("src/resources/mod.rs").exists());
         assert!(crate_path.join("src/traits").is_dir());
         assert!(crate_path.join("src/traits/mod.rs").exists());
         
