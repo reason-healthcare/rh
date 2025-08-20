@@ -4,7 +4,6 @@
 
 use std::collections::HashMap;
 
-use crate::generators::utils::GeneratorUtils;
 use crate::rust_types::RustEnum;
 use crate::value_sets::ValueSetManager;
 use crate::CodegenResult;
@@ -60,13 +59,13 @@ impl<'a> EnumGenerator<'a> {
 
     /// Convert an enum name to a filename using snake_case
     pub fn enum_name_to_filename(enum_name: &str) -> String {
-        let snake_case_name = GeneratorUtils::to_snake_case(enum_name);
+        let snake_case_name = crate::naming::Naming::to_snake_case(enum_name);
         format!("{snake_case_name}.rs")
     }
 
     /// Convert an enum name to a module name using snake_case (matching filename)
     pub fn enum_name_to_module_name(enum_name: &str) -> String {
-        GeneratorUtils::to_snake_case(enum_name)
+        crate::naming::Naming::to_snake_case(enum_name)
     }
 
     /// Get all cached enums from the value set manager

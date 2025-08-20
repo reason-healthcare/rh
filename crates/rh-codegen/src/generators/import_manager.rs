@@ -53,7 +53,7 @@ impl ImportManager {
                 let import_path = if Self::is_fhir_resource_type(super_trait) {
                     format!(
                         "crate::traits::{}::{}",
-                        crate::generators::utils::GeneratorUtils::to_snake_case(super_trait),
+                        crate::naming::Naming::to_snake_case(super_trait),
                         super_trait
                     )
                 } else {

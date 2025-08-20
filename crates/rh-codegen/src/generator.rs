@@ -14,8 +14,8 @@ use crate::generators::token_generator::TokenGenerator;
 #[cfg(test)]
 use crate::generators::ImportManager;
 use crate::generators::{
-    EnumGenerator, FieldGenerator, FileGenerator, FileIoManager, NameGenerator,
-    NestedStructGenerator, PrimitiveGenerator, StructGenerator, TraitGenerator, TypeUtilities,
+    EnumGenerator, FieldGenerator, FileGenerator, FileIoManager, NestedStructGenerator,
+    PrimitiveGenerator, StructGenerator, TraitGenerator, TypeUtilities,
 };
 use crate::rust_types::{RustEnum, RustStruct, RustTrait};
 use crate::value_sets::ValueSetManager;
@@ -166,7 +166,7 @@ impl CodeGenerator {
 
     /// Convert a FHIR field name to a valid Rust field name
     fn to_rust_field_name(&self, name: &str) -> String {
-        FieldGenerator::to_rust_field_name(name)
+        crate::naming::Naming::field_name(name)
     }
 
     /// Generate a Rust struct and write it to the appropriate directory based on FHIR type classification
@@ -306,7 +306,7 @@ impl CodeGenerator {
 
     /// Convert a FHIR resource type name to filename using snake_case
     pub fn to_filename(&self, structure_def: &StructureDefinition) -> String {
-        NameGenerator::to_filename(structure_def)
+        crate::naming::Naming::filename(structure_def)
     }
 
     /// Generate a comprehensive Resource trait with common FHIR resource methods
@@ -341,58 +341,58 @@ mod tests {
     fn test_to_valid_rust_identifier_conversion() {
         // Test FHIR resource names that should preserve original case
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("StructureDefinition"),
+            crate::naming::Naming::to_rust_identifier("StructureDefinition"),
             "StructureDefinition"
         );
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("Patient"),
+            crate::naming::Naming::to_rust_identifier("Patient"),
             "Patient"
         );
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("Observation"),
+            crate::naming::Naming::to_rust_identifier("Observation"),
             "Observation"
         );
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("CodeSystem"),
+            crate::naming::Naming::to_rust_identifier("CodeSystem"),
             "CodeSystem"
         );
 
         // Test names that need conversion due to special characters
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("patient"),
+            crate::naming::Naming::to_rust_identifier("patient"),
             "patient"
         );
 
         // Test names with spaces
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("Relative Date Criteria"),
+            crate::naming::Naming::to_rust_identifier("Relative Date Criteria"),
             "RelativeDateCriteria"
         );
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("Care Plan"),
+            crate::naming::Naming::to_rust_identifier("Care Plan"),
             "CarePlan"
         );
 
         // Test names with dashes and underscores
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("patient-name"),
+            crate::naming::Naming::to_rust_identifier("patient-name"),
             "PatientName"
         );
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("patient_name"),
+            crate::naming::Naming::to_rust_identifier("patient_name"),
             "patient_name"
         );
 
         // Test mixed separators
         assert_eq!(
-            NameGenerator::to_valid_rust_identifier("some-complex_name with.spaces"),
+            crate::naming::Naming::to_rust_identifier("some-complex_name with.spaces"),
             "SomeComplexNameWithSpaces"
         );
 
         // Test empty and edge cases
-        assert_eq!(NameGenerator::to_valid_rust_identifier(""), "_");
-        assert_eq!(NameGenerator::to_valid_rust_identifier("   "), "_");
-        assert_eq!(NameGenerator::to_valid_rust_identifier("a"), "a");
+        assert_eq!(crate::naming::Naming::to_rust_identifier(""), "_");
+        assert_eq!(crate::naming::Naming::to_rust_identifier("   "), "_");
+        assert_eq!(crate::naming::Naming::to_rust_identifier("a"), "a");
     }
 
     #[test]
@@ -551,13 +551,13 @@ mod tests {
         };
 
         // Test that primitive types are not capitalized
-        let struct_name = NameGenerator::generate_struct_name(&primitive_structure);
+        let struct_name = crate::naming::Naming::struct_name(&primitive_structure);
         assert_eq!(
             struct_name, "string",
             "Primitive type 'string' should not be capitalized"
         );
 
-        let filename = NameGenerator::to_filename(&primitive_structure);
+        let filename = crate::naming::Naming::filename(&primitive_structure);
         assert_eq!(
             filename, "string.rs",
             "Primitive type filename should not be capitalized"
@@ -582,7 +582,7 @@ mod tests {
             snapshot: None,
         };
 
-        let struct_name = NameGenerator::generate_struct_name(&boolean_structure);
+        let struct_name = crate::naming::Naming::struct_name(&boolean_structure);
         assert_eq!(
             struct_name, "boolean",
             "Primitive type 'boolean' should not be capitalized"
@@ -607,7 +607,7 @@ mod tests {
             snapshot: None,
         };
 
-        let struct_name = NameGenerator::generate_struct_name(&complex_structure);
+        let struct_name = crate::naming::Naming::struct_name(&complex_structure);
         assert_eq!(
             struct_name, "Period",
             "Complex type 'Period' should be capitalized"
@@ -870,17 +870,17 @@ mod tests {
         };
 
         // Test that struct names remain PascalCase
-        let patient_struct_name = NameGenerator::generate_struct_name(&patient_structure);
+        let patient_struct_name = crate::naming::Naming::struct_name(&patient_structure);
         assert_eq!(patient_struct_name, "Patient");
 
-        let observation_struct_name = NameGenerator::generate_struct_name(&observation_structure);
+        let observation_struct_name = crate::naming::Naming::struct_name(&observation_structure);
         assert_eq!(observation_struct_name, "Observation");
 
         // Test that filenames are snake_case
-        let patient_filename = NameGenerator::to_filename(&patient_structure);
+        let patient_filename = crate::naming::Naming::filename(&patient_structure);
         assert_eq!(patient_filename, "patient.rs");
 
-        let observation_filename = NameGenerator::to_filename(&observation_structure);
+        let observation_filename = crate::naming::Naming::filename(&observation_structure);
         assert_eq!(observation_filename, "observation.rs");
 
         // Test more complex PascalCase names
@@ -904,17 +904,17 @@ mod tests {
             snapshot: None,
         };
 
-        let struct_def_struct_name = NameGenerator::generate_struct_name(&structure_definition);
+        let struct_def_struct_name = crate::naming::Naming::struct_name(&structure_definition);
         assert_eq!(struct_def_struct_name, "StructureDefinition");
 
-        let struct_def_filename = NameGenerator::to_filename(&structure_definition);
+        let struct_def_filename = crate::naming::Naming::filename(&structure_definition);
         assert_eq!(struct_def_filename, "structure_definition.rs");
 
         // Test enum filename generation
-        let enum_filename = NameGenerator::enum_name_to_filename("AdministrativeGender");
+        let enum_filename = crate::naming::Naming::enum_filename("AdministrativeGender");
         assert_eq!(enum_filename, "administrative_gender.rs");
 
-        let enum_module_name = NameGenerator::enum_name_to_module_name("AdministrativeGender");
+        let enum_module_name = crate::naming::Naming::module_name("AdministrativeGender");
         assert_eq!(enum_module_name, "administrative_gender");
     }
 

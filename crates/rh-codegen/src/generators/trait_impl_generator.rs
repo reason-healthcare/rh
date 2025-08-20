@@ -4,7 +4,7 @@
 
 use super::utils::GeneratorUtils;
 use crate::fhir_types::StructureDefinition;
-use crate::generators::name_generator::NameGenerator;
+use crate::naming::Naming;
 use crate::rust_types::{RustTraitImpl, RustTraitImplMethod};
 use crate::CodegenResult;
 
@@ -109,7 +109,7 @@ impl TraitImplGenerator {
             return Ok(trait_impls);
         }
 
-        let struct_name = NameGenerator::generate_struct_name(structure_def);
+        let struct_name = Naming::struct_name(structure_def);
 
         // Generate Resource trait implementation for all resources
         trait_impls.push(self.generate_resource_trait_impl(&struct_name, structure_def));
@@ -210,7 +210,7 @@ impl TraitImplGenerator {
     ) -> RustTraitImpl {
         let trait_name = format!(
             "crate::traits::{}::{}",
-            crate::generators::utils::GeneratorUtils::to_snake_case(struct_name),
+            crate::naming::Naming::to_snake_case(struct_name),
             struct_name
         );
 
@@ -300,7 +300,7 @@ impl TraitImplGenerator {
             "type_".to_string()
         } else {
             // Convert field name to proper Rust method name (e.g., bodySite -> body_site)
-            crate::generators::utils::GeneratorUtils::to_rust_field_name(field_name)
+            crate::naming::Naming::field_name(field_name)
         };
 
         let return_type = self.determine_method_return_type(element);
@@ -392,7 +392,7 @@ impl TraitImplGenerator {
         let rust_field_name = if field_name == "type" {
             "type_".to_string()
         } else {
-            crate::generators::utils::GeneratorUtils::to_rust_field_name(field_name)
+            crate::naming::Naming::field_name(field_name)
         };
 
         let field_access = format!("self.{rust_field_name}");
@@ -675,7 +675,7 @@ mod tests {
         // Check that there's no empty specific trait implementation
         let specific_trait_name = format!(
             "crate::traits::{}::{}",
-            crate::generators::utils::GeneratorUtils::to_snake_case("EmptyProfile"),
+            crate::naming::Naming::to_snake_case("EmptyProfile"),
             "EmptyProfile"
         );
 

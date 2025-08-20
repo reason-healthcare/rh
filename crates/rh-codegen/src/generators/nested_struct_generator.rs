@@ -7,7 +7,8 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::{ElementDefinition, StructureDefinition};
-use crate::generators::{DocumentationGenerator, FieldGenerator, NameGenerator};
+use crate::generators::{DocumentationGenerator, FieldGenerator};
+use crate::naming::Naming;
 use crate::rust_types::RustStruct;
 use crate::CodegenResult;
 
@@ -44,7 +45,7 @@ impl<'a> NestedStructGenerator<'a> {
         let nested_struct_name = format!(
             "{}{}",
             parent_struct_name,
-            NameGenerator::to_pascal_case(nested_field_name)
+            Naming::to_pascal_case(nested_field_name)
         );
 
         // Check if we've already generated this nested struct
@@ -135,7 +136,7 @@ impl<'a> NestedStructGenerator<'a> {
         let sub_nested_struct_name = format!(
             "{}{}",
             nested_struct_name,
-            NameGenerator::to_pascal_case(sub_nested_field_name)
+            Naming::to_pascal_case(sub_nested_field_name)
         );
 
         if !self.type_cache.contains_key(&sub_nested_struct_name) {

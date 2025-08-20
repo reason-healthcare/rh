@@ -9,7 +9,7 @@ use std::path::Path;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{FileGenerator, NameGenerator, TokenGenerator};
+use crate::generators::{FileGenerator, TokenGenerator};
 use crate::rust_types::{RustStruct, RustTrait};
 use crate::{CodegenError, CodegenResult};
 
@@ -65,7 +65,7 @@ impl<'a> FileIoManager<'a> {
         std::fs::create_dir_all(&target_dir).map_err(CodegenError::Io)?;
 
         // Generate the file in the appropriate directory
-        let filename = NameGenerator::to_filename(structure_def);
+        let filename = crate::naming::Naming::filename(structure_def);
         let output_path = target_dir.join(filename);
 
         self.generate_to_file(structure_def, output_path, rust_struct, nested_structs)
@@ -84,8 +84,8 @@ impl<'a> FileIoManager<'a> {
         std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
 
         // Generate the trait file
-        let struct_name = NameGenerator::generate_struct_name(structure_def);
-        let snake_case_name = NameGenerator::to_snake_case(&struct_name);
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+        let snake_case_name = crate::naming::Naming::to_snake_case(&struct_name);
         let filename = format!("{snake_case_name}.rs");
         let output_path = traits_dir.join(filename);
 
@@ -279,7 +279,7 @@ impl<'a> FileIoManager<'a> {
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
         };
 
-        let filename = NameGenerator::to_filename(structure_def);
+        let filename = crate::naming::Naming::filename(structure_def);
         target_dir.join(filename)
     }
 
@@ -294,8 +294,8 @@ impl<'a> FileIoManager<'a> {
         structure_def: &StructureDefinition,
     ) -> std::path::PathBuf {
         let traits_dir = Self::get_traits_directory_path(base_dir);
-        let struct_name = NameGenerator::generate_struct_name(structure_def);
-        let snake_case_name = NameGenerator::to_snake_case(&struct_name);
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+        let snake_case_name = crate::naming::Naming::to_snake_case(&struct_name);
         let filename = format!("{snake_case_name}.rs");
         traits_dir.join(filename)
     }

@@ -29,6 +29,7 @@ pub mod fhir_types;
 mod generator;
 pub mod generators;
 pub mod macros;
+pub mod naming;
 pub mod quality;
 mod rust_types;
 mod type_mapper;
@@ -50,6 +51,7 @@ pub use generators::crate_generator::{
 pub use generators::file_generator::{FhirTypeCategory, FileGenerator};
 pub use generators::token_generator::TokenGenerator;
 pub use generators::utils::GeneratorUtils;
+pub use naming::Naming;
 pub use quality::{format_generated_crate, QualityConfig};
 pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType};
 pub use type_mapper::TypeMapper;
@@ -144,17 +146,7 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
 
 /// Convert a FHIR structure definition name to a proper snake_case filename for traits
 fn trait_filename_from_name(name: &str) -> String {
-    // First handle spaces, dashes, dots, and other separators
-    let cleaned = name
-        .replace([' ', '-', '.'], "_")
-        .replace(['(', ')', '[', ']'], "")
-        .replace(['/', '\\', ':'], "_");
-
-    // Then apply snake_case conversion for CamelCase
-    GeneratorUtils::to_snake_case(&cleaned)
-        .chars()
-        .filter(|c| c.is_alphanumeric() || *c == '_')
-        .collect()
+    crate::naming::Naming::trait_module_name(name)
 }
 
 /// Update the traits/mod.rs file to include the resource module

@@ -7,7 +7,8 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::{ElementDefinition, ElementType};
-use crate::generators::{DocumentationGenerator, NameGenerator};
+use crate::generators::DocumentationGenerator;
+use crate::naming::Naming;
 use crate::rust_types::{RustField, RustStruct, RustType};
 use crate::type_mapper::TypeMapper;
 use crate::value_sets::ValueSetManager;
@@ -90,9 +91,9 @@ impl<'a> FieldGenerator<'a> {
             for element_type in element_types {
                 if let Some(type_code) = &element_type.code {
                     // Create field name: base_name + type_code in snake_case
-                    let type_suffix = Self::type_code_to_snake_case(type_code);
+                    let type_suffix = crate::naming::Naming::type_suffix(type_code);
                     let field_name = format!("{base_name}_{type_suffix}");
-                    let rust_field_name = Self::to_rust_field_name(&field_name);
+                    let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
                     // Map the type
                     let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
@@ -133,7 +134,7 @@ impl<'a> FieldGenerator<'a> {
     ) -> CodegenResult<Option<RustField>> {
         // Get the field name from the path (last segment)
         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
-        let rust_field_name = Self::to_rust_field_name(field_name);
+        let rust_field_name = crate::naming::Naming::field_name(field_name);
 
         // Determine if this field is optional (min = 0)
         let is_optional = element.min.unwrap_or(0) == 0;
@@ -289,8 +290,7 @@ impl<'a> FieldGenerator<'a> {
                     // Extract parent struct name and field name from the path
                     let path_parts: Vec<&str> = element.path.split('.').collect();
                     if path_parts.len() >= 2 {
-                        let parent_struct_name =
-                            NameGenerator::to_valid_rust_identifier(path_parts[0]);
+                        let parent_struct_name = Naming::to_rust_identifier(path_parts[0]);
                         let field_name = path_parts[path_parts.len() - 1];
 
                         // For nested structures, we need to build the correct nested struct name
@@ -299,13 +299,13 @@ impl<'a> FieldGenerator<'a> {
                             // Direct nested struct (e.g., Bundle.entry -> BundleEntry)
                             format!(
                                 "{parent_struct_name}{field_pascal}",
-                                field_pascal = NameGenerator::to_pascal_case(field_name)
+                                field_pascal = Naming::to_pascal_case(field_name)
                             )
                         } else {
                             // Sub-nested struct (e.g., Bundle.entry.search -> BundleEntrySearch)
                             let mut nested_name = parent_struct_name;
                             for part in path_parts.iter().skip(1) {
-                                nested_name.push_str(&NameGenerator::to_pascal_case(part));
+                                nested_name.push_str(&Naming::to_pascal_case(part));
                             }
                             nested_name
                         };
@@ -323,25 +323,25 @@ impl<'a> FieldGenerator<'a> {
     fn build_nested_struct_type(&self, element: &ElementDefinition, is_array: bool) -> RustType {
         let path_parts: Vec<&str> = element.path.split('.').collect();
         let nested_struct_name = if path_parts.len() >= 2 {
-            let parent_struct_name = NameGenerator::to_valid_rust_identifier(path_parts[0]);
+            let parent_struct_name = Naming::to_rust_identifier(path_parts[0]);
             if path_parts.len() == 2 {
                 // Direct nested struct (e.g., Bundle.entry -> BundleEntry)
                 format!(
                     "{parent_struct_name}{part_pascal}",
-                    part_pascal = NameGenerator::to_pascal_case(path_parts[1])
+                    part_pascal = Naming::to_pascal_case(path_parts[1])
                 )
             } else {
                 // Sub-nested struct (e.g., Bundle.entry.search -> BundleEntrySearch)
                 let mut nested_name = parent_struct_name;
                 for part in path_parts.iter().skip(1) {
-                    nested_name.push_str(&NameGenerator::to_pascal_case(part));
+                    nested_name.push_str(&Naming::to_pascal_case(part));
                 }
                 nested_name
             }
         } else {
             format!(
                 "{path_identifier}Unknown",
-                path_identifier = NameGenerator::to_valid_rust_identifier(&element.path)
+                path_identifier = Naming::to_rust_identifier(&element.path)
             )
         };
 
@@ -429,7 +429,7 @@ impl<'a> FieldGenerator<'a> {
                         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
                         let companion_field_name = format!("_{field_name}");
                         let rust_companion_field_name =
-                            Self::to_rust_field_name(&companion_field_name);
+                            crate::naming::Naming::field_name(&companion_field_name);
 
                         // Map primitive type to companion element type
                         let companion_element_type = self.get_companion_element_type(type_code);
@@ -568,32 +568,26 @@ mod tests {
     #[test]
     fn test_to_rust_field_name() {
         // Test basic field names
-        assert_eq!(FieldGenerator::to_rust_field_name("active"), "active");
-        assert_eq!(FieldGenerator::to_rust_field_name("name"), "name");
+        assert_eq!(crate::naming::Naming::field_name("active"), "active");
+        assert_eq!(crate::naming::Naming::field_name("name"), "name");
 
         // Test PascalCase to snake_case conversion
+        assert_eq!(crate::naming::Naming::field_name("birthDate"), "birth_date");
         assert_eq!(
-            FieldGenerator::to_rust_field_name("birthDate"),
-            "birth_date"
-        );
-        assert_eq!(
-            FieldGenerator::to_rust_field_name("multipleBirthBoolean"),
+            crate::naming::Naming::field_name("multipleBirthBoolean"),
             "multiple_birth_boolean"
         );
 
         // Test choice types with [x] suffix
-        assert_eq!(FieldGenerator::to_rust_field_name("value[x]"), "value");
-        assert_eq!(
-            FieldGenerator::to_rust_field_name("deceased[x]"),
-            "deceased"
-        );
+        assert_eq!(crate::naming::Naming::field_name("value[x]"), "value");
+        assert_eq!(crate::naming::Naming::field_name("deceased[x]"), "deceased");
 
         // Test Rust keywords
-        assert_eq!(FieldGenerator::to_rust_field_name("type"), "type_");
-        assert_eq!(FieldGenerator::to_rust_field_name("use"), "use_");
-        assert_eq!(FieldGenerator::to_rust_field_name("ref"), "ref_");
-        assert_eq!(FieldGenerator::to_rust_field_name("for"), "for_");
-        assert_eq!(FieldGenerator::to_rust_field_name("match"), "match_");
+        assert_eq!(crate::naming::Naming::field_name("type"), "type_");
+        assert_eq!(crate::naming::Naming::field_name("use"), "use_");
+        assert_eq!(crate::naming::Naming::field_name("ref"), "ref_");
+        assert_eq!(crate::naming::Naming::field_name("for"), "for_");
+        assert_eq!(crate::naming::Naming::field_name("match"), "match_");
     }
 
     #[test]

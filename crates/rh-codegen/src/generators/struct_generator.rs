@@ -6,9 +6,7 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{
-    utils::GeneratorUtils, DocumentationGenerator, FieldGenerator, TypeUtilities,
-};
+use crate::generators::{DocumentationGenerator, FieldGenerator, TypeUtilities};
 use crate::rust_types::{RustField, RustStruct, RustType};
 use crate::value_sets::ValueSetManager;
 use crate::{CodegenError, CodegenResult};
@@ -70,7 +68,7 @@ impl<'a> StructGenerator<'a> {
         }
 
         // Generate struct name from URL or ID, not the name field
-        let struct_name = GeneratorUtils::generate_struct_name(structure_def);
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
 
         // Check if we've already generated this type
         if let Some(cached_struct) = self.type_cache.get(&struct_name) {
@@ -217,7 +215,7 @@ impl<'a> StructGenerator<'a> {
         let nested_struct_name = format!(
             "{}{}",
             parent_struct_name,
-            GeneratorUtils::to_pascal_case(nested_field_name)
+            crate::naming::Naming::to_pascal_case(nested_field_name)
         );
 
         // Check if we've already generated this nested struct
@@ -278,7 +276,7 @@ impl<'a> StructGenerator<'a> {
             let sub_nested_struct_name = format!(
                 "{}{}",
                 nested_struct_name,
-                GeneratorUtils::to_pascal_case(sub_nested_field_name)
+                crate::naming::Naming::to_pascal_case(sub_nested_field_name)
             );
 
             if !self.type_cache.contains_key(&sub_nested_struct_name) {

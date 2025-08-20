@@ -10,7 +10,6 @@
 //! - `nested_struct_generator`: Generate nested structs within FHIR structures
 //! - `file_generator`: Handle file generation and organization
 //! - `file_io_manager`: Centralized file I/O operations and directory management
-//! - `name_generator`: Handle naming conversions and conventions
 //! - `import_manager`: Manage imports and dependencies
 //! - `type_utilities`: Utility functions for type classification and helpers
 
@@ -21,7 +20,6 @@ pub mod field_generator;
 pub mod file_generator;
 pub mod file_io_manager;
 pub mod import_manager;
-pub mod name_generator;
 pub mod nested_struct_generator;
 pub mod primitive_generator;
 pub mod struct_generator;
@@ -41,7 +39,6 @@ pub use field_generator::FieldGenerator;
 pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
 pub use import_manager::ImportManager;
-pub use name_generator::NameGenerator;
 pub use nested_struct_generator::NestedStructGenerator;
 pub use primitive_generator::PrimitiveGenerator;
 pub use struct_generator::StructGenerator;

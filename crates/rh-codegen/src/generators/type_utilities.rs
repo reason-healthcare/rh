@@ -90,7 +90,7 @@ impl TypeUtilities {
     /// Check if a FHIR type should be skipped due to underscore prefix
     /// Files beginning with underscore are typically auto-generated or temporary
     pub fn should_skip_underscore_prefixed(structure_def: &StructureDefinition) -> bool {
-        use crate::generators::name_generator::NameGenerator;
+        use crate::naming::Naming;
 
         // Check if the original name or id starts with underscore
         if structure_def.name.starts_with('_') || structure_def.id.starts_with('_') {
@@ -98,7 +98,7 @@ impl TypeUtilities {
         }
 
         // Check if the generated struct name would start with underscore
-        let generated_name = NameGenerator::generate_struct_name(structure_def);
+        let generated_name = Naming::struct_name(structure_def);
         generated_name.starts_with('_')
     }
 

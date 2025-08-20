@@ -3,7 +3,7 @@
 //! This module handles the generation of Rust traits from FHIR StructureDefinitions.
 
 use crate::fhir_types::StructureDefinition;
-use crate::generators::{utils::GeneratorUtils, DocumentationGenerator, TypeUtilities};
+use crate::generators::{DocumentationGenerator, TypeUtilities};
 use crate::rust_types::{RustTrait, RustTraitMethod, RustType};
 use crate::{CodegenError, CodegenResult};
 
@@ -53,7 +53,7 @@ impl TraitGenerator {
         }
 
         // Generate trait name from the structure definition
-        let trait_name = GeneratorUtils::generate_struct_name(structure_def);
+        let trait_name = crate::naming::Naming::struct_name(structure_def);
 
         // Create the trait with enhanced documentation
         let mut rust_trait = RustTrait::new(trait_name);
@@ -381,14 +381,14 @@ impl TraitGenerator {
         for (base_name, type_codes) in choice_types {
             // Create method that returns the actual value from whichever variant is set
             let method_name = base_name.clone();
-            let snake_case_method = GeneratorUtils::to_rust_field_name(&method_name);
+            let snake_case_method = crate::naming::Naming::field_name(&method_name);
 
             // Create a simpler approach - just return the formatted value as a string
             let mut method_body_lines = Vec::new();
             for (index, type_code) in type_codes.iter().enumerate() {
-                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let field_suffix = crate::naming::Naming::type_suffix(type_code);
                 let field_name = format!("{base_name}_{field_suffix}");
-                let rust_field_name = GeneratorUtils::to_rust_field_name(&field_name);
+                let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
                 if index == 0 {
                     method_body_lines
@@ -423,9 +423,9 @@ impl TraitGenerator {
             let has_method_name = format!("has_{snake_case_method}");
             let mut has_method_body_lines = Vec::new();
             for (index, type_code) in type_codes.iter().enumerate() {
-                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let field_suffix = crate::naming::Naming::type_suffix(type_code);
                 let field_name = format!("{base_name}_{field_suffix}");
-                let rust_field_name = GeneratorUtils::to_rust_field_name(&field_name);
+                let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
                 if index == 0 {
                     has_method_body_lines.push(format!("self.{rust_field_name}.is_some()"));
@@ -445,9 +445,9 @@ impl TraitGenerator {
 
             // Also add individual getter methods for each specific type for type safety
             for type_code in &type_codes {
-                let field_suffix = FieldGenerator::type_code_to_snake_case(type_code);
+                let field_suffix = crate::naming::Naming::type_suffix(type_code);
                 let typed_method_name = format!("{base_name}_{field_suffix}");
-                let typed_rust_method_name = GeneratorUtils::to_rust_field_name(&typed_method_name);
+                let typed_rust_method_name = crate::naming::Naming::field_name(&typed_method_name);
 
                 // Map FHIR type to Rust type - ensure all primitive types map to String
                 let rust_type = match type_code.as_str() {
@@ -470,7 +470,7 @@ impl TraitGenerator {
                     "Attachment" => RustType::Custom("Attachment".to_string()),
                     "Annotation" => RustType::Custom("Annotation".to_string()),
                     "BackboneElement" => RustType::Custom("BackboneElement".to_string()),
-                    _ => RustType::Custom(GeneratorUtils::capitalize_first_letter(type_code)),
+                    _ => RustType::Custom(crate::naming::Naming::capitalize_first(type_code)),
                 };
 
                 let typed_return_type = RustType::Option(Box::new(rust_type));
@@ -566,7 +566,7 @@ impl TraitGenerator {
         element: &crate::fhir_types::ElementDefinition,
     ) -> CodegenResult<Option<RustTraitMethod>> {
         let field_name = element.path.split('.').next_back().unwrap_or("unknown");
-        let rust_field_name = GeneratorUtils::to_rust_field_name(field_name);
+        let rust_field_name = crate::naming::Naming::field_name(field_name);
 
         // Get the resource type from the element path
         let resource_type = element.path.split('.').next().unwrap_or("");
@@ -639,7 +639,7 @@ impl TraitGenerator {
                         (_, "Meta", _) => RustType::Custom("Meta".to_string()),
                         (_, "Extension", _) => RustType::Custom("Extension".to_string()),
                         (_, code, _) => {
-                            RustType::Custom(GeneratorUtils::capitalize_first_letter(code))
+                            RustType::Custom(crate::naming::Naming::capitalize_first(code))
                         }
                     }
                 } else {

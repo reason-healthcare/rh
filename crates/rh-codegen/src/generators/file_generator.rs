@@ -201,7 +201,7 @@ impl<'a> FileGenerator<'a> {
         std::fs::create_dir_all(&target_dir).map_err(CodegenError::Io)?;
 
         // Generate the file in the appropriate directory
-        let filename = GeneratorUtils::to_filename(structure_def);
+        let filename = crate::naming::Naming::filename(structure_def);
         let output_path = target_dir.join(filename);
 
         self.generate_to_file(structure_def, output_path, rust_struct, nested_structs)
@@ -220,8 +220,8 @@ impl<'a> FileGenerator<'a> {
         std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
 
         // Generate the trait file
-        let struct_name = GeneratorUtils::generate_struct_name(structure_def);
-        let snake_case_name = GeneratorUtils::to_snake_case(&struct_name);
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+        let snake_case_name = crate::naming::Naming::to_snake_case(&struct_name);
         let filename = format!("{snake_case_name}.rs");
         let output_path = traits_dir.join(filename);
 
