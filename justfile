@@ -7,7 +7,7 @@ default:
 
 # Run all tests
 test:
-    cargo test --all-features
+    cargo test --workspace --all-features
 
 # Run tests with nextest if available
 test-fast:
@@ -15,12 +15,12 @@ test-fast:
     if command -v cargo-nextest &> /dev/null; then
         cargo nextest run --all-features
     else
-        cargo test --all-features
+        cargo test --workspace --all-features
     fi
 
 # Build all packages
 build:
-    cargo build --all-targets --all-features
+    cargo build --workspace --all-targets --all-features
 
 # Check code formatting
 fmt-check:
@@ -32,7 +32,7 @@ fmt:
 
 # Run clippy lints
 lint:
-    cargo clippy --all-targets --all-features -- -D warnings
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Run security audit
 audit:
