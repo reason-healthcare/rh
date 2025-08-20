@@ -144,11 +144,6 @@ impl<'a> FileGenerator<'a> {
         };
         all_tokens.extend(doc_comment);
 
-        // Generate imports
-        all_tokens.extend(quote! {
-            use serde::{Deserialize, Serialize};
-        });
-
         // Generate all primitive type aliases
         let mut type_cache = std::collections::HashMap::new();
         let primitive_generator = PrimitiveGenerator::new(self.config, &mut type_cache);
@@ -321,8 +316,8 @@ impl<'a> FileGenerator<'a> {
         // Collect all imports needed for this file
         let mut imports = HashSet::new();
 
-        // Always include serde if enabled
-        if self.config.with_serde {
+        // Always include serde if enabled, but exclude primitive types
+        if self.config.with_serde && structure_def.kind != "primitive-type" {
             imports.insert("serde::{Deserialize, Serialize}".to_string());
         }
 
