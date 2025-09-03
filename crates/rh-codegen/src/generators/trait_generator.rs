@@ -4,16 +4,17 @@
 
 use crate::fhir_types::StructureDefinition;
 use crate::generators::accessor_trait_generator::AccessorTraitGenerator;
+use crate::generators::existence_trait_generator::ExistenceTraitGenerator;
 use crate::generators::mutator_trait_generator::MutatorTraitGenerator;
 use crate::generators::DocumentationGenerator;
 use crate::rust_types::RustTrait;
 use crate::{CodegenError, CodegenResult};
 
 /// Trait generator for FHIR StructureDefinitions
-#[derive(Default)]
 pub struct TraitGenerator {
     accessor_generator: AccessorTraitGenerator,
     mutator_generator: MutatorTraitGenerator,
+    existence_generator: ExistenceTraitGenerator,
 }
 
 impl TraitGenerator {
@@ -22,6 +23,7 @@ impl TraitGenerator {
         Self {
             accessor_generator: AccessorTraitGenerator::new(),
             mutator_generator: MutatorTraitGenerator::new(),
+            existence_generator: ExistenceTraitGenerator::new(),
         }
     }
 
@@ -60,8 +62,16 @@ impl TraitGenerator {
                 self.mutator_generator
                     .add_mutator_methods(&mut rust_trait, structure_def)?;
             }
+            "Existence" => {
+                // For existence traits, we need to generate it differently
+                return self
+                    .existence_generator
+                    .generate_existence_trait(structure_def);
+            }
             _ => {
-                // Other categories will be handled here
+                return Err(CodegenError::Generation {
+                    message: format!("Unknown trait category: {}", category),
+                });
             }
         }
 
@@ -75,6 +85,11 @@ impl TraitGenerator {
         structure_def: &StructureDefinition,
         category: &str,
     ) -> CodegenResult<()> {
+        // Special case: Resource itself should not have super traits to avoid circular dependency
+        if structure_def.id == "Resource" {
+            return Ok(());
+        }
+
         if let Some(base_def) = &structure_def.base_definition {
             if let Some(parent_trait_name) = self.extract_trait_name_from_url(base_def) {
                 if self.is_valid_fhir_base_type(&parent_trait_name) {

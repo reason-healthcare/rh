@@ -61,8 +61,27 @@ impl ImportManager {
         // Add imports for super traits
         for super_trait in &rust_trait.super_traits {
             if !Self::is_primitive_type(super_trait) {
-                // For super traits that are FHIR resources, import the trait version not the struct
-                let import_path = if Self::is_fhir_resource_type(super_trait) {
+                // For super traits that are FHIR trait types (Accessors, Mutators, Existence)
+                // or FHIR resources, import from the traits module
+                let import_path = if Self::is_fhir_trait_type(super_trait) {
+                    // For trait types like "DomainResourceAccessors", extract the base name
+                    // and use it for the module path: crate::traits::domain_resource::DomainResourceAccessors
+                    let base_name = if super_trait.ends_with("Accessors") {
+                        super_trait.strip_suffix("Accessors").unwrap()
+                    } else if super_trait.ends_with("Mutators") {
+                        super_trait.strip_suffix("Mutators").unwrap()
+                    } else if super_trait.ends_with("Existence") {
+                        super_trait.strip_suffix("Existence").unwrap()
+                    } else {
+                        super_trait
+                    };
+
+                    format!(
+                        "crate::traits::{}::{}",
+                        crate::naming::Naming::to_snake_case(base_name),
+                        super_trait
+                    )
+                } else if Self::is_fhir_resource_type(super_trait) {
                     format!(
                         "crate::traits::{}::{}",
                         crate::naming::Naming::to_snake_case(super_trait),
@@ -173,6 +192,13 @@ impl ImportManager {
     /// Check if a type is a FHIR resource type
     pub fn is_fhir_resource_type(type_name: &str) -> bool {
         NamingManager::is_fhir_resource(type_name)
+    }
+
+    /// Check if a type is a FHIR trait type (ends with Accessors, Mutators, or Existence)
+    pub fn is_fhir_trait_type(type_name: &str) -> bool {
+        type_name.ends_with("Accessors")
+            || type_name.ends_with("Mutators")
+            || type_name.ends_with("Existence")
     }
 
     /// Check if a type name represents a known FHIR data type

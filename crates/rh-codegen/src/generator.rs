@@ -100,7 +100,7 @@ impl CodeGenerator {
     ) -> CodegenResult<Vec<RustTrait>> {
         let mut trait_generator = TraitGenerator::new();
         let mut traits = Vec::new();
-        let categories = ["Accessors", "Mutators"]; // Add "Existence" later
+        let categories = ["Accessors", "Mutators", "Existence"];
 
         for category in &categories {
             let rust_trait = trait_generator.generate_trait(structure_def, category)?;

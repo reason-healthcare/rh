@@ -17,6 +17,7 @@ pub mod accessor_trait_generator;
 pub mod crate_generator;
 pub mod documentation_generator;
 pub mod enum_generator;
+pub mod existence_trait_generator;
 pub mod field_generator;
 pub mod file_generator;
 pub mod file_io_manager;
@@ -38,6 +39,7 @@ pub use crate_generator::{
 };
 pub use documentation_generator::DocumentationGenerator;
 pub use enum_generator::EnumGenerator;
+pub use existence_trait_generator::ExistenceTraitGenerator;
 pub use field_generator::FieldGenerator;
 pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
