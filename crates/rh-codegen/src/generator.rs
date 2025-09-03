@@ -93,15 +93,14 @@ impl CodeGenerator {
         Ok(rust_struct)
     }
 
-    /// Generate a Rust trait from a FHIR StructureDefinition
-    /// Generate a Rust trait from a FHIR StructureDefinition
+    /// Generate traits for a structure definition
     pub fn generate_trait(
         &mut self,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<Vec<RustTrait>> {
         let mut trait_generator = TraitGenerator::new();
         let mut traits = Vec::new();
-        let categories = ["Accessors"]; // Add "Mutators", "Existance" later
+        let categories = ["Accessors", "Mutators"]; // Add "Existence" later
 
         for category in &categories {
             let rust_trait = trait_generator.generate_trait(structure_def, category)?;
@@ -195,7 +194,7 @@ impl CodeGenerator {
         )
     }
 
-    /// Generate a trait and write it to the traits directory
+    /// Generate traits and write them to the traits directory
     pub fn generate_trait_to_organized_directory<P: AsRef<Path>>(
         &mut self,
         structure_def: &StructureDefinition,
@@ -204,14 +203,11 @@ impl CodeGenerator {
         let rust_traits = self.generate_trait(structure_def)?;
 
         let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
-        for rust_trait in &rust_traits {
-            file_io_manager.generate_trait_to_organized_directory(
-                structure_def,
-                base_output_dir.as_ref(),
-                rust_trait,
-            )?;
-        }
-        Ok(())
+        file_io_manager.generate_traits_to_organized_directory(
+            structure_def,
+            base_output_dir.as_ref(),
+            &rust_traits,
+        )
     }
 
     /// Classify a FHIR StructureDefinition into the appropriate category
@@ -272,13 +268,14 @@ impl CodeGenerator {
 
         // Create FileIoManager and delegate
         let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
-        for rust_trait in &rust_traits {
-            file_io_manager.generate_trait_to_file(
-                structure_def,
-                output_path.as_ref(),
-                rust_trait,
-            )?;
-        }
+
+        // Use generate_traits_to_file to write all traits to the same file
+        file_io_manager.generate_traits_to_file(
+            structure_def,
+            output_path.as_ref(),
+            &rust_traits,
+        )?;
+
         Ok(())
     }
 

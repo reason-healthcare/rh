@@ -4,6 +4,7 @@
 
 use crate::fhir_types::StructureDefinition;
 use crate::generators::accessor_trait_generator::AccessorTraitGenerator;
+use crate::generators::mutator_trait_generator::MutatorTraitGenerator;
 use crate::generators::DocumentationGenerator;
 use crate::rust_types::RustTrait;
 use crate::{CodegenError, CodegenResult};
@@ -12,6 +13,7 @@ use crate::{CodegenError, CodegenResult};
 #[derive(Default)]
 pub struct TraitGenerator {
     accessor_generator: AccessorTraitGenerator,
+    mutator_generator: MutatorTraitGenerator,
 }
 
 impl TraitGenerator {
@@ -19,6 +21,7 @@ impl TraitGenerator {
     pub fn new() -> Self {
         Self {
             accessor_generator: AccessorTraitGenerator::new(),
+            mutator_generator: MutatorTraitGenerator::new(),
         }
     }
 
@@ -52,6 +55,10 @@ impl TraitGenerator {
             "Accessors" => {
                 self.accessor_generator
                     .add_accessor_methods(&mut rust_trait, structure_def)?;
+            }
+            "Mutators" => {
+                self.mutator_generator
+                    .add_mutator_methods(&mut rust_trait, structure_def)?;
             }
             _ => {
                 // Other categories will be handled here

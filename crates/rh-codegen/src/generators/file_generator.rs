@@ -479,6 +479,69 @@ impl<'a> FileGenerator<'a> {
         Ok(())
     }
 
+    /// Generate multiple traits to a single file
+    pub fn generate_traits_to_file<P: AsRef<Path>>(
+        &self,
+        _structure_def: &StructureDefinition,
+        output_path: P,
+        rust_traits: &[&RustTrait],
+    ) -> CodegenResult<()> {
+        // Generate import tokens
+        let mut all_tokens = proc_macro2::TokenStream::new();
+
+        // Collect imports needed for all traits
+        let mut imports = std::collections::HashSet::new();
+        for rust_trait in rust_traits {
+            ImportManager::collect_custom_types_from_trait(rust_trait, &mut imports);
+        }
+
+        // Add import statements
+        for import_path in imports {
+            let import_stmt = format!("use {import_path};");
+            let import_tokens: proc_macro2::TokenStream =
+                import_stmt.parse().map_err(|e| CodegenError::Generation {
+                    message: format!("Failed to parse import statement '{import_stmt}': {e}"),
+                })?;
+            all_tokens.extend(import_tokens);
+        }
+
+        // Generate all traits
+        for rust_trait in rust_traits {
+            let trait_tokens = self.token_generator.generate_trait(rust_trait);
+            all_tokens.extend(trait_tokens);
+        }
+
+        // Debug: Print the tokens before parsing
+        if std::env::var("DEBUG_TOKENS").is_ok() {
+            let trait_names: Vec<&str> = rust_traits.iter().map(|t| t.name.as_str()).collect();
+            eprintln!(
+                "DEBUG: Generated tokens for traits [{}]: {}",
+                trait_names.join(", "),
+                all_tokens
+            );
+        }
+
+        // Parse the tokens into a syntax tree and format it
+        let syntax_tree = syn::parse2(all_tokens).map_err(|e| CodegenError::Generation {
+            message: format!("Failed to parse generated trait tokens: {e}"),
+        })?;
+
+        let formatted_code = prettyplease::unparse(&syntax_tree);
+
+        // Check for file collision and warn if overwriting
+        if output_path.as_ref().exists() {
+            eprintln!(
+                "Warning: Trait file '{}' already exists and will be overwritten.",
+                output_path.as_ref().display()
+            );
+        }
+
+        // Write to file
+        fs::write(output_path.as_ref(), formatted_code).map_err(CodegenError::Io)?;
+
+        Ok(())
+    }
+
     /// Generate all ValueSet enums to separate files in the specified directory
     pub fn generate_enum_files<P: AsRef<Path>>(
         &self,

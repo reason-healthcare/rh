@@ -268,6 +268,7 @@ impl ImportManager {
                 | "bool"
                 | "usize"
                 | "isize"
+                | "Self" // Built-in Rust keyword, should not be imported
         )
     }
 }

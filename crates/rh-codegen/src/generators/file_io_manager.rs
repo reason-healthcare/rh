@@ -71,6 +71,30 @@ impl<'a> FileIoManager<'a> {
         self.generate_to_file(structure_def, output_path, rust_struct, nested_structs)
     }
 
+    /// Generate multiple traits and write them to the traits directory
+    pub fn generate_traits_to_organized_directory<P: AsRef<Path>>(
+        &self,
+        structure_def: &StructureDefinition,
+        base_output_dir: P,
+        rust_traits: &[RustTrait],
+    ) -> CodegenResult<()> {
+        let traits_dir = base_output_dir.as_ref().join("src").join("traits");
+
+        // Ensure the traits directory exists
+        std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
+
+        // Generate the trait file
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+        let snake_case_name = crate::naming::Naming::to_snake_case(&struct_name);
+        let filename = format!("{snake_case_name}.rs");
+        let output_path = traits_dir.join(filename);
+
+        // Convert Vec<RustTrait> to Vec<&RustTrait> for the method call
+        let rust_trait_refs: Vec<&RustTrait> = rust_traits.iter().collect();
+        let file_generator = FileGenerator::new(self.config, self.token_generator);
+        file_generator.generate_traits_to_file(structure_def, output_path, &rust_trait_refs)
+    }
+
     /// Generate a trait and write it to the traits directory
     pub fn generate_trait_to_organized_directory<P: AsRef<Path>>(
         &self,
@@ -102,6 +126,19 @@ impl<'a> FileIoManager<'a> {
     ) -> CodegenResult<()> {
         let file_generator = FileGenerator::new(self.config, self.token_generator);
         file_generator.generate_to_file(structure_def, output_path, rust_struct, nested_structs)
+    }
+
+    /// Generate multiple Rust traits and write them to a file
+    pub fn generate_traits_to_file<P: AsRef<Path>>(
+        &self,
+        structure_def: &StructureDefinition,
+        output_path: P,
+        rust_traits: &[RustTrait],
+    ) -> CodegenResult<()> {
+        let file_generator = FileGenerator::new(self.config, self.token_generator);
+        // Convert Vec<RustTrait> to Vec<&RustTrait> for the method call
+        let rust_trait_refs: Vec<&RustTrait> = rust_traits.iter().collect();
+        file_generator.generate_traits_to_file(structure_def, output_path, &rust_trait_refs)
     }
 
     /// Generate a Rust trait and write it to a file

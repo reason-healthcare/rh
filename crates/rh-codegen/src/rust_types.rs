@@ -370,6 +370,11 @@ impl RustTraitMethod {
         self
     }
 
+    pub fn with_parameter(mut self, name: String, param_type: RustType) -> Self {
+        self.params.push(RustMethodParam::new(name, param_type));
+        self
+    }
+
     pub fn with_return_type(mut self, return_type: RustType) -> Self {
         self.return_type = Some(return_type);
         self
