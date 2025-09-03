@@ -122,12 +122,15 @@ impl TraitImplGenerator {
         }
 
         // Generate specific resource trait implementation (e.g., PatientTrait for Patient)
-        let specific_trait_impl =
-            self.generate_specific_resource_trait_impl(&struct_name, structure_def);
+        // Skip this for Resource itself to avoid conflicting implementations
+        if struct_name != "Resource" {
+            let specific_trait_impl =
+                self.generate_specific_resource_trait_impl(&struct_name, structure_def);
 
-        // Only include specific trait impl if it has methods
-        if !specific_trait_impl.is_empty() {
-            trait_impls.push(specific_trait_impl);
+            // Only include specific trait impl if it has methods
+            if !specific_trait_impl.is_empty() {
+                trait_impls.push(specific_trait_impl);
+            }
         }
 
         Ok(trait_impls)
@@ -140,47 +143,32 @@ impl TraitImplGenerator {
         structure_def: &StructureDefinition,
     ) -> RustTraitImpl {
         let mut trait_impl = RustTraitImpl::new(
-            "crate::traits::resource::Resource".to_string(),
+            "crate::traits::resource::ResourceAccessors".to_string(),
             struct_name.to_string(),
         );
 
-        // Get the appropriate resource type (base resource type for profiles)
-        let resource_type = Self::get_resource_type_for_struct(struct_name, structure_def);
-
-        // resource_type method
-        let resource_type_method = RustTraitImplMethod::new("resource_type".to_string())
-            .with_return_type("&'static str".to_string())
-            .with_body(format!("\"{resource_type}\""));
-        trait_impl.add_method(resource_type_method);
-
         // id method
         let id_method = RustTraitImplMethod::new("id".to_string())
-            .with_return_type("Option<&str>".to_string())
-            .with_body("self.base.base.id.as_ref().map(|s| s.as_str())".to_string());
+            .with_return_type("Option<String>".to_string())
+            .with_body("self.base.base.id.clone()".to_string());
         trait_impl.add_method(id_method);
 
         // meta method
         let meta_method = RustTraitImplMethod::new("meta".to_string())
-            .with_return_type("Option<&crate::datatypes::meta::Meta>".to_string())
-            .with_body("self.base.base.meta.as_ref()".to_string());
+            .with_return_type("Option<crate::datatypes::meta::Meta>".to_string())
+            .with_body("self.base.base.meta.clone()".to_string());
         trait_impl.add_method(meta_method);
-
-        // extensions method
-        let extensions_method = RustTraitImplMethod::new("extensions".to_string())
-            .with_return_type("&[crate::datatypes::extension::Extension]".to_string())
-            .with_body("self.base.extension.as_deref().unwrap_or(&[])".to_string());
-        trait_impl.add_method(extensions_method);
 
         // implicit_rules method
         let implicit_rules_method = RustTraitImplMethod::new("implicit_rules".to_string())
-            .with_return_type("Option<&str>".to_string())
-            .with_body("self.base.base.implicit_rules.as_ref().map(|s| s.as_str())".to_string());
+            .with_return_type("Option<String>".to_string())
+            .with_body("self.base.base.implicit_rules.clone()".to_string());
         trait_impl.add_method(implicit_rules_method);
 
         // language method
         let language_method = RustTraitImplMethod::new("language".to_string())
-            .with_return_type("Option<&str>".to_string())
-            .with_body("self.base.base.language.as_ref().map(|s| s.as_str())".to_string());
+            .with_return_type("Option<String>".to_string())
+            .with_body("self.base.base.language.clone()".to_string());
         trait_impl.add_method(language_method);
 
         trait_impl
@@ -189,15 +177,33 @@ impl TraitImplGenerator {
     /// Generate DomainResource trait implementation
     fn generate_domain_resource_trait_impl(&self, struct_name: &str) -> RustTraitImpl {
         let mut trait_impl = RustTraitImpl::new(
-            "crate::traits::domain_resource::DomainResource".to_string(),
+            "crate::traits::domain_resource::DomainResourceAccessors".to_string(),
             struct_name.to_string(),
         );
 
-        // narrative method
-        let narrative_method = RustTraitImplMethod::new("narrative".to_string())
+        // text method
+        let text_method = RustTraitImplMethod::new("text".to_string())
             .with_return_type("Option<crate::datatypes::narrative::Narrative>".to_string())
             .with_body("self.base.text.clone()".to_string());
-        trait_impl.add_method(narrative_method);
+        trait_impl.add_method(text_method);
+
+        // contained method
+        let contained_method = RustTraitImplMethod::new("contained".to_string())
+            .with_return_type("&[crate::resources::resource::Resource]".to_string())
+            .with_body("self.base.contained.as_deref().unwrap_or(&[])".to_string());
+        trait_impl.add_method(contained_method);
+
+        // extension method
+        let extension_method = RustTraitImplMethod::new("extension".to_string())
+            .with_return_type("&[crate::datatypes::extension::Extension]".to_string())
+            .with_body("self.base.extension.as_deref().unwrap_or(&[])".to_string());
+        trait_impl.add_method(extension_method);
+
+        // modifier_extension method
+        let modifier_extension_method = RustTraitImplMethod::new("modifier_extension".to_string())
+            .with_return_type("&[crate::datatypes::extension::Extension]".to_string())
+            .with_body("self.base.modifier_extension.as_deref().unwrap_or(&[])".to_string());
+        trait_impl.add_method(modifier_extension_method);
 
         trait_impl
     }
@@ -209,7 +215,7 @@ impl TraitImplGenerator {
         structure_def: &StructureDefinition,
     ) -> RustTraitImpl {
         let trait_name = format!(
-            "crate::traits::{}::{}",
+            "crate::traits::{}::{}Accessors",
             crate::naming::Naming::to_snake_case(struct_name),
             struct_name
         );
@@ -225,92 +231,239 @@ impl TraitImplGenerator {
             return trait_impl; // No elements to process
         };
 
-        // Generate methods for key fields
+        // Generate methods for all direct fields (matching accessor trait generator logic)
         for element in elements {
-            // Skip the root element
-            if element.path == structure_def.name || element.path == structure_def.base_type {
-                continue;
-            }
-
-            // Only process direct fields
-            let base_path = &structure_def.name;
-            if !element.path.starts_with(&format!("{base_path}.")) {
-                continue;
-            }
-
-            let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
-            if field_path.contains('.') {
-                continue; // Skip nested fields
-            }
-
-            // Generate method for this field
-            if let Some(method) = self.generate_field_accessor_method(field_path, element) {
-                trait_impl.add_method(method);
+            if self.should_generate_accessor_impl(element, structure_def) {
+                if let Some(method) = self.generate_field_accessor_method(element) {
+                    trait_impl.add_method(method);
+                }
             }
         }
 
         trait_impl
     }
 
-    /// Generate a field accessor method for a trait
-    fn generate_field_accessor_method(
+    /// Check if we should generate an accessor implementation for this element
+    /// This mirrors the logic in AccessorTraitGenerator::should_generate_accessor
+    fn should_generate_accessor_impl(
         &self,
-        field_name: &str,
         element: &crate::fhir_types::ElementDefinition,
-    ) -> Option<RustTraitImplMethod> {
-        // Generate methods for all fields that the trait generator creates
-        // This matches the logic in trait_generator.rs should_create_trait_method_for_element
-        let trait_method_fields = [
-            "status",
-            "identifier",
-            "active",
-            "name",
-            "telecom",
-            "address",
-            "gender",
-            "birthDate",
-            "photo",
-            "qualification",
-            "communication",
-            "endpoint",
-            "type",
-            "category",
-            "subject",
-            "code",
-            "value",
-            "component",
-            "interpretation",
-            "note",
-            "bodySite",
-            "method",
-            "specimen",
-            "device",
-            "referenceRange",
-            "hasMember",
-            "derivedFrom",
-            "description",
-            "title",
-        ];
+        structure_def: &StructureDefinition,
+    ) -> bool {
+        let field_path = &element.path;
+        let base_name = &structure_def.name;
 
-        if !trait_method_fields.contains(&field_name) {
-            return None;
+        // The path must start with the base name of the structure.
+        if !field_path.starts_with(base_name) {
+            return false;
         }
 
-        let method_name = if field_name == "type" {
-            "type_".to_string()
+        // We are interested in direct fields of the resource, which have paths like "Patient.active".
+        // Splitting by '.' should result in exactly two parts.
+        let path_parts: Vec<&str> = field_path.split('.').collect();
+        if path_parts.len() != 2 {
+            return false;
+        }
+
+        // The first part must match the base name.
+        if path_parts[0] != base_name {
+            return false;
+        }
+
+        // We don't generate accessors for choice types here, they are handled separately.
+        let field_name = path_parts[1];
+        !field_name.ends_with("[x]")
+    }
+
+    /// Generate a field accessor method for a trait implementation
+    fn generate_field_accessor_method(
+        &self,
+        element: &crate::fhir_types::ElementDefinition,
+    ) -> Option<RustTraitImplMethod> {
+        use super::TypeUtilities;
+
+        let path_parts: Vec<&str> = element.path.split('.').collect();
+        let field_name = path_parts.last()?.to_string();
+        let rust_field_name = crate::naming::Naming::field_name(&field_name);
+
+        let is_optional = element.min.unwrap_or(0) == 0;
+        let is_array = element.max.as_deref() == Some("*")
+            || element
+                .max
+                .as_deref()
+                .unwrap_or("1")
+                .parse::<i32>()
+                .unwrap_or(1)
+                > 1;
+
+        // Get the element type
+        let element_type = element.element_type.as_ref()?.first()?.clone();
+
+        // Map FHIR type to Rust type (this should match what the trait expects)
+        let rust_type =
+            match TypeUtilities::map_fhir_type_to_rust(&element_type, &field_name, &element.path) {
+                Ok(rt) => rt,
+                Err(_) => return None,
+            };
+
+        // Generate return type that matches the trait definition
+        let return_type = if is_array {
+            // Arrays become slices (&[Type])
+            format!("&[{}]", self.get_inner_type_for_slice(&rust_type))
+        } else if is_optional {
+            // Optional fields remain Option<Type>
+            format!("Option<{}>", self.get_type_for_option(&rust_type))
         } else {
-            // Convert field name to proper Rust method name (e.g., bodySite -> body_site)
-            crate::naming::Naming::field_name(field_name)
+            // Required fields - the type depends on the actual type
+            if let Some(element_types) = &element.element_type {
+                if let Some(first_type) = element_types.first() {
+                    if let Some(code) = &first_type.code {
+                        if code == "code" {
+                            // Enum fields should return String
+                            "String".to_string()
+                        } else {
+                            match rust_type {
+                                crate::rust_types::RustType::String => "&str".to_string(),
+                                _ => rust_type.to_string(),
+                            }
+                        }
+                    } else {
+                        match rust_type {
+                            crate::rust_types::RustType::String => "&str".to_string(),
+                            _ => rust_type.to_string(),
+                        }
+                    }
+                } else {
+                    match rust_type {
+                        crate::rust_types::RustType::String => "&str".to_string(),
+                        _ => rust_type.to_string(),
+                    }
+                }
+            } else {
+                match rust_type {
+                    crate::rust_types::RustType::String => "&str".to_string(),
+                    _ => rust_type.to_string(),
+                }
+            }
         };
 
-        let return_type = self.determine_method_return_type(element);
-        let body = self.generate_method_body(field_name, element);
+        // Generate method body
+        let body = if is_array {
+            format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name)
+        } else if is_optional {
+            // For optional types, we need to check if it's an enum that should be converted to string
+            if self.is_enum_type(&rust_type) {
+                // Convert enum to string
+                format!("self.{}.as_ref().map(|e| e.to_string())", rust_field_name)
+            } else {
+                format!("self.{}.clone()", rust_field_name)
+            }
+        } else {
+            // For non-optional fields, we need to handle different types
+            if let Some(element_types) = &element.element_type {
+                if let Some(first_type) = element_types.first() {
+                    if let Some(code) = &first_type.code {
+                        match code.as_str() {
+                            "code" => {
+                                // This is an enum field that should return String
+                                // For now, convert to debug string and extract the variant name
+                                format!("format!(\"{{:?}}\", &self.{}).to_lowercase().replace('_', \"-\")", rust_field_name)
+                            }
+                            "string" | "markdown" | "uri" | "url" | "canonical" | "dateTime"
+                            | "date" | "time" | "instant" | "base64Binary" | "oid" | "uuid" => {
+                                // String-based fields
+                                format!("self.{}.as_deref().unwrap_or(\"\")", rust_field_name)
+                            }
+                            _ => {
+                                // Other types (complex types, etc.)
+                                format!("self.{}.clone()", rust_field_name)
+                            }
+                        }
+                    } else {
+                        format!("self.{}.clone()", rust_field_name)
+                    }
+                } else {
+                    format!("self.{}.clone()", rust_field_name)
+                }
+            } else {
+                // Fallback based on rust_type
+                match rust_type {
+                    crate::rust_types::RustType::String => {
+                        format!("self.{}.as_deref().unwrap_or(\"\")", rust_field_name)
+                    }
+                    crate::rust_types::RustType::Custom(type_name)
+                        if self.is_enum_type_name(&type_name) =>
+                    {
+                        // For non-optional enum fields that trait expects as &str
+                        format!("&self.{}.to_string()", rust_field_name)
+                    }
+                    _ => format!("self.{}.clone()", rust_field_name),
+                }
+            }
+        };
 
         Some(
-            RustTraitImplMethod::new(method_name)
+            RustTraitImplMethod::new(rust_field_name)
                 .with_return_type(return_type)
                 .with_body(body),
         )
+    }
+
+    /// Get the inner type for slice return type
+    fn get_inner_type_for_slice(&self, rust_type: &crate::rust_types::RustType) -> String {
+        match rust_type {
+            crate::rust_types::RustType::Vec(inner) => inner.to_string(),
+            crate::rust_types::RustType::Option(inner) => {
+                if let crate::rust_types::RustType::Vec(vec_inner) = inner.as_ref() {
+                    vec_inner.to_string()
+                } else {
+                    inner.to_string()
+                }
+            }
+            _ => rust_type.to_string(),
+        }
+    }
+
+    /// Get the type for option return type
+    fn get_type_for_option(&self, rust_type: &crate::rust_types::RustType) -> String {
+        match rust_type {
+            crate::rust_types::RustType::Option(inner) => inner.to_string(),
+            _ => rust_type.to_string(),
+        }
+    }
+
+    /// Check if a rust type represents an enum
+    fn is_enum_type(&self, rust_type: &crate::rust_types::RustType) -> bool {
+        match rust_type {
+            crate::rust_types::RustType::Custom(type_name) => self.is_enum_type_name(type_name),
+            _ => false,
+        }
+    }
+
+    /// Check if a type name represents a FHIR enum type
+    fn is_enum_type_name(&self, type_name: &str) -> bool {
+        // Common FHIR enum type patterns
+        type_name.ends_with("Status")
+            || type_name.ends_with("Kind")
+            || type_name.ends_with("Code")
+            || type_name.ends_with("Codes")
+            || type_name.ends_with("Priority")
+            || type_name.ends_with("Intent")
+            || matches!(
+                type_name,
+                "PublicationStatus"
+                    | "CapabilityStatementKind"
+                    | "CodeSearchSupport"
+                    | "FmStatus"
+                    | "ReportStatusCodes"
+                    | "ReportResultCodes"
+                    | "VerificationresultStatus"
+                    | "TaskStatus"
+                    | "TaskIntent"
+                    | "RequestPriority"
+                    | "SupplydeliveryStatus"
+                    | "SupplyrequestStatus"
+            )
     }
 
     /// Determine the return type for a field accessor method
@@ -477,6 +630,7 @@ impl Default for TraitImplGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fhir_types::StructureDefinitionDifferential;
 
     fn create_test_structure_definition(
         name: &str,
@@ -661,7 +815,8 @@ mod tests {
         let generator = TraitImplGenerator::new();
 
         // Create a structure definition with no elements (which would result in empty trait impl)
-        let structure_def = create_test_structure_definition("EmptyProfile", None);
+        let mut structure_def = create_test_structure_definition("EmptyProfile", None);
+        structure_def.differential = Some(StructureDefinitionDifferential { element: vec![] });
 
         // Generate trait implementations
         let trait_impls = generator.generate_trait_impls(&structure_def).unwrap();
@@ -674,7 +829,7 @@ mod tests {
 
         // Check that there's no empty specific trait implementation
         let specific_trait_name = format!(
-            "crate::traits::{}::{}",
+            "crate::traits::{}::{}Accessors",
             crate::naming::Naming::to_snake_case("EmptyProfile"),
             "EmptyProfile"
         );

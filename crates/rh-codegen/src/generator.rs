@@ -94,14 +94,21 @@ impl CodeGenerator {
     }
 
     /// Generate a Rust trait from a FHIR StructureDefinition
+    /// Generate a Rust trait from a FHIR StructureDefinition
     pub fn generate_trait(
         &mut self,
         structure_def: &StructureDefinition,
-    ) -> CodegenResult<RustTrait> {
+    ) -> CodegenResult<Vec<RustTrait>> {
         let mut trait_generator = TraitGenerator::new();
-        let rust_trait = trait_generator.generate_trait(structure_def)?;
+        let mut traits = Vec::new();
+        let categories = ["Accessors"]; // Add "Mutators", "Existance" later
 
-        Ok(rust_trait)
+        for category in &categories {
+            let rust_trait = trait_generator.generate_trait(structure_def, category)?;
+            traits.push(rust_trait);
+        }
+
+        Ok(traits)
     }
 
     /// Generate a primitive type struct with special FHIR primitive type semantics
@@ -194,14 +201,17 @@ impl CodeGenerator {
         structure_def: &StructureDefinition,
         base_output_dir: P,
     ) -> CodegenResult<()> {
-        let rust_trait = self.generate_trait(structure_def)?;
+        let rust_traits = self.generate_trait(structure_def)?;
 
         let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
-        file_io_manager.generate_trait_to_organized_directory(
-            structure_def,
-            base_output_dir,
-            &rust_trait,
-        )
+        for rust_trait in &rust_traits {
+            file_io_manager.generate_trait_to_organized_directory(
+                structure_def,
+                base_output_dir.as_ref(),
+                rust_trait,
+            )?;
+        }
+        Ok(())
     }
 
     /// Classify a FHIR StructureDefinition into the appropriate category
@@ -258,11 +268,18 @@ impl CodeGenerator {
         output_path: P,
     ) -> CodegenResult<()> {
         // Generate the trait first
-        let rust_trait = self.generate_trait(structure_def)?;
+        let rust_traits = self.generate_trait(structure_def)?;
 
         // Create FileIoManager and delegate
         let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
-        file_io_manager.generate_trait_to_file(structure_def, output_path, &rust_trait)
+        for rust_trait in &rust_traits {
+            file_io_manager.generate_trait_to_file(
+                structure_def,
+                output_path.as_ref(),
+                rust_trait,
+            )?;
+        }
+        Ok(())
     }
 
     /// Generate all ValueSet enums to separate files in the specified directory
@@ -310,10 +327,10 @@ impl CodeGenerator {
     }
 
     /// Generate a comprehensive Resource trait with common FHIR resource methods
-    pub fn generate_resource_trait(&mut self) -> CodegenResult<String> {
-        let mut trait_generator = TraitGenerator::new();
-        trait_generator.generate_resource_trait()
-    }
+    // pub fn generate_resource_trait(&mut self) -> CodegenResult<String> {
+    //     let mut trait_generator = TraitGenerator::new();
+    //     trait_generator.generate_resource_trait()
+    // }
 
     /// Generate a trait file directly from a RustTrait object
     pub fn generate_trait_file_from_trait<P: AsRef<Path>>(
@@ -326,11 +343,11 @@ impl CodeGenerator {
         file_generator.generate_trait_file_from_trait(rust_trait, output_path)
     }
 
-    /// Generate an impl block for the Resource trait
-    pub fn generate_resource_impl(&self) -> String {
-        let trait_generator = TraitGenerator::new();
-        trait_generator.generate_resource_impl()
-    }
+    // Generate an impl block for the Resource trait
+    // pub fn generate_resource_impl(&self) -> String {
+    //     let trait_generator = TraitGenerator::new();
+    //     trait_generator.generate_resource_impl()
+    // }
 }
 
 #[cfg(test)]
@@ -789,18 +806,23 @@ mod tests {
         let result = generator.generate_trait(&patient_structure);
         assert!(result.is_ok(), "Should generate Patient trait successfully");
 
-        let patient_trait = result.unwrap();
+        let patient_traits = result.unwrap();
+        let patient_trait = patient_traits
+            .iter()
+            .find(|t| t.name == "PatientAccessors")
+            .expect("PatientAccessors trait not found");
+
         assert_eq!(
-            patient_trait.name, "Patient",
-            "Trait should be named 'Patient'"
+            patient_trait.name, "PatientAccessors",
+            "Trait should be named 'PatientAccessors'"
         );
 
         // Check that the Patient trait properly inherits from DomainResource
         assert!(
             patient_trait
                 .super_traits
-                .contains(&"DomainResource".to_string()),
-            "Patient trait should inherit from DomainResource"
+                .contains(&"DomainResourceAccessors".to_string()),
+            "Patient trait should inherit from DomainResourceAccessors"
         );
 
         // The Patient trait should NOT have methods that are inherited from parent traits

@@ -23,6 +23,7 @@ indexmap = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
+once_cell = "1.19"
 
 # Local workspace crates
 rh-common = { path = "../rh-common" }

@@ -13,6 +13,7 @@
 //! - `import_manager`: Manage imports and dependencies
 //! - `type_utilities`: Utility functions for type classification and helpers
 
+pub mod accessor_trait_generator;
 pub mod crate_generator;
 pub mod documentation_generator;
 pub mod enum_generator;
@@ -20,6 +21,7 @@ pub mod field_generator;
 pub mod file_generator;
 pub mod file_io_manager;
 pub mod import_manager;
+pub mod naming_manager;
 pub mod nested_struct_generator;
 pub mod primitive_generator;
 pub mod struct_generator;
@@ -39,6 +41,7 @@ pub use field_generator::FieldGenerator;
 pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
 pub use import_manager::ImportManager;
+pub use naming_manager::NamingManager;
 pub use nested_struct_generator::NestedStructGenerator;
 pub use primitive_generator::PrimitiveGenerator;
 pub use struct_generator::StructGenerator;

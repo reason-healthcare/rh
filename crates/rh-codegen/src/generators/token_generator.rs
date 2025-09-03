@@ -322,6 +322,10 @@ impl TokenGenerator {
                 let inner_tokens = self.generate_type(inner, false);
                 quote! { Box<#inner_tokens> }
             }
+            RustType::Slice(inner) => {
+                let inner_tokens = self.generate_type(inner, false);
+                quote! { &[#inner_tokens] }
+            }
             RustType::Custom(name) => {
                 // Check if this is a complex type that shouldn't be treated as an identifier
                 if name.contains('&')

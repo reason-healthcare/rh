@@ -3,6 +3,7 @@
 //! This module handles the determination of import paths for FHIR types
 //! and collection of custom types for import generation.
 
+use crate::generators::naming_manager::NamingManager;
 use crate::rust_types::{RustStruct, RustType};
 use std::collections::HashSet;
 
@@ -141,13 +142,20 @@ impl ImportManager {
                     structs_in_file,
                 );
             }
-            RustType::Reference(type_name) => {
-                if !Self::is_primitive_type(type_name)
-                    && type_name != current_struct_name
-                    && !structs_in_file.contains(type_name)
+            RustType::Slice(inner) => {
+                Self::collect_custom_types_from_type(
+                    inner,
+                    imports,
+                    current_struct_name,
+                    structs_in_file,
+                );
+            }
+            RustType::Reference(name) => {
+                if !Self::is_primitive_type(name)
+                    && name != current_struct_name
+                    && !structs_in_file.contains(name)
                 {
-                    // Get the correct import path for this type
-                    let import_path = Self::get_import_path_for_type(type_name);
+                    let import_path = Self::get_import_path_for_type(name);
                     imports.insert(import_path);
                 }
             }
@@ -158,301 +166,18 @@ impl ImportManager {
 
     /// Determine the correct import path for a given type name
     pub fn get_import_path_for_type(type_name: &str) -> String {
-        // Check if it's a known FHIR resource type
-        if Self::is_fhir_resource_type(type_name) {
-            return format!(
-                "crate::resources::{}::{}",
-                Self::to_snake_case(type_name),
-                type_name
-            );
-        }
-
-        // Check if it's a known FHIR datatype (use existing method for consistency)
-        if Self::is_fhir_datatype(type_name) {
-            return format!(
-                "crate::datatypes::{}::{}",
-                Self::to_snake_case(type_name),
-                type_name
-            );
-        }
-
-        // Check if it's a known primitive type extension
-        if Self::is_fhir_primitive_type(type_name) {
-            // Map type names to correct module names - handle both Type and non-Type variants
-            let module_name = match type_name {
-                "StringType" | "String" => "string",
-                "BooleanType" | "Boolean" => "boolean",
-                "IntegerType" | "Integer" => "integer",
-                "DecimalType" | "Decimal" => "decimal",
-                "UriType" | "Uri" => "uri",
-                "UrlType" | "Url" => "url",
-                "CanonicalType" | "Canonical" => "canonical",
-                "OidType" | "Oid" => "oid",
-                "UuidType" | "Uuid" => "uuid",
-                "InstantType" | "Instant" => "instant",
-                "DateType" | "Date" => "date",
-                "DateTimeType" | "DateTime" => "date_time",
-                "TimeType" | "Time" => "time",
-                "CodeType" | "Code" => "code",
-                "IdType" | "Id" => "id",
-                "MarkdownType" | "Markdown" => "markdown",
-                "Base64BinaryType" | "Base64Binary" => "base64binary",
-                "UnsignedIntType" | "UnsignedInt" => "unsigned_int",
-                "PositiveIntType" | "PositiveInt" => "positive_int",
-                "XhtmlType" | "Xhtml" => "xhtml",
-                _ => "unknown_primitive",
-            };
-            // Map the type name to the correct Type variant for import
-            let type_variant = match type_name {
-                "String" => "StringType",
-                "Boolean" => "BooleanType",
-                "Integer" => "IntegerType",
-                "Decimal" => "DecimalType",
-                "Uri" => "UriType",
-                "Url" => "UrlType",
-                "Canonical" => "CanonicalType",
-                "Oid" => "OidType",
-                "Uuid" => "UuidType",
-                "Instant" => "InstantType",
-                "Date" => "DateType",
-                "DateTime" => "DateTimeType",
-                "Time" => "TimeType",
-                "Code" => "CodeType",
-                "Id" => "IdType",
-                "Markdown" => "MarkdownType",
-                "Base64Binary" => "Base64BinaryType",
-                "UnsignedInt" => "UnsignedIntType",
-                "PositiveInt" => "PositiveIntType",
-                "Xhtml" => "XhtmlType",
-                _ => type_name, // Already has Type suffix
-            };
-            return format!("crate::primitives::{module_name}::{type_variant}");
-        }
-
-        // Check if it's a generated trait
-        if Self::is_generated_trait(type_name) {
-            return format!(
-                "crate::traits::{}::{}",
-                Self::to_snake_case(type_name),
-                type_name
-            );
-        }
-
-        // Default to bindings for unknown types (likely enums)
-        format!(
-            "crate::bindings::{}::{}",
-            Self::to_snake_case(type_name),
-            type_name
-        )
+        // Delegate to the centralized naming manager
+        NamingManager::get_import_path_for_type(type_name)
     }
 
     /// Check if a type is a FHIR resource type
     pub fn is_fhir_resource_type(type_name: &str) -> bool {
-        // Common FHIR resource types - using case-insensitive comparison
-        matches!(
-            type_name.to_lowercase().as_str(),
-            "patient"
-                | "observation"
-                | "practitioner"
-                | "organization"
-                | "location"
-                | "encounter"
-                | "diagnosticreport"
-                | "medication"
-                | "medicationrequest"
-                | "activitydefinition"
-                | "plandefinition"
-                | "measure"
-                | "library"
-                | "valueset"
-                | "codesystem"
-                | "conceptmap"
-                | "structuredefinition"
-                | "implementationguide"
-                | "capabilitystatement"
-                | "operationdefinition"
-                | "searchparameter"
-                | "compartmentdefinition"
-                | "examplescenario"
-                | "graphdefinition"
-                | "messagedefinition"
-                | "namingsystem"
-                | "terminologycapabilities"
-                | "testscript"
-                | "testreport"
-                | "domainresource"
-                | "resource"
-                | "metadataresource"
-                // Additional resource types that were missing
-                | "auditevent"
-                | "composition"
-                | "questionnaire"
-                | "requestgroup"
-                | "servicerequest"
-                | "evidencevariable"
-                | "guidanceresponse"
-                | "familymemberhistory"
-                | "evidence"
-                | "provenance"
-                | "group"
-                | "vitalsigns"
-                | "substance"
-                // More resource types from the generated traits
-                | "account"
-                | "adverseevent"
-                | "allergyintolerance"
-                | "appointment"
-                | "appointmentresponse"
-                | "basic"
-                | "binary"
-                | "bodystructure"
-                | "bundle"
-                | "careplan"
-                | "careteam"
-                | "chargeitem"
-                | "chargeitemdefinition"
-                | "claim"
-                | "claimresponse"
-                | "clinicalimpression"
-                | "communication"
-                | "communicationrequest"
-                | "condition"
-                | "consent"
-                | "contract"
-                | "coverage"
-                | "coverageeligibilityrequest"
-                | "coverageeligibilityresponse"
-                | "detectedissue"
-                | "device"
-                | "devicedefinition"
-                | "devicemetric"
-                | "devicerequest"
-                | "deviceusestatement"
-                | "documentmanifest"
-                | "documentreference"
-                | "endpoint"
-                | "enrollmentrequest"
-                | "enrollmentresponse"
-                | "episodeofcare"
-                | "eventdefinition"
-                | "explanationofbenefit"
-                | "flag"
-                | "goal"
-                | "healthcareservice"
-                | "imagingstudy"
-                | "immunization"
-                | "immunizationevaluation"
-                | "immunizationrecommendation"
-                | "insuranceplan"
-                | "invoice"
-                | "linkage"
-                | "list"
-                | "measurereport"
-                | "media"
-                | "medicationadministration"
-                | "medicationdispense"
-                | "medicationknowledge"
-                | "medicationstatement"
-                | "medicinalproduct"
-                | "medicinalproductauthorization"
-                | "medicinalproductcontraindication"
-                | "medicinalproductindication"
-                | "medicinalproductingredient"
-                | "medicinalproductinteraction"
-                | "medicinalproductmanufactured"
-                | "medicinalproductpackaged"
-                | "medicinalproductpharmaceutical"
-                | "medicinalproductundesirableeffect"
-                | "messageheader"
-                | "molecularsequence"
-                | "nutritionorder"
-                | "observationdefinition"
-                | "operationoutcome"
-                | "organizationaffiliation"
-                | "parameters"
-                | "paymentnotice"
-                | "paymentreconciliation"
-                | "person"
-                | "practitionerrole"
-                | "procedure"
-                | "questionnaireresponse"
-                | "relatedperson"
-                | "researchdefinition"
-                | "researchelementdefinition"
-                | "researchstudy"
-                | "researchsubject"
-                | "riskassessment"
-                | "schedule"
-                | "slot"
-                | "specimen"
-                | "specimendefinition"
-                | "structuremap"
-                | "subscription"
-                | "substancenucleicacid"
-                | "substancepolymer"
-                | "substanceprotein"
-                | "substancereferenceinformation"
-                | "substancesourcematerial"
-                | "substancespecification"
-                | "supplydelivery"
-                | "supplyrequest"
-                | "task"
-                | "verificationresult"
-                | "visionprescription"
-        )
+        NamingManager::is_fhir_resource(type_name)
     }
 
     /// Check if a type name represents a known FHIR data type
     pub fn is_fhir_datatype(type_name: &str) -> bool {
-        matches!(
-            type_name.to_lowercase().as_str(),
-            "identifier"
-                | "humanname"
-                | "address"
-                | "contactpoint"
-                | "attachment"
-                | "codeableconcept"
-                | "coding"
-                | "quantity"
-                | "range"
-                | "period"
-                | "ratio"
-                | "sampleddata"
-                | "signature"
-                | "age"
-                | "count"
-                | "distance"
-                | "duration"
-                | "money"
-                | "simplequantity"
-                | "extension"
-                | "narrative"
-                | "annotation"
-                | "reference"
-                | "meta"
-                | "timing"
-                | "dosage"
-                | "relatedartifact"
-                | "contactdetail"
-                | "contributor"
-                | "datarequirement"
-                | "parameterdef"
-                | "triggerdefinition"
-                | "usagecontext"
-                | "expression"
-                | "backboneelement"
-                | "element"
-                // Additional complex datatypes
-                | "parameterdefinition"
-                | "prodcharacteristic"
-                | "productshelflife"
-                | "marketingstatus"
-                | "population"
-                | "substanceamount"
-                | "elementdefinition"
-                // Complex nested types that may be generated
-                | "implementationguidedefinition"
-        )
+        NamingManager::is_fhir_datatype(type_name)
     }
 
     /// Check if a type is a FHIR primitive type
@@ -509,6 +234,9 @@ impl ImportManager {
         // Traits are typically generated for base types or common interfaces
         let lower_name = type_name.to_lowercase();
         lower_name.ends_with("trait")
+            || lower_name.ends_with("accessors")
+            || lower_name.ends_with("mutators")
+            || lower_name.ends_with("helpers")
             || matches!(
                 lower_name.as_str(),
                 "resourcetrait"
@@ -516,6 +244,11 @@ impl ImportManager {
                     | "backboneelementtrait"
                     | "elementtrait"
                     | "metadataresourcetrait"
+                    | "resourceaccessors"
+                    | "domainresourceaccessors"
+                    | "backboneelementaccessors"
+                    | "elementaccessors"
+                    | "metadataresourceaccessors"
             )
     }
 
@@ -523,36 +256,19 @@ impl ImportManager {
     pub fn is_primitive_type(type_name: &str) -> bool {
         matches!(
             type_name,
-            "String" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64" | "bool" | "usize" | "isize"
+            "String"
+                | "&str"
+                | "str"
+                | "i32"
+                | "u32"
+                | "i64"
+                | "u64"
+                | "f32"
+                | "f64"
+                | "bool"
+                | "usize"
+                | "isize"
         )
-    }
-
-    /// Convert a PascalCase type name to snake_case for module imports
-    /// This is a simplified version - for full functionality use NameGenerator
-    fn to_snake_case(name: &str) -> String {
-        let mut result = String::new();
-        let chars: Vec<char> = name.chars().collect();
-
-        for (i, &ch) in chars.iter().enumerate() {
-            if ch.is_uppercase() && i > 0 {
-                // Check if this is part of an acronym or start of a new word
-                let is_acronym_continuation = i > 0 && chars[i - 1].is_uppercase();
-                let is_followed_by_lowercase = i + 1 < chars.len() && chars[i + 1].is_lowercase();
-
-                // Add underscore if:
-                // 1. Previous char was lowercase (start of new word like "someWord")
-                // 2. This is an acronym followed by lowercase (like "HTTPRequest" -> "http_request")
-                if (i > 0 && chars[i - 1].is_lowercase())
-                    || (is_acronym_continuation && is_followed_by_lowercase)
-                {
-                    result.push('_');
-                }
-            }
-
-            result.push(ch.to_lowercase().next().unwrap());
-        }
-
-        result
     }
 }
 
@@ -596,5 +312,44 @@ mod tests {
         assert!(ImportManager::is_primitive_type("bool"));
         assert!(!ImportManager::is_primitive_type("Patient"));
         assert!(!ImportManager::is_primitive_type("Identifier"));
+    }
+
+    #[test]
+    fn test_nested_structure_detection() {
+        // Test nested structure import path detection with longest prefix matching
+        assert_eq!(
+            ImportManager::get_import_path_for_type("EvidenceVariableCharacteristic"),
+            "crate::resources::evidence_variable::EvidenceVariableCharacteristic"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("MeasureReportGroup"),
+            "crate::resources::measure_report::MeasureReportGroup"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("AccountCoverage"),
+            "crate::resources::account::AccountCoverage"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("AccountGuarantor"),
+            "crate::resources::account::AccountGuarantor"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("BundleEntry"),
+            "crate::resources::bundle::BundleEntry"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("ImplementationGuideGlobal"),
+            "crate::resources::implementation_guide::ImplementationGuideGlobal"
+        );
+
+        // Test that non-nested structures still work correctly
+        assert_eq!(
+            ImportManager::get_import_path_for_type("Patient"),
+            "crate::resources::patient::Patient"
+        );
+        assert_eq!(
+            ImportManager::get_import_path_for_type("Identifier"),
+            "crate::datatypes::identifier::Identifier"
+        );
     }
 }

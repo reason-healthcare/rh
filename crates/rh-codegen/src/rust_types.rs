@@ -122,6 +122,7 @@ pub enum RustType {
     Option(Box<RustType>),
     Vec(Box<RustType>),
     Box(Box<RustType>),
+    Slice(Box<RustType>),
     Custom(String),
     Reference(String),
 }
@@ -137,8 +138,16 @@ impl RustType {
             RustType::Option(inner) => format!("Option<{}>", inner.to_string()),
             RustType::Vec(inner) => format!("Vec<{}>", inner.to_string()),
             RustType::Box(inner) => format!("Box<{}>", inner.to_string()),
+            RustType::Slice(inner) => format!("[{}]", inner.to_string()),
             RustType::Custom(name) => name.clone(),
             RustType::Reference(name) => format!("&{name}"),
+        }
+    }
+
+    pub fn wrap_in_option(self) -> Self {
+        match self {
+            RustType::Option(_) => self,
+            _ => RustType::Option(Box::new(self)),
         }
     }
 }
@@ -373,6 +382,11 @@ impl RustTraitMethod {
 
     pub fn with_default_implementation(mut self, body: String) -> Self {
         self.is_default = true;
+        self.default_body = Some(body);
+        self
+    }
+
+    pub fn with_body(mut self, body: String) -> Self {
         self.default_body = Some(body);
         self
     }

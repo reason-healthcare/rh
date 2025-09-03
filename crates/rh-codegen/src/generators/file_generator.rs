@@ -401,8 +401,8 @@ impl<'a> FileGenerator<'a> {
         // Add Resource trait impl if this is the Resource struct (legacy)
         if structure_def.name == "Resource" {
             formatted_code.push_str("\n\n");
-            let trait_impl = crate::generators::TraitGenerator::new().generate_resource_impl();
-            formatted_code.push_str(&trait_impl);
+            // let trait_impl = crate::generators::TraitGenerator::new().generate_resource_impl();
+            // formatted_code.push_str(&trait_impl);
         }
 
         // Check for file collision and warn if overwriting
@@ -447,9 +447,20 @@ impl<'a> FileGenerator<'a> {
         let trait_tokens = self.token_generator.generate_trait(rust_trait);
         all_tokens.extend(trait_tokens);
 
+        // Debug: Print the tokens before parsing
+        if std::env::var("DEBUG_TOKENS").is_ok() {
+            eprintln!(
+                "DEBUG: Generated tokens for trait '{}': {}",
+                rust_trait.name, all_tokens
+            );
+        }
+
         // Parse the tokens into a syntax tree and format it
         let syntax_tree = syn::parse2(all_tokens).map_err(|e| CodegenError::Generation {
-            message: format!("Failed to parse generated trait tokens: {e}"),
+            message: format!(
+                "Failed to parse generated trait tokens for '{}': {e}",
+                rust_trait.name
+            ),
         })?;
 
         let formatted_code = prettyplease::unparse(&syntax_tree);

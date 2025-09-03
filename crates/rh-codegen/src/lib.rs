@@ -122,13 +122,13 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     // Generate both the generic Resource trait and the specific resource trait
 
     // 1. Generate the generic Resource trait
-    let generic_trait_file = traits_dir.join("resource.rs");
-    match generator.generate_resource_trait() {
-        Ok(trait_content) => {
-            std::fs::write(&generic_trait_file, trait_content)?;
-        }
-        Err(e) => return Err(e),
-    }
+    // let generic_trait_file = traits_dir.join("resource.rs");
+    // match generator.generate_resource_trait() {
+    //     Ok(trait_content) => {
+    //         std::fs::write(&generic_trait_file, trait_content)?;
+    //     }
+    //     Err(e) => return Err(e),
+    // }
 
     // 2. Generate the specific resource trait with choice type methods
     let trait_filename = trait_filename_from_name(&structure_def.name);

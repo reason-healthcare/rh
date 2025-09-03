@@ -282,6 +282,88 @@ impl TypeUtilities {
                 | "PractitionerRole"
         )
     }
+
+    /// Map FHIR element types to Rust types
+    pub fn map_fhir_type_to_rust(
+        element_type: &crate::fhir_types::ElementType,
+        field_name: &str,
+        element_path: &str,
+    ) -> crate::CodegenResult<crate::rust_types::RustType> {
+        use crate::rust_types::RustType;
+
+        let resource_type = element_path.split('.').next().unwrap_or("");
+
+        if let Some(code) = &element_type.code {
+            let rust_type = match (field_name, code.as_str(), resource_type) {
+                ("name", "HumanName", _)
+                | ("name", _, "Patient")
+                | ("name", _, "Person")
+                | ("name", _, "Practitioner")
+                | ("name", _, "RelatedPerson") => RustType::Custom("HumanName".to_string()),
+                ("name", "string", _) => RustType::String,
+                ("birthDate", _, _) => RustType::String,
+                (_, "string", _)
+                | (_, "code", _)
+                | (_, "id", _)
+                | (_, "markdown", _)
+                | (_, "uri", _)
+                | (_, "url", _)
+                | (_, "canonical", _)
+                | (_, "dateTime", _)
+                | (_, "date", _)
+                | (_, "time", _)
+                | (_, "instant", _)
+                | (_, "base64Binary", _)
+                | (_, "oid", _)
+                | (_, "uuid", _) => RustType::String,
+                (_, "boolean", _) => RustType::Boolean,
+                (_, "integer", _) | (_, "positiveInt", _) | (_, "unsignedInt", _) => {
+                    RustType::Integer
+                }
+                (_, "decimal", _) => RustType::Float,
+                (_, "Reference", _) => RustType::Custom("Reference".to_string()),
+                (_, "Identifier", _) => RustType::Custom("Identifier".to_string()),
+                (_, "CodeableConcept", _) => RustType::Custom("CodeableConcept".to_string()),
+                (_, "Coding", _) => RustType::Custom("Coding".to_string()),
+                (_, "Address", _) => RustType::Custom("Address".to_string()),
+                (_, "HumanName", _) => RustType::Custom("HumanName".to_string()),
+                (_, "ContactPoint", _) => RustType::Custom("ContactPoint".to_string()),
+                (_, "Attachment", _) => RustType::Custom("Attachment".to_string()),
+                (_, "Annotation", _) => RustType::Custom("Annotation".to_string()),
+                (_, "BackboneElement", _) => {
+                    // For BackboneElement, check if this is a nested structure
+                    let path_parts: Vec<&str> = element_path.split('.').collect();
+                    if path_parts.len() == 2 {
+                        // This is a field directly on a resource (e.g., Account.coverage)
+                        // Generate nested structure name like AccountCoverage
+                        let resource_name =
+                            crate::naming::Naming::to_rust_identifier(path_parts[0]);
+                        let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
+                        RustType::Custom(format!("{}{}", resource_name, field_name_pascal))
+                    } else {
+                        // Deeper nesting or other cases, fall back to BackboneElement
+                        RustType::Custom("BackboneElement".to_string())
+                    }
+                }
+                (_, "Meta", _) => RustType::Custom("Meta".to_string()),
+                (_, "Extension", _) => RustType::Custom("Extension".to_string()),
+                (_, code, _) if code.starts_with("http://hl7.org/fhirpath/System.") => {
+                    // Handle FHIRPath system types - map them to appropriate Rust types
+                    match code {
+                        "http://hl7.org/fhirpath/System.String" => RustType::String,
+                        "http://hl7.org/fhirpath/System.Boolean" => RustType::Boolean,
+                        "http://hl7.org/fhirpath/System.Integer" => RustType::Integer,
+                        "http://hl7.org/fhirpath/System.Decimal" => RustType::Float,
+                        _ => RustType::String, // Default fallback for unknown system types
+                    }
+                }
+                (_, code, _) => RustType::Custom(crate::naming::Naming::to_rust_identifier(code)),
+            };
+            Ok(rust_type)
+        } else {
+            Ok(RustType::String)
+        }
+    }
 }
 
 #[cfg(test)]
