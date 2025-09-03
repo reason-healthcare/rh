@@ -17,6 +17,9 @@ impl MutatorTraitGenerator {
         rust_trait: &mut RustTrait,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<()> {
+        // Add constructor method
+        self.add_constructor_method(rust_trait, structure_def)?;
+
         let elements = structure_def
             .differential
             .as_ref()
@@ -175,6 +178,27 @@ impl MutatorTraitGenerator {
         _structure_def: &StructureDefinition,
     ) -> CodegenResult<()> {
         // Implementation for choice type mutators can be added here.
+        Ok(())
+    }
+
+    /// Add a constructor method that creates an instance with default/empty values
+    fn add_constructor_method(
+        &self,
+        rust_trait: &mut RustTrait,
+        structure_def: &StructureDefinition,
+    ) -> CodegenResult<()> {
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+
+        // Basic constructor with no parameters - supports method chaining
+        let new_method = RustTraitMethod::new("new".to_string())
+            .with_doc(format!(
+                "Create a new {} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nlet resource = {}::new()\n    .set_status(\"active\".to_string())\n    .set_name(\"Example Name\".to_string());\n```",
+                struct_name, struct_name
+            ))
+            .with_return_type(RustType::Custom("Self".to_string()));
+
+        rust_trait.add_method(new_method);
+
         Ok(())
     }
 }
