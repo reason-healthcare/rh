@@ -129,7 +129,7 @@ pub struct ElementType {
 }
 
 /// Represents a FHIR StructureDefinition
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StructureDefinition {
     #[serde(rename = "resourceType")]
     pub resource_type: String,
@@ -152,12 +152,12 @@ pub struct StructureDefinition {
     pub snapshot: Option<StructureDefinitionSnapshot>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StructureDefinitionDifferential {
     pub element: Vec<ElementDefinition>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StructureDefinitionSnapshot {
     pub element: Vec<ElementDefinition>,
 }

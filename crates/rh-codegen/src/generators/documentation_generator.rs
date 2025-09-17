@@ -4,6 +4,7 @@
 //! for FHIR structs, fields, traits, and other code elements.
 
 use crate::fhir_types::{ElementDefinition, StructureDefinition};
+use crate::value_sets::ValueSetManager;
 
 /// Generator for documentation and doc comments
 pub struct DocumentationGenerator;
@@ -61,10 +62,104 @@ impl DocumentationGenerator {
 
     /// Generate documentation for a field based on ElementDefinition
     pub fn generate_field_documentation(element: &ElementDefinition) -> Option<String> {
+        let mut doc_parts = Vec::new();
+
+        // Add basic field description
         if let Some(short) = &element.short {
-            Some(short.clone())
+            doc_parts.push(short.clone());
+        } else if let Some(definition) = &element.definition {
+            doc_parts.push(definition.clone());
+        }
+
+        // Add binding information for non-required bindings
+        if let Some(binding) = &element.binding {
+            if binding.strength != "required" {
+                // Add binding strength information
+                doc_parts.push(format!(
+                    "Binding: {} ({})",
+                    binding.strength,
+                    binding.description.as_deref().unwrap_or("No description")
+                ));
+
+                // Note: We'll add available values here when we have access to ValueSetManager
+            }
+        }
+
+        if doc_parts.is_empty() {
+            None
         } else {
-            element.definition.clone()
+            Some(doc_parts.join("\n\n"))
+        }
+    }
+
+    /// Generate enhanced field documentation with ValueSet information
+    pub fn generate_field_documentation_with_binding(
+        element: &ElementDefinition,
+        value_set_manager: &ValueSetManager,
+    ) -> Option<String> {
+        let mut doc_parts = Vec::new();
+
+        // Add basic field description
+        if let Some(short) = &element.short {
+            doc_parts.push(short.clone());
+        } else if let Some(definition) = &element.definition {
+            doc_parts.push(definition.clone());
+        }
+
+        // Add binding information for non-required bindings
+        if let Some(binding) = &element.binding {
+            if binding.strength != "required" {
+                // Add binding strength information
+                doc_parts.push(format!(
+                    "Binding: {} ({})",
+                    binding.strength,
+                    binding.description.as_deref().unwrap_or("No description")
+                ));
+
+                // Add available values from ValueSet
+                if let Some(value_set_url) = &binding.value_set {
+                    // Parse ValueSet URL to remove version if present
+                    let url = if let Some(version_pos) = value_set_url.find('|') {
+                        &value_set_url[..version_pos]
+                    } else {
+                        value_set_url
+                    };
+
+                    match value_set_manager.get_value_set_codes(url, None) {
+                        Ok(codes) => {
+                            if !codes.is_empty() {
+                                let mut values_doc = String::from("Available values:");
+                                for (code, display) in codes.iter().take(10) {
+                                    // Limit to first 10 to avoid huge docs
+                                    if let Some(display) = display {
+                                        values_doc
+                                            .push_str(&format!("\n- `{}`: {}", code, display));
+                                    } else {
+                                        values_doc.push_str(&format!("\n- `{}`", code));
+                                    }
+                                }
+                                if codes.len() > 10 {
+                                    values_doc.push_str(&format!(
+                                        "\n- ... and {} more values",
+                                        codes.len() - 10
+                                    ));
+                                }
+                                doc_parts.push(values_doc);
+                            }
+                        }
+                        Err(_) => {
+                            // ValueSet not found, just add the URL reference
+                            doc_parts.push(format!("ValueSet: {}", value_set_url));
+                        }
+                    }
+                }
+            }
+        }
+
+        if doc_parts.is_empty() {
+            None
+        } else {
+            Some(doc_parts.join("\n\n"))
         }
     }
 
@@ -84,6 +179,85 @@ impl DocumentationGenerator {
 
         // Add type-specific suffix
         Some(format!("{base_doc} ({type_code})"))
+    }
+
+    /// Generate enhanced choice field documentation with ValueSet information
+    pub fn generate_choice_field_documentation_with_binding(
+        element: &ElementDefinition,
+        type_code: &str,
+        value_set_manager: &ValueSetManager,
+    ) -> Option<String> {
+        let mut doc_parts = Vec::new();
+
+        // Create base documentation that indicates this is a specific type variant of a choice field
+        let base_doc = if let Some(short) = &element.short {
+            short.clone()
+        } else if let Some(definition) = &element.definition {
+            definition.clone()
+        } else {
+            "Choice type field".to_string()
+        };
+
+        // Add type-specific suffix
+        doc_parts.push(format!("{base_doc} ({type_code})"));
+
+        // Add binding information for code type choice fields with non-required bindings
+        if type_code == "code" {
+            if let Some(binding) = &element.binding {
+                if binding.strength != "required" {
+                    // Add binding strength information
+                    doc_parts.push(format!(
+                        "Binding: {} ({})",
+                        binding.strength,
+                        binding.description.as_deref().unwrap_or("No description")
+                    ));
+
+                    // Add available values from ValueSet
+                    if let Some(value_set_url) = &binding.value_set {
+                        // Parse ValueSet URL to remove version if present
+                        let url = if let Some(version_pos) = value_set_url.find('|') {
+                            &value_set_url[..version_pos]
+                        } else {
+                            value_set_url
+                        };
+
+                        match value_set_manager.get_value_set_codes(url, None) {
+                            Ok(codes) => {
+                                if !codes.is_empty() {
+                                    let mut values_doc = String::from("Available values:");
+                                    for (code, display) in codes.iter().take(10) {
+                                        // Limit to first 10 to avoid huge docs
+                                        if let Some(display) = display {
+                                            values_doc
+                                                .push_str(&format!("\n- `{}`: {}", code, display));
+                                        } else {
+                                            values_doc.push_str(&format!("\n- `{}`", code));
+                                        }
+                                    }
+                                    if codes.len() > 10 {
+                                        values_doc.push_str(&format!(
+                                            "\n- ... and {} more values",
+                                            codes.len() - 10
+                                        ));
+                                    }
+                                    doc_parts.push(values_doc);
+                                }
+                            }
+                            Err(_) => {
+                                // ValueSet not found, just add the URL reference
+                                doc_parts.push(format!("ValueSet: {}", value_set_url));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if doc_parts.is_empty() {
+            None
+        } else {
+            Some(doc_parts.join("\n\n"))
+        }
     }
 
     /// Generate documentation for a primitive element struct

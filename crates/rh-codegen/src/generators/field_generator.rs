@@ -108,9 +108,12 @@ impl<'a> FieldGenerator<'a> {
                     field.is_optional = is_optional;
 
                     // Add documentation
-                    field.doc_comment = DocumentationGenerator::generate_choice_field_documentation(
-                        element, type_code,
-                    );
+                    field.doc_comment =
+                        DocumentationGenerator::generate_choice_field_documentation_with_binding(
+                            element,
+                            type_code,
+                            self.value_set_manager,
+                        );
 
                     // Add serde rename for the original FHIR field name with type suffix
                     let serde_name = format!(
@@ -172,7 +175,10 @@ impl<'a> FieldGenerator<'a> {
         field.is_optional = is_optional;
 
         // Add documentation if available
-        field.doc_comment = DocumentationGenerator::generate_field_documentation(element);
+        field.doc_comment = DocumentationGenerator::generate_field_documentation_with_binding(
+            element,
+            self.value_set_manager,
+        );
 
         // Add serde rename if the field name was changed
         if rust_field_name != field_name {

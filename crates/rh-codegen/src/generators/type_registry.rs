@@ -26,8 +26,8 @@ pub enum TypeClassification {
     Trait,
 }
 
-/// Global registry of type classifications
-static TYPE_REGISTRY: Lazy<Mutex<HashMap<String, TypeClassification>>> =
+/// Global registry of type classifications and structure definitions
+static TYPE_REGISTRY: Lazy<Mutex<HashMap<String, (TypeClassification, StructureDefinition)>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Type registry for managing FHIR type classifications
@@ -37,20 +37,72 @@ impl TypeRegistry {
     /// Register a type based on its StructureDefinition
     pub fn register_from_structure_definition(structure_def: &StructureDefinition) {
         let classification = Self::classify_from_structure_definition(structure_def);
-        Self::register_type(&structure_def.name, classification);
+        Self::register_type(&structure_def.name, classification, structure_def.clone());
     }
 
-    /// Register a type with a specific classification
-    pub fn register_type(type_name: &str, classification: TypeClassification) {
+    /// Register a type with a specific classification and structure definition
+    pub fn register_type(
+        type_name: &str,
+        classification: TypeClassification,
+        structure_def: StructureDefinition,
+    ) {
         if let Ok(mut registry) = TYPE_REGISTRY.lock() {
-            registry.insert(type_name.to_string(), classification);
+            registry.insert(type_name.to_string(), (classification, structure_def));
         }
+    }
+
+    /// Register a type with just a classification (creates a minimal placeholder structure definition)
+    pub fn register_type_classification_only(type_name: &str, classification: TypeClassification) {
+        // Create a minimal placeholder structure definition
+        let placeholder_structure_def = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: type_name.to_lowercase(),
+            url: format!("http://placeholder/{}", type_name),
+            version: None,
+            name: type_name.to_string(),
+            title: Some(type_name.to_string()),
+            status: "placeholder".to_string(),
+            description: None,
+            purpose: None,
+            kind: match classification {
+                TypeClassification::ValueSetEnum => "primitive-type".to_string(),
+                TypeClassification::Resource => "resource".to_string(),
+                TypeClassification::ComplexType => "complex-type".to_string(),
+                TypeClassification::NestedStructure { .. } => "complex-type".to_string(),
+                TypeClassification::Primitive => "primitive-type".to_string(),
+                TypeClassification::Trait => "logical".to_string(),
+            },
+            is_abstract: false,
+            base_type: match classification {
+                TypeClassification::ValueSetEnum => "code".to_string(),
+                TypeClassification::Primitive => "Element".to_string(),
+                _ => "Element".to_string(),
+            },
+            base_definition: None,
+            differential: None,
+            snapshot: None,
+        };
+
+        Self::register_type(type_name, classification, placeholder_structure_def);
     }
 
     /// Get the classification for a type
     pub fn get_classification(type_name: &str) -> Option<TypeClassification> {
         if let Ok(registry) = TYPE_REGISTRY.lock() {
-            registry.get(type_name).cloned()
+            registry
+                .get(type_name)
+                .map(|(classification, _)| classification.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Get the structure definition for a type
+    pub fn get_structure_definition(type_name: &str) -> Option<StructureDefinition> {
+        if let Ok(registry) = TYPE_REGISTRY.lock() {
+            registry
+                .get(type_name)
+                .map(|(_, structure_def)| structure_def.clone())
         } else {
             None
         }
@@ -104,9 +156,52 @@ impl TypeRegistry {
 
     /// Check if a StructureDefinition represents a ValueSet-based enum
     fn is_value_set_enum(structure_def: &StructureDefinition) -> bool {
+        // First, check if this is a known FHIR primitive type
+        // These should NOT be treated as ValueSet enums
+        if Self::is_fhir_primitive_type(&structure_def.name) {
+            return false;
+        }
+
         // ValueSet-based enums are typically primitive-type with base_type "code"
-        // and have binding constraints
+        // and have binding constraints, but they are NOT FHIR primitive types
         structure_def.kind == "primitive-type" && structure_def.base_type == "code"
+    }
+
+    /// Check if a type name represents a FHIR primitive type
+    pub fn is_fhir_primitive_type(type_name: &str) -> bool {
+        // Known FHIR primitive types (with and without "Type" suffix)
+        matches!(
+            type_name,
+            // With "Type" suffix
+            "BooleanType" | "StringType" | "IntegerType" | "DecimalType" |
+            "UriType" | "UrlType" | "CanonicalType" | "OidType" | "UuidType" |
+            "InstantType" | "DateType" | "DateTimeType" | "TimeType" |
+            "CodeType" | "IdType" | "MarkdownType" | "Base64BinaryType" |
+            "UnsignedIntType" | "PositiveIntType" | "XhtmlType" |
+            // Without "Type" suffix  
+            "Boolean" | "String" | "Integer" | "Decimal" |
+            "Uri" | "Url" | "Canonical" | "Oid" | "Uuid" |
+            "Instant" | "Date" | "DateTime" | "Time" |
+            "Code" | "Id" | "Markdown" | "Base64Binary" |
+            "UnsignedInt" | "PositiveInt" | "Xhtml"
+        )
+    }
+
+    /// Check if a type is a binding enum using the TypeRegistry classification.
+    /// This is more reliable than heuristics based on naming patterns.
+    ///
+    /// Binding enums are typically registered as ValueSetEnum in the TypeRegistry.
+    pub fn is_binding_enum(type_name: &str) -> bool {
+        // First exclude FHIR primitive types
+        if Self::is_fhir_primitive_type(type_name) {
+            return false;
+        }
+
+        // Check if this is registered as a ValueSetEnum in the TypeRegistry
+        matches!(
+            Self::get_classification(type_name),
+            Some(TypeClassification::ValueSetEnum)
+        )
     }
 
     /// Detect if this is a nested structure and return the parent resource name
@@ -285,7 +380,7 @@ impl TypeRegistry {
 
         // Sort by length in descending order to match longer resource names first
         // This ensures "ClaimResponse" is matched before "Claim" for types like "ClaimResponseAdditem"
-        known_resources.sort_by(|a, b| b.len().cmp(&a.len()));
+        known_resources.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
         for resource in &known_resources {
             if type_name.starts_with(resource) && type_name.len() > resource.len() {
@@ -348,7 +443,26 @@ impl TypeRegistry {
         } else {
             // Fallback to NamingManager for unregistered types
             // But for some well-known types, provide better defaults
-            if crate::generators::naming_manager::NamingManager::is_fhir_resource(type_name) {
+
+            // First check if it's a FHIR primitive type
+            if Self::is_fhir_primitive_type(type_name) {
+                Self::get_primitive_import_path(type_name).unwrap_or_else(|| {
+                    format!(
+                        "crate::primitives::{}::{}",
+                        crate::naming::Naming::to_snake_case(type_name),
+                        type_name
+                    )
+                })
+            } else if Self::is_binding_enum(type_name) {
+                // Check for binding enums BEFORE checking nested structures
+                // to prevent enums like "AccountStatus" from being misclassified
+                format!(
+                    "crate::bindings::{}::{}",
+                    crate::naming::Naming::to_snake_case(type_name),
+                    type_name
+                )
+            } else if crate::generators::naming_manager::NamingManager::is_fhir_resource(type_name)
+            {
                 format!(
                     "crate::resources::{}::{}",
                     crate::naming::Naming::to_snake_case(type_name),
@@ -585,5 +699,154 @@ mod tests {
             TypeRegistry::extract_parent_from_name("ActivityDefinitionParticipant"),
             Some("ActivityDefinition".to_string())
         );
+    }
+
+    #[test]
+    fn test_primitive_type_import_paths() {
+        // Test that FHIR primitive types are correctly routed to primitives module
+        // and not to bindings module
+
+        let primitive_types = vec![
+            "BooleanType",
+            "StringType",
+            "IntegerType",
+            "PositiveIntType",
+            "DecimalType",
+            "UriType",
+            "DateTimeType",
+        ];
+
+        for type_name in primitive_types {
+            let import_path = TypeRegistry::get_import_path_for_type(type_name);
+
+            // Should be routed to primitives, not bindings
+            assert!(
+                import_path.contains("crate::primitives::"),
+                "Type {type_name} should be routed to primitives module, got: {import_path}"
+            );
+
+            // Should not be routed to bindings
+            assert!(
+                !import_path.contains("crate::bindings::"),
+                "Type {type_name} should not be routed to bindings module, got: {import_path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_fhir_primitive_type() {
+        // Test the primitive type detection function
+        assert!(TypeRegistry::is_fhir_primitive_type("BooleanType"));
+        assert!(TypeRegistry::is_fhir_primitive_type("StringType"));
+        assert!(TypeRegistry::is_fhir_primitive_type("PositiveIntType"));
+        assert!(TypeRegistry::is_fhir_primitive_type("Boolean"));
+        assert!(TypeRegistry::is_fhir_primitive_type("String"));
+
+        // These should not be primitive types
+        assert!(!TypeRegistry::is_fhir_primitive_type("Patient"));
+        assert!(!TypeRegistry::is_fhir_primitive_type("AddressType"));
+        assert!(!TypeRegistry::is_fhir_primitive_type("HumanName"));
+    }
+
+    #[test]
+    fn test_is_binding_enum() {
+        TypeRegistry::clear();
+
+        // Test with actual StructureDefinition for AccountStatus (a binding enum)
+        let account_status = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "account-status".to_string(),
+            url: "http://hl7.org/fhir/ValueSet/account-status".to_string(),
+            version: None,
+            name: "AccountStatus".to_string(),
+            title: Some("AccountStatus".to_string()),
+            status: "active".to_string(),
+            description: None,
+            purpose: None,
+            kind: "primitive-type".to_string(),
+            is_abstract: false,
+            base_type: "code".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/code".to_string()),
+            differential: None,
+            snapshot: None,
+        };
+
+        TypeRegistry::register_from_structure_definition(&account_status);
+
+        // Test binding enum detection
+        assert!(TypeRegistry::is_binding_enum("AccountStatus"));
+
+        // Test that FHIR primitives are not binding enums
+        assert!(!TypeRegistry::is_binding_enum("BooleanType"));
+        assert!(!TypeRegistry::is_binding_enum("StringType"));
+
+        // Test that non-registered types without structure definitions don't match
+        assert!(!TypeRegistry::is_binding_enum("Patient"));
+        assert!(!TypeRegistry::is_binding_enum("AccountCoverage"));
+        assert!(!TypeRegistry::is_binding_enum("HumanName"));
+    }
+
+    #[test]
+    fn test_enum_import_paths() {
+        TypeRegistry::clear();
+
+        // Register some actual binding enums with structure definitions
+        let task_intent = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "task-intent".to_string(),
+            url: "http://hl7.org/fhir/ValueSet/task-intent".to_string(),
+            version: None,
+            name: "TaskIntent".to_string(),
+            title: Some("TaskIntent".to_string()),
+            status: "active".to_string(),
+            description: None,
+            purpose: None,
+            kind: "primitive-type".to_string(),
+            is_abstract: false,
+            base_type: "code".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/code".to_string()),
+            differential: None,
+            snapshot: None,
+        };
+
+        let publication_status = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "publication-status".to_string(),
+            url: "http://hl7.org/fhir/ValueSet/publication-status".to_string(),
+            version: None,
+            name: "PublicationStatus".to_string(),
+            title: Some("PublicationStatus".to_string()),
+            status: "active".to_string(),
+            description: None,
+            purpose: None,
+            kind: "primitive-type".to_string(),
+            is_abstract: false,
+            base_type: "code".to_string(),
+            base_definition: Some("http://hl7.org/fhir/StructureDefinition/code".to_string()),
+            differential: None,
+            snapshot: None,
+        };
+
+        TypeRegistry::register_from_structure_definition(&task_intent);
+        TypeRegistry::register_from_structure_definition(&publication_status);
+
+        // Test that binding enums are correctly routed to bindings module
+        let enum_types = vec!["TaskIntent", "PublicationStatus"];
+
+        for type_name in enum_types {
+            let import_path = TypeRegistry::get_import_path_for_type(type_name);
+
+            // Should be routed to bindings, not resources
+            assert!(
+                import_path.contains("crate::bindings::"),
+                "Type {type_name} should be routed to bindings module, got: {import_path}"
+            );
+
+            // Should not be routed to resources
+            assert!(
+                !import_path.contains("crate::resources::"),
+                "Type {type_name} should not be routed to resources module, got: {import_path}"
+            );
+        }
     }
 }

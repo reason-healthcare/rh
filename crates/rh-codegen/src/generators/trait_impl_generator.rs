@@ -147,31 +147,83 @@ impl TraitImplGenerator {
             struct_name.to_string(),
         );
 
+        // Determine the base access pattern based on the inheritance chain
+        let (base_access, use_trait_methods) =
+            self.get_resource_base_access(struct_name, structure_def);
+
         // id method
         let id_method = RustTraitImplMethod::new("id".to_string())
             .with_return_type("Option<String>".to_string())
-            .with_body("self.base.base.id.clone()".to_string());
+            .with_body(if use_trait_methods {
+                format!("{}.id()", base_access)
+            } else {
+                format!("{}.id.clone()", base_access)
+            });
         trait_impl.add_method(id_method);
 
         // meta method
         let meta_method = RustTraitImplMethod::new("meta".to_string())
             .with_return_type("Option<crate::datatypes::meta::Meta>".to_string())
-            .with_body("self.base.base.meta.clone()".to_string());
+            .with_body(if use_trait_methods {
+                format!("{}.meta()", base_access)
+            } else {
+                format!("{}.meta.clone()", base_access)
+            });
         trait_impl.add_method(meta_method);
 
         // implicit_rules method
         let implicit_rules_method = RustTraitImplMethod::new("implicit_rules".to_string())
             .with_return_type("Option<String>".to_string())
-            .with_body("self.base.base.implicit_rules.clone()".to_string());
+            .with_body(if use_trait_methods {
+                format!("{}.implicit_rules()", base_access)
+            } else {
+                format!("{}.implicit_rules.clone()", base_access)
+            });
         trait_impl.add_method(implicit_rules_method);
 
         // language method
         let language_method = RustTraitImplMethod::new("language".to_string())
             .with_return_type("Option<String>".to_string())
-            .with_body("self.base.base.language.clone()".to_string());
+            .with_body(if use_trait_methods {
+                format!("{}.language()", base_access)
+            } else {
+                format!("{}.language.clone()", base_access)
+            });
         trait_impl.add_method(language_method);
 
         trait_impl
+    }
+
+    /// Get the base access pattern for resource fields
+    fn get_resource_base_access(
+        &self,
+        struct_name: &str,
+        structure_def: &StructureDefinition,
+    ) -> (String, bool) {
+        if struct_name == "Resource" {
+            // For Resource itself, access fields directly
+            ("self".to_string(), false)
+        } else if struct_name == "DomainResource" {
+            // For DomainResource, access Resource fields directly
+            ("self.base".to_string(), false)
+        } else if let Some(base_def) = &structure_def.base_definition {
+            if base_def.contains("DomainResource") {
+                // For core resources that inherit from DomainResource - access fields directly
+                ("self.base.base".to_string(), false)
+            } else if base_def.contains("Resource") && struct_name != "DomainResource" {
+                // For resources that inherit directly from Resource - access fields directly
+                ("self.base".to_string(), false)
+            } else if base_def.starts_with("http://hl7.org/fhir/StructureDefinition/") {
+                // This is a profile of another resource - delegate to trait method
+                ("self.base".to_string(), true)
+            } else {
+                // Default case - treat as core resource
+                ("self.base.base".to_string(), false)
+            }
+        } else {
+            // Default case when no baseDefinition - treat as core resource
+            ("self.base.base".to_string(), false)
+        }
     }
 
     /// Generate DomainResource trait implementation
@@ -280,13 +332,14 @@ impl TraitImplGenerator {
         &self,
         element: &crate::fhir_types::ElementDefinition,
     ) -> Option<RustTraitImplMethod> {
-        use super::TypeUtilities;
+        use crate::config::CodegenConfig;
+        use crate::type_mapper::TypeMapper;
+        use crate::value_sets::ValueSetManager;
 
         let path_parts: Vec<&str> = element.path.split('.').collect();
         let field_name = path_parts.last()?.to_string();
         let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
-        let is_optional = element.min.unwrap_or(0) == 0;
         let is_array = element.max.as_deref() == Some("*")
             || element
                 .max
@@ -296,109 +349,58 @@ impl TraitImplGenerator {
                 .unwrap_or(1)
                 > 1;
 
-        // Get the element type
-        let element_type = element.element_type.as_ref()?.first()?.clone();
+        // Check if field is optional based on minimum cardinality
+        let is_optional = element.min.unwrap_or(0) == 0;
 
-        // Map FHIR type to Rust type (this should match what the trait expects)
+        // Create TypeMapper for consistent type resolution
+        let config = CodegenConfig::default();
+        let mut value_set_manager = ValueSetManager::new();
+        let mut type_mapper = TypeMapper::new(&config, &mut value_set_manager);
+
+        // Get the FHIR types for this element
+        let fhir_types = element.element_type.as_ref()?;
+
+        // Map FHIR type to Rust type using TypeMapper with binding information
         let rust_type =
-            match TypeUtilities::map_fhir_type_to_rust(&element_type, &field_name, &element.path) {
-                Ok(rt) => rt,
-                Err(_) => return None,
+            type_mapper.map_fhir_type_with_binding(fhir_types, element.binding.as_ref(), is_array);
+
+        // Generate return type and body based on the mapped type
+        let (return_type, body) = if is_array {
+            // For arrays, return slice references
+            let inner_type = match &rust_type {
+                crate::rust_types::RustType::Vec(inner) => inner.to_string(),
+                crate::rust_types::RustType::Option(inner) => {
+                    if let crate::rust_types::RustType::Vec(vec_inner) = inner.as_ref() {
+                        vec_inner.to_string()
+                    } else {
+                        inner.to_string()
+                    }
+                }
+                _ => rust_type.to_string(),
             };
 
-        // Generate return type that matches the trait definition
-        let return_type = if is_array {
-            // Arrays become slices (&[Type])
-            format!("&[{}]", self.get_inner_type_for_slice(&rust_type))
-        } else if is_optional {
-            // Optional fields remain Option<Type>
-            format!("Option<{}>", self.get_type_for_option(&rust_type))
+            let return_type = format!("&[{}]", inner_type);
+            let body = format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name);
+            (return_type, body)
         } else {
-            // Required fields - the type depends on the actual type
-            if let Some(element_types) = &element.element_type {
-                if let Some(first_type) = element_types.first() {
-                    if let Some(code) = &first_type.code {
-                        if code == "code" {
-                            // Enum fields should return String
-                            "String".to_string()
-                        } else {
-                            match rust_type {
-                                crate::rust_types::RustType::String => "&str".to_string(),
-                                _ => rust_type.to_string(),
-                            }
-                        }
-                    } else {
-                        match rust_type {
-                            crate::rust_types::RustType::String => "&str".to_string(),
-                            _ => rust_type.to_string(),
-                        }
-                    }
-                } else {
-                    match rust_type {
-                        crate::rust_types::RustType::String => "&str".to_string(),
-                        _ => rust_type.to_string(),
-                    }
-                }
-            } else {
-                match rust_type {
-                    crate::rust_types::RustType::String => "&str".to_string(),
+            // For non-arrays, consider optionality based on cardinality
+            if is_optional {
+                // Field is optional (min cardinality is 0), return Option<T>
+                let inner_type = match &rust_type {
+                    crate::rust_types::RustType::Option(inner) => inner.to_string(),
                     _ => rust_type.to_string(),
-                }
-            }
-        };
-
-        // Generate method body
-        let body = if is_array {
-            format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name)
-        } else if is_optional {
-            // For optional types, we need to check if it's an enum that should be converted to string
-            if self.is_enum_type(&rust_type) {
-                // Convert enum to string
-                format!("self.{}.as_ref().map(|e| e.to_string())", rust_field_name)
+                };
+                let return_type = format!("Option<{}>", inner_type);
+                let body = format!("self.{}.clone()", rust_field_name);
+                (return_type, body)
             } else {
-                format!("self.{}.clone()", rust_field_name)
-            }
-        } else {
-            // For non-optional fields, we need to handle different types
-            if let Some(element_types) = &element.element_type {
-                if let Some(first_type) = element_types.first() {
-                    if let Some(code) = &first_type.code {
-                        match code.as_str() {
-                            "code" => {
-                                // This is an enum field that should return String
-                                // For now, convert to debug string and extract the variant name
-                                format!("format!(\"{{:?}}\", &self.{}).to_lowercase().replace('_', \"-\")", rust_field_name)
-                            }
-                            "string" | "markdown" | "uri" | "url" | "canonical" | "dateTime"
-                            | "date" | "time" | "instant" | "base64Binary" | "oid" | "uuid" => {
-                                // String-based fields
-                                format!("self.{}.as_deref().unwrap_or(\"\")", rust_field_name)
-                            }
-                            _ => {
-                                // Other types (complex types, etc.)
-                                format!("self.{}.clone()", rust_field_name)
-                            }
-                        }
-                    } else {
-                        format!("self.{}.clone()", rust_field_name)
-                    }
-                } else {
-                    format!("self.{}.clone()", rust_field_name)
-                }
-            } else {
-                // Fallback based on rust_type
-                match rust_type {
-                    crate::rust_types::RustType::String => {
-                        format!("self.{}.as_deref().unwrap_or(\"\")", rust_field_name)
-                    }
-                    crate::rust_types::RustType::Custom(type_name)
-                        if self.is_enum_type_name(&type_name) =>
-                    {
-                        // For non-optional enum fields that trait expects as &str
-                        format!("&self.{}.to_string()", rust_field_name)
-                    }
-                    _ => format!("self.{}.clone()", rust_field_name),
-                }
+                // Field is required (min cardinality is 1+), return T directly
+                let return_type = match &rust_type {
+                    crate::rust_types::RustType::Option(inner) => inner.to_string(),
+                    _ => rust_type.to_string(),
+                };
+                let body = format!("self.{}.clone()", rust_field_name);
+                (return_type, body)
             }
         };
 

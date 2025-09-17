@@ -1,7 +1,8 @@
 //! Generator for accessor traits.
 use crate::fhir_types::{ElementDefinition, StructureDefinition};
-use crate::generators::TypeUtilities;
 use crate::rust_types::{RustTrait, RustTraitMethod, RustType};
+use crate::type_mapper::TypeMapper;
+use crate::value_sets::ValueSetManager;
 use crate::CodegenResult;
 
 #[derive(Default)]
@@ -17,6 +18,11 @@ impl AccessorTraitGenerator {
         rust_trait: &mut RustTrait,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<()> {
+        // Create TypeMapper for proper type resolution
+        let config = crate::config::CodegenConfig::default();
+        let mut value_set_manager = ValueSetManager::new();
+        let mut type_mapper = TypeMapper::new(&config, &mut value_set_manager);
+
         let elements = structure_def
             .differential
             .as_ref()
@@ -27,7 +33,9 @@ impl AccessorTraitGenerator {
                 let snapshot_elements = snapshot.element.clone();
                 for element in &snapshot_elements {
                     if self.should_generate_accessor(element, structure_def) {
-                        if let Some(method) = self.create_accessor_method(element)? {
+                        if let Some(method) =
+                            self.create_accessor_method(element, &mut type_mapper)?
+                        {
                             rust_trait.add_method(method);
                         }
                     }
@@ -36,7 +44,7 @@ impl AccessorTraitGenerator {
         } else {
             for element in &elements {
                 if self.should_generate_accessor(element, structure_def) {
-                    if let Some(method) = self.create_accessor_method(element)? {
+                    if let Some(method) = self.create_accessor_method(element, &mut type_mapper)? {
                         rust_trait.add_method(method);
                     }
                 }
@@ -81,6 +89,7 @@ impl AccessorTraitGenerator {
     fn create_accessor_method(
         &self,
         element: &ElementDefinition,
+        type_mapper: &mut TypeMapper,
     ) -> CodegenResult<Option<RustTraitMethod>> {
         let path_parts: Vec<&str> = element.path.split('.').collect();
         let field_name = path_parts.last().unwrap().to_string();
@@ -96,43 +105,23 @@ impl AccessorTraitGenerator {
                 .unwrap_or(1)
                 > 1;
 
-        let Some(element_type) = element.element_type.as_ref().and_then(|t| t.first()) else {
+        let Some(element_types) = element.element_type.as_ref() else {
             return Ok(None);
         };
 
-        let mut rust_type =
-            TypeUtilities::map_fhir_type_to_rust(element_type, &field_name, &element.path)?;
+        // Use TypeMapper to get the correct type including enum bindings
+        let rust_type = type_mapper.map_fhir_type_with_binding(
+            element_types,
+            element.binding.as_ref(),
+            is_array,
+        );
 
-        if is_array {
-            rust_type = RustType::Slice(Box::new(rust_type));
-        }
-
-        if is_optional && !is_array {
-            rust_type = RustType::Option(Box::new(rust_type));
-        }
-
+        // Convert the type for trait return types
         let return_type = match rust_type {
-            RustType::String => {
-                // Check if this is actually an enum field (FHIR "code" type)
-                if let Some(element_types) = &element.element_type {
-                    if let Some(first_type) = element_types.first() {
-                        if let Some(code) = &first_type.code {
-                            if code == "code" {
-                                // This is an enum field, should return String instead of &str
-                                RustType::String
-                            } else {
-                                // This is a regular string field, return &str
-                                RustType::Custom("&str".to_string())
-                            }
-                        } else {
-                            RustType::Custom("&str".to_string())
-                        }
-                    } else {
-                        RustType::Custom("&str".to_string())
-                    }
-                } else {
-                    RustType::Custom("&str".to_string())
-                }
+            RustType::Custom(_) => {
+                // For enum types or custom types, keep as-is
+                // Don't convert StringType to &str to maintain compatibility with implementations
+                rust_type.clone()
             }
             RustType::Vec(inner) => RustType::Slice(inner),
             other => other,

@@ -43,7 +43,10 @@ impl<'a> EnumGenerator<'a> {
             .generate_placeholder_enum(value_set_url);
 
         // Register the enum as a ValueSet-based enum in the TypeRegistry
-        TypeRegistry::register_type(&enum_name, TypeClassification::ValueSetEnum);
+        TypeRegistry::register_type_classification_only(
+            &enum_name,
+            TypeClassification::ValueSetEnum,
+        );
 
         // Get the generated enum from the value set manager's cache
         if let Some(rust_enum) = self.value_set_manager.get_cached_enums().get(&enum_name) {

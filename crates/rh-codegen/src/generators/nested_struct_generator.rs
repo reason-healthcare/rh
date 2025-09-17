@@ -123,7 +123,7 @@ impl<'a> NestedStructGenerator<'a> {
         // Register the nested struct in TypeRegistry with proper classification
         // Get the parent resource name from the parent struct name
         let parent_resource = parent_struct_name.to_string();
-        TypeRegistry::register_type(
+        TypeRegistry::register_type_classification_only(
             &nested_struct_name,
             crate::generators::type_registry::TypeClassification::NestedStructure {
                 parent_resource,
@@ -197,7 +197,7 @@ impl<'a> NestedStructGenerator<'a> {
             // Use a simple approach: extract from the beginning of nested_struct_name
             let parent_resource = Self::extract_parent_resource_name(nested_struct_name);
 
-            TypeRegistry::register_type(
+            TypeRegistry::register_type_classification_only(
                 &sub_nested_struct_name,
                 crate::generators::type_registry::TypeClassification::NestedStructure {
                     parent_resource,

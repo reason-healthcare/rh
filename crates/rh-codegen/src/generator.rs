@@ -282,14 +282,75 @@ impl CodeGenerator {
         Ok(())
     }
 
+    /// Pre-scan and register all ValueSet enums in the TypeRegistry
+    /// This should be called before processing resources to ensure correct import paths
+    pub fn pre_register_value_set_enums<P: AsRef<Path>>(
+        &mut self,
+        package_dir: P,
+    ) -> CodegenResult<()> {
+        let package_path = package_dir.as_ref();
+
+        // Scan for ValueSet JSON files in the package directory
+        if !package_path.exists() {
+            return Ok(()); // Nothing to scan
+        }
+
+        let entries = match std::fs::read_dir(package_path) {
+            Ok(entries) => entries,
+            Err(_) => return Ok(()), // Can't read directory, skip
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue, // Skip problematic entries
+            };
+
+            let path = entry.path();
+            if !path.is_file() || path.extension().map_or(true, |ext| ext != "json") {
+                continue;
+            }
+
+            // Try to read and parse as ValueSet
+            let content = match std::fs::read_to_string(&path) {
+                Ok(content) => content,
+                Err(_) => continue, // Skip unreadable files
+            };
+
+            let json_value: serde_json::Value = match serde_json::from_str(&content) {
+                Ok(value) => value,
+                Err(_) => continue, // Skip invalid JSON
+            };
+
+            // Check if this is a ValueSet resource
+            if json_value.get("resourceType").and_then(|v| v.as_str()) != Some("ValueSet") {
+                continue;
+            }
+
+            // Get the ValueSet URL to generate enum name
+            if let Some(url) = json_value.get("url").and_then(|v| v.as_str()) {
+                // Generate enum name using the same logic as the enum generator
+                let enum_name = self.value_set_manager.generate_enum_name(url);
+
+                // Pre-register this enum in the TypeRegistry
+                crate::generators::type_registry::TypeRegistry::register_type_classification_only(
+                    &enum_name,
+                    crate::generators::type_registry::TypeClassification::ValueSetEnum,
+                );
+            }
+        }
+
+        Ok(())
+    }
+
     /// Generate all ValueSet enums to separate files in the specified directory
     pub fn generate_enum_files<P: AsRef<Path>>(&mut self, enums_dir: P) -> CodegenResult<()> {
-        // Create an EnumGenerator with access to the cached enums
-        let enum_generator = EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
+        let mut enum_generator =
+            EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
+        let token_generator = crate::generators::token_generator::TokenGenerator::new();
+        let file_generator = FileGenerator::new(&self.config, &token_generator);
 
-        // Create FileGenerator and delegate
-        let file_generator = FileGenerator::new(&self.config, &self.token_generator);
-        file_generator.generate_enum_files(enums_dir, &enum_generator)
+        file_generator.generate_enum_files(enums_dir, &mut enum_generator)
     }
 
     /// Generate a mod.rs file that re-exports all the enum modules

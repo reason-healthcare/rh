@@ -90,6 +90,56 @@ impl ValueSetManager {
         &self.enum_cache
     }
 
+    /// Get available codes from a ValueSet for documentation purposes
+    /// Returns a list of (code, display) tuples
+    pub fn get_value_set_codes(
+        &self,
+        value_set_url: &str,
+        version: Option<&str>,
+    ) -> Result<Vec<(String, Option<String>)>, String> {
+        // Try to find and load the ValueSet file
+        let value_set = match self.load_value_set(value_set_url, version) {
+            Ok(vs) => vs,
+            Err(err) => {
+                eprintln!("Warning: Could not load ValueSet '{value_set_url}': {err}");
+                return Err(format!("ValueSet not found: {value_set_url}"));
+            }
+        };
+
+        let mut codes = Vec::new();
+
+        // Try to get codes from expansion first
+        if let Some(expansion) = &value_set.expansion {
+            if let Some(contains) = &expansion.contains {
+                for concept in contains {
+                    codes.push((concept.code.clone(), concept.display.clone()));
+                }
+                if !codes.is_empty() {
+                    return Ok(codes);
+                }
+            }
+        }
+
+        // Fallback to compose if no expansion or expansion is empty
+        if let Some(compose) = &value_set.compose {
+            if let Some(includes) = &compose.include {
+                for include in includes {
+                    if let Some(concepts) = &include.concept {
+                        for concept in concepts {
+                            codes.push((concept.code.clone(), concept.display.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
+        if codes.is_empty() {
+            Err("No codes found in ValueSet".to_string())
+        } else {
+            Ok(codes)
+        }
+    }
+
     /// Generate enum from ValueSet, trying expansion first, then compose
     pub fn generate_enum_from_value_set(
         &mut self,
