@@ -699,6 +699,12 @@ mod tests {
             TypeRegistry::extract_parent_from_name("ActivityDefinitionParticipant"),
             Some("ActivityDefinition".to_string())
         );
+
+        // Test ConditionStage specifically
+        assert_eq!(
+            TypeRegistry::extract_parent_from_name("ConditionStage"),
+            Some("Condition".to_string())
+        );
     }
 
     #[test]

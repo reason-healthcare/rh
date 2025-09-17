@@ -635,6 +635,12 @@ mod tests {
             NamingManager::detect_nested_structure_parent("ImplementationGuideGlobal"),
             Some("ImplementationGuide".to_string())
         );
+
+        // Test ConditionStage specifically
+        assert_eq!(
+            NamingManager::detect_nested_structure_parent("ConditionStage"),
+            Some("Condition".to_string())
+        );
     }
 
     #[test]
@@ -771,6 +777,11 @@ mod tests {
         assert_eq!(
             NamingManager::get_import_path_for_type("MeasureReportGroup"),
             "crate::resources::measure_report::MeasureReportGroup"
+        );
+        // Test ConditionStage specifically
+        assert_eq!(
+            NamingManager::get_import_path_for_type("ConditionStage"),
+            "crate::resources::condition::ConditionStage"
         );
     }
 }
