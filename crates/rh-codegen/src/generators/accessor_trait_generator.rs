@@ -1,5 +1,5 @@
 //! Generator for accessor traits.
-use crate::fhir_types::{ElementDefinition, StructureDefinition};
+use crate::fhir_types::{ElementDefinition, ElementType, StructureDefinition};
 use crate::rust_types::{RustTrait, RustTraitMethod, RustType};
 use crate::type_mapper::TypeMapper;
 use crate::value_sets::ValueSetManager;
@@ -109,12 +109,17 @@ impl AccessorTraitGenerator {
             return Ok(None);
         };
 
-        // Use TypeMapper to get the correct type including enum bindings
-        let rust_type = type_mapper.map_fhir_type_with_binding(
-            element_types,
-            element.binding.as_ref(),
-            is_array,
-        );
+        // Check if this is a BackboneElement that should use a specific nested type
+        let rust_type = if self.is_backbone_element(element_types) {
+            self.get_nested_type_for_backbone_element(element, is_array)
+        } else {
+            // Use TypeMapper to get the correct type including enum bindings
+            type_mapper.map_fhir_type_with_binding(
+                element_types,
+                element.binding.as_ref(),
+                is_array,
+            )
+        };
 
         // Convert the type for trait return types
         let return_type = match rust_type {
@@ -137,6 +142,47 @@ impl AccessorTraitGenerator {
             .with_body(format!("self.{}", field_name));
 
         Ok(Some(method))
+    }
+
+    /// Check if the element types contain BackboneElement
+    fn is_backbone_element(&self, element_types: &[ElementType]) -> bool {
+        element_types
+            .iter()
+            .any(|et| et.code.as_deref() == Some("BackboneElement"))
+    }
+
+    /// Get the specific nested type for a BackboneElement field
+    fn get_nested_type_for_backbone_element(
+        &self,
+        element: &ElementDefinition,
+        is_array: bool,
+    ) -> RustType {
+        let path_parts: Vec<&str> = element.path.split('.').collect();
+
+        if path_parts.len() == 2 {
+            let resource_name = path_parts[0];
+            let field_name = path_parts[1];
+
+            // Generate the expected nested type name: ResourceFieldName (e.g., AccountCoverage)
+            let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
+            let nested_type_name = format!("{}{}", resource_name, field_name_pascal);
+
+            let rust_type = RustType::Custom(nested_type_name);
+
+            if is_array {
+                RustType::Vec(Box::new(rust_type))
+            } else {
+                rust_type
+            }
+        } else {
+            // Fallback to BackboneElement if we can't determine the specific type
+            let rust_type = RustType::Custom("BackboneElement".to_string());
+            if is_array {
+                RustType::Vec(Box::new(rust_type))
+            } else {
+                rust_type
+            }
+        }
     }
 
     fn add_choice_type_accessor_methods(

@@ -360,9 +360,13 @@ impl TraitImplGenerator {
         // Get the FHIR types for this element
         let fhir_types = element.element_type.as_ref()?;
 
-        // Map FHIR type to Rust type using TypeMapper with binding information
-        let rust_type =
-            type_mapper.map_fhir_type_with_binding(fhir_types, element.binding.as_ref(), is_array);
+        // Check if this is a BackboneElement that should use a specific nested type
+        let rust_type = if self.is_backbone_element(fhir_types) {
+            self.get_nested_type_for_backbone_element(element, is_array)
+        } else {
+            // Map FHIR type to Rust type using TypeMapper with binding information
+            type_mapper.map_fhir_type_with_binding(fhir_types, element.binding.as_ref(), is_array)
+        };
 
         // Generate return type and body based on the mapped type
         let (return_type, body) = if is_array {
@@ -380,7 +384,13 @@ impl TraitImplGenerator {
             };
 
             let return_type = format!("&[{}]", inner_type);
-            let body = format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name);
+            let body = if is_optional {
+                // Optional array: Option<Vec<T>> -> use as_deref()
+                format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name)
+            } else {
+                // Required array: Vec<T> -> use as_ref() or direct reference
+                format!("&self.{}", rust_field_name)
+            };
             (return_type, body)
         } else {
             // For non-arrays, consider optionality based on cardinality
@@ -619,6 +629,47 @@ impl TraitImplGenerator {
             }
         } else {
             format!("{field_access}.clone()")
+        }
+    }
+
+    /// Check if the element types contain BackboneElement
+    fn is_backbone_element(&self, element_types: &[crate::fhir_types::ElementType]) -> bool {
+        element_types
+            .iter()
+            .any(|et| et.code.as_deref() == Some("BackboneElement"))
+    }
+
+    /// Get the specific nested type for a BackboneElement field
+    fn get_nested_type_for_backbone_element(
+        &self,
+        element: &crate::fhir_types::ElementDefinition,
+        is_array: bool,
+    ) -> crate::rust_types::RustType {
+        let path_parts: Vec<&str> = element.path.split('.').collect();
+
+        if path_parts.len() == 2 {
+            let resource_name = path_parts[0];
+            let field_name = path_parts[1];
+
+            // Generate the expected nested type name: ResourceFieldName (e.g., AccountCoverage)
+            let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
+            let nested_type_name = format!("{}{}", resource_name, field_name_pascal);
+
+            let rust_type = crate::rust_types::RustType::Custom(nested_type_name);
+
+            if is_array {
+                crate::rust_types::RustType::Vec(Box::new(rust_type))
+            } else {
+                rust_type
+            }
+        } else {
+            // Fallback to BackboneElement if we can't determine the specific type
+            let rust_type = crate::rust_types::RustType::Custom("BackboneElement".to_string());
+            if is_array {
+                crate::rust_types::RustType::Vec(Box::new(rust_type))
+            } else {
+                rust_type
+            }
         }
     }
 }

@@ -148,6 +148,14 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     // Create output directory
     fs::create_dir_all(output_path)?;
 
+    // Pre-register all ValueSet enums before processing resources
+    // This ensures correct import paths for enum types referenced by resources
+    generator
+        .pre_register_value_set_enums(effective_package_dir)
+        .map_err(|e| anyhow::anyhow!("Failed to pre-register ValueSet enums: {}", e))?;
+
+    info!("Pre-registered ValueSet enums for correct import path generation");
+
     // Process JSON files using organized structure
     process_json_files_organized(&mut generator, effective_package_dir, output_path)?;
 
