@@ -260,25 +260,7 @@ impl<'a> FileIoManager<'a> {
         for (cached_name, cached_struct) in type_cache {
             if cached_name != struct_name && Self::is_direct_nested_struct(struct_name, cached_name)
             {
-                // Debug output for ImplementationGuide
-                if struct_name == "ImplementationGuide" {
-                    println!(
-                        "DEBUG: Found nested struct '{cached_name}' for parent '{struct_name}'"
-                    );
-                }
                 nested_structs.push(cached_struct.clone());
-            }
-        }
-
-        // Debug output for ImplementationGuide
-        if struct_name == "ImplementationGuide" {
-            println!(
-                "DEBUG: Total nested structs for '{}': {}",
-                struct_name,
-                nested_structs.len()
-            );
-            for ns in &nested_structs {
-                println!("DEBUG: - {}", ns.name);
             }
         }
 

@@ -370,6 +370,12 @@ mod tests {
             "crate::resources::implementation_guide::ImplementationGuideGlobal"
         );
 
+        // Test ConditionStage specifically - this is the failing case
+        assert_eq!(
+            ImportManager::get_import_path_for_type("ConditionStage"),
+            "crate::resources::condition::ConditionStage"
+        );
+
         // Test that non-nested structures still work correctly
         assert_eq!(
             ImportManager::get_import_path_for_type("Patient"),

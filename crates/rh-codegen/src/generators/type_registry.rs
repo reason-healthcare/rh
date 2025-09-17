@@ -53,6 +53,60 @@ impl TypeRegistry {
 
     /// Register a type with just a classification (creates a minimal placeholder structure definition)
     pub fn register_type_classification_only(type_name: &str, classification: TypeClassification) {
+        // Check for collisions and give nested structures priority over ValueSet enums
+        let should_skip_registration = {
+            if let Ok(registry) = TYPE_REGISTRY.lock() {
+                if let Some((existing_classification, _)) = registry.get(type_name) {
+                    match (existing_classification, &classification) {
+                        // If we're trying to register a ValueSet enum but a nested structure already exists,
+                        // don't overwrite the nested structure
+                        (
+                            TypeClassification::NestedStructure { .. },
+                            TypeClassification::ValueSetEnum,
+                        ) => {
+                            // Keep existing nested structure, don't register ValueSet enum
+                            true // Skip registration
+                        }
+                        // If we're trying to register a nested structure but a ValueSet enum exists,
+                        // allow the overwrite (nested structure takes priority)
+                        (
+                            TypeClassification::ValueSetEnum,
+                            TypeClassification::NestedStructure { .. },
+                        ) => {
+                            // Nested structure takes priority over ValueSet enum
+                            false // Proceed with registration
+                        }
+                        // For any other collision, allow the overwrite
+                        _ => false, // Proceed with registration
+                    }
+                } else {
+                    false // No existing entry, proceed with registration
+                }
+            } else {
+                false // Can't lock, proceed with registration
+            }
+        }; // Drop the read lock here
+
+        if should_skip_registration {
+            return; // Keep the existing nested structure, don't register the ValueSet enum
+        }
+
+        // Add debug output for what we're registering
+        match &classification {
+            TypeClassification::ValueSetEnum => {
+                println!("DEBUG: Registering ValueSetEnum '{}'", type_name);
+            }
+            TypeClassification::NestedStructure { parent_resource } => {
+                println!(
+                    "DEBUG: Registering NestedStructure '{}' with parent '{}'",
+                    type_name, parent_resource
+                );
+            }
+            _ => {
+                // Don't add debug for other types to reduce noise
+            }
+        }
+
         // Create a minimal placeholder structure definition
         let placeholder_structure_def = StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
@@ -854,5 +908,115 @@ mod tests {
                 "Type {type_name} should not be routed to resources module, got: {import_path}"
             );
         }
+    }
+
+    #[test]
+    fn test_nested_structure_import_paths() {
+        // Test that registering nested structures works correctly
+        TypeRegistry::register_type_classification_only(
+            "ConditionStage",
+            TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            },
+        );
+
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("ConditionStage"),
+            "crate::resources::condition::ConditionStage"
+        );
+
+        TypeRegistry::register_type_classification_only(
+            "MedicationDosage",
+            TypeClassification::NestedStructure {
+                parent_resource: "Medication".to_string(),
+            },
+        );
+
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("MedicationDosage"),
+            "crate::resources::medication::MedicationDosage"
+        );
+    }
+
+    #[test]
+    fn test_naming_collision_valueset_vs_nested_structure() {
+        // Test the collision scenario: ValueSet registered first, then nested structure
+        TypeRegistry::clear();
+
+        // Step 1: Register as ValueSet enum (this happens during pre-registration)
+        TypeRegistry::register_type_classification_only(
+            "ConditionStage",
+            TypeClassification::ValueSetEnum,
+        );
+
+        // Verify it's registered as ValueSet
+        assert_eq!(
+            TypeRegistry::get_classification("ConditionStage"),
+            Some(TypeClassification::ValueSetEnum)
+        );
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("ConditionStage"),
+            "crate::bindings::condition_stage::ConditionStage"
+        );
+
+        // Step 2: Register as nested structure (this happens during struct generation)
+        TypeRegistry::register_type_classification_only(
+            "ConditionStage",
+            TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            },
+        );
+
+        // Verify it's now registered as nested structure (should overwrite)
+        assert_eq!(
+            TypeRegistry::get_classification("ConditionStage"),
+            Some(TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            })
+        );
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("ConditionStage"),
+            "crate::resources::condition::ConditionStage"
+        );
+    }
+
+    #[test]
+    fn test_priority_nested_structure_over_valueset() {
+        // Test that once a nested structure is registered, ValueSets cannot overwrite it
+        TypeRegistry::clear();
+
+        // Step 1: Register as nested structure first
+        TypeRegistry::register_type_classification_only(
+            "ConditionStage",
+            TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            },
+        );
+
+        // Verify it's registered as nested structure
+        assert_eq!(
+            TypeRegistry::get_classification("ConditionStage"),
+            Some(TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            })
+        );
+
+        // Step 2: Try to register as ValueSet enum (should be ignored)
+        TypeRegistry::register_type_classification_only(
+            "ConditionStage",
+            TypeClassification::ValueSetEnum,
+        );
+
+        // Verify it's still registered as nested structure (ValueSet registration ignored)
+        assert_eq!(
+            TypeRegistry::get_classification("ConditionStage"),
+            Some(TypeClassification::NestedStructure {
+                parent_resource: "Condition".to_string(),
+            })
+        );
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("ConditionStage"),
+            "crate::resources::condition::ConditionStage"
+        );
     }
 }

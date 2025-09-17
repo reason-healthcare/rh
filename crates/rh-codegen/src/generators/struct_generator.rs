@@ -153,7 +153,15 @@ impl<'a> StructGenerator<'a> {
             )? {
                 // Store the nested struct in cache for later use
                 self.type_cache
-                    .insert(nested_struct.name.clone(), nested_struct);
+                    .insert(nested_struct.name.clone(), nested_struct.clone());
+
+                // Register the nested struct in TypeRegistry with proper classification
+                crate::generators::type_registry::TypeRegistry::register_type_classification_only(
+                    &nested_struct.name,
+                    crate::generators::type_registry::TypeClassification::NestedStructure {
+                        parent_resource: struct_name.clone(),
+                    },
+                );
             }
         }
 
