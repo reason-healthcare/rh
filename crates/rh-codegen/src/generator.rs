@@ -15,7 +15,7 @@ use crate::generators::token_generator::TokenGenerator;
 use crate::generators::ImportManager;
 use crate::generators::{
     EnumGenerator, FieldGenerator, FileGenerator, FileIoManager, NestedStructGenerator,
-    PrimitiveGenerator, StructGenerator, TraitGenerator, TypeUtilities,
+    PrimitiveGenerator, StructGenerator, TraitGenerator, TypeRegistry, TypeUtilities,
 };
 use crate::rust_types::{RustEnum, RustStruct, RustTrait};
 use crate::value_sets::ValueSetManager;
@@ -83,6 +83,9 @@ impl CodeGenerator {
         &mut self,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<RustStruct> {
+        // Register the type in the TypeRegistry based on its StructureDefinition
+        TypeRegistry::register_from_structure_definition(structure_def);
+
         let mut struct_generator = StructGenerator::new(
             &self.config,
             &mut self.type_cache,

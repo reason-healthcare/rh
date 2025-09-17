@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::{ElementDefinition, StructureDefinition};
-use crate::generators::{DocumentationGenerator, FieldGenerator};
+use crate::generators::{DocumentationGenerator, FieldGenerator, TypeRegistry};
 use crate::naming::Naming;
 use crate::rust_types::RustStruct;
 use crate::CodegenResult;
@@ -120,6 +120,16 @@ impl<'a> NestedStructGenerator<'a> {
         self.type_cache
             .insert(nested_struct_name.clone(), nested_struct.clone());
 
+        // Register the nested struct in TypeRegistry with proper classification
+        // Get the parent resource name from the parent struct name
+        let parent_resource = parent_struct_name.to_string();
+        TypeRegistry::register_type(
+            &nested_struct_name,
+            crate::generators::type_registry::TypeClassification::NestedStructure {
+                parent_resource,
+            },
+        );
+
         Ok(Some(nested_struct))
     }
 
@@ -180,10 +190,30 @@ impl<'a> NestedStructGenerator<'a> {
 
             // Store the sub-nested struct in cache
             self.type_cache
-                .insert(sub_nested_struct_name, sub_nested_struct);
+                .insert(sub_nested_struct_name.clone(), sub_nested_struct);
+
+            // Register the sub-nested struct in TypeRegistry with proper classification
+            // Extract the parent resource from the nested_struct_name
+            // Use a simple approach: extract from the beginning of nested_struct_name
+            let parent_resource = Self::extract_parent_resource_name(nested_struct_name);
+
+            TypeRegistry::register_type(
+                &sub_nested_struct_name,
+                crate::generators::type_registry::TypeClassification::NestedStructure {
+                    parent_resource,
+                },
+            );
         }
 
         Ok(())
+    }
+
+    /// Extract parent resource name from a nested structure name
+    /// For example: "ActivityDefinitionParticipant" -> "ActivityDefinition"
+    fn extract_parent_resource_name(nested_struct_name: &str) -> String {
+        // Use the TypeRegistry's method for consistency
+        crate::generators::type_registry::TypeRegistry::extract_parent_from_name(nested_struct_name)
+            .unwrap_or_else(|| nested_struct_name.to_string())
     }
 
     /// Create a RustField from an ElementDefinition

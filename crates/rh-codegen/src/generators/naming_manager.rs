@@ -232,27 +232,8 @@ static FHIR_DATATYPE_MAP: Lazy<HashMap<String, FhirResourceInfo>> = Lazy::new(||
         "SubstanceAmount",
         "Timing",
         "ElementDefinition",
-        // Primitive types with Type suffix
-        "StringType",
-        "BooleanType",
-        "IntegerType",
-        "DecimalType",
-        "UriType",
-        "UrlType",
-        "CanonicalType",
-        "OidType",
-        "UuidType",
-        "InstantType",
-        "DateType",
-        "DateTimeType",
-        "TimeType",
-        "CodeType",
-        "IdType",
-        "MarkdownType",
-        "Base64BinaryType",
-        "UnsignedIntType",
-        "PositiveIntType",
-        "XhtmlType",
+        "Element",
+        "BackboneElement",
     ];
 
     let mut map = HashMap::new();
@@ -326,6 +307,15 @@ impl NamingManager {
         // Check if it's a generated trait FIRST (highest priority)
         if Self::is_generated_trait(type_name) {
             return Self::get_trait_import_path(type_name);
+        }
+
+        // Check if it's likely a binding enum before checking nested structures
+        if Self::is_likely_binding_enum(type_name) {
+            return format!(
+                "crate::bindings::{}::{}",
+                crate::naming::Naming::to_snake_case(type_name),
+                type_name
+            );
         }
 
         // Check if it's a nested structure (most specific for non-traits)
@@ -426,6 +416,179 @@ impl NamingManager {
         type_name.ends_with("Accessors")
             || type_name.ends_with("Mutators")
             || type_name.ends_with("Helpers")
+    }
+
+    /// Check if a type is likely a binding enum (standalone enum type)
+    /// rather than a nested structure within a resource.
+    ///
+    /// Binding enums typically follow patterns like:
+    /// - TaskIntent, TaskStatus (not TaskSomethingElse)
+    /// - MedicationStatus, MedicationAdminStatus
+    /// - Values that end with common enum suffixes
+    fn is_likely_binding_enum(type_name: &str) -> bool {
+        // Common suffixes that indicate binding enums
+        let binding_suffixes = [
+            "Status",
+            "Intent",
+            "Use",
+            "Type",
+            "Mode",
+            "Code",
+            "Category",
+            "Priority",
+            "Severity",
+            "State",
+            "Kind",
+            "Outcome",
+            "Action",
+            "Meaning",
+            "Behavior",
+            "Operator",
+            "Required",
+            "Selection",
+            "Timing",
+            "Purpose",
+            "Scale",
+            "Modifier",
+            "Direction",
+            "Comparator",
+            "Relationship",
+            "Participation",
+            "Capability",
+            "Interaction",
+            "Support",
+            "Content",
+            "Hierarchy",
+            "Property",
+            "Aggregation",
+            "Slicing",
+            "Derivation",
+            "Representation",
+            "Handling",
+            "Version",
+            "Classification",
+            "Assurance",
+            "Calibration",
+            "Operational",
+            "Range",
+            "Significance",
+            "Request",
+            "Response",
+            "Preference",
+            "Strand",
+            "Channel",
+            "Trigger",
+            "Variable",
+            "Orientation",
+            "Repository",
+            "Element",
+            "Study",
+            "Subject",
+            "Result",
+            "Participant",
+            "Search",
+            "Filter",
+            "Xpath",
+            "Sort",
+            "System",
+            "Gender",
+            "Actuality",
+            "Criticality",
+            "Tolerance",
+            "Plan",
+            "Team",
+            "Item",
+            "Statement",
+            "Knowledge",
+            "Evaluation",
+            "Disposition",
+            "Invoice",
+            "Component",
+            "Issue",
+            "Header",
+            "Metric",
+            "Color",
+            "Network",
+            "Note",
+            "Observation",
+            "Parameter",
+            "Provenance",
+            "Entity",
+            "Role",
+            "Publication",
+            "Quality",
+            "Quantity",
+            "Artifact",
+            "Relation",
+            "Remittance",
+            "Report",
+            "Research",
+            "Resource",
+            "Restful",
+            "Sequence",
+            "Slot",
+            "Definition",
+            "Structure",
+            "Subscription",
+            "Substance",
+            "Supply",
+            "Delivery",
+            "Task",
+            "Udi",
+            "Units",
+            "Time",
+            "Verification",
+            "Versioning",
+            "Vision",
+            "Base",
+            "Eye",
+            "Confidentiality",
+        ];
+
+        // Known exceptions - types that end with binding suffixes but are actually nested structures
+        let nested_exceptions = [
+            "BundleEntry",
+            "AccountGuarantor",
+            "AccountCoverage",
+            "ParametersParameter",
+            "MeasureReportGroup",
+            "EvidenceVariableCharacteristic",
+            "ImplementationGuideGlobal",
+            "RiskEvidenceSynthesisCertainty",
+        ];
+
+        // If it's a known nested structure exception, it's not a binding enum
+        if nested_exceptions.contains(&type_name) {
+            return false;
+        }
+
+        // Check if the type name ends with any of the common binding suffixes
+        for suffix in &binding_suffixes {
+            if type_name.ends_with(suffix) {
+                // If it starts with a resource name + suffix and the suffix is in our list,
+                // it's likely a binding enum (e.g., TaskStatus, MedicationIntent)
+                if let Some(parent_resource) = Self::detect_nested_structure_parent(type_name) {
+                    let expected_suffix_part = &type_name[parent_resource.len()..];
+                    // Check if the suffix part ends with any of our known suffixes
+                    // This handles cases like "AdminStatus" where "Status" is the core suffix
+                    if binding_suffixes
+                        .iter()
+                        .any(|s| expected_suffix_part.ends_with(s))
+                    {
+                        return true;
+                    }
+                }
+
+                // Also consider standalone types that end with these suffixes
+                // (e.g., PublicationStatus, AddressUse) - but only if they don't have
+                // a detected parent resource or are simple standalone names
+                if Self::detect_nested_structure_parent(type_name).is_none() {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     /// Get import path for generated traits
@@ -549,6 +712,65 @@ mod tests {
         assert_eq!(
             NamingManager::detect_nested_structure_parent("PatientSomething"),
             Some("Patient".to_string())
+        );
+    }
+
+    #[test]
+    fn test_binding_enum_detection() {
+        // Test that common binding enum patterns are detected correctly
+        assert!(NamingManager::is_likely_binding_enum("TaskIntent"));
+        assert!(NamingManager::is_likely_binding_enum("TaskStatus"));
+        assert!(NamingManager::is_likely_binding_enum("MedicationStatus"));
+        assert!(NamingManager::is_likely_binding_enum(
+            "MedicationAdminStatus"
+        ));
+        assert!(NamingManager::is_likely_binding_enum("PublicationStatus"));
+        assert!(NamingManager::is_likely_binding_enum("AddressUse"));
+        assert!(NamingManager::is_likely_binding_enum("ContactPointSystem"));
+        assert!(NamingManager::is_likely_binding_enum("RequestPriority"));
+
+        // Test that true nested structures are NOT detected as binding enums
+        assert!(!NamingManager::is_likely_binding_enum("AccountCoverage"));
+        assert!(!NamingManager::is_likely_binding_enum("MeasureReportGroup"));
+        assert!(!NamingManager::is_likely_binding_enum(
+            "EvidenceVariableCharacteristic"
+        ));
+        assert!(!NamingManager::is_likely_binding_enum("BundleEntry"));
+
+        // Test that regular types are not detected as binding enums
+        assert!(!NamingManager::is_likely_binding_enum("Patient"));
+        assert!(!NamingManager::is_likely_binding_enum("Identifier"));
+        assert!(!NamingManager::is_likely_binding_enum("CodeableConcept"));
+    }
+
+    #[test]
+    fn test_corrected_import_paths() {
+        // Test that binding enums now get the correct import paths
+        assert_eq!(
+            NamingManager::get_import_path_for_type("TaskIntent"),
+            "crate::bindings::task_intent::TaskIntent"
+        );
+        assert_eq!(
+            NamingManager::get_import_path_for_type("TaskStatus"),
+            "crate::bindings::task_status::TaskStatus"
+        );
+        assert_eq!(
+            NamingManager::get_import_path_for_type("MedicationStatus"),
+            "crate::bindings::medication_status::MedicationStatus"
+        );
+        assert_eq!(
+            NamingManager::get_import_path_for_type("PublicationStatus"),
+            "crate::bindings::publication_status::PublicationStatus"
+        );
+
+        // Test that nested structures still get resource paths
+        assert_eq!(
+            NamingManager::get_import_path_for_type("AccountCoverage"),
+            "crate::resources::account::AccountCoverage"
+        );
+        assert_eq!(
+            NamingManager::get_import_path_for_type("MeasureReportGroup"),
+            "crate::resources::measure_report::MeasureReportGroup"
         );
     }
 }

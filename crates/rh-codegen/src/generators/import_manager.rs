@@ -4,6 +4,7 @@
 //! and collection of custom types for import generation.
 
 use crate::generators::naming_manager::NamingManager;
+use crate::generators::type_registry::TypeRegistry;
 use crate::rust_types::{RustStruct, RustType};
 use std::collections::HashSet;
 
@@ -185,8 +186,8 @@ impl ImportManager {
 
     /// Determine the correct import path for a given type name
     pub fn get_import_path_for_type(type_name: &str) -> String {
-        // Delegate to the centralized naming manager
-        NamingManager::get_import_path_for_type(type_name)
+        // First try the TypeRegistry for accurate classification based on StructureDefinition
+        TypeRegistry::get_import_path_for_type(type_name)
     }
 
     /// Check if a type is a FHIR resource type

@@ -4,6 +4,7 @@
 
 use std::collections::HashMap;
 
+use crate::generators::type_registry::{TypeClassification, TypeRegistry};
 use crate::rust_types::RustEnum;
 use crate::value_sets::ValueSetManager;
 use crate::CodegenResult;
@@ -40,6 +41,9 @@ impl<'a> EnumGenerator<'a> {
         let enum_name = self
             .value_set_manager
             .generate_placeholder_enum(value_set_url);
+
+        // Register the enum as a ValueSet-based enum in the TypeRegistry
+        TypeRegistry::register_type(&enum_name, TypeClassification::ValueSetEnum);
 
         // Get the generated enum from the value set manager's cache
         if let Some(rust_enum) = self.value_set_manager.get_cached_enums().get(&enum_name) {

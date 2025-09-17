@@ -22,6 +22,8 @@ pub mod field_generator;
 pub mod file_generator;
 pub mod file_io_manager;
 pub mod import_manager;
+// #[cfg(test)]
+// pub mod import_manager_integration_test;
 pub mod mutator_trait_generator;
 pub mod naming_manager;
 pub mod nested_struct_generator;
@@ -30,6 +32,7 @@ pub mod struct_generator;
 pub mod token_generator;
 pub mod trait_generator;
 pub mod trait_impl_generator;
+pub mod type_registry;
 pub mod type_utilities;
 pub mod utils;
 
@@ -52,5 +55,6 @@ pub use struct_generator::StructGenerator;
 pub use token_generator::TokenGenerator;
 pub use trait_generator::TraitGenerator;
 pub use trait_impl_generator::TraitImplGenerator;
+pub use type_registry::TypeRegistry;
 pub use type_utilities::TypeUtilities;
 pub use utils::GeneratorUtils;
