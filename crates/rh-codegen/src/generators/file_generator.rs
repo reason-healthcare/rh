@@ -23,6 +23,7 @@ use crate::{CodegenError, CodegenResult};
 #[derive(Debug, Clone, PartialEq)]
 pub enum FhirTypeCategory {
     Resource,
+    Profile,
     DataType,
     Extension,
     Primitive,
@@ -187,6 +188,7 @@ impl<'a> FileGenerator<'a> {
 
         let target_dir = match category {
             FhirTypeCategory::Resource => base_dir.join("src").join("resource"),
+            FhirTypeCategory::Profile => base_dir.join("src").join("profiles"),
             FhirTypeCategory::DataType => base_dir.join("src").join("datatypes"),
             FhirTypeCategory::Extension => base_dir.join("src").join("extensions"),
             FhirTypeCategory::Primitive => base_dir.join("src").join("primitives"),
@@ -268,6 +270,11 @@ impl<'a> FileGenerator<'a> {
         &self,
         structure_def: &StructureDefinition,
     ) -> FhirTypeCategory {
+        // Check if this is a profile first (derives from a core FHIR resource)
+        if crate::generators::type_registry::TypeRegistry::is_profile(structure_def) {
+            return FhirTypeCategory::Profile;
+        }
+
         // Check if it's a primitive type
         if structure_def.kind == "primitive-type" {
             return FhirTypeCategory::Primitive;

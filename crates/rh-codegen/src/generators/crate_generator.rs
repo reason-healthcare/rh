@@ -56,6 +56,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     let primitives_dir = src_dir.join("primitives");
     let traits_dir = src_dir.join("traits");
     let bindings_dir = src_dir.join("bindings");
+    let profiles_dir = src_dir.join("profiles");
 
     fs::create_dir_all(&resource_dir)?;
     fs::create_dir_all(&datatypes_dir)?;
@@ -63,6 +64,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     fs::create_dir_all(&primitives_dir)?;
     fs::create_dir_all(&traits_dir)?;
     fs::create_dir_all(&bindings_dir)?;
+    fs::create_dir_all(&profiles_dir)?;
 
     // Generate statistics by counting organized files (if any exist from organized generation)
     let stats = generate_crate_statistics_from_organized_dirs(
@@ -95,6 +97,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
         &primitives_dir,
         &traits_dir,
         &bindings_dir,
+        &profiles_dir,
     )?;
 
     // Generate README.md
@@ -159,6 +162,7 @@ pub mod primitives;
 pub mod datatypes;
 pub mod extensions;
 pub mod resources;
+pub mod profiles;
 pub mod traits;
 pub mod bindings;
 
@@ -178,6 +182,7 @@ fn generate_module_files(
     primitives_dir: &Path,
     traits_dir: &Path,
     bindings_dir: &Path,
+    profiles_dir: &Path,
 ) -> Result<()> {
     // Generate resource/mod.rs
     let resource_mod_content = generate_mod_rs_for_directory(resource_dir, "FHIR resource types")?;
@@ -209,6 +214,11 @@ fn generate_module_files(
     let bindings_mod_content =
         generate_mod_rs_for_directory(bindings_dir, "FHIR ValueSet bindings and enums")?;
     fs::write(bindings_dir.join("mod.rs"), bindings_mod_content)?;
+
+    // Generate profiles/mod.rs for FHIR profiles
+    let profiles_mod_content =
+        generate_mod_rs_for_directory(profiles_dir, "FHIR profiles derived from core resources")?;
+    fs::write(profiles_dir.join("mod.rs"), profiles_mod_content)?;
 
     Ok(())
 }
@@ -420,6 +430,9 @@ fn generate_readme_md(
     );
     content.push_str(
         "- **`src/resources/`** - FHIR resource types (Patient, Observation, Bundle, etc.)\n",
+    );
+    content.push_str(
+        "- **`src/profiles/`** - FHIR profiles derived from core resources (vital signs, BMI, etc.)\n",
     );
     content.push_str(
         "- **`src/datatypes/`** - FHIR data types (Narrative, Extension, Coding, etc.)\n",

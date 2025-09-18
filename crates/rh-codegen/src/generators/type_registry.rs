@@ -16,6 +16,8 @@ pub enum TypeClassification {
     ValueSetEnum,
     /// FHIR resource type (goes to resources)
     Resource,
+    /// FHIR profile (goes to profiles)
+    Profile,
     /// FHIR complex datatype (goes to datatypes)
     ComplexType,
     /// Nested structure within a resource (goes to parent resource module)
@@ -37,7 +39,18 @@ impl TypeRegistry {
     /// Register a type based on its StructureDefinition
     pub fn register_from_structure_definition(structure_def: &StructureDefinition) {
         let classification = Self::classify_from_structure_definition(structure_def);
-        Self::register_type(&structure_def.name, classification, structure_def.clone());
+        Self::register_type(
+            &structure_def.name,
+            classification.clone(),
+            structure_def.clone(),
+        );
+
+        // Also register the actual Rust type name for import path lookups
+        // The Rust type name is the PascalCase version of the structure ID
+        let rust_type_name = crate::naming::Naming::to_pascal_case(&structure_def.id);
+        if rust_type_name != structure_def.name {
+            Self::register_type(&rust_type_name, classification, structure_def.clone());
+        }
     }
 
     /// Register a type with a specific classification and structure definition
@@ -121,6 +134,7 @@ impl TypeRegistry {
             kind: match classification {
                 TypeClassification::ValueSetEnum => "primitive-type".to_string(),
                 TypeClassification::Resource => "resource".to_string(),
+                TypeClassification::Profile => "resource".to_string(),
                 TypeClassification::ComplexType => "complex-type".to_string(),
                 TypeClassification::NestedStructure { .. } => "complex-type".to_string(),
                 TypeClassification::Primitive => "primitive-type".to_string(),
@@ -173,6 +187,11 @@ impl TypeRegistry {
     fn classify_from_structure_definition(
         structure_def: &StructureDefinition,
     ) -> TypeClassification {
+        // Check if this is a profile first (derives from a core FHIR resource)
+        if Self::is_profile(structure_def) {
+            return TypeClassification::Profile;
+        }
+
         match structure_def.kind.as_str() {
             "primitive-type" => {
                 // Check if this is a ValueSet-based enum
@@ -206,6 +225,236 @@ impl TypeRegistry {
                 }
             }
         }
+    }
+
+    /// Check if a StructureDefinition represents a profile (derived from a core FHIR resource)
+    pub fn is_profile(structure_def: &StructureDefinition) -> bool {
+        // Debug logging for profile detection
+        if structure_def.id.contains("bmi") || structure_def.id.contains("bodyheight") {
+            println!(
+                "Profile detection debug for '{}': base_definition = {:?}",
+                structure_def.id, structure_def.base_definition
+            );
+        }
+
+        // A profile must have a base_definition
+        let Some(base_def) = &structure_def.base_definition else {
+            if structure_def.id.contains("bmi") || structure_def.id.contains("bodyheight") {
+                println!("No base_definition found for '{}'", structure_def.id);
+            }
+            return false;
+        };
+
+        // Extract the resource type from the base definition URL
+        // e.g., "http://hl7.org/fhir/StructureDefinition/Observation" -> "Observation"
+        if let Some(resource_type) = Self::extract_resource_type_from_base_definition(base_def) {
+            if structure_def.id.contains("bmi") || structure_def.id.contains("bodyheight") {
+                println!(
+                    "Extracted resource type '{}' from base_definition '{}' for '{}'",
+                    resource_type, base_def, structure_def.id
+                );
+                println!(
+                    "is_core_fhir_resource('{}') = {}",
+                    resource_type,
+                    Self::is_core_fhir_resource(&resource_type)
+                );
+            }
+            // Check if this is a core FHIR resource
+            if Self::is_core_fhir_resource(&resource_type) {
+                return true;
+            }
+
+            // If it's not a core resource, it might be a profile of a profile
+            // (e.g., BMI -> vitalsigns -> Observation)
+            // We consider anything that derives from a non-core type to also be a profile
+            // This handles chains like: BMI inherits from vitalsigns which inherits from Observation
+            if structure_def.kind == "resource" {
+                // For resources, if they have a base_definition that's not a core resource,
+                // they're likely a profile (unless they're the base types like DomainResource)
+                match resource_type.as_str() {
+                    "DomainResource" | "Resource" | "Element" | "BackboneElement" => false,
+                    _ => true, // Any other base_definition for a resource is likely a profile
+                }
+            } else {
+                false
+            }
+        } else {
+            if structure_def.id.contains("bmi") || structure_def.id.contains("bodyheight") {
+                println!(
+                    "Failed to extract resource type from base_definition '{}' for '{}'",
+                    base_def, structure_def.id
+                );
+            }
+            false
+        }
+    }
+
+    /// Extract resource type from a base definition URL
+    fn extract_resource_type_from_base_definition(base_def: &str) -> Option<String> {
+        // Handle the standard FHIR StructureDefinition URLs
+        if let Some(last_segment) = base_def.split('/').last() {
+            // Skip common base types that aren't core resources
+            match last_segment {
+                "DomainResource" | "Resource" | "Element" | "BackboneElement" => None,
+                _ => Some(last_segment.to_string()),
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Check if a resource type is a core FHIR resource
+    fn is_core_fhir_resource(resource_type: &str) -> bool {
+        // Use the same list we have for parent resource detection
+        let core_resources = vec![
+            "Account",
+            "ActivityDefinition",
+            "AdverseEvent",
+            "AllergyIntolerance",
+            "Appointment",
+            "AppointmentResponse",
+            "AuditEvent",
+            "Basic",
+            "Binary",
+            "BiologicallyDerivedProduct",
+            "BodyStructure",
+            "Bundle",
+            "CapabilityStatement",
+            "CarePlan",
+            "CareTeam",
+            "CatalogEntry",
+            "ChargeItem",
+            "ChargeItemDefinition",
+            "Claim",
+            "ClaimResponse",
+            "ClinicalImpression",
+            "CodeSystem",
+            "Communication",
+            "CommunicationRequest",
+            "CompartmentDefinition",
+            "Composition",
+            "ConceptMap",
+            "Condition",
+            "Consent",
+            "Contract",
+            "Coverage",
+            "CoverageEligibilityRequest",
+            "CoverageEligibilityResponse",
+            "DetectedIssue",
+            "Device",
+            "DeviceDefinition",
+            "DeviceMetric",
+            "DeviceRequest",
+            "DeviceUseStatement",
+            "DiagnosticReport",
+            "DocumentManifest",
+            "DocumentReference",
+            "EffectEvidenceSynthesis",
+            "Encounter",
+            "Endpoint",
+            "EnrollmentRequest",
+            "EnrollmentResponse",
+            "EpisodeOfCare",
+            "EventDefinition",
+            "Evidence",
+            "EvidenceVariable",
+            "ExampleScenario",
+            "ExplanationOfBenefit",
+            "FamilyMemberHistory",
+            "Flag",
+            "Goal",
+            "GraphDefinition",
+            "Group",
+            "GuidanceResponse",
+            "HealthcareService",
+            "ImagingStudy",
+            "Immunization",
+            "ImmunizationEvaluation",
+            "ImmunizationRecommendation",
+            "ImplementationGuide",
+            "InsurancePlan",
+            "Invoice",
+            "Library",
+            "Linkage",
+            "List",
+            "Location",
+            "Measure",
+            "MeasureReport",
+            "Media",
+            "Medication",
+            "MedicationAdministration",
+            "MedicationDispense",
+            "MedicationKnowledge",
+            "MedicationRequest",
+            "MedicationStatement",
+            "MedicinalProduct",
+            "MedicinalProductAuthorization",
+            "MedicinalProductContraindication",
+            "MedicinalProductIndication",
+            "MedicinalProductIngredient",
+            "MedicinalProductInteraction",
+            "MedicinalProductManufactured",
+            "MedicinalProductPackaged",
+            "MedicinalProductPharmaceutical",
+            "MedicinalProductUndesirableEffect",
+            "MessageDefinition",
+            "MessageHeader",
+            "MolecularSequence",
+            "NamingSystem",
+            "NutritionOrder",
+            "Observation",
+            "ObservationDefinition",
+            "OperationDefinition",
+            "OperationOutcome",
+            "Organization",
+            "OrganizationAffiliation",
+            "Patient",
+            "PaymentNotice",
+            "PaymentReconciliation",
+            "Person",
+            "PlanDefinition",
+            "Practitioner",
+            "PractitionerRole",
+            "Procedure",
+            "Provenance",
+            "Questionnaire",
+            "QuestionnaireResponse",
+            "RelatedPerson",
+            "RequestGroup",
+            "ResearchDefinition",
+            "ResearchElementDefinition",
+            "ResearchStudy",
+            "ResearchSubject",
+            "RiskAssessment",
+            "RiskEvidenceSynthesis",
+            "Schedule",
+            "SearchParameter",
+            "ServiceRequest",
+            "Slot",
+            "Specimen",
+            "SpecimenDefinition",
+            "StructureDefinition",
+            "StructureMap",
+            "Subscription",
+            "Substance",
+            "SubstanceNucleicAcid",
+            "SubstancePolymer",
+            "SubstanceProtein",
+            "SubstanceReferenceInformation",
+            "SubstanceSourceMaterial",
+            "SubstanceSpecification",
+            "SupplyDelivery",
+            "SupplyRequest",
+            "Task",
+            "TerminologyCapabilities",
+            "TestReport",
+            "TestScript",
+            "ValueSet",
+            "VerificationResult",
+            "VisionPrescription",
+        ];
+
+        core_resources.contains(&resource_type)
     }
 
     /// Check if a StructureDefinition represents a ValueSet-based enum
@@ -493,6 +742,13 @@ impl TypeRegistry {
                     })
                 }
                 TypeClassification::Trait => Self::get_trait_import_path(type_name),
+                TypeClassification::Profile => {
+                    format!(
+                        "crate::profiles::{}::{}",
+                        crate::naming::Naming::to_snake_case(type_name),
+                        type_name
+                    )
+                }
             }
         } else {
             // Fallback to NamingManager for unregistered types
