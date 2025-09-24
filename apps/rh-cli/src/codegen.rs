@@ -218,7 +218,10 @@ fn process_json_files_organized(
     output_dir: &Path,
 ) -> Result<()> {
     let entries = fs::read_dir(input_dir)?;
+    let mut structure_definitions = Vec::new();
 
+    // Phase 1: Load all StructureDefinitions and register them in TypeRegistry
+    info!("Phase 1: Loading and registering all StructureDefinitions...");
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -249,7 +252,7 @@ fn process_json_files_organized(
                 continue;
             }
 
-            // Try to load and process as StructureDefinition
+            // Try to load StructureDefinition
             match generator.load_structure_definition(&path) {
                 Ok(structure_def) => {
                     info!(
@@ -266,24 +269,37 @@ fn process_json_files_organized(
                         continue;
                     }
 
-                    // Use the library function to generate structure and traits
-                    match rh_codegen::generate_organized_directories_with_traits(
-                        generator,
-                        &structure_def,
-                        output_dir,
-                    ) {
-                        Ok(()) => {
-                            info!("Generated {} with traits", structure_def.name);
-                        }
-                        Err(e) => {
-                            warn!("Failed to generate {}: {}", structure_def.name, e);
-                        }
-                    }
+                    // Register in TypeRegistry for import path resolution
+                    rh_codegen::generators::type_registry::TypeRegistry::register_from_structure_definition(&structure_def);
+                    info!("Registered {} in TypeRegistry", structure_def.name);
+
+                    structure_definitions.push(structure_def);
                 }
                 Err(e) => {
                     // This might not be a StructureDefinition file, so just skip it
                     warn!("Skipping {}: {}", path.display(), e);
                 }
+            }
+        }
+    }
+
+    // Phase 2: Generate code for all StructureDefinitions
+    info!(
+        "Phase 2: Generating code for {} StructureDefinitions...",
+        structure_definitions.len()
+    );
+    for structure_def in structure_definitions {
+        // Use the library function to generate structure and traits
+        match rh_codegen::generate_organized_directories_with_traits(
+            generator,
+            &structure_def,
+            output_dir,
+        ) {
+            Ok(()) => {
+                info!("Generated {} with traits", structure_def.name);
+            }
+            Err(e) => {
+                warn!("Failed to generate {}: {}", structure_def.name, e);
             }
         }
     }
