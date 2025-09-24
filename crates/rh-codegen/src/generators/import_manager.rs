@@ -128,14 +128,24 @@ impl ImportManager {
     ) {
         match rust_type {
             RustType::Custom(type_name) => {
-                // Only add import if it's not a primitive type, not the current struct, and not in the same file
-                if !Self::is_primitive_type(type_name)
+                // Handle FHIR primitive types (like StringType, BooleanType) - these need imports
+                if Self::is_fhir_primitive_type(type_name) {
+                    let import_path = Self::get_fhir_primitive_import_path(type_name);
+                    imports.insert(import_path);
+                }
+                // Only add import for other types if it's not a Rust primitive type, not the current struct, and not in the same file
+                else if !Self::is_primitive_type(type_name)
                     && type_name != current_struct_name
                     && !structs_in_file.contains(type_name)
                 {
-                    // Get the correct import path for this type
-                    let import_path = Self::get_import_path_for_type(type_name);
-                    imports.insert(import_path);
+                    // Check if the type actually exists in the TypeRegistry before generating an import
+                    if TypeRegistry::get_classification(type_name).is_some() {
+                        // Get the correct import path for this type
+                        let import_path = Self::get_import_path_for_type(type_name);
+                        imports.insert(import_path);
+                    }
+                    // If the type doesn't exist in the registry, don't generate an import
+                    // This prevents importing non-existent nested structures
                 }
             }
             RustType::Option(inner) => {
@@ -171,12 +181,23 @@ impl ImportManager {
                 );
             }
             RustType::Reference(name) => {
-                if !Self::is_primitive_type(name)
+                // Handle FHIR primitive types (like StringType, BooleanType) - these need imports
+                if Self::is_fhir_primitive_type(name) {
+                    let import_path = Self::get_fhir_primitive_import_path(name);
+                    imports.insert(import_path);
+                }
+                // Only add import for other types if it's not a Rust primitive type, not the current struct, and not in the same file
+                else if !Self::is_primitive_type(name)
                     && name != current_struct_name
                     && !structs_in_file.contains(name)
                 {
-                    let import_path = Self::get_import_path_for_type(name);
-                    imports.insert(import_path);
+                    // Check if the type actually exists in the TypeRegistry before generating an import
+                    if TypeRegistry::get_classification(name).is_some() {
+                        let import_path = Self::get_import_path_for_type(name);
+                        imports.insert(import_path);
+                    }
+                    // If the type doesn't exist in the registry, don't generate an import
+                    // This prevents importing non-existent nested structures
                 }
             }
             // Primitive types don't need imports
@@ -254,6 +275,34 @@ impl ImportManager {
                 | "PositiveInt"
                 | "Xhtml"
         )
+    }
+
+    /// Get the import path for a FHIR primitive type
+    pub fn get_fhir_primitive_import_path(type_name: &str) -> String {
+        let module_name = match type_name {
+            "StringType" => "string",
+            "BooleanType" => "boolean",
+            "IntegerType" => "integer",
+            "DecimalType" => "decimal",
+            "UriType" => "uri",
+            "UrlType" => "url",
+            "CanonicalType" => "canonical",
+            "OidType" => "oid",
+            "UuidType" => "uuid",
+            "InstantType" => "instant",
+            "DateType" => "date",
+            "DateTimeType" => "date_time",
+            "TimeType" => "time",
+            "CodeType" => "code",
+            "IdType" => "id",
+            "MarkdownType" => "markdown",
+            "Base64BinaryType" => "base64binary",
+            "UnsignedIntType" => "unsigned_int",
+            "PositiveIntType" => "positive_int",
+            "XhtmlType" => "xhtml",
+            _ => "unknown",
+        };
+        format!("crate::primitives::{}::{}", module_name, type_name)
     }
 
     /// Check if a type is a generated trait

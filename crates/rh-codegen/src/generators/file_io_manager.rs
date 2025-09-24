@@ -164,8 +164,31 @@ impl<'a> FileIoManager<'a> {
     }
 
     /// Check if a cached struct name is a direct nested struct of the parent struct
-    /// This prevents issues like Element collecting ElementDefinition nested structs
+    /// Uses TypeRegistry to determine actual parent-child relationships based on StructureDefinitions
     fn is_direct_nested_struct(parent_name: &str, cached_name: &str) -> bool {
+        // First, use the TypeRegistry to check if this is actually a nested structure
+        // and if so, verify that it belongs to the specified parent
+        if let Some(classification) =
+            crate::generators::type_registry::TypeRegistry::get_classification(cached_name)
+        {
+            match classification {
+                crate::generators::type_registry::TypeClassification::NestedStructure {
+                    parent_resource,
+                } => {
+                    // This is a registered nested structure, check if the parent matches
+                    return parent_resource == parent_name;
+                }
+                _ => {
+                    // This is not a nested structure (it's a Resource, ComplexType, Profile, etc.)
+                    // so it should not be collected as a nested struct regardless of naming patterns
+                    return false;
+                }
+            }
+        }
+
+        // Fallback to name-based logic for unregistered types
+        // This handles cases where structures might not be registered yet during processing
+
         // Must start with parent name
         if !cached_name.starts_with(parent_name) {
             return false;
@@ -176,74 +199,49 @@ impl<'a> FileIoManager<'a> {
             return false;
         }
 
-        // Get the remainder after the parent name
+        // For unregistered types, we use a more conservative approach:
+        // Only consider it a nested struct if it looks like a typical nested structure pattern
+        // and doesn't match known patterns for separate resources
         let remainder = &cached_name[parent_name.len()..];
 
-        // Special cases: if the remainder is exactly one of these complete words,
-        // it suggests this is a separate entity, not a nested struct
-        // For example: "ElementDefinition" should not be a nested struct of "Element"
-        // But "ImplementationGuideDefinition" IS a nested struct of "ImplementationGuide"
-        // So we need to be more specific about when to exclude "Definition"
+        // If the remainder is a single common resource suffix, it's likely a separate resource
+        let separate_resource_suffixes = [
+            "Definition",
+            "Specification",
+            "Polymer",
+            "Protein",
+            "ReferenceInformation",
+            "SourceMaterial",
+            "NucleicAcid",
+            "Authorization",
+            "Contraindication",
+            "Indication",
+            "Ingredient",
+            "Interaction",
+            "Manufactured",
+            "Packaged",
+            "Pharmaceutical",
+            "UndesirableEffect",
+            "Knowledge",
+            "Administration",
+            "Dispense",
+            "Request",
+            "Statement",
+        ];
 
-        // Only exclude "Definition" for known cases where it's a separate FHIR type
-        if remainder == "Definition" {
-            // Known cases where XyzDefinition is a separate FHIR type, not a nested struct of Xyz
-            let separate_definition_parents = [
-                "Element",    // ElementDefinition is separate from Element
-                "Activity",   // ActivityDefinition is separate from Activity
-                "Event",      // EventDefinition is separate from Event
-                "Plan",       // PlanDefinition is separate from Plan
-                "Message",    // MessageDefinition is separate from Message
-                "Operation",  // OperationDefinition is separate from Operation
-                "Search",     // SearchDefinition could be separate from Search
-                "Capability", // CapabilityDefinition could be separate from Capability
-            ];
-
-            if separate_definition_parents.contains(&parent_name) {
-                return false;
-            }
+        if separate_resource_suffixes
+            .iter()
+            .any(|&suffix| remainder == suffix)
+        {
+            return false;
         }
 
-        // Similarly, only exclude "definition" (lowercase) for the same known cases
-        if remainder == "definition" {
-            let separate_definition_parents = [
-                "Element",
-                "Activity",
-                "Event",
-                "Plan",
-                "Message",
-                "Operation",
-                "Search",
-                "Capability",
-            ];
-
-            if separate_definition_parents
-                .iter()
-                .any(|&p| parent_name.eq_ignore_ascii_case(p))
-            {
-                return false;
-            }
-        }
-
-        // Keep the check for remainders that START with Definition/definition for other cases
-        // but be more careful about it
-        if remainder.starts_with("Definition") || remainder.starts_with("definition") {
-            // Only exclude if this looks like a compound name where Definition is the main type
-            // e.g., "ElementDefinitionBinding" should not be child of "Element"
-            let separate_definition_parents = [
-                "Element",
-                "Activity",
-                "Event",
-                "Plan",
-                "Message",
-                "Operation",
-                "Search",
-                "Capability",
-            ];
-
-            if separate_definition_parents.contains(&parent_name) {
-                return false;
-            }
+        // If it starts with these suffixes, it's likely part of a separate resource family
+        if separate_resource_suffixes
+            .iter()
+            .any(|&suffix| remainder.starts_with(suffix))
+        {
+            return false;
         }
 
         true

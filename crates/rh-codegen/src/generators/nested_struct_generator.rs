@@ -167,8 +167,13 @@ impl<'a> NestedStructGenerator<'a> {
             sub_nested_struct.derives = derives;
             sub_nested_struct.base_definition = Some("BackboneElement".to_string());
 
-            // Process the sub-nested elements
+            // Process the sub-nested elements with full recursive support
             let sub_base_path = format!("{base_path}.{sub_nested_field_name}");
+
+            // Separate sub-nested elements into direct fields and further sub-nested structures
+            let mut direct_fields = Vec::new();
+            let mut sub_sub_nested_structs: HashMap<String, Vec<ElementDefinition>> =
+                HashMap::new();
 
             for element in sub_nested_elements {
                 if !element.path.starts_with(&sub_base_path) {
@@ -180,11 +185,31 @@ impl<'a> NestedStructGenerator<'a> {
                     .strip_prefix(&format!("{sub_base_path}."))
                     .unwrap();
 
-                // Only process direct fields (no further recursion for now - can be extended)
-                if !field_path.contains('.') {
-                    if let Some(field) = self.create_field_from_element(element)? {
-                        sub_nested_struct.add_field(field);
-                    }
+                if field_path.contains('.') {
+                    // This is a further sub-nested field - collect it for recursive generation
+                    let sub_sub_nested_field_name = field_path.split('.').next().unwrap();
+                    sub_sub_nested_structs
+                        .entry(sub_sub_nested_field_name.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(element.clone());
+                } else {
+                    // This is a direct field of this sub-nested struct
+                    direct_fields.push(element.clone());
+                }
+            }
+
+            // First, generate any further sub-nested structs recursively
+            for (sub_sub_nested_field_name, sub_sub_nested_elements) in &sub_sub_nested_structs {
+                self.generate_sub_nested_struct(
+                    &sub_nested_struct_name,
+                    sub_sub_nested_field_name,
+                    sub_sub_nested_elements,
+                    &sub_base_path,
+                )?;
+            } // Then, process direct fields (now further sub-nested structs are available)
+            for element in direct_fields {
+                if let Some(field) = self.create_field_from_element(&element)? {
+                    sub_nested_struct.add_field(field);
                 }
             }
 
