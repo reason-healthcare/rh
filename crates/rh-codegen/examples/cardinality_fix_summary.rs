@@ -4,7 +4,6 @@
 /// handles FHIR cardinality (min/max) when determining return types for accessor methods.
 ///
 /// Key fix: Non-array fields return Option<T> if min=0, T directly if min>=1
-
 fn main() {
     println!("✅ Cardinality fix verification");
     println!("   - Enhanced trait_impl_generator.rs with cardinality-based optionality");

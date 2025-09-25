@@ -1109,7 +1109,7 @@ mod tests {
         let task_intent = StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
             id: "task-intent".to_string(),
-            url: "http://hl7.org/fhir/ValueSet/task-intent".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/task-intent".to_string(),
             version: None,
             name: "TaskIntent".to_string(),
             title: Some("TaskIntent".to_string()),

@@ -76,8 +76,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(coverage_method) = accessor_trait.methods.iter().find(|m| m.name == "coverage")
         {
             if let Some(return_type) = &coverage_method.return_type {
-                let return_type_str = format!("{:?}", return_type);
-                println!("coverage() return type: {}", return_type_str);
+                let return_type_str = format!("{return_type:?}");
+                println!("coverage() return type: {return_type_str}");
 
                 // Should return AccountCoverage slice, not BackboneElement slice
                 if return_type_str.contains("AccountCoverage") {
@@ -85,9 +85,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if return_type_str.contains("BackboneElement") {
                     println!("❌ Coverage method incorrectly returns BackboneElement type");
                     println!("   Expected: AccountCoverage");
-                    println!("   Got: {}", return_type_str);
+                    println!("   Got: {return_type_str}");
                 } else {
-                    println!("⚠️  Unexpected return type: {}", return_type_str);
+                    println!("⚠️  Unexpected return type: {return_type_str}");
                 }
             }
         }
@@ -99,8 +99,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .find(|m| m.name == "guarantor")
         {
             if let Some(return_type) = &guarantor_method.return_type {
-                let return_type_str = format!("{:?}", return_type);
-                println!("guarantor() return type: {}", return_type_str);
+                let return_type_str = format!("{return_type:?}");
+                println!("guarantor() return type: {return_type_str}");
 
                 // Should return AccountGuarantor slice, not BackboneElement slice
                 if return_type_str.contains("AccountGuarantor") {
@@ -108,9 +108,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if return_type_str.contains("BackboneElement") {
                     println!("❌ Guarantor method incorrectly returns BackboneElement type");
                     println!("   Expected: AccountGuarantor");
-                    println!("   Got: {}", return_type_str);
+                    println!("   Got: {return_type_str}");
                 } else {
-                    println!("⚠️  Unexpected return type: {}", return_type_str);
+                    println!("⚠️  Unexpected return type: {return_type_str}");
                 }
             }
         }
@@ -118,13 +118,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Check name method (should still be string, not BackboneElement)
         if let Some(name_method) = accessor_trait.methods.iter().find(|m| m.name == "name") {
             if let Some(return_type) = &name_method.return_type {
-                let return_type_str = format!("{:?}", return_type);
-                println!("name() return type: {}", return_type_str);
+                let return_type_str = format!("{return_type:?}");
+                println!("name() return type: {return_type_str}");
 
                 if return_type_str.contains("String") {
                     println!("✅ Name method correctly returns String type!");
                 } else {
-                    println!("❌ Name method has unexpected type: {}", return_type_str);
+                    println!("❌ Name method has unexpected type: {return_type_str}");
                 }
             }
         }

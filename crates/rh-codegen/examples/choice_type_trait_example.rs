@@ -186,12 +186,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .sum();
 
     println!(
-        "✅ Generated {} choice type methods for 'value[x]' field across all traits",
-        total_value_methods
+        "✅ Generated {total_value_methods} choice type methods for 'value[x]' field across all traits"
     );
     println!(
-        "✅ Generated {} choice type methods for 'effective[x]' field across all traits",
-        total_effective_methods
+        "✅ Generated {total_effective_methods} choice type methods for 'effective[x]' field across all traits"
     );
     println!("✅ Each choice type gets:");
     println!("   - Generic getter method (returns formatted string)");

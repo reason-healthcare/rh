@@ -14,13 +14,13 @@ fn main() -> Result<()> {
     println!("✅ Code change applied successfully!");
     println!("   Modified trait_impl_generator.rs to use map_fhir_type_with_binding()");
     println!("   This ensures required bindings generate enum types in trait implementations.");
-    println!("");
+    println!();
     println!("Expected behavior:");
     println!(
         "- Required bindings (strength='required'): Return enum types (e.g., ConsentStateCodes)"
     );
     println!("- Non-required bindings: Return String types with documentation");
-    println!("");
+    println!();
     println!("The fix ensures that trait method return types match the actual field types");
     println!("in the struct when the field has a required binding.");
 

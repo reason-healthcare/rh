@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         &value_set_manager,
     ) {
         println!("Documentation for extensible binding:");
-        println!("{}", doc);
+        println!("{doc}");
     } else {
         println!("No documentation generated for extensible binding");
     }
@@ -69,7 +69,7 @@ fn main() -> Result<()> {
         &value_set_manager,
     ) {
         println!("Documentation for required binding:");
-        println!("{}", doc);
+        println!("{doc}");
     } else {
         println!("No documentation generated for required binding");
     }
@@ -82,7 +82,7 @@ fn main() -> Result<()> {
         &value_set_manager,
     ) {
         println!("Documentation for choice field with extensible binding:");
-        println!("{}", doc);
+        println!("{doc}");
     } else {
         println!("No documentation generated for choice field with extensible binding");
     }
