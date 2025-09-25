@@ -11,6 +11,7 @@ use crate::CodegenResult;
 /// Generator for trait implementations
 pub struct TraitImplGenerator;
 
+#[allow(dead_code)]
 impl TraitImplGenerator {
     /// Create a new trait implementation generator
     pub fn new() -> Self {
@@ -19,6 +20,7 @@ impl TraitImplGenerator {
 
     /// Extract the base resource type from a FHIR baseDefinition URL
     /// For example: "http://hl7.org/fhir/StructureDefinition/Group" -> "Group"
+    #[allow(dead_code)]
     fn extract_base_resource_type(base_definition: &str) -> Option<String> {
         // FHIR baseDefinition URLs follow the pattern:
         // http://hl7.org/fhir/StructureDefinition/{ResourceType}
@@ -32,6 +34,7 @@ impl TraitImplGenerator {
 
     /// Check if a baseDefinition indicates this is a core FHIR resource
     /// Core resources inherit directly from Resource or DomainResource
+    #[allow(dead_code)]
     fn is_core_resource(base_definition: &str) -> bool {
         matches!(
             base_definition,
@@ -155,9 +158,9 @@ impl TraitImplGenerator {
         let id_method = RustTraitImplMethod::new("id".to_string())
             .with_return_type("Option<String>".to_string())
             .with_body(if use_trait_methods {
-                format!("{}.id()", base_access)
+                format!("{base_access}.id()")
             } else {
-                format!("{}.id.clone()", base_access)
+                format!("{base_access}.id.clone()")
             });
         trait_impl.add_method(id_method);
 
@@ -165,9 +168,9 @@ impl TraitImplGenerator {
         let meta_method = RustTraitImplMethod::new("meta".to_string())
             .with_return_type("Option<crate::datatypes::meta::Meta>".to_string())
             .with_body(if use_trait_methods {
-                format!("{}.meta()", base_access)
+                format!("{base_access}.meta()")
             } else {
-                format!("{}.meta.clone()", base_access)
+                format!("{base_access}.meta.clone()")
             });
         trait_impl.add_method(meta_method);
 
@@ -175,9 +178,9 @@ impl TraitImplGenerator {
         let implicit_rules_method = RustTraitImplMethod::new("implicit_rules".to_string())
             .with_return_type("Option<String>".to_string())
             .with_body(if use_trait_methods {
-                format!("{}.implicit_rules()", base_access)
+                format!("{base_access}.implicit_rules()")
             } else {
-                format!("{}.implicit_rules.clone()", base_access)
+                format!("{base_access}.implicit_rules.clone()")
             });
         trait_impl.add_method(implicit_rules_method);
 
@@ -185,9 +188,9 @@ impl TraitImplGenerator {
         let language_method = RustTraitImplMethod::new("language".to_string())
             .with_return_type("Option<String>".to_string())
             .with_body(if use_trait_methods {
-                format!("{}.language()", base_access)
+                format!("{base_access}.language()")
             } else {
-                format!("{}.language.clone()", base_access)
+                format!("{base_access}.language.clone()")
             });
         trait_impl.add_method(language_method);
 
@@ -383,13 +386,13 @@ impl TraitImplGenerator {
                 _ => rust_type.to_string(),
             };
 
-            let return_type = format!("&[{}]", inner_type);
+            let return_type = format!("&[{inner_type}]");
             let body = if is_optional {
                 // Optional array: Option<Vec<T>> -> use as_deref()
-                format!("self.{}.as_deref().unwrap_or(&[])", rust_field_name)
+                format!("self.{rust_field_name}.as_deref().unwrap_or(&[])")
             } else {
                 // Required array: Vec<T> -> use as_ref() or direct reference
-                format!("&self.{}", rust_field_name)
+                format!("&self.{rust_field_name}")
             };
             (return_type, body)
         } else {
@@ -400,8 +403,8 @@ impl TraitImplGenerator {
                     crate::rust_types::RustType::Option(inner) => inner.to_string(),
                     _ => rust_type.to_string(),
                 };
-                let return_type = format!("Option<{}>", inner_type);
-                let body = format!("self.{}.clone()", rust_field_name);
+                let return_type = format!("Option<{inner_type}>");
+                let body = format!("self.{rust_field_name}.clone()");
                 (return_type, body)
             } else {
                 // Field is required (min cardinality is 1+), return T directly
@@ -409,7 +412,7 @@ impl TraitImplGenerator {
                     crate::rust_types::RustType::Option(inner) => inner.to_string(),
                     _ => rust_type.to_string(),
                 };
-                let body = format!("self.{}.clone()", rust_field_name);
+                let body = format!("self.{rust_field_name}.clone()");
                 (return_type, body)
             }
         };
@@ -653,7 +656,7 @@ impl TraitImplGenerator {
 
             // Generate the expected nested type name: ResourceFieldName (e.g., AccountCoverage)
             let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
-            let nested_type_name = format!("{}{}", resource_name, field_name_pascal);
+            let nested_type_name = format!("{resource_name}{field_name_pascal}");
 
             let rust_type = crate::rust_types::RustType::Custom(nested_type_name);
 

@@ -17,6 +17,12 @@ pub struct TraitGenerator {
     existence_generator: ExistenceTraitGenerator,
 }
 
+impl Default for TraitGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TraitGenerator {
     /// Create a new trait generator
     pub fn new() -> Self {
@@ -70,7 +76,7 @@ impl TraitGenerator {
             }
             _ => {
                 return Err(CodegenError::Generation {
-                    message: format!("Unknown trait category: {}", category),
+                    message: format!("Unknown trait category: {category}"),
                 });
             }
         }
@@ -95,7 +101,7 @@ impl TraitGenerator {
                 if self.is_valid_fhir_base_type(&parent_trait_name) {
                     rust_trait
                         .super_traits
-                        .push(format!("{}{}", parent_trait_name, category));
+                        .push(format!("{parent_trait_name}{category}"));
                 }
             }
         }
@@ -104,7 +110,7 @@ impl TraitGenerator {
 
     /// Extract trait name from FHIR StructureDefinition URL
     fn extract_trait_name_from_url(&self, url: &str) -> Option<String> {
-        url.split('/').last().map(|s| s.to_string())
+        url.split('/').next_back().map(|s| s.to_string())
     }
 
     /// Check if the given type name is a valid FHIR base type for inheritance

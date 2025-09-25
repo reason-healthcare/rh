@@ -302,7 +302,7 @@ impl ImportManager {
             "XhtmlType" => "xhtml",
             _ => "unknown",
         };
-        format!("crate::primitives::{}::{}", module_name, type_name)
+        format!("crate::primitives::{module_name}::{type_name}")
     }
 
     /// Check if a type is a generated trait

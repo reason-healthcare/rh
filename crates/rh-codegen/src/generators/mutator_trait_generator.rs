@@ -128,7 +128,7 @@ impl MutatorTraitGenerator {
         rust_type: &RustType,
         is_array: bool,
     ) -> CodegenResult<()> {
-        let method_name = format!("set_{}", rust_field_name);
+        let method_name = format!("set_{rust_field_name}");
 
         let parameter_type = if is_array {
             // For arrays, set method takes a Vec
@@ -139,12 +139,11 @@ impl MutatorTraitGenerator {
 
         let method = RustTraitMethod::new(method_name)
             .with_doc(format!(
-                "Sets the {} field and returns self for chaining.",
-                field_name
+                "Sets the {field_name} field and returns self for chaining."
             ))
             .with_parameter("value".to_string(), parameter_type)
             .with_return_type(RustType::Custom("Self".to_string()))
-            .with_body(format!("self.{} = value; self", field_name));
+            .with_body(format!("self.{field_name} = value; self"));
 
         rust_trait.add_method(method);
         Ok(())
@@ -157,16 +156,15 @@ impl MutatorTraitGenerator {
         field_name: &str,
         rust_type: &RustType,
     ) -> CodegenResult<()> {
-        let method_name = format!("add_{}", rust_field_name);
+        let method_name = format!("add_{rust_field_name}");
 
         let method = RustTraitMethod::new(method_name)
             .with_doc(format!(
-                "Adds an item to the {} field and returns self for chaining.",
-                field_name
+                "Adds an item to the {field_name} field and returns self for chaining."
             ))
             .with_parameter("item".to_string(), rust_type.clone())
             .with_return_type(RustType::Custom("Self".to_string()))
-            .with_body(format!("self.{}.push(item); self", field_name));
+            .with_body(format!("self.{field_name}.push(item); self"));
 
         rust_trait.add_method(method);
         Ok(())
@@ -192,8 +190,7 @@ impl MutatorTraitGenerator {
         // Basic constructor with no parameters - supports method chaining
         let new_method = RustTraitMethod::new("new".to_string())
             .with_doc(format!(
-                "Create a new {} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nlet resource = {}::new()\n    .set_status(\"active\".to_string())\n    .set_name(\"Example Name\".to_string());\n```",
-                struct_name, struct_name
+                "Create a new {struct_name} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nlet resource = {struct_name}::new()\n    .set_status(\"active\".to_string())\n    .set_name(\"Example Name\".to_string());\n```"
             ))
             .with_return_type(RustType::Custom("Self".to_string()));
 

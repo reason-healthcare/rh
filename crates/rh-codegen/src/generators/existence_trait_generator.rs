@@ -5,6 +5,12 @@ use crate::CodegenResult;
 /// Generator for existence check traits that provide has_xxx() methods
 pub struct ExistenceTraitGenerator;
 
+impl Default for ExistenceTraitGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExistenceTraitGenerator {
     pub fn new() -> Self {
         Self
@@ -16,7 +22,7 @@ impl ExistenceTraitGenerator {
         structure_def: &StructureDefinition,
     ) -> CodegenResult<RustTrait> {
         let struct_name = crate::naming::Naming::struct_name(structure_def);
-        let trait_name = format!("{}Existence", struct_name);
+        let trait_name = format!("{struct_name}Existence");
         let base_trait = self.get_base_trait_name(structure_def);
 
         let mut rust_trait = RustTrait::new(trait_name.clone());
@@ -71,7 +77,7 @@ impl ExistenceTraitGenerator {
         rust_trait: &mut RustTrait,
     ) -> CodegenResult<()> {
         let rust_field_name = crate::naming::Naming::field_name(field_name);
-        let method_name = format!("has_{}", rust_field_name);
+        let method_name = format!("has_{rust_field_name}");
 
         // Determine if this is an array field
         let is_array = element
@@ -82,15 +88,9 @@ impl ExistenceTraitGenerator {
 
         // Generate appropriate documentation
         let doc_comment = if is_array {
-            format!(
-                "Returns true if the {} field is not empty.",
-                rust_field_name
-            )
+            format!("Returns true if the {rust_field_name} field is not empty.")
         } else {
-            format!(
-                "Returns true if the {} field is present (Some).",
-                rust_field_name
-            )
+            format!("Returns true if the {rust_field_name} field is present (Some).")
         };
 
         let method = RustTraitMethod::new(method_name)
@@ -148,7 +148,7 @@ impl ExistenceTraitGenerator {
         ]);
 
         if let Some(base_definition) = &structure_def.base_definition {
-            docs.push(format!("- Base Definition: {}", base_definition));
+            docs.push(format!("- Base Definition: {base_definition}"));
         }
 
         docs.join("\n")
@@ -165,7 +165,6 @@ mod tests {
 
         // This would need a proper StructureDefinition for a real test
         // For now, just verify the generator can be created
-        assert!(true);
     }
 
     #[test]

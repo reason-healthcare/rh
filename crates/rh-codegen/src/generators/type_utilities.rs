@@ -339,7 +339,7 @@ impl TypeUtilities {
                         let resource_name =
                             crate::naming::Naming::to_rust_identifier(path_parts[0]);
                         let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
-                        RustType::Custom(format!("{}{}", resource_name, field_name_pascal))
+                        RustType::Custom(format!("{resource_name}{field_name_pascal}"))
                     } else {
                         // Deeper nesting or other cases, fall back to BackboneElement
                         RustType::Custom("BackboneElement".to_string())

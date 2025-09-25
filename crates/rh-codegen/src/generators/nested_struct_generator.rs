@@ -190,7 +190,7 @@ impl<'a> NestedStructGenerator<'a> {
                     let sub_sub_nested_field_name = field_path.split('.').next().unwrap();
                     sub_sub_nested_structs
                         .entry(sub_sub_nested_field_name.to_string())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(element.clone());
                 } else {
                     // This is a direct field of this sub-nested struct

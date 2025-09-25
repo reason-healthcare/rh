@@ -204,6 +204,19 @@ impl<'a> FileIoManager<'a> {
         // and doesn't match known patterns for separate resources
         let remainder = &cached_name[parent_name.len()..];
 
+        // Must be a direct nested structure name, not a substring match
+        // e.g., "ElementBinding" from "Element" is valid (remainder="Binding")
+        // but "ElementdefinitionBinding" from "Element" is NOT valid 
+        // (remainder="definitionBinding" which looks like it belongs to ElementDefinition)
+        
+        // If remainder starts with lowercase letters, it's likely a separate structure
+        // e.g., "Element" + "definitionBinding" suggests it belongs to "ElementDefinition"
+        if let Some(first_char) = remainder.chars().next() {
+            if first_char.is_lowercase() {
+                return false;
+            }
+        }
+
         // If the remainder is a single common resource suffix, it's likely a separate resource
         let separate_resource_suffixes = [
             "Definition",
@@ -229,10 +242,7 @@ impl<'a> FileIoManager<'a> {
             "Statement",
         ];
 
-        if separate_resource_suffixes
-            .iter()
-            .any(|&suffix| remainder == suffix)
-        {
+        if separate_resource_suffixes.contains(&remainder) {
             return false;
         }
 

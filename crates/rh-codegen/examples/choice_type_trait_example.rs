@@ -98,28 +98,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generate the trait
     println!("Generating Observation trait with choice type methods...");
-    let observation_trait = generator.generate_trait(&observation_structure)?;
+    let observation_traits = generator.generate_trait(&observation_structure)?;
 
-    // Display information about the generated trait
-    println!("Generated trait: {}", observation_trait.name);
-    println!("Number of methods: {}", observation_trait.methods.len());
-    println!();
+    // Display information about the generated traits
+    for (i, observation_trait) in observation_traits.iter().enumerate() {
+        println!("Generated trait {}: {}", i + 1, observation_trait.name);
+        println!("Number of methods: {}", observation_trait.methods.len());
+        println!();
 
-    // List all the methods in the trait
-    println!("Choice type trait methods:");
-    for method in &observation_trait.methods {
-        if method.name.contains("value") || method.name.contains("effective") {
-            println!("- {}", method.name);
-            if let Some(doc) = &method.doc_comment {
-                println!("  Documentation: {doc}");
+        // List all the methods in the trait
+        println!("Choice type trait methods:");
+        for method in &observation_trait.methods {
+            if method.name.contains("value") || method.name.contains("effective") {
+                println!("- {}", method.name);
+                if let Some(doc) = &method.doc_comment {
+                    println!("  Documentation: {doc}");
+                }
+                if let Some(return_type) = &method.return_type {
+                    println!("  Return type: {return_type:?}");
+                }
+                if method.default_body.is_some() {
+                    println!("  Has default implementation: Yes");
+                }
+                println!();
             }
-            if let Some(return_type) = &method.return_type {
-                println!("  Return type: {return_type:?}");
-            }
-            if method.default_body.is_some() {
-                println!("  Has default implementation: Yes");
-            }
-            println!();
         }
     }
 
@@ -162,21 +164,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "=".repeat(80));
 
     println!("\nSummary:");
+    let total_value_methods: usize = observation_traits
+        .iter()
+        .map(|trait_def| trait_def.methods.iter().filter(|m| m.name.contains("value")).count())
+        .sum();
+    let total_effective_methods: usize = observation_traits
+        .iter()
+        .map(|trait_def| trait_def.methods.iter().filter(|m| m.name.contains("effective")).count())
+        .sum();
+    
     println!(
-        "✅ Generated {} choice type methods for 'value[x]' field",
-        observation_trait
-            .methods
-            .iter()
-            .filter(|m| m.name.contains("value"))
-            .count()
+        "✅ Generated {} choice type methods for 'value[x]' field across all traits",
+        total_value_methods
     );
     println!(
-        "✅ Generated {} choice type methods for 'effective[x]' field",
-        observation_trait
-            .methods
-            .iter()
-            .filter(|m| m.name.contains("effective"))
-            .count()
+        "✅ Generated {} choice type methods for 'effective[x]' field across all traits",
+        total_effective_methods
     );
     println!("✅ Each choice type gets:");
     println!("   - Generic getter method (returns formatted string)");

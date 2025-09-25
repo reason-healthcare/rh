@@ -132,10 +132,9 @@ impl DocumentationGenerator {
                                 for (code, display) in codes.iter().take(10) {
                                     // Limit to first 10 to avoid huge docs
                                     if let Some(display) = display {
-                                        values_doc
-                                            .push_str(&format!("\n- `{}`: {}", code, display));
+                                        values_doc.push_str(&format!("\n- `{code}`: {display}"));
                                     } else {
-                                        values_doc.push_str(&format!("\n- `{}`", code));
+                                        values_doc.push_str(&format!("\n- `{code}`"));
                                     }
                                 }
                                 if codes.len() > 10 {
@@ -149,7 +148,7 @@ impl DocumentationGenerator {
                         }
                         Err(_) => {
                             // ValueSet not found, just add the URL reference
-                            doc_parts.push(format!("ValueSet: {}", value_set_url));
+                            doc_parts.push(format!("ValueSet: {value_set_url}"));
                         }
                     }
                 }
@@ -229,9 +228,9 @@ impl DocumentationGenerator {
                                         // Limit to first 10 to avoid huge docs
                                         if let Some(display) = display {
                                             values_doc
-                                                .push_str(&format!("\n- `{}`: {}", code, display));
+                                                .push_str(&format!("\n- `{code}`: {display}"));
                                         } else {
-                                            values_doc.push_str(&format!("\n- `{}`", code));
+                                            values_doc.push_str(&format!("\n- `{code}`"));
                                         }
                                     }
                                     if codes.len() > 10 {
@@ -245,7 +244,7 @@ impl DocumentationGenerator {
                             }
                             Err(_) => {
                                 // ValueSet not found, just add the URL reference
-                                doc_parts.push(format!("ValueSet: {}", value_set_url));
+                                doc_parts.push(format!("ValueSet: {value_set_url}"));
                             }
                         }
                     }

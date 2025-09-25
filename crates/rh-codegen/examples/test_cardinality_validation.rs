@@ -90,14 +90,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate trait implementation
     let traits = generator.generate_trait(&structure_def)?;
 
-    // Convert traits to string for analysis
-    let trait_impl = traits
-        .iter()
-        .map(|t| t.to_string())
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    println!("Generated trait implementation:\n{}", trait_impl);
+    // Display information about the generated traits
+    println!("Generated {} trait(s) for cardinality validation", traits.len());
+    for (i, trait_def) in traits.iter().enumerate() {
+        println!("Trait {}: {} with {} methods", i + 1, trait_def.name, trait_def.methods.len());
+    }
 
     // Check that the generated code has the correct return types
     assert!(

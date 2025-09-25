@@ -133,13 +133,13 @@ impl AccessorTraitGenerator {
         };
 
         let method = RustTraitMethod::new(rust_field_name)
-            .with_doc(format!("Returns a reference to the {} field.", field_name))
+            .with_doc(format!("Returns a reference to the {field_name} field."))
             .with_return_type(if is_optional && !is_array {
                 return_type.clone().wrap_in_option()
             } else {
                 return_type.clone()
             })
-            .with_body(format!("self.{}", field_name));
+            .with_body(format!("self.{field_name}"));
 
         Ok(Some(method))
     }
@@ -165,7 +165,7 @@ impl AccessorTraitGenerator {
 
             // Generate the expected nested type name: ResourceFieldName (e.g., AccountCoverage)
             let field_name_pascal = crate::naming::Naming::to_pascal_case(field_name);
-            let nested_type_name = format!("{}{}", resource_name, field_name_pascal);
+            let nested_type_name = format!("{resource_name}{field_name_pascal}");
 
             let rust_type = RustType::Custom(nested_type_name);
 

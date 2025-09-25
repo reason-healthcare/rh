@@ -345,12 +345,11 @@ impl CodeGenerator {
 
     /// Generate all ValueSet enums to separate files in the specified directory
     pub fn generate_enum_files<P: AsRef<Path>>(&mut self, enums_dir: P) -> CodegenResult<()> {
-        let mut enum_generator =
-            EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
+        let enum_generator = EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
         let token_generator = crate::generators::token_generator::TokenGenerator::new();
         let file_generator = FileGenerator::new(&self.config, &token_generator);
 
-        file_generator.generate_enum_files(enums_dir, &mut enum_generator)
+        file_generator.generate_enum_files(enums_dir, &enum_generator)
     }
 
     /// Generate a mod.rs file that re-exports all the enum modules
@@ -392,7 +391,6 @@ impl CodeGenerator {
     //     let mut trait_generator = TraitGenerator::new();
     //     trait_generator.generate_resource_trait()
     // }
-
     /// Generate a trait file directly from a RustTrait object
     pub fn generate_trait_file_from_trait<P: AsRef<Path>>(
         &self,

@@ -107,12 +107,11 @@ impl TypeRegistry {
         // Add debug output for what we're registering
         match &classification {
             TypeClassification::ValueSetEnum => {
-                println!("DEBUG: Registering ValueSetEnum '{}'", type_name);
+                println!("DEBUG: Registering ValueSetEnum '{type_name}'");
             }
             TypeClassification::NestedStructure { parent_resource } => {
                 println!(
-                    "DEBUG: Registering NestedStructure '{}' with parent '{}'",
-                    type_name, parent_resource
+                    "DEBUG: Registering NestedStructure '{type_name}' with parent '{parent_resource}'"
                 );
             }
             _ => {
@@ -124,7 +123,7 @@ impl TypeRegistry {
         let placeholder_structure_def = StructureDefinition {
             resource_type: "StructureDefinition".to_string(),
             id: type_name.to_lowercase(),
-            url: format!("http://placeholder/{}", type_name),
+            url: format!("http://placeholder/{type_name}"),
             version: None,
             name: type_name.to_string(),
             title: Some(type_name.to_string()),
@@ -292,7 +291,7 @@ impl TypeRegistry {
     /// Extract resource type from a base definition URL
     fn extract_resource_type_from_base_definition(base_def: &str) -> Option<String> {
         // Handle the standard FHIR StructureDefinition URLs
-        if let Some(last_segment) = base_def.split('/').last() {
+        if let Some(last_segment) = base_def.split('/').next_back() {
             // Skip common base types that aren't core resources
             match last_segment {
                 "DomainResource" | "Resource" | "Element" | "BackboneElement" => None,

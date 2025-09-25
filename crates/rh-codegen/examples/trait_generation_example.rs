@@ -85,23 +85,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generate the trait
     println!("Generating Patient trait...");
-    let patient_trait = generator.generate_trait(&patient_structure)?;
+    let patient_traits = generator.generate_trait(&patient_structure)?;
 
-    // Display information about the generated trait
-    println!("Generated trait: {}", patient_trait.name);
-    println!("Documentation: {:?}", patient_trait.doc_comment);
-    println!("Number of methods: {}", patient_trait.methods.len());
-    println!();
+    // Display information about the generated traits
+    for (i, patient_trait) in patient_traits.iter().enumerate() {
+        println!("Generated trait {}: {}", i + 1, patient_trait.name);
+        println!("Documentation: {:?}", patient_trait.doc_comment);
+        println!("Number of methods: {}", patient_trait.methods.len());
+        println!();
 
-    // List all the methods in the trait
-    println!("Trait methods:");
-    for method in &patient_trait.methods {
-        println!("- {}", method.name);
-        if let Some(doc) = &method.doc_comment {
-            println!("  Documentation: {doc}");
-        }
-        if let Some(return_type) = &method.return_type {
-            println!("  Return type: {return_type:?}");
+        // List all the methods in the trait
+        println!("Trait methods:");
+        for method in &patient_trait.methods {
+            println!("- {}", method.name);
+            if let Some(doc) = &method.doc_comment {
+                println!("  Documentation: {doc}");
+            }
+            if let Some(return_type) = &method.return_type {
+                println!("  Return type: {return_type:?}");
+            }
+            println!();
         }
         println!();
     }
