@@ -1,6 +1,8 @@
 use anyhow::Result;
+use rh_codegen::fhir_types::{
+    ElementDefinition, ElementType, StructureDefinition, StructureDefinitionDifferential,
+};
 use rh_codegen::{CodeGenerator, CodegenConfig};
-use rh_codegen::fhir_types::{ElementDefinition, StructureDefinition, ElementType, StructureDefinitionDifferential};
 use std::path::Path;
 
 /// Create a test structure definition with array fields to test array handling
@@ -89,7 +91,7 @@ fn main() -> Result<()> {
 
     // Create a test structure with arrays
     let test_structure = create_test_structure_with_arrays();
-    
+
     // Generate the struct to test array handling
     generator.generate_to_organized_directories(&test_structure, &src_dir)?;
 

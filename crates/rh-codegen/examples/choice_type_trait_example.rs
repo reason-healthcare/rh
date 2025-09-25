@@ -166,13 +166,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nSummary:");
     let total_value_methods: usize = observation_traits
         .iter()
-        .map(|trait_def| trait_def.methods.iter().filter(|m| m.name.contains("value")).count())
+        .map(|trait_def| {
+            trait_def
+                .methods
+                .iter()
+                .filter(|m| m.name.contains("value"))
+                .count()
+        })
         .sum();
     let total_effective_methods: usize = observation_traits
         .iter()
-        .map(|trait_def| trait_def.methods.iter().filter(|m| m.name.contains("effective")).count())
+        .map(|trait_def| {
+            trait_def
+                .methods
+                .iter()
+                .filter(|m| m.name.contains("effective"))
+                .count()
+        })
         .sum();
-    
+
     println!(
         "✅ Generated {} choice type methods for 'value[x]' field across all traits",
         total_value_methods

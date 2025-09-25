@@ -206,9 +206,9 @@ impl<'a> FileIoManager<'a> {
 
         // Must be a direct nested structure name, not a substring match
         // e.g., "ElementBinding" from "Element" is valid (remainder="Binding")
-        // but "ElementdefinitionBinding" from "Element" is NOT valid 
+        // but "ElementdefinitionBinding" from "Element" is NOT valid
         // (remainder="definitionBinding" which looks like it belongs to ElementDefinition)
-        
+
         // If remainder starts with lowercase letters, it's likely a separate structure
         // e.g., "Element" + "definitionBinding" suggests it belongs to "ElementDefinition"
         if let Some(first_char) = remainder.chars().next() {

@@ -91,9 +91,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let traits = generator.generate_trait(&structure_def)?;
 
     // Display information about the generated traits
-    println!("Generated {} trait(s) for cardinality validation", traits.len());
+    println!(
+        "Generated {} trait(s) for cardinality validation",
+        traits.len()
+    );
     for (i, trait_def) in traits.iter().enumerate() {
-        println!("Trait {}: {} with {} methods", i + 1, trait_def.name, trait_def.methods.len());
+        println!(
+            "Trait {}: {} with {} methods",
+            i + 1,
+            trait_def.name,
+            trait_def.methods.len()
+        );
     }
 
     // Check that the generated code has the correct return types
