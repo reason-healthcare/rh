@@ -31,6 +31,14 @@ fn main() {
                 if !rest.trim().is_empty() {
                     println!("\n[WARN] Unparsed tail: {:?}", rest);
                 }
+                
+                // Translate to FHIR ValueSet.compose
+                let compose = translate_to_fhir(&ast);
+                println!("\nFHIR ValueSet.compose:");
+                match serde_json::to_string_pretty(&compose) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => eprintln!("JSON serialization error: {}", e),
+                }
             }
             Err(e) => {
                 eprintln!("Parse error: {:?}", e);
@@ -123,6 +131,267 @@ pub enum Value {
     Code(String),
     Uri(String),
     Hierarchy(HierarchyOp, CodeRef),
+}
+
+/* =========================
+   AST to FHIR Translation
+   ========================= */
+
+use std::collections::HashMap;
+
+pub fn translate_to_fhir(ast: &Start) -> ValueSetCompose {
+    // Create alias lookup table
+    let mut aliases = HashMap::new();
+    for header in &ast.headers {
+        match header {
+            Header::Alias { name, target } => {
+                aliases.insert(name.clone(), target.clone());
+            }
+        }
+    }
+    
+    // Translate the expression
+    let (include, exclude) = translate_expression(&ast.expr, &aliases);
+    
+    ValueSetCompose {
+        inactive: None,
+        include,
+        exclude,
+    }
+}
+
+fn translate_expression(expr: &Expr, aliases: &HashMap<String, AliasTarget>) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
+    match expr {
+        Expr::Clause(clause) => {
+            let component = translate_clause(clause, aliases);
+            (vec![component], vec![])
+        }
+        Expr::Minus(left, right) => {
+            let (mut include, mut exclude) = translate_expression(left, aliases);
+            let (right_include, right_exclude) = translate_expression(right, aliases);
+            
+            // In FHIR, A - B means include A and exclude B
+            exclude.extend(right_include);
+            include.extend(right_exclude); // Double negative becomes include
+            
+            (include, exclude)
+        }
+        Expr::Or(left, right) => {
+            // OR means multiple include components
+            let (mut left_include, mut left_exclude) = translate_expression(left, aliases);
+            let (right_include, right_exclude) = translate_expression(right, aliases);
+            
+            left_include.extend(right_include);
+            left_exclude.extend(right_exclude);
+            
+            (left_include, left_exclude)
+        }
+        Expr::And(left, right) => {
+            // AND means we need to merge filters within components where possible
+            // For now, we'll create separate components and let FHIR handle the intersection
+            let (mut left_include, mut left_exclude) = translate_expression(left, aliases);
+            let (right_include, right_exclude) = translate_expression(right, aliases);
+            
+            left_include.extend(right_include);
+            left_exclude.extend(right_exclude);
+            
+            (left_include, left_exclude)
+        }
+        Expr::Not(inner) => {
+            // NOT flips include/exclude
+            let (include, exclude) = translate_expression(inner, aliases);
+            (exclude, include)
+        }
+        Expr::Group(inner) => {
+            translate_expression(inner, aliases)
+        }
+    }
+}
+
+fn translate_clause(clause: &Clause, aliases: &HashMap<String, AliasTarget>) -> ConceptSetComponent {
+    let system = resolve_system_ref(&clause.system, aliases);
+    let version = clause.version.clone();
+    
+    let (concept, filter, mut value_set) = translate_inner_expr_with_aliases(&clause.inner, aliases);
+    
+    // Remove any unresolved alias markers and resolve them
+    value_set = value_set.into_iter().map(|vs| {
+        if vs.starts_with('#') {
+            let alias_name = &vs[1..]; // Remove the '#' prefix
+            match aliases.get(alias_name) {
+                Some(AliasTarget::ValueSetUrl(url)) => url.clone(),
+                _ => vs, // Keep original if can't resolve
+            }
+        } else {
+            vs
+        }
+    }).collect();
+    
+    ConceptSetComponent {
+        system,
+        version,
+        concept,
+        filter,
+        value_set,
+    }
+}
+
+fn resolve_system_ref(system_ref: &SystemRef, aliases: &HashMap<String, AliasTarget>) -> Option<String> {
+    match system_ref {
+        SystemRef::Uri(uri) => Some(uri.clone()),
+        SystemRef::Alias(alias_name) => {
+            match aliases.get(alias_name) {
+                Some(AliasTarget::System(SystemRef::Uri(uri))) => Some(uri.clone()),
+                Some(AliasTarget::System(SystemRef::Alias(nested_alias))) => {
+                    // Handle nested aliases (though unlikely in practice)
+                    resolve_system_ref(&SystemRef::Alias(nested_alias.clone()), aliases)
+                }
+                Some(AliasTarget::ValueSetUrl(_)) => None, // This alias points to a ValueSet, not a system
+                None => None, // Unresolved alias
+            }
+        }
+    }
+}
+
+fn translate_inner_expr_with_aliases(inner: &InnerExpr, aliases: &HashMap<String, AliasTarget>) -> (Vec<ConceptReferenceComponent>, Vec<ConceptSetFilter>, Vec<String>) {
+    match inner {
+        InnerExpr::Term(term) => translate_term_with_aliases(term, aliases),
+        InnerExpr::And(left, right) => {
+            let (mut concepts, mut filters, mut value_sets) = translate_inner_expr_with_aliases(left, aliases);
+            let (right_concepts, right_filters, right_value_sets) = translate_inner_expr_with_aliases(right, aliases);
+            
+            concepts.extend(right_concepts);
+            filters.extend(right_filters);
+            value_sets.extend(right_value_sets);
+            
+            (concepts, filters, value_sets)
+        }
+        InnerExpr::Or(left, right) => {
+            let (mut concepts, mut filters, mut value_sets) = translate_inner_expr_with_aliases(left, aliases);
+            let (right_concepts, right_filters, right_value_sets) = translate_inner_expr_with_aliases(right, aliases);
+            
+            concepts.extend(right_concepts);
+            filters.extend(right_filters);
+            value_sets.extend(right_value_sets);
+            
+            (concepts, filters, value_sets)
+        }
+        InnerExpr::Minus(_left, _right) => {
+            (vec![], vec![], vec![])
+        }
+        InnerExpr::Not(_inner) => {
+            (vec![], vec![], vec![])
+        }
+        InnerExpr::Group(inner) => translate_inner_expr_with_aliases(inner, aliases),
+    }
+}
+
+
+
+fn translate_term_with_aliases(term: &Term, aliases: &HashMap<String, AliasTarget>) -> (Vec<ConceptReferenceComponent>, Vec<ConceptSetFilter>, Vec<String>) {
+    match term {
+        Term::MembershipAlias(alias) => {
+            match aliases.get(alias) {
+                Some(AliasTarget::ValueSetUrl(url)) => (vec![], vec![], vec![url.clone()]),
+                _ => (vec![], vec![], vec![]), // Unresolved alias
+            }
+        }
+        _ => translate_term(term), // For non-alias terms, use the original function
+    }
+}
+
+// Keep the old function for non-alias terms
+fn translate_term(term: &Term) -> (Vec<ConceptReferenceComponent>, Vec<ConceptSetFilter>, Vec<String>) {
+    match term {
+        Term::Hierarchy(op, code_ref) => {
+            let code = extract_code_from_ref(code_ref);
+            let filter_op = match op {
+                HierarchyOp::DescOrSelf => FilterOperator::IsA,
+                HierarchyOp::DescOnly => FilterOperator::DescendentOf,
+                HierarchyOp::Isa => FilterOperator::IsA,
+            };
+            
+            let filter = ConceptSetFilter {
+                property: "concept".to_string(),
+                op: filter_op,
+                value: code,
+            };
+            
+            (vec![], vec![filter], vec![])
+        }
+        Term::PropertyEq(property, value) => {
+            let filter = ConceptSetFilter {
+                property: property.clone(),
+                op: FilterOperator::Equals,
+                value: translate_value_to_string(value),
+            };
+            
+            (vec![], vec![filter], vec![])
+        }
+        Term::PropertyIn(property, values) => {
+            let value_str = values.iter()
+                .map(translate_value_to_string)
+                .collect::<Vec<_>>()
+                .join(",");
+            
+            let filter = ConceptSetFilter {
+                property: property.clone(),
+                op: FilterOperator::In,
+                value: value_str,
+            };
+            
+            (vec![], vec![filter], vec![])
+        }
+        Term::PropertyRegex(property, regex) => {
+            let filter = ConceptSetFilter {
+                property: property.clone(),
+                op: FilterOperator::Regex,
+                value: regex.clone(),
+            };
+            
+            (vec![], vec![filter], vec![])
+        }
+        Term::MembershipValueSet(url) => {
+            (vec![], vec![], vec![url.clone()])
+        }
+        Term::MembershipAlias(_alias) => {
+            // This should only be called from translate_term_with_aliases now
+            // If we get here, something is wrong, so return empty
+            (vec![], vec![], vec![])
+        }
+        Term::Exists(property) => {
+            let filter = ConceptSetFilter {
+                property: property.clone(),
+                op: FilterOperator::Exists,
+                value: "true".to_string(),
+            };
+            
+            (vec![], vec![filter], vec![])
+        }
+    }
+}
+
+fn extract_code_from_ref(code_ref: &CodeRef) -> String {
+    match code_ref {
+        CodeRef::Code(code) => code.clone(),
+        CodeRef::Quoted(quoted) => quoted.clone(),
+    }
+}
+
+fn translate_value_to_string(value: &Value) -> String {
+    match value {
+        Value::Str(s) => s.clone(),
+        Value::Code(c) => c.clone(),
+        Value::Uri(u) => u.clone(),
+        Value::Hierarchy(op, code_ref) => {
+            let op_str = match op {
+                HierarchyOp::DescOrSelf => "<<",
+                HierarchyOp::DescOnly => "<",
+                HierarchyOp::Isa => "isa",
+            };
+            format!("{} {}", op_str, extract_code_from_ref(code_ref))
+        }
+    }
 }
 
 /* =========================
@@ -536,6 +805,71 @@ impl fmt::Display for SystemRef {
 }
 
 /* =========================
+   FHIR ValueSet.compose structures
+   ========================= */
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetCompose {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inactive: Option<bool>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub include: Vec<ConceptSetComponent>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub exclude: Vec<ConceptSetComponent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptSetComponent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub concept: Vec<ConceptReferenceComponent>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub filter: Vec<ConceptSetFilter>,
+    #[serde(rename = "valueSet", skip_serializing_if = "Vec::is_empty")]
+    pub value_set: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptReferenceComponent {
+    pub code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptSetFilter {
+    pub property: String,
+    pub op: FilterOperator,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FilterOperator {
+    #[serde(rename = "=")]
+    Equals,
+    #[serde(rename = "is-a")]
+    IsA,
+    #[serde(rename = "descendent-of")]
+    DescendentOf,
+    #[serde(rename = "is-not-a")]
+    IsNotA,
+    #[serde(rename = "regex")]
+    Regex,
+    #[serde(rename = "in")]
+    In,
+    #[serde(rename = "not-in")]
+    NotIn,
+    #[serde(rename = "generalizes")]
+    Generalizes,
+    #[serde(rename = "exists")]
+    Exists,
+}
+
+/* =========================
    Tests
    ========================= */
 #[cfg(test)]
@@ -589,6 +923,78 @@ mod tests {
             }
             _ => panic!("Expected clause with version"),
         }
+    }
+
+    #[test]
+    fn t_fhir_translation_basic_hierarchy() {
+        let input = "http://snomed.info/sct: < 22298006";
+        let (_r, ast) = parse_start(input).unwrap();
+        let compose = translate_to_fhir(&ast);
+        
+        assert_eq!(compose.include.len(), 1);
+        assert_eq!(compose.exclude.len(), 0);
+        
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(include.version, None);
+        assert_eq!(include.filter.len(), 1);
+        
+        let filter = &include.filter[0];
+        assert_eq!(filter.property, "concept");
+        assert!(matches!(filter.op, FilterOperator::DescendentOf));
+        assert_eq!(filter.value, "22298006");
+    }
+
+    #[test]
+    fn t_fhir_translation_with_aliases() {
+        let input = r#"
+          @alias sct = http://snomed.info/sct|20250131
+          @alias dm  = vs(https://example.org/fhir/ValueSet/diabetes)
+          sct: << 73211009 | sct: in #dm - sct: << 44054006
+        "#;
+        let (_r, ast) = parse_start(input).unwrap();
+        let compose = translate_to_fhir(&ast);
+        
+        // Should have includes and excludes
+        assert!(!compose.include.is_empty());
+        assert!(!compose.exclude.is_empty());
+        
+        // Check that aliases are resolved
+        let has_system = compose.include.iter().any(|inc| {
+            inc.system == Some("http://snomed.info/sct".to_string())
+        });
+        assert!(has_system, "System alias should be resolved");
+        
+        let has_valueset = compose.include.iter().any(|inc| {
+            inc.value_set.contains(&"https://example.org/fhir/ValueSet/diabetes".to_string())
+        });
+        assert!(has_valueset, "ValueSet alias should be resolved");
+    }
+
+    #[test]
+    fn t_fhir_translation_property_filters() {
+        let input = r#"http://loinc.org: component = "Glucose" & method in ("Automated count","Manual count")"#;
+        let (_r, ast) = parse_start(input).unwrap();
+        let compose = translate_to_fhir(&ast);
+        
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(include.filter.len(), 2);
+        
+        // Check for component = "Glucose" filter
+        let component_filter = include.filter.iter().find(|f| f.property == "component");
+        assert!(component_filter.is_some());
+        let component_filter = component_filter.unwrap();
+        assert!(matches!(component_filter.op, FilterOperator::Equals));
+        assert_eq!(component_filter.value, "Glucose");
+        
+        // Check for method in (...) filter
+        let method_filter = include.filter.iter().find(|f| f.property == "method");
+        assert!(method_filter.is_some());
+        let method_filter = method_filter.unwrap();
+        assert!(matches!(method_filter.op, FilterOperator::In));
+        assert_eq!(method_filter.value, "Automated count,Manual count");
     }
 }
 
