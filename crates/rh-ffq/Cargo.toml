@@ -1,0 +1,16 @@
+[package]
+
+name = "rh-ffq"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "FFQ — FHIR Filter Query to build FHIR ValueSet filter blocks"
+authors = ["Reason Healthcare"]
+repository = "https://github.com/reason-healthcare/rh"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+nom = { workspace = true }
+
