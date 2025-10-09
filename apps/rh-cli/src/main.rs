@@ -4,6 +4,7 @@ use tracing::error;
 
 mod codegen;
 mod download;
+mod ffq;
 mod fhirpath;
 mod validator;
 
@@ -37,6 +38,10 @@ enum Commands {
     /// Parse and evaluate FHIRPath expressions
     #[clap(subcommand)]
     Fhirpath(fhirpath::FhirpathCommands),
+
+    /// Parse and translate FFQ (FHIR Filter Query) expressions
+    #[clap(subcommand)]
+    Ffq(ffq::FfqCommands),
 
     /// Validate FHIR resources
     #[clap(subcommand)]
@@ -75,6 +80,12 @@ async fn main() -> Result<()> {
         Commands::Fhirpath(cmd) => {
             if let Err(e) = fhirpath::handle_command(cmd).await {
                 error!("FHIRPath error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Ffq(cmd) => {
+            if let Err(e) = ffq::handle_command(ffq::FfqArgs { command: cmd }).await {
+                error!("FFQ error: {}", e);
                 std::process::exit(1);
             }
         }
