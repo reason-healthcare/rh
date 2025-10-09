@@ -1,7 +1,7 @@
 # FFQ - FHIR Filter Query DSL Specification
-- 🌐 **Language Agnostic**: Designed to be implementable in any programming language
-- 📖 **Human Readable**: Intuitive syntax for FHIR terminology filtering
-- 📋 **Formal Grammar**: ANTLR grammar for cross-language implementations Query Language
+- **Language Agnostic**: Designed to be implementable in any programming language
+- **Human Readable**: Intuitive syntax for FHIR terminology filtering
+- **Formal Grammar**: ANTLR grammar for cross-language implementations Query Language
 
 > ⚠️ **Experimental**: This DSL proposal is currently in experimental development and is not ready for production use.
 
@@ -59,7 +59,7 @@ cargo run --bin rh -- ffq translate 'http://snomed.info/sct: << 73211009'
 
 This will parse the FFQ expression and show the resulting FHIR JSON that can be used in ValueSet resources.
 
-## 📚 Comprehensive Examples
+## Comprehensive Examples
 
 The [`examples/`](examples/) directory contains detailed FFQ usage patterns and real-world scenarios:
 
