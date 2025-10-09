@@ -145,9 +145,11 @@ async fn handle_translate(
 async fn handle_repl(show_ast: bool, compact: bool) -> Result<()> {
     println!("FFQ REPL - FHIR Filter Query Interactive Shell");
     println!("Type 'help' for commands, 'exit' or Ctrl+C to quit");
-    println!("Enter FFQ expressions to see parsed AST and FHIR translation\n");
+    println!("Enter alias definitions with '@alias name = value' or FFQ expressions");
+    println!("Aliases persist until 'clear' or 'reset' command\n");
 
     let mut rl = DefaultEditor::new()?;
+    let mut aliases = Vec::<String>::new(); // Store alias lines
 
     // Load history if it exists
     let history_path = std::env::var("HOME")
@@ -185,8 +187,24 @@ async fn handle_repl(show_ast: bool, compact: bool) -> Result<()> {
                         print!("\x1B[2J\x1B[1;1H"); // Clear screen
                         continue;
                     }
+                    "reset" => {
+                        aliases.clear();
+                        println!("Aliases cleared");
+                        continue;
+                    }
+                    "aliases" => {
+                        if aliases.is_empty() {
+                            println!("No aliases defined");
+                        } else {
+                            println!("Current aliases:");
+                            for alias in &aliases {
+                                println!("  {}", alias);
+                            }
+                        }
+                        continue;
+                    }
                     _ => {
-                        process_repl_input(line, show_ast, compact);
+                        process_repl_input(line, &mut aliases, show_ast, compact);
                     }
                 }
             }
@@ -213,8 +231,23 @@ async fn handle_repl(show_ast: bool, compact: bool) -> Result<()> {
     Ok(())
 }
 
-fn process_repl_input(input: &str, show_ast: bool, compact: bool) {
-    match parse_start(input) {
+fn process_repl_input(input: &str, aliases: &mut Vec<String>, show_ast: bool, compact: bool) {
+    // Check if this is an alias definition
+    if input.trim_start().starts_with("@alias") {
+        aliases.push(input.to_string());
+        println!("Alias added: {}", input.trim());
+        return;
+    }
+
+    // Build complete input with all aliases
+    let mut complete_input = String::new();
+    for alias in aliases {
+        complete_input.push_str(alias);
+        complete_input.push('\n');
+    }
+    complete_input.push_str(input);
+
+    match parse_start(&complete_input) {
         Ok((rest, ast)) => {
             if show_ast {
                 println!("AST:");
@@ -247,14 +280,24 @@ fn print_repl_help() {
     println!("FFQ REPL Commands:");
     println!("  help          - Show this help message");
     println!("  clear         - Clear the screen");
+    println!("  reset         - Clear all stored aliases");
+    println!("  aliases       - Show currently stored aliases");
     println!("  exit, quit    - Exit the REPL");
+    println!();
+    println!("Usage:");
+    println!("  @alias name = value   - Define an alias (persists until reset)");
+    println!("  expression            - Evaluate FFQ expression with current aliases");
     println!("  Ctrl+C        - Interrupt current input");
     println!();
     println!("FFQ Syntax Examples:");
     println!("  http://snomed.info/sct: < 22298006");
     println!("  http://loinc.org: component = \"Glucose\"");
+    println!();
+    println!("REPL Alias Examples:");
     println!("  @alias sct = http://snomed.info/sct");
+    println!("  @alias dm = vs(https://example.org/fhir/ValueSet/diabetes)");
     println!("  sct: << 73211009 & component = \"test\"");
+    println!("  sct: << 22298006 - << 1755008");
     println!();
 }
 

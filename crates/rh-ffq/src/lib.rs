@@ -129,10 +129,7 @@ fn translate_expression(
     aliases: &HashMap<String, AliasTarget>,
 ) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
     match expr {
-        Expr::Clause(clause) => {
-            let component = translate_clause(clause, aliases);
-            (vec![component], vec![])
-        }
+        Expr::Clause(clause) => translate_clause_with_excludes(clause, aliases),
         Expr::Minus(left, right) => {
             let (mut include, mut exclude) = translate_expression(left, aliases);
             let (right_include, right_exclude) = translate_expression(right, aliases);
@@ -173,18 +170,174 @@ fn translate_expression(
     }
 }
 
-fn translate_clause(
+fn translate_clause_with_excludes(
     clause: &Clause,
     aliases: &HashMap<String, AliasTarget>,
-) -> ConceptSetComponent {
+) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
     let system = resolve_system_ref(&clause.system, aliases);
     let version = clause.version.clone();
 
-    let (concept, filter, mut value_set) =
-        translate_inner_expr_with_aliases(&clause.inner, aliases);
+    // Check if this clause contains a minus operation
+    if let InnerExpr::Minus(left, right) = &clause.inner {
+        // Handle minus operation: left side becomes includes, right side becomes excludes
+        let left_components = translate_inner_expr_with_expansion(left, aliases);
+        let right_components = translate_inner_expr_with_expansion(right, aliases);
 
-    // Remove any unresolved alias markers and resolve them
-    value_set = value_set
+        let mut includes = vec![];
+        let mut excludes = vec![];
+
+        // Process left side as includes
+        for (concept, filter, mut value_set) in left_components {
+            value_set = resolve_value_set_aliases(value_set, aliases);
+            includes.push(ConceptSetComponent {
+                system: system.clone(),
+                version: version.clone(),
+                concept,
+                filter,
+                value_set,
+            });
+        }
+
+        // Process right side as excludes
+        for (concept, filter, mut value_set) in right_components {
+            value_set = resolve_value_set_aliases(value_set, aliases);
+            excludes.push(ConceptSetComponent {
+                system: system.clone(),
+                version: version.clone(),
+                concept,
+                filter,
+                value_set,
+            });
+        }
+
+        (includes, excludes)
+    } else if contains_not_operation(&clause.inner) {
+        // Handle AND operations with NOT - create separate includes and excludes
+        let (includes, excludes) = extract_includes_excludes(&clause.inner, &system, &version, aliases);
+        (includes, excludes)
+    } else {
+        // Normal case without minus or NOT+AND operations
+        let components = translate_inner_expr_with_expansion(&clause.inner, aliases);
+
+        let includes = components
+            .into_iter()
+            .map(|(concept, filter, mut value_set)| {
+                value_set = resolve_value_set_aliases(value_set, aliases);
+                ConceptSetComponent {
+                    system: system.clone(),
+                    version: version.clone(),
+                    concept,
+                    filter,
+                    value_set,
+                }
+            })
+            .collect();
+
+        (includes, vec![])
+    }
+}
+
+fn contains_not_operation(expr: &InnerExpr) -> bool {
+    match expr {
+        InnerExpr::Not(_) => true,
+        InnerExpr::And(left, right) => {
+            contains_not_operation(left) || contains_not_operation(right)
+        }
+        InnerExpr::Or(left, right) => {
+            contains_not_operation(left) || contains_not_operation(right)
+        }
+        InnerExpr::Group(inner) => contains_not_operation(inner),
+        _ => false,
+    }
+}
+
+fn extract_includes_excludes(
+    expr: &InnerExpr,
+    system: &Option<String>,
+    version: &Option<String>,
+    aliases: &HashMap<String, AliasTarget>
+) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
+    match expr {
+        InnerExpr::Not(inner) => {
+            // NOT expressions become excludes
+            let components = translate_inner_expr_with_expansion(inner, aliases);
+            let excludes = components.into_iter().map(|(concept, filter, mut value_set)| {
+                value_set = resolve_value_set_aliases(value_set, aliases);
+                ConceptSetComponent {
+                    system: system.clone(),
+                    version: version.clone(),
+                    concept,
+                    filter,
+                    value_set,
+                }
+            }).collect();
+            (vec![], excludes)
+        }
+        InnerExpr::And(left, right) => {
+            // Handle AND operations with potential NOT inside
+            let (left_includes, left_excludes) = extract_includes_excludes(left, system, version, aliases);
+            let (right_includes, right_excludes) = extract_includes_excludes(right, system, version, aliases);
+            
+            let mut all_includes = vec![];
+            let mut all_excludes = vec![];
+            
+            // If both sides have includes, create Cartesian product
+            if !left_includes.is_empty() && !right_includes.is_empty() {
+                for left_inc in &left_includes {
+                    for right_inc in &right_includes {
+                        let mut combined_filters = left_inc.filter.clone();
+                        combined_filters.extend(right_inc.filter.clone());
+                        
+                        let mut combined_concepts = left_inc.concept.clone();
+                        combined_concepts.extend(right_inc.concept.clone());
+                        
+                        let mut combined_value_set = left_inc.value_set.clone();
+                        combined_value_set.extend(right_inc.value_set.clone());
+                        
+                        all_includes.push(ConceptSetComponent {
+                            system: system.clone(),
+                            version: version.clone(),
+                            concept: combined_concepts,
+                            filter: combined_filters,
+                            value_set: combined_value_set,
+                        });
+                    }
+                }
+            } else {
+                // If only one side has includes, use those
+                all_includes.extend(left_includes);
+                all_includes.extend(right_includes);
+            }
+            
+            // Combine all excludes
+            all_excludes.extend(left_excludes);
+            all_excludes.extend(right_excludes);
+            
+            (all_includes, all_excludes)
+        }
+        _ => {
+            // Regular expressions become includes
+            let components = translate_inner_expr_with_expansion(expr, aliases);
+            let includes = components.into_iter().map(|(concept, filter, mut value_set)| {
+                value_set = resolve_value_set_aliases(value_set, aliases);
+                ConceptSetComponent {
+                    system: system.clone(),
+                    version: version.clone(),
+                    concept,
+                    filter,
+                    value_set,
+                }
+            }).collect();
+            (includes, vec![])
+        }
+    }
+}
+
+fn resolve_value_set_aliases(
+    value_set: Vec<String>,
+    aliases: &HashMap<String, AliasTarget>,
+) -> Vec<String> {
+    value_set
         .into_iter()
         .map(|vs| {
             if let Some(alias_name) = vs.strip_prefix('#') {
@@ -197,15 +350,7 @@ fn translate_clause(
                 vs
             }
         })
-        .collect();
-
-    ConceptSetComponent {
-        system,
-        version,
-        concept,
-        filter,
-        value_set,
-    }
+        .collect()
 }
 
 fn resolve_system_ref(
@@ -222,49 +367,77 @@ fn resolve_system_ref(
                     resolve_system_ref(&SystemRef::Alias(nested_alias.clone()), aliases)
                 }
                 Some(AliasTarget::ValueSetUrl(_)) => None, // This alias points to a ValueSet, not a system
-                None => None,                              // Unresolved alias
+                _ => None,                                 // Unresolved alias
             }
         }
     }
 }
 
-fn translate_inner_expr_with_aliases(
+fn translate_inner_expr_with_expansion(
     inner: &InnerExpr,
     aliases: &HashMap<String, AliasTarget>,
-) -> (
+) -> Vec<(
     Vec<ConceptReferenceComponent>,
     Vec<ConceptSetFilter>,
     Vec<String>,
-) {
+)> {
     match inner {
-        InnerExpr::Term(term) => translate_term_with_aliases(term, aliases),
+        InnerExpr::Term(term) => {
+            if let Term::PropertyIn(property, values) = term {
+                // Expand PropertyIn into multiple components, one per value
+                values
+                    .iter()
+                    .map(|value| {
+                        let filter = ConceptSetFilter {
+                            property: property.clone(),
+                            op: FilterOperator::Equals,
+                            value: translate_value_to_string(value),
+                        };
+                        (vec![], vec![filter], vec![])
+                    })
+                    .collect()
+            } else {
+                vec![translate_term_with_aliases(term, aliases)]
+            }
+        }
         InnerExpr::And(left, right) => {
-            let (mut concepts, mut filters, mut value_sets) =
-                translate_inner_expr_with_aliases(left, aliases);
-            let (right_concepts, right_filters, right_value_sets) =
-                translate_inner_expr_with_aliases(right, aliases);
+            let left_components = translate_inner_expr_with_expansion(left, aliases);
+            let right_components = translate_inner_expr_with_expansion(right, aliases);
 
-            concepts.extend(right_concepts);
-            filters.extend(right_filters);
-            value_sets.extend(right_value_sets);
+            // Cartesian product: combine each left component with each right component
+            let mut result = Vec::new();
+            for (left_concepts, left_filters, left_value_sets) in left_components {
+                for (right_concepts, right_filters, right_value_sets) in &right_components {
+                    let mut concepts = left_concepts.clone();
+                    concepts.extend(right_concepts.iter().cloned());
 
-            (concepts, filters, value_sets)
+                    let mut filters = left_filters.clone();
+                    filters.extend(right_filters.iter().cloned());
+
+                    let mut value_sets = left_value_sets.clone();
+                    value_sets.extend(right_value_sets.iter().cloned());
+
+                    result.push((concepts, filters, value_sets));
+                }
+            }
+            result
         }
         InnerExpr::Or(left, right) => {
-            let (mut concepts, mut filters, mut value_sets) =
-                translate_inner_expr_with_aliases(left, aliases);
-            let (right_concepts, right_filters, right_value_sets) =
-                translate_inner_expr_with_aliases(right, aliases);
-
-            concepts.extend(right_concepts);
-            filters.extend(right_filters);
-            value_sets.extend(right_value_sets);
-
-            (concepts, filters, value_sets)
+            let mut left_components = translate_inner_expr_with_expansion(left, aliases);
+            let right_components = translate_inner_expr_with_expansion(right, aliases);
+            left_components.extend(right_components);
+            left_components
         }
-        InnerExpr::Minus(_left, _right) => (vec![], vec![], vec![]),
-        InnerExpr::Not(_inner) => (vec![], vec![], vec![]),
-        InnerExpr::Group(inner) => translate_inner_expr_with_aliases(inner, aliases),
+        InnerExpr::Minus(_left, _right) => {
+            // Minus operations within clauses are not directly supported
+            // They should be handled at the expression level
+            vec![(vec![], vec![], vec![])]
+        }
+        InnerExpr::Not(_inner) => {
+            // NOT operations within clauses need special handling at clause level
+            vec![(vec![], vec![], vec![])]
+        }
+        InnerExpr::Group(inner) => translate_inner_expr_with_expansion(inner, aliases),
     }
 }
 
@@ -313,10 +486,20 @@ fn translate_term(
             (vec![], vec![filter], vec![])
         }
         Term::PropertyEq(property, value) => {
+            let (op, val) = match value {
+                Value::Hierarchy(HierarchyOp::DescOrSelf, code_ref) => {
+                    (FilterOperator::IsA, extract_code_from_ref(code_ref))
+                }
+                Value::Hierarchy(HierarchyOp::DescOnly, code_ref) => {
+                    (FilterOperator::DescendentOf, extract_code_from_ref(code_ref))
+                }
+                _ => (FilterOperator::Equals, translate_value_to_string(value)),
+            };
+            
             let filter = ConceptSetFilter {
                 property: property.clone(),
-                op: FilterOperator::Equals,
-                value: translate_value_to_string(value),
+                op,
+                value: val,
             };
 
             (vec![], vec![filter], vec![])
@@ -878,8 +1061,8 @@ pub enum FilterOperator {
 }
 
 /* =========================
-   Tests
-   ========================= */
+Tests
+========================= */
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -889,14 +1072,12 @@ mod tests {
         let input = "http://snomed.info/sct: < 22298006";
         let (_r, ast) = parse_start(input).unwrap();
         match ast.expr {
-            Expr::Clause(Clause { inner, .. }) => {
-                match inner {
-                    InnerExpr::Term(Term::Hierarchy(HierarchyOp::DescOnly, CodeRef::Code(c))) => {
-                        assert_eq!(c, "22298006");
-                    }
-                    _ => panic!("unexpected inner AST"),
+            Expr::Clause(Clause { inner, .. }) => match inner {
+                InnerExpr::Term(Term::Hierarchy(HierarchyOp::DescOnly, CodeRef::Code(c))) => {
+                    assert_eq!(c, "22298006");
                 }
-            }
+                _ => panic!("unexpected inner AST"),
+            },
             _ => panic!("not a clause"),
         }
     }
@@ -919,12 +1100,17 @@ mod tests {
 
     #[test]
     fn t_sample2_with_version() {
-        let input = "http://snomed.info/sct|20250731: << 404684003 & associatedMorphology = << 49755003";
+        let input =
+            "http://snomed.info/sct|20250731: << 404684003 & associatedMorphology = << 49755003";
         let (_r, ast) = parse_start(input).unwrap();
-        
+
         // Verify it parses as expected
         match ast.expr {
-            Expr::Clause(Clause { system, version, inner }) => {
+            Expr::Clause(Clause {
+                system,
+                version,
+                inner,
+            }) => {
                 assert!(matches!(system, SystemRef::Uri(_)));
                 assert_eq!(version, Some("20250731".to_string()));
                 assert!(matches!(inner, InnerExpr::And(_, _)));
@@ -938,19 +1124,77 @@ mod tests {
         let input = "http://snomed.info/sct: < 22298006";
         let (_r, ast) = parse_start(input).unwrap();
         let compose = translate_to_fhir(&ast);
-        
+
         assert_eq!(compose.include.len(), 1);
         assert_eq!(compose.exclude.len(), 0);
-        
+
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
         assert_eq!(include.version, None);
         assert_eq!(include.filter.len(), 1);
-        
+
         let filter = &include.filter[0];
         assert_eq!(filter.property, "concept");
         assert!(matches!(filter.op, FilterOperator::DescendentOf));
         assert_eq!(filter.value, "22298006");
+    }
+
+    #[test]
+    fn t_fhir_translation_minus_operation() {
+        // Test: sct: << 22298006 - << 1755008
+        // Should create one include and one exclude block
+        let input = "sct: << 22298006 - << 1755008";
+        let (_r, ast) = parse_start(input).unwrap();
+        let fhir = translate_to_fhir(&ast);
+
+        // Should have 1 include and 1 exclude
+        assert_eq!(fhir.include.len(), 1);
+        assert_eq!(fhir.exclude.len(), 1);
+
+        // Check include block
+        let include = &fhir.include[0];
+        assert_eq!(include.system, None); // sct alias not resolved
+        assert_eq!(include.filter.len(), 1);
+        assert_eq!(include.filter[0].property, "concept");
+        assert!(matches!(include.filter[0].op, FilterOperator::IsA));
+        assert_eq!(include.filter[0].value, "22298006");
+
+        // Check exclude block
+        let exclude = &fhir.exclude[0];
+        assert_eq!(exclude.system, None); // sct alias not resolved
+        assert_eq!(exclude.filter.len(), 1);
+        assert_eq!(exclude.filter[0].property, "concept");
+        assert!(matches!(exclude.filter[0].op, FilterOperator::IsA));
+        assert_eq!(exclude.filter[0].value, "1755008");
+    }
+
+    #[test]
+    fn t_fhir_translation_not_operation() {
+        // Test: sct: << 404684003 & ! (associatedMorphology = << 49755003)
+        // Should create one include and one exclude block
+        let input = "sct: << 404684003 & ! (associatedMorphology = << 49755003)";
+        let (_r, ast) = parse_start(input).unwrap();
+        let fhir = translate_to_fhir(&ast);
+
+        // Should have 1 include and 1 exclude
+        assert_eq!(fhir.include.len(), 1);
+        assert_eq!(fhir.exclude.len(), 1);
+
+        // Check include block
+        let include = &fhir.include[0];
+        assert_eq!(include.system, None); // sct alias not resolved
+        assert_eq!(include.filter.len(), 1);
+        assert_eq!(include.filter[0].property, "concept");
+        assert!(matches!(include.filter[0].op, FilterOperator::IsA));
+        assert_eq!(include.filter[0].value, "404684003");
+
+        // Check exclude block  
+        let exclude = &fhir.exclude[0];
+        assert_eq!(exclude.system, None); // sct alias not resolved
+        assert_eq!(exclude.filter.len(), 1);
+        assert_eq!(exclude.filter[0].property, "associatedMorphology");
+        assert!(matches!(exclude.filter[0].op, FilterOperator::IsA));
+        assert_eq!(exclude.filter[0].value, "49755003");
     }
 
     #[test]
@@ -962,19 +1206,21 @@ mod tests {
         "#;
         let (_r, ast) = parse_start(input).unwrap();
         let compose = translate_to_fhir(&ast);
-        
+
         // Should have includes and excludes
         assert!(!compose.include.is_empty());
         assert!(!compose.exclude.is_empty());
-        
+
         // Check that aliases are resolved
-        let has_system = compose.include.iter().any(|inc| {
-            inc.system == Some("http://snomed.info/sct".to_string())
-        });
+        let has_system = compose
+            .include
+            .iter()
+            .any(|inc| inc.system == Some("http://snomed.info/sct".to_string()));
         assert!(has_system, "System alias should be resolved");
-        
+
         let has_valueset = compose.include.iter().any(|inc| {
-            inc.value_set.contains(&"https://example.org/fhir/ValueSet/diabetes".to_string())
+            inc.value_set
+                .contains(&"https://example.org/fhir/ValueSet/diabetes".to_string())
         });
         assert!(has_valueset, "ValueSet alias should be resolved");
     }
@@ -984,24 +1230,42 @@ mod tests {
         let input = r#"http://loinc.org: component = "Glucose" & method in ("Automated count","Manual count")"#;
         let (_r, ast) = parse_start(input).unwrap();
         let compose = translate_to_fhir(&ast);
-        
-        assert_eq!(compose.include.len(), 1);
-        let include = &compose.include[0];
-        assert_eq!(include.system, Some("http://loinc.org".to_string()));
-        assert_eq!(include.filter.len(), 2);
-        
-        // Check for component = "Glucose" filter
-        let component_filter = include.filter.iter().find(|f| f.property == "component");
-        assert!(component_filter.is_some());
-        let component_filter = component_filter.unwrap();
-        assert!(matches!(component_filter.op, FilterOperator::Equals));
-        assert_eq!(component_filter.value, "Glucose");
-        
-        // Check for method in (...) filter
-        let method_filter = include.filter.iter().find(|f| f.property == "method");
-        assert!(method_filter.is_some());
-        let method_filter = method_filter.unwrap();
-        assert!(matches!(method_filter.op, FilterOperator::In));
-        assert_eq!(method_filter.value, "Automated count,Manual count");
+
+        // With the new expansion logic, PropertyIn creates multiple include blocks
+        assert_eq!(compose.include.len(), 2);
+
+        // Each include block should have the component filter plus one method value
+        for include in &compose.include {
+            assert_eq!(include.system, Some("http://loinc.org".to_string()));
+            assert_eq!(include.filter.len(), 2);
+
+            // Check for component = "Glucose" filter
+            let component_filter = include.filter.iter().find(|f| f.property == "component");
+            assert!(component_filter.is_some());
+            let component_filter = component_filter.unwrap();
+            assert!(matches!(component_filter.op, FilterOperator::Equals));
+            assert_eq!(component_filter.value, "Glucose");
+
+            // Check for method filter (should be equals, not in)
+            let method_filter = include.filter.iter().find(|f| f.property == "method");
+            assert!(method_filter.is_some());
+            let method_filter = method_filter.unwrap();
+            assert!(matches!(method_filter.op, FilterOperator::Equals));
+            assert!(
+                method_filter.value == "Automated count" || method_filter.value == "Manual count"
+            );
+        }
+
+        // Verify we have both method values across the two include blocks
+        let method_values: Vec<String> = compose
+            .include
+            .iter()
+            .flat_map(|inc| inc.filter.iter())
+            .filter(|f| f.property == "method")
+            .map(|f| f.value.clone())
+            .collect();
+        assert_eq!(method_values.len(), 2);
+        assert!(method_values.contains(&"Automated count".to_string()));
+        assert!(method_values.contains(&"Manual count".to_string()));
     }
 }
