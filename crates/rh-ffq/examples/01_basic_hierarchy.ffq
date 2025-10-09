@@ -1,0 +1,16 @@
+// Basic Hierarchy Operations
+// This example demonstrates the fundamental hierarchy operators in FFQ
+
+// Descendants-only (children, grandchildren, etc.)
+http://snomed.info/sct: < 22298006
+
+// Descendants-or-self (includes the concept itself)  
+http://snomed.info/sct: << 73211009
+
+// Using aliases for cleaner syntax
+@alias sct = http://snomed.info/sct
+sct: << 404684003
+
+// Versioned system references
+@alias sct_2024 = http://snomed.info/sct|20240131
+sct_2024: < 22298006

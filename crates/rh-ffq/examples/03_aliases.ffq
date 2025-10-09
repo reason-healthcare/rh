@@ -1,0 +1,24 @@
+// Aliases and ValueSets
+// This example demonstrates alias usage for systems and ValueSets
+
+// System aliases
+@alias sct = http://snomed.info/sct
+@alias loinc = http://loinc.org
+@alias rxnorm = http://www.nlm.nih.gov/research/umls/rxnorm
+
+// Versioned system alias  
+@alias sct_current = http://snomed.info/sct|20250131
+
+// ValueSet alias
+@alias diabetes_meds = vs(https://example.org/fhir/ValueSet/diabetes-medications)
+
+// Using system aliases
+sct: << 73211009
+loinc: component = "Glucose"
+rxnorm: << 1234567
+
+// Using versioned alias
+sct_current: < 22298006
+
+// ValueSet membership
+sct: in #diabetes_meds

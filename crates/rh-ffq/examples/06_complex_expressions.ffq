@@ -1,0 +1,18 @@
+// Complex Expressions
+// This example shows advanced combinations of FFQ operators
+
+@alias sct = http://snomed.info/sct|20250131
+@alias loinc = http://loinc.org
+@alias diabetes_vs = vs(https://example.org/fhir/ValueSet/diabetes)
+
+// Complex hierarchy with exclusions and property filters
+sct: << 73211009 & active = true & ! (associatedMorphology = << 49755003) - << 44054006
+
+// PropertyIn expansion with exclusions  
+loinc: component = "Glucose" & method in ("Auto", "Manual") & ! (status = "deprecated")
+
+// Combining ValueSet membership with filters
+sct: (in #diabetes_vs | << 73211009) & active = true
+
+// Multi-level exclusions and negations
+sct: << 22298006 & component in ("A", "B", "C") & ! (status in ("retired", "inactive")) - << 1755008

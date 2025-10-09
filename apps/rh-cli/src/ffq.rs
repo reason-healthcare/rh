@@ -198,7 +198,7 @@ async fn handle_repl(show_ast: bool, compact: bool) -> Result<()> {
                         } else {
                             println!("Current aliases:");
                             for alias in &aliases {
-                                println!("  {}", alias);
+                                println!("  {alias}");
                             }
                         }
                         continue;

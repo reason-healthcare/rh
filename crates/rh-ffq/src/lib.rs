@@ -29,6 +29,7 @@ pub enum Header {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AliasTarget {
     System(SystemRef),
+    SystemWithVersion(SystemRef, String), // system, version
     ValueSetUrl(String),
 }
 
@@ -174,8 +175,9 @@ fn translate_clause_with_excludes(
     clause: &Clause,
     aliases: &HashMap<String, AliasTarget>,
 ) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
-    let system = resolve_system_ref(&clause.system, aliases);
-    let version = clause.version.clone();
+    let (system, alias_version) = resolve_system_and_version(&clause.system, aliases);
+    // Clause version takes precedence over alias version
+    let version = clause.version.clone().or(alias_version);
 
     // Check if this clause contains a minus operation
     if let InnerExpr::Minus(left, right) = &clause.inner {
@@ -213,7 +215,8 @@ fn translate_clause_with_excludes(
         (includes, excludes)
     } else if contains_not_operation(&clause.inner) {
         // Handle AND operations with NOT - create separate includes and excludes
-        let (includes, excludes) = extract_includes_excludes(&clause.inner, &system, &version, aliases);
+        let (includes, excludes) =
+            extract_includes_excludes(&clause.inner, &system, &version, aliases);
         (includes, excludes)
     } else {
         // Normal case without minus or NOT+AND operations
@@ -243,9 +246,7 @@ fn contains_not_operation(expr: &InnerExpr) -> bool {
         InnerExpr::And(left, right) => {
             contains_not_operation(left) || contains_not_operation(right)
         }
-        InnerExpr::Or(left, right) => {
-            contains_not_operation(left) || contains_not_operation(right)
-        }
+        InnerExpr::Or(left, right) => contains_not_operation(left) || contains_not_operation(right),
         InnerExpr::Group(inner) => contains_not_operation(inner),
         _ => false,
     }
@@ -255,45 +256,50 @@ fn extract_includes_excludes(
     expr: &InnerExpr,
     system: &Option<String>,
     version: &Option<String>,
-    aliases: &HashMap<String, AliasTarget>
+    aliases: &HashMap<String, AliasTarget>,
 ) -> (Vec<ConceptSetComponent>, Vec<ConceptSetComponent>) {
     match expr {
         InnerExpr::Not(inner) => {
             // NOT expressions become excludes
             let components = translate_inner_expr_with_expansion(inner, aliases);
-            let excludes = components.into_iter().map(|(concept, filter, mut value_set)| {
-                value_set = resolve_value_set_aliases(value_set, aliases);
-                ConceptSetComponent {
-                    system: system.clone(),
-                    version: version.clone(),
-                    concept,
-                    filter,
-                    value_set,
-                }
-            }).collect();
+            let excludes = components
+                .into_iter()
+                .map(|(concept, filter, mut value_set)| {
+                    value_set = resolve_value_set_aliases(value_set, aliases);
+                    ConceptSetComponent {
+                        system: system.clone(),
+                        version: version.clone(),
+                        concept,
+                        filter,
+                        value_set,
+                    }
+                })
+                .collect();
             (vec![], excludes)
         }
         InnerExpr::And(left, right) => {
             // Handle AND operations with potential NOT inside
-            let (left_includes, left_excludes) = extract_includes_excludes(left, system, version, aliases);
-            let (right_includes, right_excludes) = extract_includes_excludes(right, system, version, aliases);
-            
+            let (left_includes, left_excludes) =
+                extract_includes_excludes(left, system, version, aliases);
+            let (right_includes, right_excludes) =
+                extract_includes_excludes(right, system, version, aliases);
+
             let mut all_includes = vec![];
             let mut all_excludes = vec![];
-            
+
             // If both sides have includes, create Cartesian product
             if !left_includes.is_empty() && !right_includes.is_empty() {
                 for left_inc in &left_includes {
                     for right_inc in &right_includes {
                         let mut combined_filters = left_inc.filter.clone();
                         combined_filters.extend(right_inc.filter.clone());
-                        
+
                         let mut combined_concepts = left_inc.concept.clone();
                         combined_concepts.extend(right_inc.concept.clone());
-                        
+
                         let mut combined_value_set = left_inc.value_set.clone();
                         combined_value_set.extend(right_inc.value_set.clone());
-                        
+
                         all_includes.push(ConceptSetComponent {
                             system: system.clone(),
                             version: version.clone(),
@@ -308,26 +314,29 @@ fn extract_includes_excludes(
                 all_includes.extend(left_includes);
                 all_includes.extend(right_includes);
             }
-            
+
             // Combine all excludes
             all_excludes.extend(left_excludes);
             all_excludes.extend(right_excludes);
-            
+
             (all_includes, all_excludes)
         }
         _ => {
             // Regular expressions become includes
             let components = translate_inner_expr_with_expansion(expr, aliases);
-            let includes = components.into_iter().map(|(concept, filter, mut value_set)| {
-                value_set = resolve_value_set_aliases(value_set, aliases);
-                ConceptSetComponent {
-                    system: system.clone(),
-                    version: version.clone(),
-                    concept,
-                    filter,
-                    value_set,
-                }
-            }).collect();
+            let includes = components
+                .into_iter()
+                .map(|(concept, filter, mut value_set)| {
+                    value_set = resolve_value_set_aliases(value_set, aliases);
+                    ConceptSetComponent {
+                        system: system.clone(),
+                        version: version.clone(),
+                        concept,
+                        filter,
+                        value_set,
+                    }
+                })
+                .collect();
             (includes, vec![])
         }
     }
@@ -353,21 +362,32 @@ fn resolve_value_set_aliases(
         .collect()
 }
 
-fn resolve_system_ref(
+fn resolve_system_and_version(
     system_ref: &SystemRef,
     aliases: &HashMap<String, AliasTarget>,
-) -> Option<String> {
+) -> (Option<String>, Option<String>) {
     match system_ref {
-        SystemRef::Uri(uri) => Some(uri.clone()),
+        SystemRef::Uri(uri) => (Some(uri.clone()), None),
         SystemRef::Alias(alias_name) => {
             match aliases.get(alias_name) {
-                Some(AliasTarget::System(SystemRef::Uri(uri))) => Some(uri.clone()),
+                Some(AliasTarget::System(SystemRef::Uri(uri))) => (Some(uri.clone()), None),
+                Some(AliasTarget::SystemWithVersion(SystemRef::Uri(uri), version)) => {
+                    (Some(uri.clone()), Some(version.clone()))
+                }
                 Some(AliasTarget::System(SystemRef::Alias(nested_alias))) => {
                     // Handle nested aliases (though unlikely in practice)
-                    resolve_system_ref(&SystemRef::Alias(nested_alias.clone()), aliases)
+                    resolve_system_and_version(&SystemRef::Alias(nested_alias.clone()), aliases)
                 }
-                Some(AliasTarget::ValueSetUrl(_)) => None, // This alias points to a ValueSet, not a system
-                _ => None,                                 // Unresolved alias
+                Some(AliasTarget::SystemWithVersion(SystemRef::Alias(nested_alias), version)) => {
+                    // Handle nested aliases with version - use the version from the alias
+                    let (sys, _) = resolve_system_and_version(
+                        &SystemRef::Alias(nested_alias.clone()),
+                        aliases,
+                    );
+                    (sys, Some(version.clone()))
+                }
+                Some(AliasTarget::ValueSetUrl(_)) => (None, None), // This alias points to a ValueSet, not a system
+                _ => (None, None),                                 // Unresolved alias
             }
         }
     }
@@ -490,12 +510,13 @@ fn translate_term(
                 Value::Hierarchy(HierarchyOp::DescOrSelf, code_ref) => {
                     (FilterOperator::IsA, extract_code_from_ref(code_ref))
                 }
-                Value::Hierarchy(HierarchyOp::DescOnly, code_ref) => {
-                    (FilterOperator::DescendentOf, extract_code_from_ref(code_ref))
-                }
+                Value::Hierarchy(HierarchyOp::DescOnly, code_ref) => (
+                    FilterOperator::DescendentOf,
+                    extract_code_from_ref(code_ref),
+                ),
                 _ => (FilterOperator::Equals, translate_value_to_string(value)),
             };
-            
+
             let filter = ConceptSetFilter {
                 property: property.clone(),
                 op,
@@ -721,7 +742,10 @@ fn parse_header(i: &str) -> IResult<&str, Header> {
                 parse_system_ref,
                 opt(preceded(char('|'), parse_version_code)),
             ),
-            |(system, _version)| AliasTarget::System(system),
+            |(system, version)| match version {
+                Some(ver) => AliasTarget::SystemWithVersion(system, ver),
+                _ => AliasTarget::System(system),
+            },
         ),
     ))(i)?;
     Ok((i, Header::Alias { name, target }))
@@ -1188,13 +1212,34 @@ mod tests {
         assert!(matches!(include.filter[0].op, FilterOperator::IsA));
         assert_eq!(include.filter[0].value, "404684003");
 
-        // Check exclude block  
+        // Check exclude block
         let exclude = &fhir.exclude[0];
         assert_eq!(exclude.system, None); // sct alias not resolved
         assert_eq!(exclude.filter.len(), 1);
         assert_eq!(exclude.filter[0].property, "associatedMorphology");
         assert!(matches!(exclude.filter[0].op, FilterOperator::IsA));
         assert_eq!(exclude.filter[0].value, "49755003");
+    }
+
+    #[test]
+    fn t_fhir_translation_versioned_alias() {
+        // Test versioned alias: @alias sct = http://snomed.info/sct|20250131
+        let input = r#"
+          @alias sct = http://snomed.info/sct|20250131
+          sct: < 22298006
+        "#;
+        let (_r, ast) = parse_start(input).unwrap();
+        let compose = translate_to_fhir(&ast);
+
+        assert_eq!(compose.include.len(), 1);
+
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(include.version, Some("20250131".to_string()));
+        assert_eq!(include.filter.len(), 1);
+        assert_eq!(include.filter[0].property, "concept");
+        assert!(matches!(include.filter[0].op, FilterOperator::DescendentOf));
+        assert_eq!(include.filter[0].value, "22298006");
     }
 
     #[test]

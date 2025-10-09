@@ -30,13 +30,70 @@ The goal is to provide a standardized, intuitive syntax for building FHIR termin
 
 ## Quick Start (Reference Implementation)
 
+### CLI Usage
+
 ```bash
-cargo run
+# Parse FFQ expression and show AST
+cargo run --bin rh -- ffq parse 'sct: << 73211009'
+
+# Translate to FHIR ValueSet.compose JSON
+cargo run --bin rh -- ffq translate 'sct: << 73211009'
+
+# Interactive REPL with alias support
+cargo run --bin rh -- ffq repl
+
+# Parse from file
+cargo run --bin rh -- ffq parse --file examples/01_basic_hierarchy.ffq
+
+# Translate from file with pretty formatting
+cargo run --bin rh -- ffq translate --file examples/02_property_filters.ffq
 ```
 
-This will parse and translate several example queries using the Rust reference implementation, showing both the AST and the resulting FHIR JSON.
+### Basic Example
 
-## Grammar Overview
+The simplest way to get started is with a hierarchy query:
+
+```bash
+cargo run --bin rh -- ffq translate 'http://snomed.info/sct: << 73211009'
+```
+
+This will parse the FFQ expression and show the resulting FHIR JSON that can be used in ValueSet resources.
+
+## 📚 Comprehensive Examples
+
+The [`examples/`](examples/) directory contains detailed FFQ usage patterns and real-world scenarios:
+
+### Basic Usage
+- **[Basic Hierarchy](examples/01_basic_hierarchy.ffq)** - Hierarchy operators (`<`, `<<`) and versioned systems
+- **[Property Filters](examples/02_property_filters.ffq)** - Property equality, membership, and PropertyIn expansion  
+- **[Aliases](examples/03_aliases.ffq)** - System and ValueSet aliases for cleaner queries
+
+### Advanced Operations
+- **[Minus Operations](examples/04_minus_operations.ffq)** - Exclusions using minus (`-`) operator
+- **[NOT Operations](examples/05_not_operations.ffq)** - Negation using NOT (`!`) operator
+- **[Complex Expressions](examples/06_complex_expressions.ffq)** - Multi-level combinations and nested logic
+
+### Real-World Use Cases  
+- **[SNOMED CT Examples](examples/07_snomed_examples.ffq)** - Clinical findings, procedures, and medical concepts
+- **[LOINC Examples](examples/08_loinc_examples.ffq)** - Laboratory tests and measurements
+- **[Medication Examples](examples/09_medication_examples.ffq)** - Pharmaceutical products and drug hierarchies
+
+### Running Examples
+
+```bash
+# Parse and view AST
+cargo run --bin rh -- ffq parse --file examples/01_basic_hierarchy.ffq
+
+# Translate to FHIR ValueSet.compose JSON  
+cargo run --bin rh -- ffq translate --file examples/02_property_filters.ffq
+
+# Interactive REPL (copy/paste any example)
+cargo run --bin rh -- ffq repl
+```
+
+See the **[Examples README](examples/README.md)** for detailed documentation and expected outputs.
+
+## Grammar Reference
 
 FFQ supports the complete FHIR terminology filter query language:
 

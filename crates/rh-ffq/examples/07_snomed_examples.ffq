@@ -1,0 +1,28 @@
+// SNOMED CT Examples
+// Real-world SNOMED CT use cases and patterns
+
+@alias sct = http://snomed.info/sct|20250131
+
+// Clinical findings
+sct: << 404684003  // Clinical finding
+
+// Procedures 
+sct: << 71388002   // Procedure
+
+// Disorders excluding congenital
+sct: << 64572001 - << 66091009  // Disease - Congenital disease
+
+// Active medications (exclude inactive/retired)
+sct: << 373873005 & active = true  // Pharmaceutical / biologic product
+
+// Body structures excluding anatomical abnormalities  
+sct: << 123037004 - << 49755003   // Body structure - Morphologically abnormal structure
+
+// Specific morphology patterns
+sct: << 404684003 & ! (associatedMorphology = << 49755003)  // Clinical findings without abnormal morphology
+
+// Observable entities with specific properties
+sct: << 363787002 & component = "substance"  // Observable entity
+
+// Substance hierarchy excluding allergens
+sct: << 105590001 - << 126904000  // Substance - Allergenic extract
