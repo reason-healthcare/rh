@@ -1,4 +1,4 @@
-# FFQ - FHIR F### DSL Specification
+# FFQ - FHIR Filter Query DSL Specification
 - 🌐 **Language Agnostic**: Designed to be implementable in any programming language
 - 📖 **Human Readable**: Intuitive syntax for FHIR terminology filtering
 - 📋 **Formal Grammar**: ANTLR grammar for cross-language implementations Query Language
