@@ -78,3 +78,39 @@ docs:
 # Update all dependencies
 update:
     cargo update
+
+# Build WASM package for VCL (web target)
+build-wasm:
+    #!/usr/bin/env bash
+    echo "Building VCL WASM (web target)..."
+    cd crates/rh-vcl && just wasm-web
+    # Copy to workspace pkg directory for compatibility
+    mkdir -p ../../pkg/wasm
+    cp -r pkg/web/* ../../pkg/wasm/
+    echo "✅ WASM web build complete! Output in pkg/wasm/ and crates/rh-vcl/pkg/web/"
+
+# Build WASM package for Node.js
+build-wasm-node:
+    #!/usr/bin/env bash
+    echo "Building VCL WASM (Node.js target)..."
+    cd crates/rh-vcl && just wasm-node
+    # Copy to workspace pkg directory for compatibility
+    mkdir -p ../../pkg/wasm-node
+    cp -r pkg/node/* ../../pkg/wasm-node/
+    echo "✅ WASM Node.js build complete! Output in pkg/wasm-node/ and crates/rh-vcl/pkg/node/"
+
+# Build WASM package for bundlers (webpack, etc.)
+build-wasm-bundler:
+    #!/usr/bin/env bash
+    echo "Building VCL WASM (bundler target)..."
+    cd crates/rh-vcl && just wasm-bundler
+    # Copy to workspace pkg directory for compatibility
+    mkdir -p ../../pkg/wasm-bundler
+    cp -r pkg/bundler/* ../../pkg/wasm-bundler/
+    echo "✅ WASM bundler build complete! Output in pkg/wasm-bundler/ and crates/rh-vcl/pkg/bundler/"
+
+# Test WASM build 
+test-wasm:
+    #!/usr/bin/env bash
+    echo "Testing VCL WASM build..."
+    cd crates/rh-vcl && make test-wasm

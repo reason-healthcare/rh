@@ -2,7 +2,30 @@
 
 [![Crates.io](https://img.shields.io/crates/v/rh-vcl)](https://crates.io/crates/rh-vcl)
 [![Documentation](https://docs.rs/rh-vcl/badge.svg)](https://docs.rs/rh-vcl)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT OR Apache-2.0](https:```bash
+# From crate directory (crates/rh-vcl/)
+just wasm          # Web target (ES6 modules)
+just wasm-node     # Node.js target (CommonJS) 
+just wasm-bundler  # Bundler target (webpack, etc.)
+
+# Test the build
+just test-wasm
+
+# Clean build artifacts
+just clean-wasm
+
+# Development server for web testing
+just dev-web
+```
+
+#### From workspace root:
+
+```bash
+# Build using justfile (workspace-level)
+just build-wasm        # Web target
+just build-wasm-node   # Node.js target
+just build-wasm-bundler # Bundler target
+```.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
 
 A Rust parser for the ValueSet Compose Language (VCL), a domain-specific language for expressing ValueSet CLDs in a compact syntax suitable for use within a URL and enabling a new family of implicit ValueSet URIs that are usable across all code systems.
 
@@ -235,12 +258,87 @@ This crate can translate VCL expressions into FHIR ValueSet.compose structures:
 
 ## WASM Support
 
-This crate can be compiled to WebAssembly for use in web applications:
+This crate can be compiled to WebAssembly for use in web applications and Node.js projects. The WASM bindings provide the same parsing and translation functionality as the CLI with similar parameter options.
 
-```toml
-[dependencies]
-rh-vcl = { version = "0.1.0", features = ["wasm"] }
+### Build WASM Packages
+
+#### From rh-vcl crate directory:
+
+```bash
+# Build all WASM targets
+make wasm
+
+# Build specific targets
+make wasm-web      # Web target (ES6 modules)
+make wasm-node     # Node.js target (CommonJS) 
+make wasm-bundler  # Bundler target (webpack, etc.)
+
+# Test the build
+make test-wasm
+
+# Clean build artifacts
+make clean-wasm
+
+# Development server for web testing
+make dev-web
 ```
+
+#### From workspace root:
+
+```bash
+# Build using justfile (workspace-level)
+just build-wasm        # Web target
+just build-wasm-node   # Node.js target
+just build-wasm-bundler # Bundler target
+```
+
+### Web Usage
+
+```javascript
+import init, { 
+    parse_vcl_simple, 
+    translate_vcl_with_system,
+    get_version 
+} from './rh_vcl.js';
+
+await init(); // Required for web target
+
+console.log('VCL Version:', get_version());
+
+// Parse VCL expression
+const parseResult = parse_vcl_simple('(123456,789012)');
+if (parseResult.success) {
+    console.log('AST:', JSON.parse(parseResult.data));
+}
+
+// Translate to FHIR with default system
+const fhirResult = translate_vcl_with_system('123456', 'http://snomed.info/sct');
+if (fhirResult.success) {
+    console.log('FHIR:', JSON.parse(fhirResult.data));
+}
+```
+
+### Node.js Usage
+
+```javascript
+const { 
+    parse_vcl_simple, 
+    translate_vcl_with_system 
+} = require('./rh_vcl.js');
+
+// Parse and translate (no init() required)
+const parseResult = parse_vcl_simple('has_ingredient=1886');
+const translateResult = translate_vcl_with_system('123456', 'http://snomed.info/sct');
+```
+
+### Available Functions
+
+- **Simple functions**: `parse_vcl_simple()`, `translate_vcl_simple()`, `translate_vcl_with_system()`
+- **Advanced**: `parse_vcl_expression()`, `translate_vcl_expression()` with options
+- **Utilities**: `validate_vcl_expression()`, `get_version()`
+- **Options**: `ParseOptions`, `TranslateOptions` classes
+
+All functions return `WasmResult` objects with `success`, `data`, and `error` properties.
 
 ## Contributing
 

@@ -21,6 +21,9 @@ pub mod fhir;
 pub mod parser;
 pub mod translator;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 pub use ast::{Code, Filter, Operation, SimpleExpression, VclExpression};
 pub use error::VclError;
 pub use fhir::{ValueSetCompose, ValueSetFilter, ValueSetInclude};
@@ -29,3 +32,11 @@ pub use translator::{translate_vcl_string_to_fhir, translate_vcl_to_fhir, VclTra
 
 /// Re-export commonly used types
 pub type VclResult<T> = Result<T, VclError>;
+
+// Re-export WASM functions when targeting WASM
+#[cfg(target_arch = "wasm32")]
+pub use wasm::{
+    get_version, parse_vcl_expression, parse_vcl_simple, translate_vcl_expression,
+    translate_vcl_simple, translate_vcl_with_system, validate_vcl_expression, 
+    ParseOptions, TranslateOptions, WasmResult,
+};

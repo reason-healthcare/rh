@@ -1,0 +1,6 @@
+# WASM build artifacts
+pkg/
+
+# Temporary build files
+*.wasm
+*.js.map

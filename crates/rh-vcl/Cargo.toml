@@ -11,6 +11,9 @@ repository = "https://github.com/reason-healthcare/rh"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O4"]
+
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
