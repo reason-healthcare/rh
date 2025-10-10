@@ -74,8 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (i, (title, vcl_expr, description)) in examples.iter().enumerate() {
         println!("Example {}: {}", i + 1, title);
-        println!("Description: {}", description);
-        println!("VCL: {}", vcl_expr);
+        println!("Description: {description}");
+        println!("VCL: {vcl_expr}");
 
         match translate_vcl_string_to_fhir(vcl_expr) {
             Ok(compose) => {
@@ -84,13 +84,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Display the resulting FHIR structure
                 let json = serde_json::to_string_pretty(&compose).unwrap();
                 println!("FHIR ValueSet.compose:");
-                println!("{}", json);
+                println!("{json}");
 
                 // Provide analysis
                 analyze_compose(&compose);
             }
             Err(e) => {
-                println!("❌ Translation failed: {}", e);
+                println!("❌ Translation failed: {e}");
             }
         }
 
@@ -108,15 +108,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test with default SNOMED CT system
     let vcl_without_system = "123456, 789012";
-    println!("VCL without system URI: {}", vcl_without_system);
+    println!("VCL without system URI: {vcl_without_system}");
 
     match snomed_translator.translate(&rh_vcl::parse_vcl(vcl_without_system)?) {
         Ok(compose) => {
             println!("✅ SNOMED CT translation:");
             let json = serde_json::to_string_pretty(&compose)?;
-            println!("{}", json);
+            println!("{json}");
         }
-        Err(e) => println!("❌ SNOMED CT translation failed: {}", e),
+        Err(e) => println!("❌ SNOMED CT translation failed: {e}"),
     }
 
     println!();
@@ -126,9 +126,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(compose) => {
             println!("✅ LOINC translation:");
             let json = serde_json::to_string_pretty(&compose)?;
-            println!("{}", json);
+            println!("{json}");
         }
-        Err(e) => println!("❌ LOINC translation failed: {}", e),
+        Err(e) => println!("❌ LOINC translation failed: {e}"),
     }
 
     println!("\n🎉 All translation examples completed!");
@@ -149,17 +149,17 @@ fn analyze_compose(compose: &rh_vcl::ValueSetCompose) {
 
         let total_concepts: usize = compose.include.iter().map(|inc| inc.concept.len()).sum();
         if total_concepts > 0 {
-            println!("   - Total concepts: {}", total_concepts);
+            println!("   - Total concepts: {total_concepts}");
         }
 
         let total_filters: usize = compose.include.iter().map(|inc| inc.filter.len()).sum();
         if total_filters > 0 {
-            println!("   - Total filters: {}", total_filters);
+            println!("   - Total filters: {total_filters}");
         }
 
         let total_valuesets: usize = compose.include.iter().map(|inc| inc.value_set.len()).sum();
         if total_valuesets > 0 {
-            println!("   - ValueSet references: {}", total_valuesets);
+            println!("   - ValueSet references: {total_valuesets}");
         }
 
         // List unique systems
@@ -171,7 +171,7 @@ fn analyze_compose(compose: &rh_vcl::ValueSetCompose) {
         if !systems.is_empty() {
             println!("   - Code systems: {}", systems.len());
             for system in systems.iter().take(3) {
-                println!("     • {}", system);
+                println!("     • {system}");
             }
             if systems.len() > 3 {
                 println!("     • ... and {} more", systems.len() - 3);
@@ -183,7 +183,7 @@ fn analyze_compose(compose: &rh_vcl::ValueSetCompose) {
         println!("   - Exclude entries: {}", compose.exclude.len());
         let excluded_concepts: usize = compose.exclude.iter().map(|exc| exc.concept.len()).sum();
         if excluded_concepts > 0 {
-            println!("   - Excluded concepts: {}", excluded_concepts);
+            println!("   - Excluded concepts: {excluded_concepts}");
         }
     }
 }

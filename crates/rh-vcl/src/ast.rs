@@ -57,10 +57,11 @@ pub enum SimpleExpression {
     IncludeValueSet(IncludeValueSet),
 }
 
-/// System URI wrapped in parentheses: (http://example.org/system)
+/// System URI wrapped in parentheses: (http://example.org/system) or (http://example.org/system|version)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemUri {
     pub uri: String,
+    pub version: Option<String>,
 }
 
 /// Include ValueSet expression

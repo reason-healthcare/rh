@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 analyze_expression(&parsed);
             }
             Err(e) => {
-                println!("  ❌ Parse error: {}", e);
+                println!("  ❌ Parse error: {e}");
             }
         }
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Error Handling Examples\n");
     println!("======================\n");
 
-    let error_examples = vec![
+    let error_examples = [
         "",                  // Empty
         "   ",               // Whitespace only
         "(unclosed",         // Unclosed parentheses
@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  ⚠️ Unexpected success!");
             }
             Err(e) => {
-                println!("  ❌ Expected error: {}", e);
+                println!("  ❌ Expected error: {e}");
             }
         }
 

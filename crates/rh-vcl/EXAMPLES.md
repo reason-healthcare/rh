@@ -159,6 +159,93 @@ This document provides comprehensive examples of all VCL language features suppo
 }
 ```
 
+### System URI with Version Specifier
+
+**VCL:** `(http://snomed.info/sct|20250901)123456789`
+
+**Description:** A SNOMED CT code with an explicit version specifier. The version follows the pipe character `|` after the system URI.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "version": "20250901",
+      "concept": [
+        {
+          "code": "123456789"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Complex Version Format
+
+**VCL:** `(http://loinc.org|2.76)8302-2`
+
+**Description:** LOINC code with a complex version string including dots and version prefixes.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://loinc.org",
+      "version": "2.76",
+      "concept": [
+        {
+          "code": "8302-2"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Date-based Version
+
+**VCL:** `(http://acme.org/cs|2025-01-01)74400008`
+
+**Description:** Version specifier using a date format.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://acme.org/cs", 
+      "version": "2025-01-01",
+      "concept": [
+        {
+          "code": "74400008"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Wildcard with Version
+
+**VCL:** `(http://loinc.org|2.76)*`
+
+**Description:** All codes from LOINC version 2.76.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://loinc.org",
+      "version": "2.76"
+    }
+  ]
+}
+```
+
 ---
 
 ## Filters

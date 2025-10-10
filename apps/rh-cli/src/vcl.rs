@@ -37,6 +37,10 @@ pub enum VclCommands {
         /// Enable translation mode (shows both AST and FHIR translation)
         #[clap(short, long)]
         translate: bool,
+
+        /// Default code system URI to use for codes without explicit system
+        #[clap(short = 's', long)]
+        default_system: Option<String>,
     },
 }
 
@@ -52,8 +56,11 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
         } => {
             translate_expression(&expression, &format, output.as_deref())?;
         }
-        VclCommands::Repl { translate } => {
-            run_repl(translate)?;
+        VclCommands::Repl {
+            translate,
+            default_system,
+        } => {
+            run_repl(translate, default_system)?;
         }
     }
     Ok(())
@@ -68,10 +75,10 @@ fn parse_expression(expression: &str, format: &str) -> Result<()> {
             }
             "json" => {
                 let json = serde_json::to_string_pretty(&ast)?;
-                println!("{}", json);
+                println!("{json}");
             }
             "debug" => {
-                println!("{:#?}", ast);
+                println!("{ast:#?}");
             }
             _ => {
                 return Err(anyhow!(
@@ -109,7 +116,7 @@ fn translate_expression(
             let mut result = String::new();
             result.push_str("✅ VCL Translation successful:\n\n");
             result.push_str("Original VCL:\n");
-            result.push_str(&format!("  {}\n\n", expression));
+            result.push_str(&format!("  {expression}\n\n"));
             result.push_str("FHIR ValueSet.compose:\n");
             result.push_str(&serde_json::to_string_pretty(&fhir_compose)?);
             result
@@ -126,18 +133,21 @@ fn translate_expression(
         fs::write(output_path, &output_content)?;
         println!("✅ Translation written to: {}", output_path.display());
     } else {
-        println!("{}", output_content);
+        println!("{output_content}");
     }
 
     Ok(())
 }
 
-fn run_repl(translate_mode: bool) -> Result<()> {
+fn run_repl(translate_mode: bool, default_system: Option<String>) -> Result<()> {
     println!("🚀 VCL Interactive REPL");
     println!(
         "Type VCL expressions to parse{}. Type 'exit' or 'quit' to exit.",
         if translate_mode { " and translate" } else { "" }
     );
+    if let Some(ref system) = default_system {
+        println!("Default code system: {system}");
+    }
     println!("Commands: .help, .exit, .quit");
     println!();
 
@@ -163,15 +173,18 @@ fn run_repl(translate_mode: bool) -> Result<()> {
                             println!("  .quit     - Exit the REPL");
                             println!();
                             println!("VCL Syntax Examples:");
-                            println!("  http://snomed.info/sct");
-                            println!("  http://loinc.org");
-                            println!("  http://snomed.info/sct#123456007");
-                            println!("  http://snomed.info/sct is-a #123456007");
-                            println!("  http://snomed.info/sct descendant-of #123456007");
-                            println!(
-                                "  http://snomed.info/sct#123456007 OR http://loinc.org#LA1234-5"
-                            );
-                            println!("  http://snomed.info/sct#123456007 AND NOT http://snomed.info/sct#789012003");
+                            if default_system.is_some() {
+                                println!("  123456     - Simple code (uses default system)");
+                                println!("  *          - Wildcard (uses default system)");
+                                println!("  status = \"active\"  - Filter (uses default system)");
+                            }
+                            println!("  (http://snomed.info/sct)123456");
+                            println!("  (http://snomed.info/sct)*");
+                            println!("  (http://snomed.info/sct)status = \"active\"");
+                            println!("  (http://snomed.info/sct)category << 123456");
+                            println!("  (http://snomed.info/sct)123456, 789012  - Multiple codes");
+                            println!("  123456; 789012; 345678  - Disjunction (OR)");
+                            println!("  * - inactive  - Exclusion (NOT)");
                         }
                         ".exit" | ".quit" => {
                             println!("Goodbye! 👋");
@@ -179,8 +192,7 @@ fn run_repl(translate_mode: bool) -> Result<()> {
                         }
                         _ => {
                             println!(
-                                "Unknown command: {}. Type '.help' for available commands.",
-                                line
+                                "Unknown command: {line}. Type '.help' for available commands."
                             );
                         }
                     }
@@ -202,7 +214,11 @@ fn run_repl(translate_mode: bool) -> Result<()> {
 
                         if translate_mode {
                             println!();
-                            let translator = VclTranslator::new();
+                            let translator = if let Some(ref default_sys) = default_system {
+                                VclTranslator::with_default_system(default_sys.clone())
+                            } else {
+                                VclTranslator::new()
+                            };
                             match translator.translate(&ast) {
                                 Ok(fhir_compose) => {
                                     println!("🔄 FHIR Translation:");
@@ -210,13 +226,13 @@ fn run_repl(translate_mode: bool) -> Result<()> {
                                     println!("{}", indent_json(&json, 1));
                                 }
                                 Err(e) => {
-                                    println!("❌ Translation error: {}", e);
+                                    println!("❌ Translation error: {e}");
                                 }
                             }
                         }
                     }
                     Err(e) => {
-                        println!("❌ Parse error: {}", e);
+                        println!("❌ Parse error: {e}");
                     }
                 }
                 println!();
@@ -241,15 +257,15 @@ fn run_repl(translate_mode: bool) -> Result<()> {
 
 fn print_ast_pretty(expr: &VclExpression, indent: usize) {
     let indent_str = "  ".repeat(indent);
-    println!("{}AST:", indent_str);
-    let json = serde_json::to_string_pretty(expr).unwrap_or_else(|_| format!("{:#?}", expr));
+    println!("{indent_str}AST:");
+    let json = serde_json::to_string_pretty(expr).unwrap_or_else(|_| format!("{expr:#?}"));
     println!("{}", indent_json(&json, indent + 1));
 }
 
 fn indent_json(json: &str, indent_level: usize) -> String {
     let indent_str = "  ".repeat(indent_level);
     json.lines()
-        .map(|line| format!("{}{}", indent_str, line))
+        .map(|line| format!("{indent_str}{line}"))
         .collect::<Vec<_>>()
         .join("\n")
 }

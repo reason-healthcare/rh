@@ -14,6 +14,9 @@ pub struct VclTranslator {
     /// Default system URI to use when none is specified
     pub default_system: Option<String>,
 
+    /// Default version to use when none is specified and default system is used
+    pub default_version: Option<String>,
+
     /// Whether to create separate includes for conjunctions (true) or combine them (false)
     pub separate_conjunction_includes: bool,
 }
@@ -23,14 +26,33 @@ impl VclTranslator {
     pub fn new() -> Self {
         Self {
             default_system: None,
+            default_version: None,
             separate_conjunction_includes: true,
         }
     }
 
     /// Create a new translator with a default code system
     pub fn with_default_system(system: String) -> Self {
+        // Parse system|version if present
+        let (system, version) = if let Some(pipe_pos) = system.find('|') {
+            let (sys, ver) = system.split_at(pipe_pos);
+            (sys.to_string(), Some(ver[1..].to_string())) // Skip the '|' character
+        } else {
+            (system, None)
+        };
+
         Self {
             default_system: Some(system),
+            default_version: version,
+            separate_conjunction_includes: true,
+        }
+    }
+
+    /// Create a new translator with a default code system and version
+    pub fn with_default_system_and_version(system: String, version: Option<String>) -> Self {
+        Self {
+            default_system: Some(system),
+            default_version: version,
             separate_conjunction_includes: true,
         }
     }
@@ -78,10 +100,12 @@ impl VclTranslator {
             }
             Some(Operation::Disjunction(sub_exprs)) => {
                 // Disjunction: Combine all expressions into concepts of a single include
-                let system = self.get_system_from_sub_expr(&expr.sub_expr);
-                let mut combined_include = ValueSetInclude::new_system(
-                    system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default()),
-                );
+                let (system, version) = self.get_system_and_version_from_sub_expr(&expr.sub_expr);
+                let default_system =
+                    system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default());
+                let default_version = version.or_else(|| self.default_version.clone());
+                let mut combined_include =
+                    ValueSetInclude::new_system_with_version(default_system, default_version);
 
                 // Add main expression concepts
                 if let Some(main_include) = main_include {
@@ -119,11 +143,11 @@ impl VclTranslator {
         &self,
         sub_expr: &SubExpression,
     ) -> VclResult<Option<ValueSetInclude>> {
-        let system = self.get_system_from_sub_expr(sub_expr);
+        let (system, version) = self.get_system_and_version_from_sub_expr(sub_expr);
 
         match &sub_expr.content {
             SubExpressionContent::Simple(simple_expr) => {
-                self.translate_simple_expression(simple_expr, system)
+                self.translate_simple_expression(simple_expr, system, version)
             }
             SubExpressionContent::Nested(nested_expr) => {
                 // For nested expressions, create a new compose and merge results
@@ -146,14 +170,24 @@ impl VclTranslator {
         &self,
         simple_expr: &SimpleExpression,
         system: Option<String>,
+        version: Option<String>,
     ) -> VclResult<Option<ValueSetInclude>> {
+        let use_default_system = system.is_none();
         let system_uri = system.or_else(|| self.default_system.clone());
+        let version_to_use = version.or_else(|| {
+            // Only use default version if we're using the default system
+            if use_default_system && self.default_system.is_some() {
+                self.default_version.clone()
+            } else {
+                None
+            }
+        });
 
         match simple_expr {
             SimpleExpression::Wildcard => {
                 // Wildcard - include all from system
                 if let Some(sys) = system_uri {
-                    let include = ValueSetInclude::new_system(sys);
+                    let include = ValueSetInclude::new_system_with_version(sys, version_to_use);
                     // Add a filter that matches everything (no specific filter needed for wildcard)
                     Ok(Some(include))
                 } else {
@@ -167,7 +201,8 @@ impl VclTranslator {
             SimpleExpression::Code(code) => {
                 // Simple code
                 if let Some(sys) = system_uri {
-                    let mut include = ValueSetInclude::new_system(sys);
+                    let mut include =
+                        ValueSetInclude::new_system_with_version(sys, version_to_use.clone());
                     include.add_concept(code.value().to_string(), None);
                     Ok(Some(include))
                 } else {
@@ -176,7 +211,7 @@ impl VclTranslator {
             }
             SimpleExpression::Filter(filter) => {
                 // Filter expression
-                self.translate_filter(filter, system_uri)
+                self.translate_filter(filter, system_uri, version_to_use)
             }
             SimpleExpression::IncludeValueSet(include_vs) => {
                 // Include ValueSet
@@ -185,7 +220,10 @@ impl VclTranslator {
                         Ok(Some(ValueSetInclude::new_valueset(uri.clone())))
                     }
                     IncludeValueSet::SystemUri(system_uri) => {
-                        Ok(Some(ValueSetInclude::new_system(system_uri.uri.clone())))
+                        Ok(Some(ValueSetInclude::new_system_with_version(
+                            system_uri.uri.clone(),
+                            system_uri.version.clone(),
+                        )))
                     }
                 }
             }
@@ -197,12 +235,23 @@ impl VclTranslator {
         &self,
         filter: &Filter,
         system: Option<String>,
+        version: Option<String>,
     ) -> VclResult<Option<ValueSetInclude>> {
+        let use_default_system = system.is_none();
         let system_uri = system
             .or_else(|| self.default_system.clone())
             .ok_or_else(|| VclError::parse_error("Filter requires a system URI", 0, ""))?;
 
-        let mut include = ValueSetInclude::new_system(system_uri);
+        let version_to_use = version.or_else(|| {
+            // Only use default version if we're using the default system
+            if use_default_system && self.default_system.is_some() {
+                self.default_version.clone()
+            } else {
+                None
+            }
+        });
+
+        let mut include = ValueSetInclude::new_system_with_version(system_uri, version_to_use);
 
         match filter {
             Filter::PropertyFilter {
@@ -285,8 +334,15 @@ impl VclTranslator {
     }
 
     /// Get system URI from sub-expression
-    fn get_system_from_sub_expr(&self, sub_expr: &SubExpression) -> Option<String> {
-        sub_expr.system_uri.as_ref().map(|uri| uri.uri.clone())
+    /// Get system URI and version from a sub-expression
+    fn get_system_and_version_from_sub_expr(
+        &self,
+        sub_expr: &SubExpression,
+    ) -> (Option<String>, Option<String>) {
+        match &sub_expr.system_uri {
+            Some(uri) => (Some(uri.uri.clone()), uri.version.clone()),
+            _ => (None, None),
+        }
     }
 
     /// Merge one include into another
@@ -371,6 +427,64 @@ mod tests {
         assert_eq!(include.system, Some("http://loinc.org".to_string()));
         assert_eq!(include.concept.len(), 1);
         assert_eq!(include.concept[0].code, "8302-2");
+    }
+
+    #[test]
+    fn test_code_with_system_uri_and_version() {
+        let translator = VclTranslator::new();
+        let expr = parse_vcl("(http://snomed.info/sct|2025)123456789").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(include.version, Some("2025".to_string()));
+        assert_eq!(include.concept.len(), 1);
+        assert_eq!(include.concept[0].code, "123456789");
+    }
+
+    #[test]
+    fn test_code_with_system_uri_and_complex_version() {
+        let translator = VclTranslator::new();
+        let expr = parse_vcl("(http://loinc.org|v2.76)8302-2").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(include.version, Some("v2.76".to_string()));
+        assert_eq!(include.concept.len(), 1);
+        assert_eq!(include.concept[0].code, "8302-2");
+    }
+
+    #[test]
+    fn test_default_system_with_version() {
+        let translator =
+            VclTranslator::with_default_system("http://snomed.info/sct|2025".to_string());
+        let expr = parse_vcl("123456").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(include.version, Some("2025".to_string()));
+        assert_eq!(include.concept.len(), 1);
+        assert_eq!(include.concept[0].code, "123456");
+    }
+
+    #[test]
+    fn test_default_system_with_wildcard_and_version() {
+        let translator =
+            VclTranslator::with_default_system("http://snomed.info/sct|2025".to_string());
+        let expr = parse_vcl("*").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(include.version, Some("2025".to_string()));
+        // Wildcard should not have concepts
+        assert_eq!(include.concept.len(), 0);
     }
 
     #[test]
@@ -601,8 +715,7 @@ mod tests {
             assert_eq!(include.filter.len(), 1);
             assert_eq!(
                 include.filter[0].op, expected_op,
-                "Failed for expression: {}",
-                vcl_expr
+                "Failed for expression: {vcl_expr}"
             );
         }
     }

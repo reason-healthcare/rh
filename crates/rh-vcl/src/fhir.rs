@@ -186,6 +186,17 @@ impl ValueSetInclude {
         }
     }
 
+    /// Create a new include for a specific system and version
+    pub fn new_system_with_version(system: String, version: Option<String>) -> Self {
+        Self {
+            system: Some(system),
+            version,
+            concept: Vec::new(),
+            filter: Vec::new(),
+            value_set: Vec::new(),
+        }
+    }
+
     /// Create a new include for a ValueSet reference
     pub fn new_valueset(valueset_url: String) -> Self {
         Self {

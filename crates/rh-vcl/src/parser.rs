@@ -135,11 +135,24 @@ fn include_vs(input: &str) -> IResult<&str, IncludeValueSet> {
     )(input)
 }
 
-/// systemUri: OPEN URI CLOSE
+/// systemUri: OPEN URI (PIPE version)? CLOSE
 fn system_uri(input: &str) -> IResult<&str, SystemUri> {
-    map(delimited(ws(char('(')), uri, ws(char(')'))), |uri| {
-        SystemUri { uri }
-    })(input)
+    map(
+        delimited(
+            ws(char('(')),
+            pair(uri, opt(preceded(char('|'), version_string))),
+            ws(char(')')),
+        ),
+        |(uri, version)| SystemUri {
+            uri,
+            version: version.map(|v| v.to_string()),
+        },
+    )(input)
+}
+
+/// Parse version string (alphanumeric, dots, dashes, underscores)
+fn version_string(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')(input)
 }
 
 /// Basic token parsers
@@ -157,11 +170,9 @@ fn uri(input: &str) -> IResult<&str, String> {
         recognize(tuple((
             take_while1(|c: char| c.is_ascii_alphabetic()),
             char(':'),
-            take_while1(|c: char| c.is_ascii_alphanumeric() || "?=:;&_%+-.@#$^!{}/".contains(c)),
-            opt(pair(
-                char('|'),
-                take_while(|c: char| c != '|' && c != '(' && c != ')'),
-            )),
+            take_while1(|c: char| {
+                c.is_ascii_alphanumeric() || "?=:;&_%+-.@#$^!{}/".contains(c) && c != '|'
+            }),
         ))),
         |s: &str| s.to_string(),
     )(input)
@@ -455,15 +466,48 @@ mod tests {
     fn test_system_uri() {
         let result = parse_vcl("(http://snomed.info/sct)123456").unwrap();
         assert!(result.expr.sub_expr.system_uri.is_some());
-        assert_eq!(
-            result.expr.sub_expr.system_uri.unwrap().uri,
-            "http://snomed.info/sct"
-        );
+        let system_uri = result.expr.sub_expr.system_uri.unwrap();
+        assert_eq!(system_uri.uri, "http://snomed.info/sct");
+        assert_eq!(system_uri.version, None);
 
         if let SubExpressionContent::Simple(SimpleExpression::Code(code)) =
             &result.expr.sub_expr.content
         {
             assert_eq!(code, &Code::Simple("123456".to_string()));
+        } else {
+            panic!("Expected simple code expression");
+        }
+    }
+
+    #[test]
+    fn test_system_uri_with_version() {
+        let result = parse_vcl("(http://snomed.info/sct|2025)123456").unwrap();
+        assert!(result.expr.sub_expr.system_uri.is_some());
+        let system_uri = result.expr.sub_expr.system_uri.unwrap();
+        assert_eq!(system_uri.uri, "http://snomed.info/sct");
+        assert_eq!(system_uri.version, Some("2025".to_string()));
+
+        if let SubExpressionContent::Simple(SimpleExpression::Code(code)) =
+            &result.expr.sub_expr.content
+        {
+            assert_eq!(code, &Code::Simple("123456".to_string()));
+        } else {
+            panic!("Expected simple code expression");
+        }
+    }
+
+    #[test]
+    fn test_system_uri_with_complex_version() {
+        let result = parse_vcl("(http://loinc.org|v2.76)8302-2").unwrap();
+        assert!(result.expr.sub_expr.system_uri.is_some());
+        let system_uri = result.expr.sub_expr.system_uri.unwrap();
+        assert_eq!(system_uri.uri, "http://loinc.org");
+        assert_eq!(system_uri.version, Some("v2.76".to_string()));
+
+        if let SubExpressionContent::Simple(SimpleExpression::Code(code)) =
+            &result.expr.sub_expr.content
+        {
+            assert_eq!(code, &Code::Simple("8302-2".to_string()));
         } else {
             panic!("Expected simple code expression");
         }
@@ -636,10 +680,10 @@ mod tests {
     #[test]
     fn test_display_code() {
         let simple_code = Code::Simple("test123".to_string());
-        assert_eq!(format!("{}", simple_code), "test123");
+        assert_eq!(format!("{simple_code}"), "test123");
 
         let quoted_code = Code::Quoted("quoted value".to_string());
-        assert_eq!(format!("{}", quoted_code), "\"quoted value\"");
+        assert_eq!(format!("{quoted_code}"), "\"quoted value\"");
     }
 
     #[test]
