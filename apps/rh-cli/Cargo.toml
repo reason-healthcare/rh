@@ -28,4 +28,3 @@ rh-codegen = { path = "../../crates/rh-codegen" }
 rh-fhirpath = { path = "../../crates/rh-fhirpath" }
 rh-validator = { path = "../../crates/rh-validator" }
 rh-loader = { path = "../../crates/rh-loader" }
-rh-ffq = { path = "../../crates/rh-ffq" }

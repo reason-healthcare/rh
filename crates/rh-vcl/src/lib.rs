@@ -17,11 +17,15 @@
 
 pub mod ast;
 pub mod error;
+pub mod fhir;
 pub mod parser;
+pub mod translator;
 
-pub use ast::*;
-pub use error::*;
+pub use ast::{Code, VclExpression, SimpleExpression, Filter, Operation};
+pub use error::VclError;
+pub use fhir::{ValueSetCompose, ValueSetInclude, ValueSetFilter};
 pub use parser::parse_vcl;
+pub use translator::{VclTranslator, translate_vcl_to_fhir, translate_vcl_string_to_fhir};
 
 /// Re-export commonly used types
 pub type VclResult<T> = Result<T, VclError>;

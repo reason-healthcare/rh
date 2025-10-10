@@ -12,9 +12,10 @@ VCL is inspired by SNOMED CT's Expression Constraint Language (ECL) and is defin
 
 - ✅ **Complete VCL Grammar Support** - Parses all VCL constructs according to the official grammar
 - ✅ **Rich AST** - Detailed Abstract Syntax Tree with convenient utility methods
+- ✅ **FHIR ValueSet Translation** - Convert VCL expressions to FHIR ValueSet.compose structures
 - ✅ **Comprehensive Error Handling** - Meaningful error messages with position information
 - ✅ **Zero-Copy Parsing** - Efficient parsing using nom with minimal allocations
-- ✅ **Serde Support** - Serialize/deserialize parsed VCL expressions to/from JSON
+- ✅ **Serde Support** - Serialize/deserialize parsed VCL expressions and FHIR structures to/from JSON
 - ✅ **WASM Compatible** - Can be compiled to WebAssembly for use in web applications
 
 ## Installation
@@ -29,16 +30,20 @@ rh-vcl = "0.1.0"
 ## Quick Start
 
 ```rust
-use rh_vcl::{parse_vcl, VclExpression};
+use rh_vcl::{parse_vcl, translate_vcl_string_to_fhir};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Parse a simple VCL expression
+    // Parse a VCL expression
     let vcl_str = "(http://snomed.info/sct)status = \"active\"";
     let expression = parse_vcl(vcl_str)?;
     
     println!("Parsed VCL expression successfully!");
     println!("System URIs: {:?}", expression.system_uris());
     println!("Codes: {:?}", expression.codes());
+    
+    // Translate to FHIR ValueSet.compose
+    let fhir_compose = translate_vcl_string_to_fhir(vcl_str)?;
+    println!("FHIR compose: {}", serde_json::to_string_pretty(&fhir_compose)?);
     
     Ok(())
 }
@@ -138,6 +143,24 @@ let json = serde_json::to_string_pretty(&expr)?;
 println!("JSON: {}", json);
 ```
 
+### VCL to FHIR Translation
+
+```rust
+use rh_vcl::{VclTranslator, translate_vcl_string_to_fhir};
+
+// Simple translation using convenience function
+let fhir_compose = translate_vcl_string_to_fhir("(http://snomed.info/sct)123456")?;
+println!("{}", serde_json::to_string_pretty(&fhir_compose)?);
+
+// Custom translator with default system
+let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+let vcl_expr = parse_vcl("status = \"active\", category << 123456")?;
+let fhir_compose = translator.translate(&vcl_expr)?;
+
+// Results in FHIR ValueSet.compose with multiple includes
+assert_eq!(fhir_compose.include.len(), 2);
+```
+
 ### Error Handling
 
 ```rust
@@ -174,6 +197,39 @@ code        : SCODE | QUOTED_VALUE ;
 ```
 
 See the [FHIR IG Guidance](https://build.fhir.org/ig/FHIR/ig-guidance/vcl.html) for the complete grammar specification.
+
+## VCL to FHIR Translation
+
+This crate can translate VCL expressions into FHIR ValueSet.compose structures:
+
+### Translation Rules
+
+| VCL Construct | FHIR Mapping | Example |
+|---------------|--------------|---------|
+| Simple code | `include.concept` | `123456` → `{"concept": [{"code": "123456"}]}` |
+| Wildcard `*` | `include` (all codes) | `*` → `{"system": "..."}` |
+| System URI | `include.system` | `(http://snomed.info/sct)code` → `{"system": "http://snomed.info/sct"}` |
+| Property filter | `include.filter` | `status = "active"` → `{"filter": [{"property": "status", "op": "=", "value": "active"}]}` |
+| Conjunction `,` | Multiple `include` | `code1, code2` → `{"include": [{...}, {...}]}` |
+| Disjunction `;` | Single `include` with multiple concepts | `code1; code2` → `{"include": [{"concept": [...]}]}` |
+| Exclusion `-` | `exclude` entry | `* - inactive` → `{"include": [...], "exclude": [...]}` |
+| ValueSet inclusion | `include.valueSet` | `^http://example.org/vs` → `{"valueSet": ["..."]}` |
+
+### Filter Operator Mapping
+
+| VCL Operator | FHIR Operator | Description |
+|--------------|---------------|-------------|
+| `=` | `=` | Equals |
+| `<<` | `is-a` | Is-a (subsumption) |
+| `~<<` | `is-not-a` | Is-not-a |
+| `<` | `descendent-of` | Descendant-of |
+| `^` | `in` | In (member of) |
+| `~^` | `not-in` | Not-in |
+| `>>` | `generalizes` | Generalizes |
+| `<!` | `child-of` | Child-of |
+| `!!<` | `descendent-leaf` | Descendant-leaf |
+| `?` | `exists` | Exists |
+| `/` | `regex` | Regular expression |
 
 ## WASM Support
 

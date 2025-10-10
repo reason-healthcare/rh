@@ -3,7 +3,8 @@
 //! This example shows how to parse various VCL expressions and extract
 //! information from the resulting AST.
 
-use rh_vcl::{parse_vcl, SimpleExpression, SubExpressionContent, VclExpression};
+use rh_vcl::{parse_vcl, SimpleExpression, VclExpression, Operation};
+use rh_vcl::ast::SubExpressionContent;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example VCL expressions to parse
@@ -107,9 +108,9 @@ fn analyze_expression(expr: &VclExpression) {
     // Check for operations
     if let Some(op) = &expr.expr.operation {
         match op {
-            rh_vcl::Operation::Conjunction(_) => println!("  ➕ Has conjunction (AND)"),
-            rh_vcl::Operation::Disjunction(_) => println!("  ⚡ Has disjunction (OR)"),
-            rh_vcl::Operation::Exclusion(_) => println!("  ➖ Has exclusion (NOT)"),
+            Operation::Conjunction(_) => println!("  ➕ Has conjunction (AND)"),
+            Operation::Disjunction(_) => println!("  ⚡ Has disjunction (OR)"),
+            Operation::Exclusion(_) => println!("  ➖ Has exclusion (NOT)"),
         }
     }
 }
