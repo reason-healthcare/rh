@@ -154,12 +154,53 @@ impl VclTranslator {
                 let mut nested_compose = ValueSetCompose::new();
                 self.translate_expression(nested_expr, &mut nested_compose)?;
 
-                // Merge all includes from nested compose
-                // For simplicity, we'll take the first include and merge others into it
-                if let Some(first_include) = nested_compose.include.into_iter().next() {
-                    Ok(Some(first_include))
+                // If all includes have the same system, merge their filters into one include
+                if nested_compose.include.len() > 1 {
+                    let first_system = nested_compose.include[0].system.clone();
+                    let first_version = nested_compose.include[0].version.clone();
+                    let all_same_system = nested_compose
+                        .include
+                        .iter()
+                        .all(|inc| inc.system == first_system && inc.version == first_version);
+
+                    if all_same_system
+                        && nested_compose
+                            .include
+                            .iter()
+                            .all(|inc| !inc.filter.is_empty())
+                    {
+                        // Merge all filters into a single include
+                        let mut merged_include = ValueSetInclude::new_system_with_version(
+                            first_system.unwrap_or_default(),
+                            first_version,
+                        );
+
+                        for include in nested_compose.include {
+                            for filter in include.filter {
+                                merged_include.add_filter(filter.property, filter.op, filter.value);
+                            }
+                            // Also merge concepts if any
+                            for concept in include.concept {
+                                merged_include.add_concept(concept.code, concept.display);
+                            }
+                        }
+
+                        Ok(Some(merged_include))
+                    } else {
+                        // Different systems or mixed content - take first include
+                        if let Some(first_include) = nested_compose.include.into_iter().next() {
+                            Ok(Some(first_include))
+                        } else {
+                            Ok(None)
+                        }
+                    }
                 } else {
-                    Ok(None)
+                    // Single or no includes - return as is
+                    if let Some(first_include) = nested_compose.include.into_iter().next() {
+                        Ok(Some(first_include))
+                    } else {
+                        Ok(None)
+                    }
                 }
             }
         }
@@ -213,6 +254,10 @@ impl VclTranslator {
                 // Filter expression
                 self.translate_filter(filter, system_uri, version_to_use)
             }
+            SimpleExpression::FilterList(filters) => {
+                // Filter list - translate as multiple filters on the same system
+                self.translate_filter_list(filters, system_uri, version_to_use)
+            }
             SimpleExpression::IncludeValueSet(include_vs) => {
                 // Include ValueSet
                 match include_vs {
@@ -259,20 +304,225 @@ impl VclTranslator {
                 operator,
                 value,
             } => {
-                let fhir_op = self.map_filter_operator(operator)?;
-                let filter_value = self.map_filter_value(value)?;
-                include.add_filter(property.value().to_string(), fhir_op, filter_value);
+                // Check if this is a complex nested filter structure
+                // Look for patterns like prop1^{prop2^{...}}
+                if matches!(operator, ast::FilterOperator::In) {
+                    if let FilterValue::FilterList(filters) = value {
+                        if filters.len() == 1 {
+                            if let Filter::PropertyFilter {
+                                operator: inner_op,
+                                value: inner_value,
+                                ..
+                            } = &filters[0]
+                            {
+                                // Check if inner filter is also using In operator with FilterList
+                                if matches!(inner_op, ast::FilterOperator::In) {
+                                    if let FilterValue::FilterList(_) = inner_value {
+                                        return Err(VclError::parse_error(
+                                            "Complex nested filters are not yet implemented",
+                                            0,
+                                            "Deeply nested filter structures like 'prop1^{prop2^{prop3=value}}' are not currently supported"
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback to original single filter transformation logic
+                let (final_op, final_value) = if matches!(operator, ast::FilterOperator::In) {
+                    if let FilterValue::FilterList(filters) = value {
+                        if filters.len() == 1 {
+                            if let Filter::PropertyFilter {
+                                property: _,
+                                operator: inner_op,
+                                value: inner_value,
+                            } = &filters[0]
+                            {
+                                // Transform the operator: use the inner operator instead of In
+                                let transformed_op = self.map_filter_operator(inner_op)?;
+                                let transformed_value = self.map_filter_value(inner_value)?;
+                                (transformed_op, transformed_value)
+                            } else {
+                                // Other filter types, fall back to original behavior
+                                let fhir_op = self.map_filter_operator(operator)?;
+                                let filter_value = self.map_filter_value(value)?;
+                                (fhir_op, filter_value)
+                            }
+                        } else {
+                            // Multiple filters, fall back to original behavior
+                            let fhir_op = self.map_filter_operator(operator)?;
+                            let filter_value = self.map_filter_value(value)?;
+                            (fhir_op, filter_value)
+                        }
+                    } else {
+                        // Not a FilterList, normal processing
+                        let fhir_op = self.map_filter_operator(operator)?;
+                        let filter_value = self.map_filter_value(value)?;
+                        (fhir_op, filter_value)
+                    }
+                } else {
+                    // Not an In operator, normal processing
+                    let fhir_op = self.map_filter_operator(operator)?;
+                    let filter_value = self.map_filter_value(value)?;
+                    (fhir_op, filter_value)
+                };
+
+                include.add_filter(property.value().to_string(), final_op, final_value);
             }
             Filter::OfOperation { source, property } => {
-                // "Of" operations are complex - for now, create a filter based on the property
-                // This is a simplified implementation
-                let fhir_op = fhir::FilterOperator::Equal; // Default to equality
+                // "Of" operations - choose operator based on source type
+                let fhir_op = match source {
+                    OfSource::CodeList(_) => fhir::FilterOperator::In, // Use "in" for code lists
+                    _ => fhir::FilterOperator::Equal, // Default to equality for single codes, URIs, etc.
+                };
                 let source_value = self.map_of_source_to_value(source)?;
                 include.add_filter(property.value().to_string(), fhir_op, source_value);
             }
         }
 
         Ok(Some(include))
+    }
+
+    /// Translate a list of filters into a ValueSet include
+    fn translate_filter_list(
+        &self,
+        filters: &[Filter],
+        system: Option<String>,
+        version: Option<String>,
+    ) -> VclResult<Option<ValueSetInclude>> {
+        let use_default_system = system.is_none();
+        let system_uri = system
+            .or_else(|| self.default_system.clone())
+            .ok_or_else(|| VclError::parse_error("Filter list requires a system URI", 0, ""))?;
+
+        let version_to_use = version.or_else(|| {
+            // Only use default version if we're using the default system
+            if use_default_system && self.default_system.is_some() {
+                self.default_version.clone()
+            } else {
+                None
+            }
+        });
+
+        let mut include = ValueSetInclude::new_system_with_version(system_uri, version_to_use);
+
+        // Add all filters to the same include
+        for filter in filters {
+            match filter {
+                Filter::PropertyFilter {
+                    property,
+                    operator,
+                    value,
+                } => {
+                    // Special handling for In operator with FilterList (same as in translate_filter)
+                    let (final_op, final_value) = if matches!(operator, ast::FilterOperator::In) {
+                        if let FilterValue::FilterList(filters) = value {
+                            if filters.len() == 1 {
+                                if let Filter::PropertyFilter {
+                                    property: _,
+                                    operator: inner_op,
+                                    value: inner_value,
+                                } = &filters[0]
+                                {
+                                    let transformed_op = self.map_filter_operator(inner_op)?;
+                                    let transformed_value = self.map_filter_value(inner_value)?;
+                                    (transformed_op, transformed_value)
+                                } else {
+                                    let fhir_op = self.map_filter_operator(operator)?;
+                                    let filter_value = self.map_filter_value(value)?;
+                                    (fhir_op, filter_value)
+                                }
+                            } else {
+                                let fhir_op = self.map_filter_operator(operator)?;
+                                let filter_value = self.map_filter_value(value)?;
+                                (fhir_op, filter_value)
+                            }
+                        } else {
+                            let fhir_op = self.map_filter_operator(operator)?;
+                            let filter_value = self.map_filter_value(value)?;
+                            (fhir_op, filter_value)
+                        }
+                    } else {
+                        let fhir_op = self.map_filter_operator(operator)?;
+                        let filter_value = self.map_filter_value(value)?;
+                        (fhir_op, filter_value)
+                    };
+
+                    include.add_filter(property.value().to_string(), final_op, final_value);
+                }
+                Filter::OfOperation { source, property } => {
+                    // "Of" operations in filter lists - for now, create a filter based on the property
+                    let fhir_op = match source {
+                        OfSource::CodeList(_) => fhir::FilterOperator::In,
+                        _ => fhir::FilterOperator::Equal,
+                    };
+                    let source_value = self.map_of_source_to_value(source)?;
+                    include.add_filter(property.value().to_string(), fhir_op, source_value);
+                }
+            }
+        }
+
+        Ok(Some(include))
+    }
+
+    /// Convert a filter to a string representation (for nested filter lists)
+    fn filter_to_string(&self, filter: &Filter) -> VclResult<String> {
+        match filter {
+            Filter::PropertyFilter {
+                property,
+                operator,
+                value,
+            } => {
+                let op_str = match operator {
+                    ast::FilterOperator::Equals => "=",
+                    ast::FilterOperator::IsA => "<<",
+                    ast::FilterOperator::IsNotA => "~<<",
+                    ast::FilterOperator::DescendantOf => "<",
+                    ast::FilterOperator::Regex => "/",
+                    ast::FilterOperator::In => "^",
+                    ast::FilterOperator::NotIn => "~^",
+                    ast::FilterOperator::Generalizes => ">>",
+                    ast::FilterOperator::ChildOf => "<!",
+                    ast::FilterOperator::DescendantLeaf => "!!<",
+                    ast::FilterOperator::Exists => "?",
+                };
+                let value_str = match value {
+                    FilterValue::Code(code) => code.value().to_string(),
+                    FilterValue::String(s) => format!("\"{s}\""),
+                    FilterValue::CodeList(codes) => {
+                        let code_strs: Vec<String> =
+                            codes.iter().map(|c| c.value().to_string()).collect();
+                        let joined = code_strs.join(",");
+                        format!("{{{joined}}}")
+                    }
+                    FilterValue::Uri(uri) => uri.clone(),
+                    FilterValue::FilterList(_) => {
+                        // For deeply nested filter lists, just use a placeholder
+                        "{...}".to_string()
+                    }
+                };
+                let prop_value = property.value();
+                Ok(format!("{prop_value}{op_str}:{value_str}"))
+            }
+            Filter::OfOperation { source, property } => {
+                let source_str = match source {
+                    OfSource::Code(code) => code.value().to_string(),
+                    OfSource::CodeList(codes) => {
+                        let code_strs: Vec<String> =
+                            codes.iter().map(|c| c.value().to_string()).collect();
+                        let joined = code_strs.join(",");
+                        format!("{{{joined}}}")
+                    }
+                    OfSource::Wildcard => "*".to_string(),
+                    OfSource::Uri(uri) => uri.clone(),
+                    OfSource::FilterList(_) => "{...}".to_string(),
+                };
+                let prop_value = property.value();
+                Ok(format!("{source_str}.{prop_value}"))
+            }
+        }
     }
 
     /// Map VCL filter operator to FHIR filter operator
@@ -304,13 +554,32 @@ impl VclTranslator {
                 Ok(code_strs.join(","))
             }
             FilterValue::Uri(uri) => Ok(uri.clone()),
-            FilterValue::FilterList(_) => {
-                // Complex filter lists not supported in simple FHIR filters
-                Err(VclError::parse_error(
-                    "Complex filter lists not supported in FHIR translation",
-                    0,
-                    "",
-                ))
+            FilterValue::FilterList(filters) => {
+                // Handle special case: single filter like {concept<<1151133}
+                // This represents a set defined by the filter, so we extract the value
+                if filters.len() == 1 {
+                    if let Filter::PropertyFilter {
+                        property: _,
+                        operator: _,
+                        value,
+                    } = &filters[0]
+                    {
+                        // For {concept<<value}, we want to use the value directly
+                        // The operator transformation is handled separately in the calling context
+                        return self.map_filter_value(value);
+                    }
+                }
+
+                // For multiple filters or complex cases, convert to string representation
+                let filter_strs: Result<Vec<String>, _> =
+                    filters.iter().map(|f| self.filter_to_string(f)).collect();
+                match filter_strs {
+                    Ok(strs) => {
+                        let joined = strs.join(" AND ");
+                        Ok(format!("({joined})"))
+                    }
+                    Err(e) => Err(e),
+                }
             }
         }
     }
@@ -676,6 +945,142 @@ mod tests {
         let filter = &include.filter[0];
         assert_eq!(filter.property, "category");
         assert_eq!(filter.value, "*");
+    }
+
+    #[test]
+    fn test_code_list_with_property_uses_in_operator() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("{123456, 789012, 345678}.status").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 1);
+
+        let filter = &include.filter[0];
+        assert_eq!(filter.property, "status");
+        assert_eq!(filter.op, fhir::FilterOperator::In); // Should use "in" for code lists
+        assert_eq!(filter.value, "123456,789012,345678");
+    }
+
+    #[test]
+    fn test_single_code_with_property_uses_equals_operator() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("123456.status").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 1);
+
+        let filter = &include.filter[0];
+        assert_eq!(filter.property, "status");
+        assert_eq!(filter.op, fhir::FilterOperator::Equal); // Should use "=" for single codes
+        assert_eq!(filter.value, "123456");
+    }
+
+    #[test]
+    fn test_filter_list_translation() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("{status=\"active\", category<<12345}").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 2);
+
+        // First filter: status = "active"
+        let filter1 = &include.filter[0];
+        assert_eq!(filter1.property, "status");
+        assert_eq!(filter1.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter1.value, "active");
+
+        // Second filter: category << 12345
+        let filter2 = &include.filter[1];
+        assert_eq!(filter2.property, "category");
+        assert_eq!(filter2.op, fhir::FilterOperator::IsA);
+        assert_eq!(filter2.value, "12345");
+    }
+
+    #[test]
+    fn test_simple_filter_list() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("{has_ingredient=1886, has_dose_form=317541}").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 2);
+
+        // First filter: has_ingredient = 1886
+        let filter1 = &include.filter[0];
+        assert_eq!(filter1.property, "has_ingredient");
+        assert_eq!(filter1.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter1.value, "1886");
+
+        // Second filter: has_dose_form = 317541
+        let filter2 = &include.filter[1];
+        assert_eq!(filter2.property, "has_dose_form");
+        assert_eq!(filter2.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter2.value, "317541");
+    }
+
+    #[test]
+    fn test_parentheses_filter_conjunction() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("(has_ingredient=1886, has_dose_form=317541)").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 2);
+
+        // First filter: has_ingredient = 1886
+        let filter1 = &include.filter[0];
+        assert_eq!(filter1.property, "has_ingredient");
+        assert_eq!(filter1.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter1.value, "1886");
+
+        // Second filter: has_dose_form = 317541
+        let filter2 = &include.filter[1];
+        assert_eq!(filter2.property, "has_dose_form");
+        assert_eq!(filter2.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter2.value, "317541");
+    }
+
+    #[test]
+    fn test_complex_nested_filter_list() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("{has_ingredient=1886, has_dose_form^{concept<<1151133}}").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 1);
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 2);
+
+        // First filter: has_ingredient = 1886
+        let filter1 = &include.filter[0];
+        assert_eq!(filter1.property, "has_ingredient");
+        assert_eq!(filter1.op, fhir::FilterOperator::Equal);
+        assert_eq!(filter1.value, "1886");
+
+        // Second filter: has_dose_form << 1151133 (transformed from ^{concept<<1151133})
+        let filter2 = &include.filter[1];
+        assert_eq!(filter2.property, "has_dose_form");
+        assert_eq!(filter2.op, fhir::FilterOperator::IsA); // Transformed to is-a
+        assert_eq!(filter2.value, "1151133"); // Just the value from the nested filter
+    }
+
+    #[test]
+    fn test_deeply_nested_filter_error() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("consists_of^{has_ingredient^{has_tradename=2201670}}").unwrap();
+        let result = translator.translate(&expr);
+
+        // Should return an error for deeply nested filters
+        assert!(result.is_err());
+        let error_msg = result.err().unwrap().to_string();
+        assert!(error_msg.contains("Complex nested filters are not yet implemented"));
     }
 
     #[test]

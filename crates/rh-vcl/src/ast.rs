@@ -53,6 +53,8 @@ pub enum SimpleExpression {
     Code(Code),
     /// Filter expression
     Filter(Filter),
+    /// Filter list expression
+    FilterList(Vec<Filter>),
     /// Include ValueSet (^uri or ^(uri))
     IncludeValueSet(IncludeValueSet),
 }

@@ -100,6 +100,7 @@ fn analyze_expression(expr: &VclExpression) {
             SimpleExpression::Wildcard => println!("  🔍 Type: Wildcard"),
             SimpleExpression::Code(_) => println!("  🔍 Type: Simple code"),
             SimpleExpression::Filter(_) => println!("  🔍 Type: Filter expression"),
+            SimpleExpression::FilterList(_) => println!("  🔍 Type: Filter list"),
             SimpleExpression::IncludeValueSet(_) => println!("  🔍 Type: Include ValueSet"),
         },
         SubExpressionContent::Nested(_) => println!("  🔍 Type: Nested expression"),

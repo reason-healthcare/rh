@@ -114,10 +114,11 @@ fn exclusion(input: &str) -> IResult<&str, Operation> {
     map(preceded(ws(char('-')), sub_expr), Operation::Exclusion)(input)
 }
 
-/// simpleExpr: STAR | code | filter | includeVs
+/// simpleExpr: STAR | code | filter | filterList | includeVs
 fn simple_expr(input: &str) -> IResult<&str, SimpleExpression> {
     alt((
         map(include_vs, SimpleExpression::IncludeValueSet),
+        map(filter_list, SimpleExpression::FilterList),
         map(filter, SimpleExpression::Filter),
         value(SimpleExpression::Wildcard, ws(char('*'))),
         map(code, SimpleExpression::Code),

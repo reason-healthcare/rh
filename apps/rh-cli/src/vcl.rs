@@ -31,6 +31,10 @@ pub enum VclCommands {
         /// Output file path (optional)
         #[clap(short, long)]
         output: Option<PathBuf>,
+
+        /// Default code system URI to use for codes without explicit system
+        #[clap(short = 's', long)]
+        default_system: Option<String>,
     },
     /// Interactive REPL for VCL expressions
     Repl {
@@ -53,8 +57,9 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
             expression,
             format,
             output,
+            default_system,
         } => {
-            translate_expression(&expression, &format, output.as_deref())?;
+            translate_expression(&expression, &format, output.as_deref(), default_system)?;
         }
         VclCommands::Repl {
             translate,
@@ -99,13 +104,18 @@ fn translate_expression(
     expression: &str,
     format: &str,
     output: Option<&std::path::Path>,
+    default_system: Option<String>,
 ) -> Result<()> {
     // First parse the expression
     let ast =
         parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {}", e))?;
 
     // Then translate to FHIR
-    let translator = VclTranslator::new();
+    let translator = if let Some(system) = default_system {
+        VclTranslator::with_default_system(system)
+    } else {
+        VclTranslator::new()
+    };
     let fhir_compose = translator
         .translate(&ast)
         .map_err(|e| anyhow!("Failed to translate to FHIR: {}", e))?;

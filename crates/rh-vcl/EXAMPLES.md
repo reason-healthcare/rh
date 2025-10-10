@@ -11,41 +11,54 @@ This document provides comprehensive examples of all VCL language features suppo
 5. [Complex Expressions](#complex-expressions)
 6. [ValueSet Inclusions](#valueset-inclusions)
 7. [Of Operations](#of-operations)
-8. [Error Cases](#error-cases)
+8. [Code List Usage](#code-list-usage)
+9. [Filter Lists](#filter-lists)
+10. [Error Cases](#error-cases)
+
+---
+
+## Note on Default Systems
+
+Many VCL expressions require a system URI to be valid. When no system URI is explicitly provided (like `(http://snomed.info/sct)`), you can use a default system. In the CLI tools:
+- Translate: Use `--default-system "http://snomed.info/sct"` or `-s "http://snomed.info/sct"`
+- REPL: Use `--default-system "http://snomed.info/sct"` 
+- Library: Use `VclTranslator::with_default_system("http://snomed.info/sct".to_string())`
+
+Examples marked as requiring a default system will only work in these contexts.
 
 ---
 
 ## Basic Expressions
 
-### Wildcard
+### Wildcard with System
 
-**VCL:** `*`
+**VCL:** `(http://snomed.info/sct)*`
 
-**Description:** Matches all codes from any system (or default system if specified).
+**Description:** Matches all codes from the specified system. Wildcard requires a system URI.
 
 **FHIR Output:**
 ```json
 {
   "include": [
     {
-      "system": ""
+      "system": "http://snomed.info/sct"
     }
   ]
 }
 ```
 
-### Simple Code
+### Simple Code (with Default System)
 
-**VCL:** `123456`
+**VCL:** `123456` *(with default system: http://snomed.info/sct)*
 
-**Description:** A specific code without a system URI. Requires a default system to be specified for FHIR translation.
+**Description:** A specific code without an explicit system URI. Requires a default system to be specified (e.g., using the REPL's `--default-system` option).
 
-**FHIR Output:** *(Requires default system)*
+**FHIR Output:**
 ```json
 {
   "include": [
     {
-      "system": "http://default-system.org",
+      "system": "http://snomed.info/sct",
       "concept": [
         {
           "code": "123456"
@@ -56,18 +69,18 @@ This document provides comprehensive examples of all VCL language features suppo
 }
 ```
 
-### Quoted Code
+### Quoted Code (with Default System)
 
-**VCL:** `"special-code with-spaces"`
+**VCL:** `"special-code with-spaces"` *(with default system: http://snomed.info/sct)*
 
-**Description:** A code containing spaces or special characters, enclosed in quotes.
+**Description:** A code containing spaces or special characters, enclosed in quotes. Requires a default system.
 
-**FHIR Output:** *(Requires default system)*
+**FHIR Output:**
 ```json
 {
   "include": [
     {
-      "system": "http://default-system.org",
+      "system": "http://snomed.info/sct",
       "concept": [
         {
           "code": "special-code with-spaces"
@@ -121,11 +134,11 @@ This document provides comprehensive examples of all VCL language features suppo
 }
 ```
 
-### Multiple Codes with System URI
+### Multiple Codes with System URI (Conjunction)
 
-**VCL:** `(http://snomed.info/sct)123456, 789012, "quoted-code"`
+**VCL:** `(http://snomed.info/sct)123456, (http://snomed.info/sct)789012, (http://snomed.info/sct)"quoted-code"`
 
-**Description:** Multiple codes from the same system. The system URI applies to all codes in the conjunction.
+**Description:** Multiple specific codes from the same system using conjunction. Each code requires its own system URI.
 
 **FHIR Output:**
 ```json
@@ -438,9 +451,9 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ### Disjunction (OR)
 
-**VCL:** `(http://snomed.info/sct)123456; 789012; 345678`
+**VCL:** `(http://snomed.info/sct)123456; (http://snomed.info/sct)789012; (http://snomed.info/sct)345678`
 
-**Description:** A set of alternative codes - any one of these codes.
+**Description:** A set of alternative codes - any one of these codes. Each code requires its own system URI.
 
 **FHIR Output:**
 ```json
@@ -466,9 +479,9 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ### Exclusion (NOT)
 
-**VCL:** `(http://snomed.info/sct)* - {inactive, deprecated, "not applicable"}`
+**VCL:** `(http://snomed.info/sct)* - (http://snomed.info/sct)inactive`
 
-**Description:** All SNOMED CT codes except for the specified ones.
+**Description:** All SNOMED CT codes except for the specified code. Exclusions require individual system URIs.
 
 **FHIR Output:**
 ```json
@@ -484,12 +497,6 @@ This document provides comprehensive examples of all VCL language features suppo
       "concept": [
         {
           "code": "inactive"
-        },
-        {
-          "code": "deprecated"
-        },
-        {
-          "code": "not applicable"
         }
       ]
     }
@@ -499,9 +506,9 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ### Mixed Operations
 
-**VCL:** `(http://snomed.info/sct)status = "active", category << 123456 - deprecated`
+**VCL:** `(http://snomed.info/sct)status = "active", (http://snomed.info/sct)category << 123456`
 
-**Description:** Codes with active status AND category under 123456, but excluding deprecated codes.
+**Description:** Codes with active status AND codes with category under 123456 (conjunction of filters).
 
 **FHIR Output:**
 ```json
@@ -527,16 +534,6 @@ This document provides comprehensive examples of all VCL language features suppo
         }
       ]
     }
-  ],
-  "exclude": [
-    {
-      "system": "http://snomed.info/sct",
-      "concept": [
-        {
-          "code": "deprecated"
-        }
-      ]
-    }
   ]
 }
 ```
@@ -545,11 +542,11 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ## Complex Expressions
 
-### Nested Expressions
+### Filter with Exclusion
 
-**VCL:** `(http://snomed.info/sct)(123456, 789012); (345678, 987654)`
+**VCL:** `(http://snomed.info/sct)status = "active" - (http://snomed.info/sct)deprecated`
 
-**Description:** Grouping codes using parentheses to create complex logical expressions.
+**Description:** Codes with active status, excluding deprecated ones.
 
 **FHIR Output:**
 ```json
@@ -557,18 +554,21 @@ This document provides comprehensive examples of all VCL language features suppo
   "include": [
     {
       "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "status",
+          "op": "=",
+          "value": "active"
+        }
+      ]
+    }
+  ],
+  "exclude": [
+    {
+      "system": "http://snomed.info/sct",
       "concept": [
         {
-          "code": "123456"
-        },
-        {
-          "code": "789012"
-        },
-        {
-          "code": "345678"
-        },
-        {
-          "code": "987654"
+          "code": "deprecated"
         }
       ]
     }
@@ -608,59 +608,46 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ### Complex Filter Expression
 
-**VCL:** `(http://snomed.info/sct)status = "active", category << 123456, type ^ {procedure, observation} - {deprecated, "not applicable"}`
+**VCL:** `(http://snomed.info/sct)status = "active", (http://snomed.info/sct)category << 123456, (http://snomed.info/sct)type ~^ {deprecated, "not applicable"}`
 
 **Description:** Multiple filters combined with exclusions - active codes under category 123456 that are procedures or observations, excluding deprecated ones.
 
 **FHIR Output:**
 ```json
-{
-  "include": [
-    {
-      "system": "http://snomed.info/sct",
-      "filter": [
-        {
-          "property": "status",
-          "op": "=",
-          "value": "active"
-        }
-      ]
-    },
-    {
-      "system": "http://snomed.info/sct",
-      "filter": [
-        {
-          "property": "category",
-          "op": "is-a",
-          "value": "123456"
-        }
-      ]
-    },
-    {
-      "system": "http://snomed.info/sct",
-      "filter": [
-        {
-          "property": "type",
-          "op": "in",
-          "value": "procedure,observation"
-        }
-      ]
-    }
-  ],
-  "exclude": [
-    {
-      "system": "http://snomed.info/sct",
-      "concept": [
-        {
-          "code": "deprecated"
-        },
-        {
-          "code": "not applicable"
-        }
-      ]
-    }
-  ]
-}
+  {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "status",
+            "op": "=",
+            "value": "active"
+          }
+        ]
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "category",
+            "op": "is-a",
+            "value": "123456"
+          }
+        ]
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "type",
+            "op": "not-in",
+            "value": "deprecated,not applicable"
+          }
+        ]
+      }
+    ]
+  }
 ```
 
 ---
@@ -757,8 +744,8 @@ This document provides comprehensive examples of all VCL language features suppo
       "filter": [
         {
           "property": "category",
-          "op": "exists",
-          "value": ""
+          "op": "=",
+          "value": "*"
         }
       ]
     }
@@ -790,23 +777,23 @@ This document provides comprehensive examples of all VCL language features suppo
 }
 ```
 
-### URI Of Operation
+### Single Code Of Operation
 
-**VCL:** `http://example.org/system.property`
+**VCL:** `(http://snomed.info/sct)123456.status`
 
-**Description:** Get a property from codes in a system referenced by URI.
+**Description:** Get the status property of a specific code.
 
 **FHIR Output:**
 ```json
 {
   "include": [
     {
-      "system": "http://example.org/system",
+      "system": "http://snomed.info/sct",
       "filter": [
         {
-          "property": "property",
-          "op": "exists",
-          "value": ""
+          "property": "status",
+          "op": "=",
+          "value": "123456"
         }
       ]
     }
@@ -816,41 +803,13 @@ This document provides comprehensive examples of all VCL language features suppo
 
 ---
 
-## Code Lists
+## Code List Usage
 
-### Simple Code List
+### Code Lists in Filters
 
-**VCL:** `(http://snomed.info/sct){123456, 789012, "quoted-code"}`
+**VCL:** `(http://snomed.info/sct)status ^ {active, "in-review", deprecated}`
 
-**Description:** A list of specific codes from the same system.
-
-**FHIR Output:**
-```json
-{
-  "include": [
-    {
-      "system": "http://snomed.info/sct",
-      "concept": [
-        {
-          "code": "123456"
-        },
-        {
-          "code": "789012"
-        },
-        {
-          "code": "quoted-code"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Code List with Exclusions
-
-**VCL:** `(http://snomed.info/sct){123456, 789012, 345678} - deprecated`
-
-**Description:** A specific set of codes, excluding deprecated ones.
+**Description:** Code lists can be used in property filters with the "in" operator to match multiple values.
 
 **FHIR Output:**
 ```json
@@ -858,31 +817,175 @@ This document provides comprehensive examples of all VCL language features suppo
   "include": [
     {
       "system": "http://snomed.info/sct",
-      "concept": [
+      "filter": [
         {
-          "code": "123456"
-        },
-        {
-          "code": "789012"
-        },
-        {
-          "code": "345678"
-        }
-      ]
-    }
-  ],
-  "exclude": [
-    {
-      "system": "http://snomed.info/sct",
-      "concept": [
-        {
-          "code": "deprecated"
+          "property": "status",
+          "op": "in",
+          "value": "active,in-review,deprecated"
         }
       ]
     }
   ]
 }
 ```
+
+### Code Lists with Properties (Of Operations)
+
+**VCL:** `(http://snomed.info/sct){123456, 789012, 345678}.status`
+
+**Description:** Code lists can be used with properties to filter by property values of specific codes.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "status",
+          "op": "in",
+          "value": "123456,789012,345678"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Filter Lists
+
+Filter lists allow you to specify multiple filters that must all match (logical AND). They can be used with or without explicit system URIs.
+
+### Complex Filter Lists
+
+**VCL:** `(http://snomed.info/sct){has_ingredient=1886, has_dose_form^{concept<<1151133}}`
+
+**Description:** Complex filter lists with multiple filters. When using the `^{filter}` syntax, the inner filter's operator is extracted and applied directly.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "has_ingredient",
+          "op": "=",
+          "value": "1886"
+        },
+        {
+          "property": "has_dose_form",
+          "op": "is-a",
+          "value": "1151133"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Simple Filter Lists
+
+**VCL:** `(http://snomed.info/sct){status="active", category<<12345}`
+
+**Description:** Multiple filters combined in a single filter list for logical AND operations.
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "status",
+          "op": "=",
+          "value": "active"
+        },
+        {
+          "property": "category",
+          "op": "is-a",
+          "value": "12345"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Filter Lists with Default System (requires default system)
+
+**VCL:** `{has_ingredient=1886, has_dose_form=317541}`
+
+**Description:** Filter lists without explicit system URI. Requires using `--default-system` CLI option or `VclTranslator::with_default_system()` in library usage.
+
+**CLI Usage:**
+```bash
+rh vcl translate --default-system "http://snomed.info/sct" "{has_ingredient=1886, has_dose_form=317541}"
+```
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "has_ingredient",
+          "op": "=",
+          "value": "1886"
+        },
+        {
+          "property": "has_dose_form",
+          "op": "=",
+          "value": "317541"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Parentheses Filter Conjunction (requires default system)
+
+**VCL:** `(has_ingredient=1886, has_dose_form=317541)`
+
+**Description:** Parentheses syntax creates nested expressions with conjunctions. Filters with the same system are automatically merged into a single filter list for logical AND operations.
+
+**CLI Usage:**
+```bash
+rh vcl translate --default-system "http://snomed.info/sct" "(has_ingredient=1886, has_dose_form=317541)"
+```
+
+**FHIR Output:**
+```json
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "has_ingredient",
+          "op": "=",
+          "value": "1886"
+        },
+        {
+          "property": "has_dose_form",
+          "op": "=",
+          "value": "317541"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Note:** Both `{filter, filter}` and `(filter, filter)` syntaxes produce equivalent results when all filters use the same system URI.
 
 ---
 
