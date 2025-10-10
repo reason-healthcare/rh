@@ -2,7 +2,7 @@
 //!
 //! This example shows how to translate various VCL expressions into FHIR ValueSet.compose structures.
 
-use rh_vcl::{VclTranslator, translate_vcl_string_to_fhir};
+use rh_vcl::{translate_vcl_string_to_fhir, VclTranslator};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("VCL to FHIR ValueSet Translation Examples");
@@ -76,16 +76,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Example {}: {}", i + 1, title);
         println!("Description: {}", description);
         println!("VCL: {}", vcl_expr);
-        
+
         match translate_vcl_string_to_fhir(vcl_expr) {
             Ok(compose) => {
                 println!("✅ Translation successful!");
-                
+
                 // Display the resulting FHIR structure
                 let json = serde_json::to_string_pretty(&compose).unwrap();
                 println!("FHIR ValueSet.compose:");
                 println!("{}", json);
-                
+
                 // Provide analysis
                 analyze_compose(&compose);
             }
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("❌ Translation failed: {}", e);
             }
         }
-        
+
         println!("{}", "=".repeat(60));
         println!();
     }
@@ -102,13 +102,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Custom Translator Configuration Examples");
     println!("=======================================\n");
 
-    let snomed_translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+    let snomed_translator =
+        VclTranslator::with_default_system("http://snomed.info/sct".to_string());
     let loinc_translator = VclTranslator::with_default_system("http://loinc.org".to_string());
 
     // Test with default SNOMED CT system
     let vcl_without_system = "123456, 789012";
     println!("VCL without system URI: {}", vcl_without_system);
-    
+
     match snomed_translator.translate(&rh_vcl::parse_vcl(vcl_without_system)?) {
         Ok(compose) => {
             println!("✅ SNOMED CT translation:");
@@ -117,9 +118,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ SNOMED CT translation failed: {}", e),
     }
-    
+
     println!();
-    
+
     // Test with default LOINC system
     match loinc_translator.translate(&rh_vcl::parse_vcl(vcl_without_system)?) {
         Ok(compose) => {
@@ -131,7 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n🎉 All translation examples completed!");
-    
+
     Ok(())
 }
 
@@ -141,28 +142,30 @@ fn analyze_compose(compose: &rh_vcl::ValueSetCompose) {
         println!("📋 Compose is empty");
         return;
     }
-    
+
     if !compose.include.is_empty() {
         println!("📋 Analysis:");
         println!("   - Include entries: {}", compose.include.len());
-        
+
         let total_concepts: usize = compose.include.iter().map(|inc| inc.concept.len()).sum();
         if total_concepts > 0 {
             println!("   - Total concepts: {}", total_concepts);
         }
-        
+
         let total_filters: usize = compose.include.iter().map(|inc| inc.filter.len()).sum();
         if total_filters > 0 {
             println!("   - Total filters: {}", total_filters);
         }
-        
+
         let total_valuesets: usize = compose.include.iter().map(|inc| inc.value_set.len()).sum();
         if total_valuesets > 0 {
             println!("   - ValueSet references: {}", total_valuesets);
         }
-        
+
         // List unique systems
-        let systems: Vec<_> = compose.include.iter()
+        let systems: Vec<_> = compose
+            .include
+            .iter()
             .filter_map(|inc| inc.system.as_ref())
             .collect();
         if !systems.is_empty() {
@@ -175,7 +178,7 @@ fn analyze_compose(compose: &rh_vcl::ValueSetCompose) {
             }
         }
     }
-    
+
     if !compose.exclude.is_empty() {
         println!("   - Exclude entries: {}", compose.exclude.len());
         let excluded_concepts: usize = compose.exclude.iter().map(|exc| exc.concept.len()).sum();

@@ -4,9 +4,9 @@ use tracing::error;
 
 mod codegen;
 mod download;
-// mod ffq; // TODO: Implement rh-ffq crate
 mod fhirpath;
 mod validator;
+mod vcl;
 
 /// rh - Unified CLI for FHIR processing tools
 ///
@@ -39,10 +39,9 @@ enum Commands {
     #[clap(subcommand)]
     Fhirpath(fhirpath::FhirpathCommands),
 
-    /// Parse and translate FFQ (FHIR Filter Query) expressions
-    // TODO: Implement rh-ffq crate
-    // #[clap(subcommand)]
-    // Ffq(ffq::FfqCommands),
+    /// Parse and translate VCL (ValueSet Compose Language) expressions
+    #[clap(subcommand)]
+    Vcl(vcl::VclCommands),
 
     /// Validate FHIR resources
     #[clap(subcommand)]
@@ -84,13 +83,12 @@ async fn main() -> Result<()> {
                 std::process::exit(1);
             }
         }
-        // TODO: Implement rh-ffq crate
-        // Commands::Ffq(cmd) => {
-        //     if let Err(e) = ffq::handle_command(ffq::FfqArgs { command: cmd }).await {
-        //         error!("FFQ error: {}", e);
-        //         std::process::exit(1);
-        //     }
-        // }
+        Commands::Vcl(cmd) => {
+            if let Err(e) = vcl::handle_command(cmd).await {
+                error!("VCL error: {}", e);
+                std::process::exit(1);
+            }
+        }
         Commands::Validate(cmd) => {
             if let Err(e) = validator::handle_command(cmd).await {
                 error!("Validator error: {}", e);

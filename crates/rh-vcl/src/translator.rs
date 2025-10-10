@@ -13,7 +13,7 @@ use crate::{
 pub struct VclTranslator {
     /// Default system URI to use when none is specified
     pub default_system: Option<String>,
-    
+
     /// Whether to create separate includes for conjunctions (true) or combine them (false)
     pub separate_conjunction_includes: bool,
 }
@@ -26,7 +26,7 @@ impl VclTranslator {
             separate_conjunction_includes: true,
         }
     }
-    
+
     /// Create a new translator with a default code system
     pub fn with_default_system(system: String) -> Self {
         Self {
@@ -34,25 +34,29 @@ impl VclTranslator {
             separate_conjunction_includes: true,
         }
     }
-    
+
     /// Set whether to create separate includes for conjunctions
     pub fn set_separate_conjunction_includes(mut self, separate: bool) -> Self {
         self.separate_conjunction_includes = separate;
         self
     }
-    
+
     /// Translate a VCL expression into a FHIR ValueSet compose structure
     pub fn translate(&self, vcl_expr: &VclExpression) -> VclResult<ValueSetCompose> {
         let mut compose = ValueSetCompose::new();
         self.translate_expression(&vcl_expr.expr, &mut compose)?;
         Ok(compose)
     }
-    
+
     /// Translate an expression into the compose structure
-    fn translate_expression(&self, expr: &Expression, compose: &mut ValueSetCompose) -> VclResult<()> {
+    fn translate_expression(
+        &self,
+        expr: &Expression,
+        compose: &mut ValueSetCompose,
+    ) -> VclResult<()> {
         // First translate the main sub-expression
         let main_include = self.translate_sub_expression(&expr.sub_expr)?;
-        
+
         match &expr.operation {
             None => {
                 // Simple expression - just add the include
@@ -65,7 +69,7 @@ impl VclTranslator {
                 if let Some(include) = main_include {
                     compose.add_include(include);
                 }
-                
+
                 for sub_expr in sub_exprs {
                     if let Some(include) = self.translate_sub_expression(sub_expr)? {
                         compose.add_include(include);
@@ -76,21 +80,21 @@ impl VclTranslator {
                 // Disjunction: Combine all expressions into concepts of a single include
                 let system = self.get_system_from_sub_expr(&expr.sub_expr);
                 let mut combined_include = ValueSetInclude::new_system(
-                    system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default())
+                    system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default()),
                 );
-                
+
                 // Add main expression concepts
                 if let Some(main_include) = main_include {
                     self.merge_include_into(&main_include, &mut combined_include)?;
                 }
-                
+
                 // Add all disjunction concepts
                 for sub_expr in sub_exprs {
                     if let Some(include) = self.translate_sub_expression(sub_expr)? {
                         self.merge_include_into(&include, &mut combined_include)?;
                     }
                 }
-                
+
                 if !combined_include.concept.is_empty() || !combined_include.filter.is_empty() {
                     compose.add_include(combined_include);
                 }
@@ -100,20 +104,23 @@ impl VclTranslator {
                 if let Some(include) = main_include {
                     compose.add_include(include);
                 }
-                
+
                 if let Some(exclude) = self.translate_sub_expression(excluded_expr)? {
                     compose.add_exclude(exclude);
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Translate a sub-expression into a ValueSet include
-    fn translate_sub_expression(&self, sub_expr: &SubExpression) -> VclResult<Option<ValueSetInclude>> {
+    fn translate_sub_expression(
+        &self,
+        sub_expr: &SubExpression,
+    ) -> VclResult<Option<ValueSetInclude>> {
         let system = self.get_system_from_sub_expr(sub_expr);
-        
+
         match &sub_expr.content {
             SubExpressionContent::Simple(simple_expr) => {
                 self.translate_simple_expression(simple_expr, system)
@@ -122,7 +129,7 @@ impl VclTranslator {
                 // For nested expressions, create a new compose and merge results
                 let mut nested_compose = ValueSetCompose::new();
                 self.translate_expression(nested_expr, &mut nested_compose)?;
-                
+
                 // Merge all includes from nested compose
                 // For simplicity, we'll take the first include and merge others into it
                 if let Some(first_include) = nested_compose.include.into_iter().next() {
@@ -133,11 +140,15 @@ impl VclTranslator {
             }
         }
     }
-    
+
     /// Translate a simple expression into a ValueSet include
-    fn translate_simple_expression(&self, simple_expr: &SimpleExpression, system: Option<String>) -> VclResult<Option<ValueSetInclude>> {
+    fn translate_simple_expression(
+        &self,
+        simple_expr: &SimpleExpression,
+        system: Option<String>,
+    ) -> VclResult<Option<ValueSetInclude>> {
         let system_uri = system.or_else(|| self.default_system.clone());
-        
+
         match simple_expr {
             SimpleExpression::Wildcard => {
                 // Wildcard - include all from system
@@ -146,7 +157,11 @@ impl VclTranslator {
                     // Add a filter that matches everything (no specific filter needed for wildcard)
                     Ok(Some(include))
                 } else {
-                    Err(VclError::parse_error("Wildcard requires a system URI", 0, ""))
+                    Err(VclError::parse_error(
+                        "Wildcard requires a system URI",
+                        0,
+                        "",
+                    ))
                 }
             }
             SimpleExpression::Code(code) => {
@@ -176,16 +191,25 @@ impl VclTranslator {
             }
         }
     }
-    
+
     /// Translate a filter into a ValueSet include
-    fn translate_filter(&self, filter: &Filter, system: Option<String>) -> VclResult<Option<ValueSetInclude>> {
-        let system_uri = system.or_else(|| self.default_system.clone())
+    fn translate_filter(
+        &self,
+        filter: &Filter,
+        system: Option<String>,
+    ) -> VclResult<Option<ValueSetInclude>> {
+        let system_uri = system
+            .or_else(|| self.default_system.clone())
             .ok_or_else(|| VclError::parse_error("Filter requires a system URI", 0, ""))?;
-            
+
         let mut include = ValueSetInclude::new_system(system_uri);
-        
+
         match filter {
-            Filter::PropertyFilter { property, operator, value } => {
+            Filter::PropertyFilter {
+                property,
+                operator,
+                value,
+            } => {
                 let fhir_op = self.map_filter_operator(operator)?;
                 let filter_value = self.map_filter_value(value)?;
                 include.add_filter(property.value().to_string(), fhir_op, filter_value);
@@ -198,10 +222,10 @@ impl VclTranslator {
                 include.add_filter(property.value().to_string(), fhir_op, source_value);
             }
         }
-        
+
         Ok(Some(include))
     }
-    
+
     /// Map VCL filter operator to FHIR filter operator
     fn map_filter_operator(&self, vcl_op: &ast::FilterOperator) -> VclResult<fhir::FilterOperator> {
         let fhir_op = match vcl_op {
@@ -219,7 +243,7 @@ impl VclTranslator {
         };
         Ok(fhir_op)
     }
-    
+
     /// Map VCL filter value to string
     fn map_filter_value(&self, value: &FilterValue) -> VclResult<String> {
         match value {
@@ -233,11 +257,15 @@ impl VclTranslator {
             FilterValue::Uri(uri) => Ok(uri.clone()),
             FilterValue::FilterList(_) => {
                 // Complex filter lists not supported in simple FHIR filters
-                Err(VclError::parse_error("Complex filter lists not supported in FHIR translation", 0, ""))
+                Err(VclError::parse_error(
+                    "Complex filter lists not supported in FHIR translation",
+                    0,
+                    "",
+                ))
             }
         }
     }
-    
+
     /// Map "of" source to filter value
     fn map_of_source_to_value(&self, source: &OfSource) -> VclResult<String> {
         match source {
@@ -248,40 +276,48 @@ impl VclTranslator {
             }
             OfSource::Wildcard => Ok("*".to_string()),
             OfSource::Uri(uri) => Ok(uri.clone()),
-            OfSource::FilterList(_) => {
-                Err(VclError::parse_error("Complex filter lists not supported in FHIR translation", 0, ""))
-            }
+            OfSource::FilterList(_) => Err(VclError::parse_error(
+                "Complex filter lists not supported in FHIR translation",
+                0,
+                "",
+            )),
         }
     }
-    
+
     /// Get system URI from sub-expression
     fn get_system_from_sub_expr(&self, sub_expr: &SubExpression) -> Option<String> {
         sub_expr.system_uri.as_ref().map(|uri| uri.uri.clone())
     }
-    
+
     /// Merge one include into another
-    fn merge_include_into(&self, source: &ValueSetInclude, target: &mut ValueSetInclude) -> VclResult<()> {
+    fn merge_include_into(
+        &self,
+        source: &ValueSetInclude,
+        target: &mut ValueSetInclude,
+    ) -> VclResult<()> {
         // Merge concepts
         for concept in &source.concept {
             if !target.concept.iter().any(|c| c.code == concept.code) {
                 target.concept.push(concept.clone());
             }
         }
-        
-        // Merge filters  
+
+        // Merge filters
         for filter in &source.filter {
-            if !target.filter.iter().any(|f| f.property == filter.property && f.op == filter.op && f.value == filter.value) {
+            if !target.filter.iter().any(|f| {
+                f.property == filter.property && f.op == filter.op && f.value == filter.value
+            }) {
                 target.filter.push(filter.clone());
             }
         }
-        
+
         // Merge valueset references
         for vs in &source.value_set {
             if !target.value_set.contains(vs) {
                 target.value_set.push(vs.clone());
             }
         }
-        
+
         Ok(())
     }
 }
@@ -314,10 +350,10 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("123456").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         assert_eq!(compose.exclude.len(), 0);
-        
+
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
         assert_eq!(include.concept.len(), 1);
@@ -329,7 +365,7 @@ mod tests {
         let translator = VclTranslator::new();
         let expr = parse_vcl("(http://loinc.org)8302-2").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://loinc.org".to_string()));
@@ -342,7 +378,7 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://example.org".to_string());
         let expr = parse_vcl("\"code with spaces\"").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.concept.len(), 1);
@@ -354,7 +390,7 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("*").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
@@ -367,11 +403,11 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("status = \"active\"").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.filter.len(), 1);
-        
+
         let filter = &include.filter[0];
         assert_eq!(filter.property, "status");
         assert_eq!(filter.op, fhir::FilterOperator::Equal);
@@ -383,11 +419,11 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("category << 123456").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.filter.len(), 1);
-        
+
         let filter = &include.filter[0];
         assert_eq!(filter.property, "category");
         assert_eq!(filter.op, fhir::FilterOperator::IsA);
@@ -399,12 +435,14 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("code1, code2, code3").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         // Conjunction should create multiple includes
         assert_eq!(compose.include.len(), 3);
         assert_eq!(compose.exclude.len(), 0);
-        
-        let codes: Vec<&str> = compose.include.iter()
+
+        let codes: Vec<&str> = compose
+            .include
+            .iter()
             .flat_map(|inc| inc.concept.iter().map(|c| c.code.as_str()))
             .collect();
         assert!(codes.contains(&"code1"));
@@ -417,14 +455,14 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("code1; code2; code3").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         // Disjunction should create one include with multiple concepts
         assert_eq!(compose.include.len(), 1);
         assert_eq!(compose.exclude.len(), 0);
-        
+
         let include = &compose.include[0];
         assert_eq!(include.concept.len(), 3);
-        
+
         let codes: Vec<&str> = include.concept.iter().map(|c| c.code.as_str()).collect();
         assert!(codes.contains(&"code1"));
         assert!(codes.contains(&"code2"));
@@ -436,14 +474,14 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("* - inactive").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         assert_eq!(compose.exclude.len(), 1);
-        
+
         // Include should be wildcard (all codes)
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
-        
+
         // Exclude should contain the excluded code
         let exclude = &compose.exclude[0];
         assert_eq!(exclude.concept.len(), 1);
@@ -455,7 +493,7 @@ mod tests {
         let translator = VclTranslator::new();
         let expr = parse_vcl("^http://example.org/valueset").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.value_set.len(), 1);
@@ -467,7 +505,7 @@ mod tests {
         let translator = VclTranslator::new();
         let expr = parse_vcl("^(http://snomed.info/sct)").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
@@ -478,7 +516,7 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("(code1, code2)").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         // The nested conjunction should be flattened into concepts
@@ -488,20 +526,27 @@ mod tests {
     #[test]
     fn test_complex_expression() {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
-        let expr = parse_vcl("(http://snomed.info/sct)status = \"active\", category << 123456").unwrap();
+        let expr =
+            parse_vcl("(http://snomed.info/sct)status = \"active\", category << 123456").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         // Should create multiple includes for the conjunction
         assert_eq!(compose.include.len(), 2);
-        
+
         // First include should have status filter
         let first_include = &compose.include[0];
-        assert_eq!(first_include.system, Some("http://snomed.info/sct".to_string()));
+        assert_eq!(
+            first_include.system,
+            Some("http://snomed.info/sct".to_string())
+        );
         assert!(first_include.filter.iter().any(|f| f.property == "status"));
-        
+
         // Second include should have category filter
         let second_include = &compose.include[1];
-        assert!(second_include.filter.iter().any(|f| f.property == "category"));
+        assert!(second_include
+            .filter
+            .iter()
+            .any(|f| f.property == "category"));
     }
 
     #[test]
@@ -509,11 +554,11 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("*.category").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.filter.len(), 1);
-        
+
         let filter = &include.filter[0];
         assert_eq!(filter.property, "category");
         assert_eq!(filter.value, "*");
@@ -522,7 +567,7 @@ mod tests {
     #[test]
     fn test_convenience_function() {
         let compose = translate_vcl_string_to_fhir("(http://snomed.info/sct)123456").unwrap();
-        
+
         assert_eq!(compose.include.len(), 1);
         let include = &compose.include[0];
         assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
@@ -533,7 +578,7 @@ mod tests {
     #[test]
     fn test_filter_operator_mapping() {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
-        
+
         let test_cases = vec![
             ("prop = value", fhir::FilterOperator::Equal),
             ("prop << value", fhir::FilterOperator::IsA),
@@ -546,15 +591,19 @@ mod tests {
             ("prop !!< value", fhir::FilterOperator::DescendentLeaf),
             ("prop ? value", fhir::FilterOperator::Exists),
         ];
-        
+
         for (vcl_expr, expected_op) in test_cases {
             let expr = parse_vcl(vcl_expr).unwrap();
             let compose = translator.translate(&expr).unwrap();
-            
+
             assert_eq!(compose.include.len(), 1);
             let include = &compose.include[0];
             assert_eq!(include.filter.len(), 1);
-            assert_eq!(include.filter[0].op, expected_op, "Failed for expression: {}", vcl_expr);
+            assert_eq!(
+                include.filter[0].op, expected_op,
+                "Failed for expression: {}",
+                vcl_expr
+            );
         }
     }
 
@@ -562,9 +611,11 @@ mod tests {
     fn test_empty_compose() {
         let compose = ValueSetCompose::new();
         assert!(compose.is_empty());
-        
+
         let mut compose = ValueSetCompose::new();
-        compose.add_include(ValueSetInclude::new_system("http://example.org".to_string()));
+        compose.add_include(ValueSetInclude::new_system(
+            "http://example.org".to_string(),
+        ));
         assert!(!compose.is_empty());
     }
 
@@ -573,12 +624,12 @@ mod tests {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("status = \"active\"").unwrap();
         let compose = translator.translate(&expr).unwrap();
-        
+
         let json = serde_json::to_string_pretty(&compose).unwrap();
         assert!(json.contains("status"));
         assert!(json.contains("active"));
         assert!(json.contains("include"));
-        
+
         // Test deserialization
         let deserialized: ValueSetCompose = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, compose);

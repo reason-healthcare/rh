@@ -3,8 +3,8 @@
 //! This example shows how to parse various VCL expressions and extract
 //! information from the resulting AST.
 
-use rh_vcl::{parse_vcl, SimpleExpression, VclExpression, Operation};
 use rh_vcl::ast::SubExpressionContent;
+use rh_vcl::{parse_vcl, Operation, SimpleExpression, VclExpression};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example VCL expressions to parse

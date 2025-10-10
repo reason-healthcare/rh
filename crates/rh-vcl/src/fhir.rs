@@ -11,11 +11,11 @@ pub struct ValueSetCompose {
     /// Date/time that the value set is effective
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effective_date: Option<String>,
-    
+
     /// Include concepts from code systems
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub include: Vec<ValueSetInclude>,
-    
+
     /// Exclude concepts from code systems
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub exclude: Vec<ValueSetInclude>,
@@ -27,19 +27,19 @@ pub struct ValueSetInclude {
     /// The code system from which codes are included/excluded
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system: Option<String>,
-    
+
     /// The version of the code system
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    
+
     /// Specific concepts to include/exclude
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub concept: Vec<ValueSetConcept>,
-    
+
     /// Filters to apply to the code system
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub filter: Vec<ValueSetFilter>,
-    
+
     /// ValueSets to include
     #[serde(skip_serializing_if = "Vec::is_empty", default, rename = "valueSet")]
     pub value_set: Vec<String>,
@@ -50,11 +50,11 @@ pub struct ValueSetInclude {
 pub struct ValueSetConcept {
     /// Code value
     pub code: String,
-    
+
     /// Display text for the code
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<String>,
-    
+
     /// Additional designations for the concept
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub designation: Vec<ValueSetDesignation>,
@@ -65,10 +65,10 @@ pub struct ValueSetConcept {
 pub struct ValueSetFilter {
     /// Property to filter on
     pub property: String,
-    
+
     /// Filter operation
     pub op: FilterOperator,
-    
+
     /// Value to filter with
     pub value: String,
 }
@@ -115,11 +115,11 @@ pub struct ValueSetDesignation {
     /// Language of designation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
-    
+
     /// Use context for designation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub use_: Option<Coding>,
-    
+
     /// Designation value
     pub value: String,
 }
@@ -130,19 +130,19 @@ pub struct Coding {
     /// Code system
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system: Option<String>,
-    
+
     /// Version of code system
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    
+
     /// Code value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
-    
+
     /// Display text
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<String>,
-    
+
     /// User selected flag
     #[serde(skip_serializing_if = "Option::is_none", rename = "userSelected")]
     pub user_selected: Option<bool>,
@@ -157,17 +157,17 @@ impl ValueSetCompose {
             exclude: Vec::new(),
         }
     }
-    
+
     /// Add an include entry
     pub fn add_include(&mut self, include: ValueSetInclude) {
         self.include.push(include);
     }
-    
+
     /// Add an exclude entry
     pub fn add_exclude(&mut self, exclude: ValueSetInclude) {
         self.exclude.push(exclude);
     }
-    
+
     /// Check if compose is empty (no includes or excludes)
     pub fn is_empty(&self) -> bool {
         self.include.is_empty() && self.exclude.is_empty()
@@ -185,7 +185,7 @@ impl ValueSetInclude {
             value_set: Vec::new(),
         }
     }
-    
+
     /// Create a new include for a ValueSet reference
     pub fn new_valueset(valueset_url: String) -> Self {
         Self {
@@ -196,7 +196,7 @@ impl ValueSetInclude {
             value_set: vec![valueset_url],
         }
     }
-    
+
     /// Add a concept
     pub fn add_concept(&mut self, code: String, display: Option<String>) {
         self.concept.push(ValueSetConcept {
@@ -205,7 +205,7 @@ impl ValueSetInclude {
             designation: Vec::new(),
         });
     }
-    
+
     /// Add a filter
     pub fn add_filter(&mut self, property: String, op: FilterOperator, value: String) {
         self.filter.push(ValueSetFilter {
