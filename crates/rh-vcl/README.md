@@ -78,6 +78,8 @@ This parser supports all VCL language features:
 
 ## Examples
 
+For comprehensive examples covering all VCL language features, see [EXAMPLES.md](EXAMPLES.md).
+
 ### Basic Usage
 
 ```rust
