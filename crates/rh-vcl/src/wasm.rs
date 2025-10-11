@@ -3,9 +3,9 @@
 //! This module provides WebAssembly bindings for VCL functionality,
 //! exposing parse and translate functions with similar parameters to the CLI.
 
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use wasm_bindgen::prelude::*;
 
 use crate::{parse_vcl, VclTranslator};
 
@@ -93,6 +93,7 @@ impl ParseOptions {
 pub struct TranslateOptions {
     format: String,
     default_system: Option<String>,
+    separate_conjunction_includes: bool,
 }
 
 #[wasm_bindgen]
@@ -102,6 +103,7 @@ impl TranslateOptions {
         Self {
             format: "json".to_string(),
             default_system: None,
+            separate_conjunction_includes: false,
         }
     }
 
@@ -123,6 +125,16 @@ impl TranslateOptions {
     #[wasm_bindgen(setter)]
     pub fn set_default_system(&mut self, system: Option<String>) {
         self.default_system = system;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn separate_conjunction_includes(&self) -> bool {
+        self.separate_conjunction_includes
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_separate_conjunction_includes(&mut self, separate: bool) {
+        self.separate_conjunction_includes = separate;
     }
 }
 
@@ -165,8 +177,10 @@ pub fn translate_vcl_expression(expression: &str, options: &TranslateOptions) ->
     // Create translator with optional default system
     let translator = if let Some(ref system) = options.default_system {
         VclTranslator::with_default_system(system.clone())
+            .set_separate_conjunction_includes(options.separate_conjunction_includes)
     } else {
         VclTranslator::new()
+            .set_separate_conjunction_includes(options.separate_conjunction_includes)
     };
 
     // Translate to FHIR
@@ -184,7 +198,11 @@ pub fn translate_vcl_expression(expression: &str, options: &TranslateOptions) ->
         "pretty" => {
             let json = match serde_json::to_string_pretty(&fhir_compose) {
                 Ok(json) => json,
-                Err(e) => return WasmResult::err(format!("Failed to serialize FHIR compose to JSON: {e}")),
+                Err(e) => {
+                    return WasmResult::err(format!(
+                        "Failed to serialize FHIR compose to JSON: {e}"
+                    ))
+                }
             };
             let pretty_output = format!(
                 "✅ VCL Translation successful:\n\nOriginal VCL:\n  {expression}\n\nFHIR ValueSet.compose:\n{json}"
@@ -230,7 +248,63 @@ pub fn get_version() -> String {
 #[wasm_bindgen]
 pub fn validate_vcl_expression(expression: &str) -> WasmResult {
     match parse_vcl(expression) {
-        Ok(_) => WasmResult::ok(serde_json::json!({"valid": true, "message": "Valid VCL expression"}).to_string()),
+        Ok(_) => WasmResult::ok(
+            serde_json::json!({"valid": true, "message": "Valid VCL expression"}).to_string(),
+        ),
         Err(e) => WasmResult::err(format!("Invalid VCL expression: {e}")),
+    }
+}
+
+/// Explain a VCL expression in plain English
+#[wasm_bindgen]
+pub fn explain_vcl_simple(expression: &str) -> WasmResult {
+    use crate::VclExplainer;
+
+    // Parse the expression
+    let ast = match parse_vcl(expression) {
+        Ok(ast) => ast,
+        Err(e) => return WasmResult::err(format!("Failed to parse VCL expression: {e}")),
+    };
+
+    // Create explainer
+    let explainer = VclExplainer::new();
+
+    // Explain the expression
+    let explanation = match explainer.explain_with_text(&ast, expression) {
+        Ok(explanation) => explanation,
+        Err(e) => return WasmResult::err(format!("Failed to explain VCL expression: {e}")),
+    };
+
+    // Return as JSON
+    match serde_json::to_string_pretty(&explanation) {
+        Ok(json) => WasmResult::ok(json),
+        Err(e) => WasmResult::err(format!("Failed to serialize explanation: {e}")),
+    }
+}
+
+/// Explain a VCL expression with default system context
+#[wasm_bindgen]
+pub fn explain_vcl_with_system(expression: &str, default_system: &str) -> WasmResult {
+    use crate::VclExplainer;
+
+    // Parse the expression
+    let ast = match parse_vcl(expression) {
+        Ok(ast) => ast,
+        Err(e) => return WasmResult::err(format!("Failed to parse VCL expression: {e}")),
+    };
+
+    // Create explainer with system context
+    let explainer = VclExplainer::with_default_system(default_system.to_string());
+
+    // Explain the expression
+    let explanation = match explainer.explain_with_text(&ast, expression) {
+        Ok(explanation) => explanation,
+        Err(e) => return WasmResult::err(format!("Failed to explain VCL expression: {e}")),
+    };
+
+    // Return as JSON
+    match serde_json::to_string_pretty(&explanation) {
+        Ok(json) => WasmResult::ok(json),
+        Err(e) => WasmResult::err(format!("Failed to serialize explanation: {e}")),
     }
 }

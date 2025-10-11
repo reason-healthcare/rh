@@ -9,6 +9,10 @@ __pycache__/
 **/*.rs.bk
 *.pdb
 
+# Build artifacts
+build/
+pkg/
+
 # IDE files
 .vscode/
 .idea/

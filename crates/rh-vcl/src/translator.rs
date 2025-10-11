@@ -27,7 +27,7 @@ impl VclTranslator {
         Self {
             default_system: None,
             default_version: None,
-            separate_conjunction_includes: true,
+            separate_conjunction_includes: false, // Default to combining conjunctions
         }
     }
 
@@ -44,7 +44,7 @@ impl VclTranslator {
         Self {
             default_system: Some(system),
             default_version: version,
-            separate_conjunction_includes: true,
+            separate_conjunction_includes: false, // Default to combining conjunctions
         }
     }
 
@@ -53,7 +53,7 @@ impl VclTranslator {
         Self {
             default_system: Some(system),
             default_version: version,
-            separate_conjunction_includes: true,
+            separate_conjunction_includes: false, // Default to combining conjunctions
         }
     }
 
@@ -65,6 +65,9 @@ impl VclTranslator {
 
     /// Translate a VCL expression into a FHIR ValueSet compose structure
     pub fn translate(&self, vcl_expr: &VclExpression) -> VclResult<ValueSetCompose> {
+        // First, validate that the expression can be translated to FHIR compose
+        self.is_expression_translatable(&vcl_expr.expr)?;
+
         let mut compose = ValueSetCompose::new();
         self.translate_expression(&vcl_expr.expr, &mut compose)?;
         Ok(compose)
@@ -87,40 +90,84 @@ impl VclTranslator {
                 }
             }
             Some(Operation::Conjunction(sub_exprs)) => {
-                // Conjunction: Add main expression and all additional sub-expressions
-                if let Some(include) = main_include {
-                    compose.add_include(include);
-                }
-
-                for sub_expr in sub_exprs {
-                    if let Some(include) = self.translate_sub_expression(sub_expr)? {
+                // Conjunction: behavior depends on separate_conjunction_includes flag
+                if self.separate_conjunction_includes {
+                    // Create separate includes for each expression
+                    if let Some(include) = main_include {
                         compose.add_include(include);
                     }
+
+                    for sub_expr in sub_exprs {
+                        if let Some(include) = self.translate_sub_expression(sub_expr)? {
+                            compose.add_include(include);
+                        }
+                    }
+                } else {
+                    // Combine all expressions into concepts of a single include (like disjunction)
+                    let (system, version) =
+                        self.get_system_and_version_from_sub_expr(&expr.sub_expr);
+                    let default_system =
+                        system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default());
+                    let default_version = version.or_else(|| self.default_version.clone());
+                    let mut combined_include =
+                        ValueSetInclude::new_system_with_version(default_system, default_version);
+
+                    // Add main expression concepts
+                    if let Some(main_include) = main_include {
+                        self.merge_include_into(&main_include, &mut combined_include)?;
+                    }
+
+                    // Add all conjunction concepts
+                    for sub_expr in sub_exprs {
+                        if let Some(include) = self.translate_sub_expression(sub_expr)? {
+                            self.merge_include_into(&include, &mut combined_include)?;
+                        }
+                    }
+
+                    compose.add_include(combined_include);
                 }
             }
             Some(Operation::Disjunction(sub_exprs)) => {
-                // Disjunction: Combine all expressions into concepts of a single include
-                let (system, version) = self.get_system_and_version_from_sub_expr(&expr.sub_expr);
-                let default_system =
-                    system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default());
-                let default_version = version.or_else(|| self.default_version.clone());
-                let mut combined_include =
-                    ValueSetInclude::new_system_with_version(default_system, default_version);
+                // Disjunction: Check if we should combine (concepts) or separate (filters)
 
-                // Add main expression concepts
-                if let Some(main_include) = main_include {
-                    self.merge_include_into(&main_include, &mut combined_include)?;
-                }
+                // First, translate all sub-expressions
+                let sub_includes: Vec<ValueSetInclude> = sub_exprs
+                    .iter()
+                    .filter_map(|sub_expr| self.translate_sub_expression(sub_expr).ok().flatten())
+                    .collect();
 
-                // Add all disjunction concepts
-                for sub_expr in sub_exprs {
-                    if let Some(include) = self.translate_sub_expression(sub_expr)? {
+                if self.should_combine_disjunction_includes(&main_include, &sub_includes) {
+                    // Combine all expressions into concepts of a single include (concept-only case)
+                    let (system, version) =
+                        self.get_system_and_version_from_sub_expr(&expr.sub_expr);
+                    let default_system =
+                        system.unwrap_or_else(|| self.default_system.clone().unwrap_or_default());
+                    let default_version = version.or_else(|| self.default_version.clone());
+                    let mut combined_include =
+                        ValueSetInclude::new_system_with_version(default_system, default_version);
+
+                    // Add main expression concepts
+                    if let Some(main_include) = main_include {
+                        self.merge_include_into(&main_include, &mut combined_include)?;
+                    }
+
+                    // Add all disjunction concepts
+                    for include in sub_includes {
                         self.merge_include_into(&include, &mut combined_include)?;
                     }
-                }
 
-                if !combined_include.concept.is_empty() || !combined_include.filter.is_empty() {
-                    compose.add_include(combined_include);
+                    if !combined_include.concept.is_empty() || !combined_include.filter.is_empty() {
+                        compose.add_include(combined_include);
+                    }
+                } else {
+                    // Create separate includes for filter-based expressions (true OR logic)
+                    if let Some(include) = main_include {
+                        compose.add_include(include);
+                    }
+
+                    for include in sub_includes {
+                        compose.add_include(include);
+                    }
                 }
             }
             Some(Operation::Exclusion(excluded_expr)) => {
@@ -152,7 +199,18 @@ impl VclTranslator {
             SubExpressionContent::Nested(nested_expr) => {
                 // For nested expressions, create a new compose and merge results
                 let mut nested_compose = ValueSetCompose::new();
-                self.translate_expression(nested_expr, &mut nested_compose)?;
+
+                // If the parent sub-expression has a system URI, create a temporary translator
+                // with that system as the default for the nested expression
+                if let (Some(inherited_system), inherited_version) = (system, version) {
+                    let nested_translator = VclTranslator::with_default_system_and_version(
+                        inherited_system,
+                        inherited_version,
+                    );
+                    nested_translator.translate_expression(nested_expr, &mut nested_compose)?;
+                } else {
+                    self.translate_expression(nested_expr, &mut nested_compose)?;
+                }
 
                 // If all includes have the same system, merge their filters into one include
                 if nested_compose.include.len() > 1 {
@@ -645,6 +703,101 @@ impl VclTranslator {
 
         Ok(())
     }
+
+    /// Check if includes should be combined for disjunction (concepts) or kept separate (filters)
+    fn should_combine_disjunction_includes(
+        &self,
+        main_include: &Option<ValueSetInclude>,
+        sub_includes: &[ValueSetInclude],
+    ) -> bool {
+        // If main include has filters, don't combine
+        if let Some(main) = main_include {
+            if !main.filter.is_empty() {
+                return false;
+            }
+        }
+
+        // If any sub-include has filters, don't combine
+        for include in sub_includes {
+            if !include.filter.is_empty() {
+                return false;
+            }
+        }
+
+        // Only combine if all includes are concept-only (no filters)
+        true
+    }
+
+    /// Check if an expression can be translated to FHIR ValueSet.compose
+    /// Only filter expressions and codes are translatable, not value set expressions
+    fn is_expression_translatable(&self, expr: &Expression) -> VclResult<()> {
+        self.check_sub_expression_translatable(&expr.sub_expr)?;
+
+        if let Some(ref operation) = expr.operation {
+            match operation {
+                Operation::Conjunction(sub_exprs) | Operation::Disjunction(sub_exprs) => {
+                    for sub_expr in sub_exprs {
+                        self.check_sub_expression_translatable(sub_expr)?;
+                    }
+                }
+                Operation::Exclusion(sub_expr) => {
+                    self.check_sub_expression_translatable(sub_expr)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if a sub-expression is translatable
+    fn check_sub_expression_translatable(&self, sub_expr: &SubExpression) -> VclResult<()> {
+        match &sub_expr.content {
+            SubExpressionContent::Simple(simple) => {
+                self.check_simple_expression_translatable(simple)?;
+            }
+            SubExpressionContent::Nested(nested_expr) => {
+                self.is_expression_translatable(nested_expr)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Check if a simple expression is translatable
+    fn check_simple_expression_translatable(&self, simple: &SimpleExpression) -> VclResult<()> {
+        use crate::ast::{Filter, SimpleExpression};
+
+        match simple {
+            SimpleExpression::Wildcard => Ok(()), // * is translatable as a concept
+            SimpleExpression::Code(_) => Ok(()),  // Codes are translatable
+            SimpleExpression::IncludeValueSet(_) => Ok(()), // ValueSet includes are translatable
+            SimpleExpression::Filter(filter) => {
+                // Check if this is a translatable filter
+                match filter {
+                    Filter::PropertyFilter { .. } => Ok(()), // Property filters are translatable
+                    Filter::OfOperation { .. } => {
+                        // Of operations represent value sets, not filters
+                        Err(VclError::TranslationError {
+                            message: "Of operations (like '*.concept' or 'B.codeprop') represent value sets and cannot be translated to FHIR ValueSet.compose filters. Only filter expressions with operators (=, <<, etc.) can be translated.".to_string()
+                        })
+                    }
+                }
+            }
+            SimpleExpression::FilterList(filters) => {
+                // Check each filter in the list
+                for filter in filters {
+                    match filter {
+                        Filter::PropertyFilter { .. } => {} // OK
+                        Filter::OfOperation { .. } => {
+                            return Err(VclError::TranslationError {
+                                message: "Filter lists containing of operations cannot be translated to FHIR ValueSet.compose. Only property filters with operators are supported.".to_string()
+                            })
+                        }
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 impl Default for VclTranslator {
@@ -819,7 +972,27 @@ mod tests {
         let expr = parse_vcl("code1, code2, code3").unwrap();
         let compose = translator.translate(&expr).unwrap();
 
-        // Conjunction should create multiple includes
+        // Conjunction should create one include with multiple concepts (default behavior)
+        assert_eq!(compose.include.len(), 1);
+        assert_eq!(compose.exclude.len(), 0);
+
+        let include = &compose.include[0];
+        assert_eq!(include.concept.len(), 3);
+
+        let codes: Vec<&str> = include.concept.iter().map(|c| c.code.as_str()).collect();
+        assert!(codes.contains(&"code1"));
+        assert!(codes.contains(&"code2"));
+        assert!(codes.contains(&"code3"));
+    }
+
+    #[test]
+    fn test_conjunction_translation_separate_includes() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string())
+            .set_separate_conjunction_includes(true);
+        let expr = parse_vcl("code1, code2, code3").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        // With separate_conjunction_includes=true, should create multiple includes
         assert_eq!(compose.include.len(), 3);
         assert_eq!(compose.exclude.len(), 0);
 
@@ -839,7 +1012,7 @@ mod tests {
         let expr = parse_vcl("code1; code2; code3").unwrap();
         let compose = translator.translate(&expr).unwrap();
 
-        // Disjunction should create one include with multiple concepts
+        // Disjunction with concepts should create one include with multiple concepts
         assert_eq!(compose.include.len(), 1);
         assert_eq!(compose.exclude.len(), 0);
 
@@ -850,6 +1023,52 @@ mod tests {
         assert!(codes.contains(&"code1"));
         assert!(codes.contains(&"code2"));
         assert!(codes.contains(&"code3"));
+    }
+
+    #[test]
+    fn test_disjunction_with_filters_creates_separate_includes() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("status = \"active\"; concept << 123456").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        // Disjunction with filters should create separate includes (OR logic)
+        assert_eq!(compose.include.len(), 2);
+        assert_eq!(compose.exclude.len(), 0);
+
+        // First include should have status filter
+        let first_include = &compose.include[0];
+        assert_eq!(first_include.filter.len(), 1);
+        assert_eq!(first_include.concept.len(), 0);
+        assert_eq!(first_include.filter[0].property, "status");
+        assert_eq!(first_include.filter[0].value, "active");
+
+        // Second include should have concept filter
+        let second_include = &compose.include[1];
+        assert_eq!(second_include.filter.len(), 1);
+        assert_eq!(second_include.concept.len(), 0);
+        assert_eq!(second_include.filter[0].property, "concept");
+        assert_eq!(second_include.filter[0].value, "123456");
+    }
+
+    #[test]
+    fn test_conjunction_with_filters_creates_combined_filters() {
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr = parse_vcl("status = \"active\", concept << 123456").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        // Conjunction with filters should create single include with multiple filters (AND logic)
+        assert_eq!(compose.include.len(), 1);
+        assert_eq!(compose.exclude.len(), 0);
+
+        let include = &compose.include[0];
+        assert_eq!(include.filter.len(), 2);
+        assert_eq!(include.concept.len(), 0);
+
+        // Should have both filters
+        let filter_properties: Vec<&str> =
+            include.filter.iter().map(|f| f.property.as_str()).collect();
+        assert!(filter_properties.contains(&"status"));
+        assert!(filter_properties.contains(&"concept"));
     }
 
     #[test]
@@ -913,70 +1132,92 @@ mod tests {
             parse_vcl("(http://snomed.info/sct)status = \"active\", category << 123456").unwrap();
         let compose = translator.translate(&expr).unwrap();
 
-        // Should create multiple includes for the conjunction
-        assert_eq!(compose.include.len(), 2);
+        // Should create one include combining the conjunction concepts/filters
+        assert_eq!(compose.include.len(), 1);
 
-        // First include should have status filter
-        let first_include = &compose.include[0];
-        assert_eq!(
-            first_include.system,
-            Some("http://snomed.info/sct".to_string())
-        );
-        assert!(first_include.filter.iter().any(|f| f.property == "status"));
-
-        // Second include should have category filter
-        let second_include = &compose.include[1];
-        assert!(second_include
-            .filter
-            .iter()
-            .any(|f| f.property == "category"));
+        // The combined include should have both status and category filters
+        let include = &compose.include[0];
+        assert_eq!(include.system, Some("http://snomed.info/sct".to_string()));
+        assert!(include.filter.iter().any(|f| f.property == "status"));
+        assert!(include.filter.iter().any(|f| f.property == "category"));
     }
 
     #[test]
     fn test_of_operation() {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("*.category").unwrap();
-        let compose = translator.translate(&expr).unwrap();
+        let result = translator.translate(&expr);
 
-        assert_eq!(compose.include.len(), 1);
-        let include = &compose.include[0];
-        assert_eq!(include.filter.len(), 1);
-
-        let filter = &include.filter[0];
-        assert_eq!(filter.property, "category");
-        assert_eq!(filter.value, "*");
+        // Of operations should not be translatable to FHIR compose
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.to_string().contains("Of operations"));
+        assert!(error.to_string().contains("represent value sets"));
     }
 
     #[test]
     fn test_code_list_with_property_uses_in_operator() {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("{123456, 789012, 345678}.status").unwrap();
-        let compose = translator.translate(&expr).unwrap();
+        let result = translator.translate(&expr);
 
-        assert_eq!(compose.include.len(), 1);
-        let include = &compose.include[0];
-        assert_eq!(include.filter.len(), 1);
-
-        let filter = &include.filter[0];
-        assert_eq!(filter.property, "status");
-        assert_eq!(filter.op, fhir::FilterOperator::In); // Should use "in" for code lists
-        assert_eq!(filter.value, "123456,789012,345678");
+        // Code list with property access should not be translatable to FHIR compose
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.to_string().contains("Of operations"));
+        assert!(error.to_string().contains("represent value sets"));
     }
 
     #[test]
     fn test_single_code_with_property_uses_equals_operator() {
         let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
         let expr = parse_vcl("123456.status").unwrap();
-        let compose = translator.translate(&expr).unwrap();
+        let result = translator.translate(&expr);
 
-        assert_eq!(compose.include.len(), 1);
-        let include = &compose.include[0];
-        assert_eq!(include.filter.len(), 1);
+        // Single code with property access should not be translatable to FHIR compose
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.to_string().contains("Of operations"));
+        assert!(error.to_string().contains("represent value sets"));
+    }
 
-        let filter = &include.filter[0];
-        assert_eq!(filter.property, "status");
-        assert_eq!(filter.op, fhir::FilterOperator::Equal); // Should use "=" for single codes
-        assert_eq!(filter.value, "123456");
+    #[test]
+    fn test_translation_validation_examples() {
+        use crate::parse_vcl;
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+
+        // TRANSLATABLE: Simple codes
+        assert!(translator.translate(&parse_vcl("123456").unwrap()).is_ok());
+
+        // TRANSLATABLE: Property filters with operators
+        assert!(translator
+            .translate(&parse_vcl("status = \"active\"").unwrap())
+            .is_ok());
+        assert!(translator
+            .translate(&parse_vcl("concept << 123456").unwrap())
+            .is_ok());
+
+        // TRANSLATABLE: Conjunctions/disjunctions of valid expressions
+        assert!(translator
+            .translate(&parse_vcl("(123456, 789012)").unwrap())
+            .is_ok());
+        assert!(translator
+            .translate(&parse_vcl("status = \"active\"; concept << 123456").unwrap())
+            .is_ok());
+
+        // NOT TRANSLATABLE: Of operations (value set expressions)
+        assert!(translator
+            .translate(&parse_vcl("*.concept").unwrap())
+            .is_err());
+        assert!(translator
+            .translate(&parse_vcl("B.codeprop").unwrap())
+            .is_err());
+        assert!(translator
+            .translate(&parse_vcl("123456.status").unwrap())
+            .is_err());
+        assert!(translator
+            .translate(&parse_vcl("{123456, 789012}.status").unwrap())
+            .is_err());
     }
 
     #[test]

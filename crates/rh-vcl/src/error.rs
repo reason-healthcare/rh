@@ -32,6 +32,10 @@ pub enum VclError {
     /// Nested expression too deep
     #[error("Expression nesting too deep (max depth: {max_depth})")]
     NestingTooDeep { max_depth: usize },
+
+    /// Translation error - expression cannot be translated to FHIR
+    #[error("Translation error: {message}")]
+    TranslationError { message: String },
 }
 
 impl VclError {
