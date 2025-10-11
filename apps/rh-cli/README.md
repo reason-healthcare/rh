@@ -14,8 +14,15 @@ cargo run -p rh -- --help
 # Generate Rust types from a FHIR StructureDefinition
 cargo run -p rh -- codegen generate -i examples/patient.json -o examples/patient.rs
 
+# Download FHIR packages from registries
+cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1
+
 # Evaluate a FHIRPath expression
 cargo run -p rh -- fhirpath eval "Patient.name.family" -d examples/patient.json
+
+# Parse and translate VCL expressions
+cargo run -p rh -- vcl parse "(http://snomed.info/sct)status = \"active\""
+cargo run -p rh -- vcl translate "(http://snomed.info/sct)123456" --default-system http://snomed.info/sct
 
 # Validate JSON syntax
 cargo run -p rh -- validate json -i examples/patient.json
@@ -47,24 +54,31 @@ The RH CLI is organized into subcommands, each providing specialized functionali
 
 ```
 rh
-├── codegen     # FHIR code generation and package management
+├── codegen     # FHIR code generation
 │   ├── init    # Initialize configuration
 │   ├── generate # Generate from single file
 │   ├── batch   # Batch processing
-│   ├── download # Download packages
 │   └── install # Install and generate
+├── download    # FHIR package management
+│   ├── package # Download packages from registries
+│   └── list    # List available package versions
 ├── fhirpath    # FHIRPath expression operations
 │   ├── parse   # Parse expressions
 │   ├── eval    # Evaluate expressions
 │   ├── repl    # Interactive shell
 │   └── test    # Run test suites
+├── vcl         # ValueSet Compose Language (VCL) operations
+│   ├── parse   # Parse VCL expressions
+│   ├── translate # Translate to FHIR ValueSet.compose
+│   ├── explain # Explain expressions in plain English
+│   └── repl    # Interactive VCL shell
 └── validate    # JSON and FHIR validation
     └── json    # JSON syntax validation
 ```
 
 ## Code Generation (`rh codegen`)
 
-Generate type-safe Rust code from FHIR StructureDefinitions with full package management support.
+Generate type-safe Rust code from FHIR StructureDefinitions.
 
 ### Initialize Configuration
 
@@ -93,9 +107,13 @@ cargo run -p rh -- codegen batch -i ./fhir-definitions/ -o ./generated/
 cargo run -p rh -- codegen batch -c codegen.json
 ```
 
-### Package Management
+## Package Management (`rh download`)
 
-Download and install FHIR packages from npm-style registries:
+Download and manage FHIR packages from npm-style registries using the rh-loader crate.
+
+### Download Packages
+
+Download FHIR packages from registries:
 
 ```bash
 # Download a package (to default ~/.fhir/packages directory)
@@ -104,15 +122,6 @@ cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1
 # Download to custom location
 cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 -o ./custom-packages/
 
-# List available versions for a package
-cargo run -p rh -- download list hl7.fhir.r4.core
-
-# Get latest version only
-cargo run -p rh -- download list hl7.fhir.r4.core --latest
-
-# Install package and generate types
-cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
-
 # Overwrite existing package
 cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 --overwrite
 
@@ -120,6 +129,27 @@ cargo run -p rh -- download package hl7.fhir.r4.core 4.0.1 --overwrite
 export RH_REGISTRY_TOKEN="your-auth-token"
 cargo run -p rh -- download package my.custom.package 1.0.0 \
   --registry https://my-fhir-registry.com
+```
+
+### List Package Versions
+
+Query available versions for FHIR packages:
+
+```bash
+# List available versions for a package
+cargo run -p rh -- download list hl7.fhir.r4.core
+
+# Get latest version only
+cargo run -p rh -- download list hl7.fhir.r4.core --latest
+```
+
+### Integration with Code Generation
+
+The package manager integrates with code generation for streamlined workflows:
+
+```bash
+# Install package and generate types in one step
+cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
 ```
 
 ## FHIRPath Operations (`rh fhirpath`)
@@ -226,6 +256,154 @@ cargo run -p rh -- fhirpath test --file tests.json --data patient.json
   }
 ]
 ```
+
+## ValueSet Compose Language (`rh vcl`)
+
+Parse, translate, and explain ValueSet Compose Language (VCL) expressions with comprehensive support for FHIR ValueSet.compose generation and hierarchical component explanations.
+
+### Parse VCL Expressions
+
+Parse VCL expressions and view the Abstract Syntax Tree (AST):
+
+```bash
+# Parse and show pretty output
+cargo run -p rh -- vcl parse "123456"
+
+# Parse with system URI
+cargo run -p rh -- vcl parse "(http://snomed.info/sct)status = \"active\""
+
+# Show AST in JSON format
+cargo run -p rh -- vcl parse "category << 123456" --format json
+
+# Debug output with full AST details
+cargo run -p rh -- vcl parse "* - inactive" --format debug
+```
+
+### Translate to FHIR ValueSet.compose
+
+Translate VCL expressions to FHIR ValueSet.compose structures:
+
+```bash
+# Translate simple code
+cargo run -p rh -- vcl translate "123456" --default-system http://snomed.info/sct
+
+# Translate with explicit system URI
+cargo run -p rh -- vcl translate "(http://snomed.info/sct)status = \"active\""
+
+# Complex expression with multiple systems
+cargo run -p rh -- vcl translate "(http://loinc.org)12345-6; concept <<123455" --default-system http://snomed.info/sct
+
+# Save output to file
+cargo run -p rh -- vcl translate "category << 123456, status = \"active\"" -o valueset-compose.json
+
+# Pretty format for human reading
+cargo run -p rh -- vcl translate "* - {inactive, retired}" --format pretty
+```
+
+### Explain VCL Expressions
+
+Get detailed plain-English explanations of VCL expressions with hierarchical component breakdown:
+
+```bash
+# Basic explanation
+cargo run -p rh -- vcl explain "status = \"active\""
+
+# Complex expression explanation
+cargo run -p rh -- vcl explain "(http://snomed.info/sct)category << 123456, status = \"active\""
+
+# JSON format for programmatic use
+cargo run -p rh -- vcl explain "* - inactive" --format json
+
+# Save explanation to file
+cargo run -p rh -- vcl explain "(code1, code2); code3" -o explanation.txt
+```
+
+### Interactive VCL REPL
+
+Start an interactive shell for VCL expression experimentation:
+
+```bash
+# Basic REPL
+cargo run -p rh -- vcl repl
+
+# REPL with translation mode
+cargo run -p rh -- vcl repl --translate
+
+# REPL with explanation mode
+cargo run -p rh -- vcl repl --explain
+
+# REPL with both translation and explanation
+cargo run -p rh -- vcl repl --translate --explain --default-system http://snomed.info/sct
+```
+
+#### REPL Commands
+
+The VCL REPL supports special commands:
+
+- `.help` - Show available commands and VCL syntax examples
+- `.exit` or `.quit` - Exit the REPL
+- `exit` or `quit` - Alternative exit commands
+
+#### REPL Example Session
+
+```
+vcl> status = "active"
+✅ Parsed successfully:
+  AST: Filter expression with property 'status' equals 'active'
+
+✅ Translation successful:
+{
+  "include": [
+    {
+      "system": "http://snomed.info/sct",
+      "filter": [
+        {
+          "property": "status",
+          "op": "=",
+          "value": "active"
+        }
+      ]
+    }
+  ]
+}
+
+✅ Explanation:
+Expression Type: Filter - defines criteria for selecting codes
+Overall Explanation: codes where status equals "active"
+
+Components:
+  • status (Property): The 'status' property of codes
+  • = (Operator): equals
+  • "active" (Value): The target value "active"
+```
+
+### VCL Language Features
+
+The RH CLI supports all VCL language constructs:
+
+#### Basic Expressions
+- **Wildcards**: `*` (matches all codes)
+- **Simple codes**: `123456` or `"quoted code"`  
+- **System URIs**: `(http://snomed.info/sct)123456`
+
+#### Operators
+- **Conjunction** (AND): `code1, code2, code3`
+- **Disjunction** (OR): `code1; code2; code3`
+- **Exclusion** (NOT): `* - inactive`
+
+#### Filters
+- **Equality**: `status = "active"`
+- **Is-a relationships**: `category << 123456`
+- **Descendant-of**: `type < 456789`
+- **Regular expressions**: `code / "^[A-Z]+$"`
+- **Set operations**: `status ^ {active, inactive}`
+- **Of operations**: `*.category`, `{code1, code2}.property`
+
+#### Advanced Features
+- **Nested expressions**: `(code1, code2); code3`
+- **ValueSet inclusions**: `^http://example.org/valueset`
+- **Filter lists**: `{status = "active", category << 123456}`
+- **Mixed systems**: `(http://loinc.org)123-4; (http://snomed.info/sct)567890`
 
 ## Validation (`rh validate`)
 
@@ -469,8 +647,30 @@ cargo run -p rh -- validate json --input ./examples/bundle.ndjson --multiple --f
 # 6. Test FHIRPath expressions against generated types
 cargo run -p rh -- fhirpath eval "Patient.name.family" --data ./examples/patient.json
 
-# 7. Start interactive exploration
+# 7. Work with ValueSet Compose Language (VCL)
+cargo run -p rh -- vcl translate "(http://snomed.info/sct)123456 OR (http://loinc.org)LA6113-0"
+
+# 8. Start interactive exploration
 cargo run -p rh -- fhirpath repl --data ./examples/patient.json
+```
+
+### VCL Workflow
+
+```bash
+# Parse and validate VCL expressions
+cargo run -p rh -- vcl parse "(http://snomed.info/sct)active-status = \"active\""
+
+# Convert VCL to FHIR ValueSet.compose
+cargo run -p rh -- vcl translate "123456 OR 789012" \
+  --default-system http://snomed.info/sct \
+  --format json
+
+# Get detailed explanations of VCL expressions
+cargo run -p rh -- vcl explain "(http://snomed.info/sct)status = \"active\" AND severity != \"mild\"" \
+  --hierarchical --max-depth 3
+
+# Interactive VCL development
+cargo run -p rh -- vcl repl
 ```
 
 ### Batch Processing
