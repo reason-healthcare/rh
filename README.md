@@ -14,9 +14,10 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | Status | Component | Description |
 |--------|-----------|-------------|
 | 🚀 | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
-| 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
+| 🔜 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
-| 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
+| 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
+| 🔜 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
 | 🚀 | [rh-loader](crates/rh-loader/README.md)  | FHIR package loader from npm-style registries |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
@@ -44,7 +45,8 @@ cargo build
 │   ├── rh-core/               # Core functionality
 │   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
 │   ├── rh-loader/             # FHIR package loader from npm-style registries
-│   └── rh-validator/          # FHIR resource validation library
+│   ├── rh-validator/          # FHIR resource validation library
+│   └── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
 ├── apps/                   # Executable applications
 │   └── rh-cli/                # Unified cross-platform CLI for FHIR
 ├── setup.sh                # Development setup script
@@ -112,6 +114,9 @@ cargo run -p rh -- codegen --help
 
 # FHIRPath operations
 cargo run -p rh -- fhirpath --help
+
+# ValueSet Compose Language (VCL) operations
+cargo run -p rh -- vcl --help
 ```
 
 Check code formatting:

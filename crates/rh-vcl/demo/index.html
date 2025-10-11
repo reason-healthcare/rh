@@ -209,6 +209,9 @@
 </head>
 <body>
     <h1>VCL Parser & Translation Demo</h1>
+    
+    <p>See <a href="https://github.com/reason-healthcare/rh/tree/main/crates/rh-vcl" target="_blank">reason-healthcare/rh rh-vcl</a> for source code.</p>
+
     <p>
         This demo showcases the ValueSet Compose Language (VCL) parser and FHIR translation capabilities.
         Enter a VCL expression below to parse it and translate it to FHIR ValueSet compose format.
@@ -581,7 +584,9 @@
             if (data.components && data.components.length > 0) {
                 output += "Components:\n";
                 for (const component of data.components) {
-                    output += `  • ${component.component} (${component.component_type}): ${component.meaning}\n`;
+                    // Create hierarchical indentation based on nesting level
+                    const indent = "  ".repeat((component.nesting_level || 0) + 1);
+                    output += `${indent}• ${component.component} (${component.component_type}): ${component.meaning}\n`;
                 }
             }
             

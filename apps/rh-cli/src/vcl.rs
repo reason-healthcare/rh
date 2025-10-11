@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use tracing::error;
 
-use rh_vcl::{has_explicit_systems, parse_vcl, VclExplainer, VclExpression, VclTranslator};
+use rh_vcl::{parse_vcl, VclExplainer, VclExpression, VclTranslator};
 
 #[derive(Subcommand)]
 pub enum VclCommands {
@@ -141,15 +141,9 @@ fn translate_expression(
         parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {}", e))?;
 
     // Then translate to FHIR
-    // Only use default system if provided AND the expression doesn't have explicit systems
+    // Use default system if provided - translator will handle mixed expressions correctly
     let translator = if let Some(system) = default_system {
-        if has_explicit_systems(&ast) {
-            // Expression has explicit systems, don't override with default
-            VclTranslator::new()
-        } else {
-            // No explicit systems, use default
-            VclTranslator::with_default_system(system)
-        }
+        VclTranslator::with_default_system(system)
     } else {
         VclTranslator::new()
     };
@@ -219,9 +213,11 @@ fn explain_expression(
             if !explanation_result.components.is_empty() {
                 result.push_str("\nComponents:\n");
                 for component in &explanation_result.components {
+                    // Create indentation based on nesting level
+                    let indent = "  ".repeat(component.nesting_level + 1);
                     result.push_str(&format!(
-                        "  • {} ({}): {}\n",
-                        component.component, component.component_type, component.meaning
+                        "{}• {} ({}): {}\n",
+                        indent, component.component, component.component_type, component.meaning
                     ));
                 }
             }

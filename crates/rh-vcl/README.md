@@ -2,44 +2,27 @@
 
 [![Crates.io](https://img.shields.io/crates/v/rh-vcl)](https://crates.io/crates/rh-vcl)
 [![Documentation](https://docs.rs/rh-vcl/badge.svg)](https://docs.rs/rh-vcl)
-[![License: MIT OR Apache-2.0](https:```bash
-# From crate directory (crates/rh-vcl/)
-just wasm          # Web target (ES6 modules)
-just wasm-node     # Node.js target (CommonJS) 
-just wasm-bundler  # Bundler target (webpack, etc.)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/reason-healthcare/rh#license)
 
-# Test the build
-just test-wasm
+## Overview
 
-# Clean build artifacts
-just clean-wasm
-
-# Development server for web testing
-just dev-web
-```
-
-#### From workspace root:
-
-```bash
-# Build using justfile (workspace-level)
-just build-wasm        # Web target
-just build-wasm-node   # Node.js target
-just build-wasm-bundler # Bundler target
-```.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
-
-A Rust parser for the ValueSet Compose Language (VCL), a domain-specific language for expressing ValueSet CLDs in a compact syntax suitable for use within a URL and enabling a new family of implicit ValueSet URIs that are usable across all code systems.
+rh-vcl is a comprehensive parser and translator for the **ValueSet Compose Language (VCL)**, a domain-specific language for expressing ValueSet CLDs in a compact syntax suitable for use within a URL and enabling a new family of implicit ValueSet URIs that are usable across all code systems.
 
 VCL is inspired by SNOMED CT's Expression Constraint Language (ECL) and is defined in the [FHIR IG Guidance](https://build.fhir.org/ig/FHIR/ig-guidance/vcl.html).
 
+This crate provides complete VCL parsing with FHIR translation, enhanced explain functionality with hierarchical component visualization, and WebAssembly support for cross-platform use.
+
 ## Features
 
-- ✅ **Complete VCL Grammar Support** - Parses all VCL constructs according to the official grammar
-- ✅ **Rich AST** - Detailed Abstract Syntax Tree with convenient utility methods
-- ✅ **FHIR ValueSet Translation** - Convert VCL expressions to FHIR ValueSet.compose structures
-- ✅ **Comprehensive Error Handling** - Meaningful error messages with position information
-- ✅ **Zero-Copy Parsing** - Efficient parsing using nom with minimal allocations
-- ✅ **Serde Support** - Serialize/deserialize parsed VCL expressions and FHIR structures to/from JSON
-- ✅ **WASM Compatible** - Can be compiled to WebAssembly for use in web applications
+- **Complete VCL Grammar Support** - Parses all VCL constructs according to the official grammar
+- **Rich AST** - Detailed Abstract Syntax Tree with convenient utility methods
+- **FHIR ValueSet Translation** - Convert VCL expressions to FHIR ValueSet.compose structures
+- **Enhanced Explain Function** - Detailed operation explanations with hierarchical component visualization
+- **Mixed System Support** - Handles expressions with multiple code systems seamlessly
+- **Comprehensive Error Handling** - Meaningful error messages with position information
+- **Zero-Copy Parsing** - Efficient parsing using nom with minimal allocations
+- **Serde Support** - Serialize/deserialize parsed VCL expressions and FHIR structures to/from JSON
+- **WASM Compatible** - Can be compiled to WebAssembly for use in web applications
 
 ## Installation
 
@@ -166,6 +149,32 @@ println!("Codes: {:?}", codes);
 // Serialize to JSON
 let json = serde_json::to_string_pretty(&expr)?;
 println!("JSON: {}", json);
+```
+
+### VCL Expression Explanation
+
+```rust
+use rh_vcl::{parse_vcl, VclExplainer};
+
+let expr = parse_vcl("(http://snomed.info/sct)status = \"active\", category << 123456")?;
+let explainer = VclExplainer::new();
+
+// Get detailed explanation with hierarchical components
+let explanation = explainer.explain_expression_with_level(&expr, 0)?;
+
+println!("Expression Type: {}", explanation.expression_type);
+println!("Overall Explanation: {}", explanation.explanation);
+
+// Display hierarchical components with indentation
+for component in &explanation.components {
+    let indent = "  ".repeat(component.nesting_level + 1);
+    println!("{}Component: {} - {}", indent, component.component_type, component.explanation);
+}
+
+// Mixed system expressions are handled seamlessly
+let mixed_expr = parse_vcl("(http://snomed.info/sct)123456, (http://loinc.org)789012")?;
+let mixed_explanation = explainer.explain_expression_with_level(&mixed_expr, 0)?;
+println!("Mixed systems: {}", mixed_explanation.explanation);
 ```
 
 ### VCL to FHIR Translation
@@ -298,6 +307,7 @@ just build-wasm-bundler # Bundler target
 import init, { 
     parse_vcl_simple, 
     translate_vcl_with_system,
+    explain_vcl_simple,
     get_version 
 } from './rh_vcl.js';
 
@@ -316,6 +326,20 @@ const fhirResult = translate_vcl_with_system('123456', 'http://snomed.info/sct')
 if (fhirResult.success) {
     console.log('FHIR:', JSON.parse(fhirResult.data));
 }
+
+// Get detailed explanation with hierarchical components
+const explainResult = explain_vcl_simple('(http://snomed.info/sct)status = "active", category << 123456');
+if (explainResult.success) {
+    const explanation = JSON.parse(explainResult.data);
+    console.log('Expression Type:', explanation.expression_type);
+    console.log('Explanation:', explanation.explanation);
+    
+    // Display hierarchical components
+    explanation.components.forEach(component => {
+        const indent = '  '.repeat(component.nesting_level + 1);
+        console.log(`${indent}${component.component_type}: ${component.explanation}`);
+    });
+}
 ```
 
 ### Node.js Usage
@@ -323,20 +347,31 @@ if (fhirResult.success) {
 ```javascript
 const { 
     parse_vcl_simple, 
-    translate_vcl_with_system 
+    translate_vcl_with_system,
+    explain_vcl_simple
 } = require('./rh_vcl.js');
 
 // Parse and translate (no init() required)
 const parseResult = parse_vcl_simple('has_ingredient=1886');
 const translateResult = translate_vcl_with_system('123456', 'http://snomed.info/sct');
+
+// Get hierarchical explanation
+const explainResult = explain_vcl_simple('(http://snomed.info/sct)status = "active"');
+if (explainResult.success) {
+    const explanation = JSON.parse(explainResult.data);
+    console.log('Hierarchical components:');
+    explanation.components.forEach(component => {
+        console.log(`  ${'  '.repeat(component.nesting_level)}${component.component_type}: ${component.explanation}`);
+    });
+}
 ```
 
 ### Available Functions
 
-- **Simple functions**: `parse_vcl_simple()`, `translate_vcl_simple()`, `translate_vcl_with_system()`
-- **Advanced**: `parse_vcl_expression()`, `translate_vcl_expression()` with options
+- **Simple functions**: `parse_vcl_simple()`, `translate_vcl_simple()`, `translate_vcl_with_system()`, `explain_vcl_simple()`
+- **Advanced**: `parse_vcl_expression()`, `translate_vcl_expression()`, `explain_vcl_expression()` with options
 - **Utilities**: `validate_vcl_expression()`, `get_version()`
-- **Options**: `ParseOptions`, `TranslateOptions` classes
+- **Options**: `ParseOptions`, `TranslateOptions`, `ExplainOptions` classes
 
 All functions return `WasmResult` objects with `success`, `data`, and `error` properties.
 
@@ -355,7 +390,7 @@ at your option.
 
 ## Related Projects
 
-This crate is part of the [Reason Healthcare](https://github.com/reason-healthcare/rh) monorepo, which includes:
+This crate is part of the [Rust Healthcare Toolkit](https://github.com/reason-healthcare/rh) monorepo, which includes:
 
 - **rh-codegen** - FHIR code generation from StructureDefinitions
 - **rh-fhirpath** - FHIRPath expression evaluation

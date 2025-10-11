@@ -1393,4 +1393,140 @@ mod tests {
         let deserialized: ValueSetCompose = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, compose);
     }
+
+    #[test]
+    fn test_mixed_explicit_and_default_systems() {
+        // Test the case where some parts have explicit systems and others use default
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr =
+            parse_vcl("(http://loinc.org)(parent^{LP46821-2,LP259418-4}) ; concept <<123455")
+                .unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        // Should have two includes
+        assert_eq!(compose.include.len(), 2);
+
+        // First include should use explicit LOINC system
+        let loinc_include = &compose.include[0];
+        assert_eq!(loinc_include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(loinc_include.filter.len(), 1);
+        assert_eq!(loinc_include.filter[0].property, "parent");
+        assert_eq!(loinc_include.filter[0].op, fhir::FilterOperator::In);
+        assert_eq!(loinc_include.filter[0].value, "LP46821-2,LP259418-4");
+
+        // Second include should use default SNOMED system
+        let snomed_include = &compose.include[1];
+        assert_eq!(
+            snomed_include.system,
+            Some("http://snomed.info/sct".to_string())
+        );
+        assert_eq!(snomed_include.filter.len(), 1);
+        assert_eq!(snomed_include.filter[0].property, "concept");
+        assert_eq!(snomed_include.filter[0].op, fhir::FilterOperator::IsA);
+        assert_eq!(snomed_include.filter[0].value, "123455");
+    }
+
+    #[test]
+    fn test_mixed_systems_with_codes_and_filters() {
+        // Test mixed explicit/default systems with both codes and filters
+        let translator = VclTranslator::with_default_system("http://acme.org".to_string());
+        let expr = parse_vcl("(http://loinc.org)12345-6 ; concept <<654321").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 2);
+
+        // First include: explicit LOINC with specific code
+        let loinc_include = &compose.include[0];
+        assert_eq!(loinc_include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(loinc_include.concept.len(), 1);
+        assert_eq!(loinc_include.concept[0].code, "12345-6");
+
+        // Second include: default ACME with filter
+        let acme_include = &compose.include[1];
+        assert_eq!(acme_include.system, Some("http://acme.org".to_string()));
+        assert_eq!(acme_include.filter.len(), 1);
+        assert_eq!(acme_include.filter[0].property, "concept");
+        assert_eq!(acme_include.filter[0].op, fhir::FilterOperator::IsA);
+        assert_eq!(acme_include.filter[0].value, "654321");
+    }
+
+    #[test]
+    fn test_all_explicit_systems_ignores_default() {
+        // Test that when all parts have explicit systems, default is ignored
+        let translator = VclTranslator::with_default_system("http://acme.org".to_string());
+        let expr =
+            parse_vcl("(http://loinc.org)12345-6 ; (http://snomed.info/sct)concept <<654321")
+                .unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 2);
+
+        // First include: LOINC
+        let loinc_include = &compose.include[0];
+        assert_eq!(loinc_include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(loinc_include.concept.len(), 1);
+        assert_eq!(loinc_include.concept[0].code, "12345-6");
+
+        // Second include: SNOMED (not ACME default)
+        let snomed_include = &compose.include[1];
+        assert_eq!(
+            snomed_include.system,
+            Some("http://snomed.info/sct".to_string())
+        );
+        assert_eq!(snomed_include.filter.len(), 1);
+        assert_eq!(snomed_include.filter[0].property, "concept");
+        assert_eq!(snomed_include.filter[0].op, fhir::FilterOperator::IsA);
+        assert_eq!(snomed_include.filter[0].value, "654321");
+    }
+
+    #[test]
+    fn test_all_default_systems() {
+        // Test that when no parts have explicit systems, all use default
+        let translator = VclTranslator::with_default_system("http://acme.org".to_string());
+        let expr = parse_vcl("12345-6 ; concept <<654321").unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 2);
+
+        // Both includes should use default system
+        for include in &compose.include {
+            assert_eq!(include.system, Some("http://acme.org".to_string()));
+        }
+
+        // First include: code
+        assert_eq!(compose.include[0].concept.len(), 1);
+        assert_eq!(compose.include[0].concept[0].code, "12345-6");
+
+        // Second include: filter
+        assert_eq!(compose.include[1].filter.len(), 1);
+        assert_eq!(compose.include[1].filter[0].property, "concept");
+        assert_eq!(compose.include[1].filter[0].op, fhir::FilterOperator::IsA);
+        assert_eq!(compose.include[1].filter[0].value, "654321");
+    }
+
+    #[test]
+    fn test_mixed_systems_with_nested_expressions() {
+        // Test mixed systems with nested expressions
+        let translator = VclTranslator::with_default_system("http://snomed.info/sct".to_string());
+        let expr =
+            parse_vcl("(http://loinc.org)(parent^{LP123}) ; (status = \"active\", category <<123)")
+                .unwrap();
+        let compose = translator.translate(&expr).unwrap();
+
+        assert_eq!(compose.include.len(), 2);
+
+        // First include: explicit LOINC
+        let loinc_include = &compose.include[0];
+        assert_eq!(loinc_include.system, Some("http://loinc.org".to_string()));
+        assert_eq!(loinc_include.filter.len(), 1);
+        assert_eq!(loinc_include.filter[0].property, "parent");
+
+        // Second include: default SNOMED for nested expression
+        let snomed_include = &compose.include[1];
+        assert_eq!(
+            snomed_include.system,
+            Some("http://snomed.info/sct".to_string())
+        );
+        assert_eq!(snomed_include.filter.len(), 2); // Combined filters for the conjunction
+    }
 }

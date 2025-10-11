@@ -175,6 +175,7 @@ pub fn translate_vcl_expression(expression: &str, options: &TranslateOptions) ->
     };
 
     // Create translator with optional default system
+    // Use default system if provided - translator will handle mixed expressions correctly
     let translator = if let Some(ref system) = options.default_system {
         VclTranslator::with_default_system(system.clone())
             .set_separate_conjunction_includes(options.separate_conjunction_includes)

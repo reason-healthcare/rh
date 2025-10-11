@@ -45,6 +45,8 @@ pub struct ComponentExplanation {
     pub meaning: String,
     /// Type of this component
     pub component_type: String,
+    /// Nesting level for hierarchical display (0 = root level)
+    pub nesting_level: usize,
 }
 
 /// VCL Expression Explainer
@@ -165,16 +167,26 @@ impl VclExplainer {
         &self,
         expr: &Expression,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
+        self.explain_expression_with_level(expr, 0)
+    }
+
+    /// Explain an expression with a specific nesting level
+    fn explain_expression_with_level(
+        &self,
+        expr: &Expression,
+        level: usize,
+    ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         let mut components = Vec::new();
 
         // Explain main sub-expression
         let (main_explanation, main_type, main_components) =
-            self.explain_sub_expression(&expr.sub_expr)?;
+            self.explain_sub_expression_with_level(&expr.sub_expr, level)?;
         components.extend(main_components);
 
         // Handle operations
         if let Some(ref operation) = expr.operation {
-            let (op_explanation, op_components) = self.explain_operation(operation, &main_type)?;
+            let (op_explanation, op_components) =
+                self.explain_operation_with_level(operation, &main_type, level)?;
             components.extend(op_components);
 
             let full_explanation = format!("{main_explanation} {op_explanation}");
@@ -191,6 +203,15 @@ impl VclExplainer {
         &self,
         sub_expr: &SubExpression,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
+        self.explain_sub_expression_with_level(sub_expr, 0)
+    }
+
+    /// Explain a sub-expression with a specific nesting level
+    fn explain_sub_expression_with_level(
+        &self,
+        sub_expr: &SubExpression,
+        level: usize,
+    ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         let mut explanation = String::new();
         let mut components = Vec::new();
 
@@ -202,13 +223,18 @@ impl VclExplainer {
                 component: format!("({})", system_uri.uri),
                 meaning: format!("Codes from the {system_text} terminology system"),
                 component_type: "System URI".to_string(),
+                nesting_level: level,
             });
         }
 
         // Handle content
         let (content_explanation, expr_type, content_components) = match &sub_expr.content {
-            SubExpressionContent::Simple(simple) => self.explain_simple_expression(simple)?,
-            SubExpressionContent::Nested(nested) => self.explain_expression(nested)?,
+            SubExpressionContent::Simple(simple) => {
+                self.explain_simple_expression_with_level(simple, level)?
+            }
+            SubExpressionContent::Nested(nested) => {
+                self.explain_expression_with_level(nested, level + 1)?
+            }
         };
 
         explanation.push_str(&content_explanation);
@@ -217,10 +243,11 @@ impl VclExplainer {
         Ok((explanation, expr_type, components))
     }
 
-    /// Explain a simple expression
-    fn explain_simple_expression(
+    /// Explain a simple expression with a specific nesting level
+    fn explain_simple_expression_with_level(
         &self,
         simple: &SimpleExpression,
+        level: usize,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         let _components: Vec<ComponentExplanation> = Vec::new();
 
@@ -234,6 +261,7 @@ impl VclExplainer {
                     component: "*".to_string(),
                     meaning: "All codes/concepts in the system".to_string(),
                     component_type: "Wildcard".to_string(),
+                    nesting_level: level,
                 }],
             )),
             SimpleExpression::Code(code) => {
@@ -247,19 +275,25 @@ impl VclExplainer {
                         component: code_text.to_string(),
                         meaning: format!("The specific code/concept '{code_text}'"),
                         component_type: "Code".to_string(),
+                        nesting_level: level,
                     }],
                 ))
             }
-            SimpleExpression::Filter(filter) => self.explain_filter(filter),
-            SimpleExpression::FilterList(filters) => self.explain_filter_list(filters),
-            SimpleExpression::IncludeValueSet(vs) => self.explain_include_valueset(vs),
+            SimpleExpression::Filter(filter) => self.explain_filter_with_level(filter, level),
+            SimpleExpression::FilterList(filters) => {
+                self.explain_filter_list_with_level(filters, level)
+            }
+            SimpleExpression::IncludeValueSet(vs) => {
+                self.explain_include_valueset_with_level(vs, level)
+            }
         }
     }
 
-    /// Explain a filter
-    fn explain_filter(
+    /// Explain a filter with a specific nesting level
+    fn explain_filter_with_level(
         &self,
         filter: &Filter,
+        level: usize,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         match filter {
             Filter::PropertyFilter {
@@ -306,16 +340,19 @@ impl VclExplainer {
                             component: prop_name.to_string(),
                             meaning: format!("The '{prop_name}' property of codes"),
                             component_type: "Property".to_string(),
+                            nesting_level: level,
                         },
                         ComponentExplanation {
                             component: format!("{operator:?}"),
                             meaning: op_text,
                             component_type: "Operator".to_string(),
+                            nesting_level: level,
                         },
                         ComponentExplanation {
                             component: value_text.clone(),
                             meaning: format!("The target value {value_text}"),
                             component_type: "Value".to_string(),
+                            nesting_level: level,
                         },
                     ],
                 ))
@@ -336,11 +373,13 @@ impl VclExplainer {
                             component: source_text.clone(),
                             meaning: format!("The source: {source_text}"),
                             component_type: "Source".to_string(),
+                            nesting_level: level,
                         },
                         ComponentExplanation {
                             component: prop_name.to_string(),
                             meaning: format!("The '{prop_name}' property values"),
                             component_type: "Property".to_string(),
+                            nesting_level: level,
                         },
                     ],
                 ))
@@ -348,10 +387,11 @@ impl VclExplainer {
         }
     }
 
-    /// Explain filter list
-    fn explain_filter_list(
+    /// Explain filter list with a specific nesting level
+    fn explain_filter_list_with_level(
         &self,
         filters: &[Filter],
+        level: usize,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         if filters.is_empty() {
             return Ok((
@@ -368,7 +408,8 @@ impl VclExplainer {
         let mut has_value_sets = false;
 
         for filter in filters {
-            let (explanation, expr_type, components) = self.explain_filter(filter)?;
+            let (explanation, expr_type, components) =
+                self.explain_filter_with_level(filter, level)?;
             explanations.push(explanation);
             all_components.extend(components);
 
@@ -396,10 +437,11 @@ impl VclExplainer {
         ))
     }
 
-    /// Explain include valueset
-    fn explain_include_valueset(
+    /// Explain include valueset with a specific nesting level
+    fn explain_include_valueset_with_level(
         &self,
         vs: &IncludeValueSet,
+        level: usize,
     ) -> VclResult<(String, ExpressionType, Vec<ComponentExplanation>)> {
         match vs {
             IncludeValueSet::Uri(uri) => Ok((
@@ -411,6 +453,7 @@ impl VclExplainer {
                     component: format!("^{uri}"),
                     meaning: format!("Reference to ValueSet '{uri}'"),
                     component_type: "ValueSet Reference".to_string(),
+                    nesting_level: level,
                 }],
             )),
             IncludeValueSet::SystemUri(system_uri) => {
@@ -424,69 +467,91 @@ impl VclExplainer {
                         component: format!("^({})", system_uri.uri),
                         meaning: format!("All codes from {system_text} system"),
                         component_type: "System Reference".to_string(),
+                        nesting_level: level,
                     }],
                 ))
             }
         }
     }
 
-    /// Explain an operation
-    fn explain_operation(
+    /// Explain an operation with a specific nesting level
+    fn explain_operation_with_level(
         &self,
         operation: &Operation,
         main_type: &ExpressionType,
+        level: usize,
     ) -> VclResult<(String, Vec<ComponentExplanation>)> {
         match operation {
             Operation::Conjunction(sub_exprs) => {
                 let is_filter = matches!(main_type, ExpressionType::Filter { .. });
+                let mut components = Vec::new();
+                let mut explanations = Vec::new();
 
-                if is_filter {
-                    Ok((
-                        format!("AND {} additional criteria", sub_exprs.len()),
-                        vec![ComponentExplanation {
-                            component: ",".to_string(),
-                            meaning: "AND - all conditions must be true".to_string(),
-                            component_type: "Conjunction".to_string(),
-                        }],
-                    ))
-                } else {
-                    Ok((
-                        format!("combined with {} other value sets", sub_exprs.len()),
-                        vec![ComponentExplanation {
-                            component: ",".to_string(),
-                            meaning: "Combined collection of values".to_string(),
-                            component_type: "Collection".to_string(),
-                        }],
-                    ))
+                // Add the conjunction operator explanation
+                components.push(ComponentExplanation {
+                    component: ",".to_string(),
+                    meaning: if is_filter {
+                        "AND - all conditions must be true".to_string()
+                    } else {
+                        "Combined collection of values".to_string()
+                    },
+                    component_type: "Conjunction".to_string(),
+                    nesting_level: level,
+                });
+
+                // Explain each sub-expression
+                for sub_expr in sub_exprs {
+                    let (sub_explanation, _sub_type, sub_components) =
+                        self.explain_sub_expression_with_level(sub_expr, level + 1)?;
+                    explanations.push(sub_explanation);
+                    components.extend(sub_components);
                 }
+
+                let full_explanation = if is_filter {
+                    format!("AND {}", explanations.join(", AND "))
+                } else {
+                    format!("combined with {}", explanations.join(", and "))
+                };
+
+                Ok((full_explanation, components))
             }
             Operation::Disjunction(sub_exprs) => {
                 let is_filter = matches!(main_type, ExpressionType::Filter { .. });
+                let mut components = Vec::new();
+                let mut explanations = Vec::new();
 
-                if is_filter {
-                    Ok((
-                        format!("OR {} alternative criteria", sub_exprs.len()),
-                        vec![ComponentExplanation {
-                            component: ";".to_string(),
-                            meaning: "OR - any condition can be true".to_string(),
-                            component_type: "Disjunction".to_string(),
-                        }],
-                    ))
-                } else {
-                    Ok((
-                        format!("combined with {} other value sets", sub_exprs.len()),
-                        vec![ComponentExplanation {
-                            component: ";".to_string(),
-                            meaning: "Combined collection of values".to_string(),
-                            component_type: "Collection".to_string(),
-                        }],
-                    ))
+                // Add the disjunction operator explanation
+                components.push(ComponentExplanation {
+                    component: ";".to_string(),
+                    meaning: if is_filter {
+                        "OR - any condition can be true".to_string()
+                    } else {
+                        "Combined collection of values".to_string()
+                    },
+                    component_type: "Disjunction".to_string(),
+                    nesting_level: level,
+                });
+
+                // Explain each sub-expression
+                for sub_expr in sub_exprs {
+                    let (sub_explanation, _sub_type, sub_components) =
+                        self.explain_sub_expression_with_level(sub_expr, level + 1)?;
+                    explanations.push(sub_explanation);
+                    components.extend(sub_components);
                 }
+
+                let full_explanation = if is_filter {
+                    format!("OR {}", explanations.join(", OR "))
+                } else {
+                    format!("combined with {}", explanations.join(", and "))
+                };
+
+                Ok((full_explanation, components))
             }
             Operation::Exclusion(excluded_expr) => {
                 // Explain what is being excluded
                 let (excluded_explanation, _excluded_type, excluded_components) =
-                    self.explain_sub_expression(excluded_expr)?;
+                    self.explain_sub_expression_with_level(excluded_expr, level + 1)?;
 
                 let exclusion_text = format!("EXCLUDING {excluded_explanation}");
 
@@ -494,6 +559,7 @@ impl VclExplainer {
                     component: "-".to_string(),
                     meaning: "EXCLUDE - remove matching items".to_string(),
                     component_type: "Exclusion".to_string(),
+                    nesting_level: level,
                 }];
 
                 // Add the excluded expression components
@@ -508,10 +574,89 @@ impl VclExplainer {
     fn determine_combined_type(
         &self,
         main_type: &ExpressionType,
-        _operation: &Operation,
+        operation: &Operation,
     ) -> ExpressionType {
-        // For now, inherit the main type. Could be more sophisticated
-        main_type.clone()
+        match operation {
+            Operation::Conjunction(sub_exprs) | Operation::Disjunction(sub_exprs) => {
+                // Analyze all sub-expressions to create comprehensive description
+                let mut descriptions = Vec::new();
+                let mut has_filters = false;
+                let mut has_value_sets = false;
+
+                // Add main type description
+                match main_type {
+                    ExpressionType::Filter { description } => {
+                        descriptions.push(description.clone());
+                        has_filters = true;
+                    }
+                    ExpressionType::ValueSet { description } => {
+                        descriptions.push(description.clone());
+                        has_value_sets = true;
+                    }
+                    ExpressionType::Mixed { .. } => {
+                        has_filters = true;
+                        has_value_sets = true;
+                    }
+                }
+
+                // Analyze each sub-expression
+                for sub_expr in sub_exprs {
+                    if let Ok((_, sub_type, _)) = self.explain_sub_expression(sub_expr) {
+                        match sub_type {
+                            ExpressionType::Filter { description } => {
+                                descriptions.push(description);
+                                has_filters = true;
+                            }
+                            ExpressionType::ValueSet { description } => {
+                                descriptions.push(description);
+                                has_value_sets = true;
+                            }
+                            ExpressionType::Mixed { .. } => {
+                                has_filters = true;
+                                has_value_sets = true;
+                            }
+                        }
+                    }
+                }
+
+                // Determine final type based on what we found
+                let connector = match operation {
+                    Operation::Conjunction(_) => " AND ",
+                    Operation::Disjunction(_) => " OR ",
+                    _ => " ",
+                };
+
+                let combined_description = descriptions.join(connector);
+
+                if has_filters && has_value_sets {
+                    ExpressionType::Mixed {
+                        description: format!("Mixed expression: {combined_description}"),
+                    }
+                } else if has_filters {
+                    ExpressionType::Filter {
+                        description: combined_description,
+                    }
+                } else {
+                    ExpressionType::ValueSet {
+                        description: combined_description,
+                    }
+                }
+            }
+            Operation::Exclusion(_) => {
+                // For exclusions, keep the main type but note the exclusion
+                match main_type {
+                    ExpressionType::Filter { description } => ExpressionType::Filter {
+                        description: format!("{description} with exclusions"),
+                    },
+                    ExpressionType::ValueSet { description } => ExpressionType::ValueSet {
+                        description: format!("{description} with exclusions"),
+                    },
+                    ExpressionType::Mixed { description } => ExpressionType::Mixed {
+                        description: format!("{description} with exclusions"),
+                    },
+                }
+            }
+        }
     }
 
     /// Explain system URI
