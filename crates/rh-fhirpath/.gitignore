@@ -1,0 +1,7 @@
+# WASM build artifacts
+pkg/
+build/
+
+# Test artifacts
+*.profraw
+*.profdata

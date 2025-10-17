@@ -539,6 +539,37 @@ impl UnitConverter {
         })
     }
 
+    /// Compare two quantities with unit conversion
+    /// Returns -1 if left < right, 0 if equal, 1 if left > right
+    pub fn compare_quantities(
+        &self,
+        left_value: f64,
+        left_unit: &Option<String>,
+        right_value: f64,
+        right_unit: &Option<String>,
+    ) -> FhirPathResult<i32> {
+        if !self.are_units_compatible(left_unit, right_unit) {
+            return Err(FhirPathError::EvaluationError {
+                message: format!(
+                    "Cannot compare quantities with incompatible units: {left_unit:?} and {right_unit:?}"
+                ),
+            });
+        }
+
+        // Convert both to base units for comparison
+        let (left_base, _) = self.to_base_unit(left_value, left_unit)?;
+        let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
+
+        // Compare the base values
+        if left_base < right_base {
+            Ok(-1)
+        } else if left_base > right_base {
+            Ok(1)
+        } else {
+            Ok(0)
+        }
+    }
+
     /// Divide two quantities (same units result in dimensionless)
     pub fn divide_quantities(
         &self,

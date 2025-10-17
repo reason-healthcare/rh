@@ -2,10 +2,11 @@
 
 use crate::ast::DateTimePrecision;
 use crate::error::*;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Result of evaluating a FHIRPath expression
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FhirPathValue {
     /// Boolean value
     Boolean(bool),
@@ -65,7 +66,16 @@ impl FhirPathValue {
                     value: v2,
                     unit: u2,
                 },
-            ) => v1 == v2 && u1 == u2,
+            ) => {
+                use crate::evaluator::operations::units::UnitConverter;
+                let converter = UnitConverter::new();
+                // Use compare_quantities to handle unit conversion for equality
+                match converter.compare_quantities(*v1, u1, *v2, u2) {
+                    Ok(0) => true,   // Equal when comparison returns 0
+                    Ok(_) => false,  // Not equal
+                    Err(_) => false, // Incompatible units means not equal
+                }
+            }
             _ => false,
         }
     }
@@ -230,6 +240,22 @@ impl FhirPathValue {
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => Ok(a.cmp(b) as i32),
+
+            // Quantity comparisons with unit conversion
+            (
+                FhirPathValue::Quantity {
+                    value: v1,
+                    unit: u1,
+                },
+                FhirPathValue::Quantity {
+                    value: v2,
+                    unit: u2,
+                },
+            ) => {
+                use crate::evaluator::operations::units::UnitConverter;
+                let converter = UnitConverter::new();
+                converter.compare_quantities(*v1, u1, *v2, u2)
+            }
 
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot compare {self:?} and {other:?}"),

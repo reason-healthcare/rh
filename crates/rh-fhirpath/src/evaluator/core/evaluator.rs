@@ -247,6 +247,17 @@ impl FhirPathEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Object(obj) => {
+                // Check if member is the resourceType - if so, return the object itself
+                // This enables expressions like Patient.id to work on Patient resources
+                if let Some(resource_type) = obj.get("resourceType") {
+                    if let Some(resource_type_str) = resource_type.as_str() {
+                        if resource_type_str == member {
+                            // The member matches the resourceType, return the object itself
+                            return Ok(FhirPathValue::Object(obj.clone()));
+                        }
+                    }
+                }
+
                 if let Some(value) = obj.get(member) {
                     Ok(FhirPathValue::from_json(value))
                 } else {

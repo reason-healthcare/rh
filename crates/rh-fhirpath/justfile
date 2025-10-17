@@ -1,0 +1,101 @@
+# Justfile for rh-fhirpath WASM builds
+
+# Default recipe - show available commands
+default:
+    @just --list
+
+# Check if wasm-pack is installed
+check-wasm-pack:
+    #!/usr/bin/env bash
+    if ! command -v wasm-pack >/dev/null 2>&1; then
+        echo "wasm-pack not found. Installing..."
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    fi
+
+# Build all WASM targets
+wasm: wasm-web wasm-node wasm-bundler
+
+# Build for web browsers (ES6 modules)
+wasm-web: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building WASM for web target..."
+    mkdir -p pkg/web
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target web --out-dir pkg/web
+    else
+        wasm-pack build --target web --out-dir pkg/web
+    fi
+    echo "✅ Web WASM build complete! Output in pkg/web/"
+
+# Build for Node.js (CommonJS)
+wasm-node: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building WASM for Node.js target..."
+    mkdir -p pkg/node
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target nodejs --out-dir pkg/node
+    else
+        wasm-pack build --target nodejs --out-dir pkg/node
+    fi
+    echo "✅ Node.js WASM build complete! Output in pkg/node/"
+
+# Build for bundlers (webpack, rollup, etc.)
+wasm-bundler: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building WASM for bundler target..."
+    mkdir -p pkg/bundler
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target bundler --out-dir pkg/bundler
+    else
+        wasm-pack build --target bundler --out-dir pkg/bundler
+    fi
+    echo "✅ Bundler WASM build complete! Output in pkg/bundler/"
+
+# Clean WASM build artifacts
+clean-wasm:
+    @echo "Cleaning WASM build artifacts..."
+    @rm -rf pkg/
+    @echo "✅ WASM artifacts cleaned"
+
+# Test WASM builds
+test-wasm: wasm-node
+    #!/usr/bin/env bash
+    echo "Testing Node.js WASM build..."
+    cd pkg/node && node -e "const {get_version,parse_fhirpath,evaluate_fhirpath}=require('./rh_fhirpath.js'); console.log('Version:',get_version()); const result=parse_fhirpath('Patient.name.given'); console.log('Parse test:',result.success ? 'PASS' : 'FAIL');"
+    echo "✅ WASM test complete!"
+
+# Development: build web target and start local server for testing
+dev-web: wasm-web
+    #!/usr/bin/env bash
+    echo "Starting development server on http://localhost:8000"
+    echo "Open http://localhost:8000/pkg/web/ to see generated files"
+    cd pkg/web && python3 -m http.server 8000
+
+# Build demo app (WASM + HTML static site)
+build-demo: wasm-web
+    #!/usr/bin/env bash
+    echo "Building FHIRPath demo app..."
+    
+    # Create build directory (gitignored)
+    mkdir -p build/
+    
+    # Copy demo HTML
+    cp demo/index.html build/
+    
+    # Copy WASM files from web build
+    cp pkg/web/rh_fhirpath.js build/
+    cp pkg/web/rh_fhirpath_bg.wasm build/
+    
+    echo "✅ Demo build complete! Output in build/"
+    echo "  - Open build/index.html in a browser"
+    echo "  - Or run: cd build && python3 -m http.server 8000"
+
+# Build and serve demo locally
+demo: build-demo
+    #!/usr/bin/env bash
+    echo "Starting demo server on http://localhost:8000"
+    echo "Demo ready at: http://localhost:8000"
+    cd build && python3 -m http.server 8000

@@ -24,6 +24,10 @@ pub mod evaluator;
 pub mod extensions;
 pub mod parser;
 
+// WASM bindings - only compiled for wasm32 target
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 // Re-export the main public types users need
 pub use ast::{
     AdditiveOperator, EqualityOperator, Expression, FhirPathExpression, InequalityOperator,

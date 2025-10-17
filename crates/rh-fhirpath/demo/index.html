@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FHIRPath Expression Engine Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f7fa;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h3 {
+            color: #555;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        textarea.large {
+            min-height: 200px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        button.parse {
+            background: #9b59b6;
+        }
+        
+        button.parse:hover:not(:disabled) {
+            background: #8e44ad;
+        }
+        
+        button.eval {
+            background: #27ae60;
+        }
+        
+        button.eval:hover:not(:disabled) {
+            background: #229954;
+        }
+        
+        .button-group {
+            margin-bottom: 15px;
+        }
+        
+        .syntax-indicator {
+            margin-left: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .syntax-indicator.valid {
+            color: #27ae60;
+        }
+        
+        .syntax-indicator.invalid {
+            color: #e74c3c;
+        }
+        
+        .result {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .success {
+            border-color: #27ae60;
+            background: #f0fff4;
+        }
+        
+        .error {
+            border-color: #e74c3c;
+            background: #fff5f5;
+            color: #c0392b;
+        }
+        
+        .json-output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .examples {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 0 0 20px 0;
+            border-radius: 4px;
+        }
+        
+        .example-button {
+            background: #3498db;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin: 2px;
+        }
+        
+        .example-button:hover {
+            background: #2980b9;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #f1f3f5;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>FHIRPath Expression Engine Demo</h1>
+    
+    <p>See <a href="https://github.com/reason-healthcare/rh/tree/main/crates/rh-fhirpath" target="_blank">reason-healthcare/rh rh-fhirpath</a> for source code.</p>
+
+    <p>
+        This demo showcases the FHIRPath expression parser and evaluator capabilities.
+        Enter a FHIRPath expression and a FHIR resource to parse and evaluate the expression.
+    </p>
+    
+    <div class="examples">
+        <h2>Try these examples:</h2>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Basic Navigation:</strong>
+            <button class="example-button" onclick="loadExample('simple')">Simple Fields</button>
+            <button class="example-button" onclick="loadExample('nested')">Nested Navigation</button>
+            <button class="example-button" onclick="loadExample('array')">Array Fields</button>
+            <button class="example-button" onclick="loadExample('resourceType')">ResourceType Root</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Functions:</strong>
+            <button class="example-button" onclick="loadExample('where')">where() Filtering</button>
+            <button class="example-button" onclick="loadExample('first')">first() Function</button>
+            <button class="example-button" onclick="loadExample('exists')">exists() Check</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Boolean Logic:</strong>
+            <button class="example-button" onclick="loadExample('and')">AND Operations</button>
+            <button class="example-button" onclick="loadExample('or')">OR Operations</button>
+            <button class="example-button" onclick="loadExample('comparison')">Comparisons</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Units & Quantities:</strong>
+            <button class="example-button" onclick="loadExample('unitSimple')">Simple Unit</button>
+            <button class="example-button" onclick="loadExample('unitConversion')">Unit Conversion</button>
+            <button class="example-button" onclick="loadExample('unitComparison')">Unit Comparison</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Date & Time:</strong>
+            <button class="example-button" onclick="loadExample('dateComparison')">Date Comparison</button>
+            <button class="example-button" onclick="loadExample('today')">today() Function</button>
+            <button class="example-button" onclick="loadExample('now')">now() Function</button>
+            <button class="example-button" onclick="loadExample('dateArithmetic')">Date Arithmetic</button>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Advanced:</strong>
+            <button class="example-button" onclick="loadExample('complex')">Complex Query</button>
+            <button class="example-button" onclick="loadExample('chaining')">Chained Functions</button>
+            <button class="example-button" onclick="loadExample('counting')">count() & empty()</button>
+        </div>
+        
+        <div>
+            <strong>Collection Operations:</strong>
+            <button class="example-button" onclick="loadExample('select')">select() Transform</button>
+            <button class="example-button" onclick="loadExample('distinct')">distinct() Values</button>
+            <button class="example-button" onclick="loadExample('union')">union() Combine</button>
+            <button class="example-button" onclick="loadExample('intersection')">intersect() Common</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="two-column">
+            <div class="input-group">
+                <label for="fhirpathExpression">
+                    FHIRPath Expression:
+                    <span id="syntaxIndicator" class="syntax-indicator" style="display: none;"></span>
+                </label>
+                <textarea id="fhirpathExpression" placeholder="e.g., Patient.name.given"></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="fhirResource">FHIR Resource (JSON):</label>
+                <textarea id="fhirResource" class="large" placeholder='{"resourceType": "Patient", ...}'></textarea>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="parse" onclick="parseExpression()" id="parseBtn">Parse Expression</button>
+            <button class="eval" onclick="evaluateExpression()" id="evalBtn">Evaluate Expression</button>
+        </div>
+    </div>
+
+    <div id="status" class="status" style="display: none;"></div>
+
+    <div class="container" id="resultContainer" style="display: none;">
+        <h3 id="resultTitle">Result</h3>
+        <div id="resultOutput" class="json-output"></div>
+    </div>
+
+    <div class="container">
+        <h3>About FHIRPath</h3>
+        <p>
+            FHIRPath is a path-based navigation and extraction language, somewhat like XPath for FHIR. 
+            It allows you to navigate and extract elements from FHIR resources using expressions.
+        </p>
+        <p>
+            <strong>Common Patterns:</strong>
+        </p>
+        <ul>
+            <li><code>Patient.name</code> - Navigate to name field</li>
+            <li><code>Patient.id</code> - Use resourceType as root (equivalent to <code>id</code> or <code>%resource.id</code>)</li>
+            <li><code>Patient.name.given</code> - Navigate through nested objects</li>
+            <li><code>Patient.name.given.first()</code> - Get first element from array</li>
+            <li><code>Patient.telecom.where(system='email')</code> - Filter arrays</li>
+            <li><code>Patient.active and Patient.gender='male'</code> - Boolean logic</li>
+            <li><code>5.4 'kg'</code> - Quantities with units (context-free expressions)</li>
+            <li><code>1000 'g'.convertsToQuantity(1 'kg')</code> - Unit conversions</li>
+        </ul>
+    </div>
+
+    <script type="module">
+        import init, { 
+            parse_fhirpath,
+            evaluate_fhirpath,
+            validate_fhirpath_expression,
+            get_version
+        } from './rh_fhirpath.js';
+
+        let wasmInitialized = false;
+        let validateTimeout = null;
+
+        // Initialize WASM
+        async function initWasm() {
+            try {
+                await init();
+                wasmInitialized = true;
+                showStatus('WASM initialized successfully - version ' + get_version(), 'success');
+                
+                // Load default example
+                loadExample('simple');
+            } catch (error) {
+                showStatus('Failed to initialize WASM: ' + error, 'error');
+                console.error('WASM init error:', error);
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Parse FHIRPath expression
+        window.parseExpression = function() {
+            if (!wasmInitialized) {
+                showStatus('WASM not initialized yet', 'error');
+                return;
+            }
+
+            const expression = document.getElementById('fhirpathExpression').value.trim();
+            if (!expression) {
+                showStatus('Please enter a FHIRPath expression', 'error');
+                return;
+            }
+
+            showStatus('Parsing expression...', 'loading');
+
+            try {
+                const result = parse_fhirpath(expression);
+                
+                const resultContainer = document.getElementById('resultContainer');
+                const resultTitle = document.getElementById('resultTitle');
+                const resultOutput = document.getElementById('resultOutput');
+                
+                if (result.success) {
+                    resultOutput.textContent = result.data;
+                    resultContainer.className = 'container success';
+                    resultTitle.textContent = 'Parse Result (AST)';
+                    resultContainer.style.display = 'block';
+                    showStatus('Expression parsed successfully', 'success');
+                    updateSyntaxIndicator(true);
+                } else {
+                    resultOutput.textContent = result.error || 'Unknown error';
+                    resultContainer.className = 'container error';
+                    resultTitle.textContent = 'Parse Error';
+                    resultContainer.style.display = 'block';
+                    showStatus('Parse failed: ' + result.error, 'error');
+                    updateSyntaxIndicator(false);
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+                updateSyntaxIndicator(false);
+            }
+        };
+
+        // Evaluate FHIRPath expression
+        window.evaluateExpression = function() {
+            if (!wasmInitialized) {
+                showStatus('WASM not initialized yet', 'error');
+                return;
+            }
+
+            const expression = document.getElementById('fhirpathExpression').value.trim();
+            const resourceJson = document.getElementById('fhirResource').value.trim();
+
+            if (!expression) {
+                showStatus('Please enter a FHIRPath expression', 'error');
+                return;
+            }
+
+            if (!resourceJson) {
+                showStatus('Please enter a FHIR resource', 'error');
+                return;
+            }
+
+            showStatus('Evaluating expression...', 'loading');
+
+            try {
+                const result = evaluate_fhirpath(expression, resourceJson);
+                
+                const resultContainer = document.getElementById('resultContainer');
+                const resultTitle = document.getElementById('resultTitle');
+                const resultOutput = document.getElementById('resultOutput');
+                
+                if (result.success) {
+                    resultOutput.textContent = result.data;
+                    resultContainer.className = 'container success';
+                    resultTitle.textContent = 'Evaluation Result';
+                    resultContainer.style.display = 'block';
+                    showStatus('Evaluation successful', 'success');
+                } else {
+                    resultOutput.textContent = result.error || 'Unknown error';
+                    resultContainer.className = 'container error';
+                    resultTitle.textContent = 'Evaluation Error';
+                    resultContainer.style.display = 'block';
+                    showStatus('Evaluation failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        };
+
+        // Auto-validate on typing
+        function debounceValidate() {
+            if (validateTimeout) {
+                clearTimeout(validateTimeout);
+            }
+            
+            validateTimeout = setTimeout(() => {
+                const expression = document.getElementById('fhirpathExpression').value.trim();
+                if (expression && wasmInitialized) {
+                    const result = validate_fhirpath_expression(expression);
+                    updateSyntaxIndicator(result.success);
+                } else {
+                    updateSyntaxIndicator(false, true);
+                }
+            }, 500);
+        }
+
+        function updateSyntaxIndicator(isValid, isEmpty = false) {
+            const indicator = document.getElementById('syntaxIndicator');
+            
+            if (isEmpty) {
+                indicator.style.display = 'none';
+                return;
+            }
+            
+            indicator.style.display = 'inline';
+            if (isValid) {
+                indicator.textContent = '✓';
+                indicator.className = 'syntax-indicator valid';
+                indicator.title = 'Valid FHIRPath expression';
+            } else {
+                indicator.textContent = '✗';
+                indicator.className = 'syntax-indicator invalid';
+                indicator.title = 'Invalid FHIRPath expression';
+            }
+        }
+
+        // Load example expressions
+        window.loadExample = function(type) {
+            const examples = {
+                'simple': {
+                    expression: 'Patient.id',
+                    resource: getExamplePatient()
+                },
+                'nested': {
+                    expression: 'Patient.name.family',
+                    resource: getExamplePatient()
+                },
+                'array': {
+                    expression: 'Patient.name.given',
+                    resource: getExamplePatient()
+                },
+                'where': {
+                    expression: "Patient.telecom.where(system='email').value",
+                    resource: getExamplePatient()
+                },
+                'first': {
+                    expression: 'Patient.name.first().family',
+                    resource: getExamplePatient()
+                },
+                'exists': {
+                    expression: 'Patient.name.exists()',
+                    resource: getExamplePatient()
+                },
+                'and': {
+                    expression: "Patient.active and Patient.gender='male'",
+                    resource: getExamplePatient()
+                },
+                'or': {
+                    expression: "Patient.active or Patient.gender='female'",
+                    resource: getExamplePatient()
+                },
+                'comparison': {
+                    expression: "Patient.birthDate < '2000-01-01'",
+                    resource: getExamplePatient()
+                },
+                'unitSimple': {
+                    expression: "5.4 'kg'",
+                    resource: {}
+                },
+                'unitConversion': {
+                    expression: "1000 'g'.convertsToQuantity(1 'kg')",
+                    resource: {}
+                },
+                'unitComparison': {
+                    expression: "5.4 'kg' > 5000 'g'",
+                    resource: {}
+                },
+                'dateComparison': {
+                    expression: "today() > @1990-01-01 and today() < @2050-12-31",
+                    resource: {}
+                },
+                'today': {
+                    expression: "today()",
+                    resource: {}
+                },
+                'now': {
+                    expression: "now()",
+                    resource: {}
+                },
+                'dateArithmetic': {
+                    expression: "@2025 + 30 years",
+                    resource: {}
+                },
+                'complex': {
+                    expression: "Patient.name.where(use='official').given.first()",
+                    resource: getExamplePatient()
+                },
+                'chaining': {
+                    expression: "Patient.name.select(given).where($this.length() > 4)",
+                    resource: getExamplePatient()
+                },
+                'counting': {
+                    expression: "Patient.name.count() > 0 and Patient.telecom.where(system='phone').empty().not()",
+                    resource: getExamplePatient()
+                },
+                'select': {
+                    expression: "Patient.telecom.select(system & ': ' & value)",
+                    resource: getExamplePatient()
+                },
+                'distinct': {
+                    expression: "Patient.name.given.distinct()",
+                    resource: {
+                        "resourceType": "Patient",
+                        "id": "example",
+                        "name": [
+                            {
+                                "given": ["John", "James", "John"]
+                            },
+                            {
+                                "given": ["Johnny", "John"]
+                            }
+                        ]
+                    }
+                },
+                'union': {
+                    expression: "Patient.name.given | Patient.name.prefix",
+                    resource: getExamplePatient()
+                },
+                'intersection': {
+                    expression: "Patient.name.select(given).intersect(Patient.name.select(given))",
+                    resource: getExamplePatient()
+                }
+            };
+
+            const example = examples[type];
+            if (example) {
+                document.getElementById('fhirpathExpression').value = example.expression;
+                document.getElementById('fhirResource').value = JSON.stringify(example.resource, null, 2);
+                debounceValidate();
+            }
+        };
+
+        // Example FHIR Patient resource
+        function getExamplePatient() {
+            return {
+                "resourceType": "Patient",
+                "id": "example-patient",
+                "meta": {
+                    "versionId": "1",
+                    "lastUpdated": "2023-01-15T10:30:00Z"
+                },
+                "active": true,
+                "name": [
+                    {
+                        "use": "official",
+                        "family": "Smith",
+                        "given": ["John", "James"],
+                        "prefix": ["Mr."]
+                    },
+                    {
+                        "use": "usual",
+                        "given": ["Johnny"]
+                    }
+                ],
+                "telecom": [
+                    {
+                        "system": "phone",
+                        "value": "+1-555-123-4567",
+                        "use": "home"
+                    },
+                    {
+                        "system": "email",
+                        "value": "john.smith@example.com",
+                        "use": "home"
+                    }
+                ],
+                "gender": "male",
+                "birthDate": "1990-01-15",
+                "address": [
+                    {
+                        "use": "home",
+                        "line": ["123 Main St"],
+                        "city": "Springfield",
+                        "state": "IL",
+                        "postalCode": "62701"
+                    }
+                ]
+            };
+        }
+
+        // Add event listener for auto-validation
+        document.getElementById('fhirpathExpression').addEventListener('input', debounceValidate);
+
+        // Initialize on load
+        initWasm();
+    </script>
+</body>
+</html>
