@@ -511,7 +511,7 @@ impl TypeRegistry {
         // Check if the base_definition indicates this is a BackboneElement
         if let Some(base_def) = &structure_def.base_definition {
             if base_def.contains("BackboneElement") {
-                // Extract parent resource from the URL or name
+                // Extract parent resource from the URL fragment
                 // E.g., "http://hl7.org/fhir/StructureDefinition/Task#Task.restriction" -> "Task"
                 if let Some(fragment) = base_def.split('#').nth(1) {
                     if let Some(parent) = fragment.split('.').next() {
@@ -519,9 +519,10 @@ impl TypeRegistry {
                     }
                 }
 
-                // Fallback: try to extract from the name
-                // E.g., "TaskRestriction" -> "Task"
-                return Self::extract_parent_from_name(&structure_def.name);
+                // If there's no fragment, this is a standalone reusable BackboneElement type
+                // (like SubstanceAmount), not a nested structure within a specific resource.
+                // Return None to classify it as ComplexType instead of NestedStructure.
+                return None;
             }
         }
 
@@ -1167,6 +1168,8 @@ mod tests {
 
     #[test]
     fn test_nested_structure_import_paths() {
+        TypeRegistry::clear();
+        
         // Test that registering nested structures works correctly
         TypeRegistry::register_type_classification_only(
             "ConditionStage",
