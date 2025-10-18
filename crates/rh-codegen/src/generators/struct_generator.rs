@@ -265,6 +265,11 @@ impl<'a> StructGenerator<'a> {
                 continue;
             }
 
+            // Skip the BackboneElement definition itself (where path == base_path)
+            if element.path == base_path {
+                continue;
+            }
+
             let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
 
             if field_path.contains('.') {
@@ -275,8 +280,25 @@ impl<'a> StructGenerator<'a> {
                     .or_insert_with(Vec::new)
                     .push(element.clone());
             } else {
-                // This is a direct field of this nested struct
-                direct_fields.push(element.clone());
+                // Check if this direct field is itself a BackboneElement that needs a nested struct
+                let is_backbone_element = element
+                    .element_type
+                    .as_ref()
+                    .and_then(|types| types.first())
+                    .and_then(|t| t.code.as_ref())
+                    .map(|code| code == "BackboneElement")
+                    .unwrap_or(false);
+
+                if is_backbone_element {
+                    // Treat this as a sub-nested struct even though it appears as a direct field
+                    sub_nested_structs
+                        .entry(field_path.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(element.clone());
+                } else {
+                    // This is a direct field of this nested struct
+                    direct_fields.push(element.clone());
+                }
             }
         }
 
@@ -308,11 +330,23 @@ impl<'a> StructGenerator<'a> {
                 sub_nested_struct.derives = derives;
                 sub_nested_struct.base_definition = Some("BackboneElement".to_string());
 
-                // Process the sub-nested elements
+                // Process the sub-nested elements with full recursive support
                 let sub_base_path = format!("{base_path}.{sub_nested_field_name}");
+
+                // Separate sub-nested elements into direct fields and further sub-nested structures
+                let mut sub_direct_fields = Vec::new();
+                let mut sub_sub_nested_structs: HashMap<
+                    String,
+                    Vec<crate::fhir_types::ElementDefinition>,
+                > = HashMap::new();
 
                 for element in sub_nested_elements {
                     if !element.path.starts_with(&sub_base_path) {
+                        continue;
+                    }
+
+                    // Skip the BackboneElement definition itself (where path == base_path)
+                    if element.path == sub_base_path {
                         continue;
                     }
 
@@ -321,18 +355,80 @@ impl<'a> StructGenerator<'a> {
                         .strip_prefix(&format!("{sub_base_path}."))
                         .unwrap();
 
-                    // Only process direct fields (no further nesting for now)
-                    if !sub_field_path.contains('.') {
-                        let fields = self.create_fields_from_element(element)?;
-                        for field in fields {
-                            sub_nested_struct.add_field(field);
+                    if sub_field_path.contains('.') {
+                        // This is a further sub-nested field - collect it for recursive generation
+                        let sub_sub_nested_field_name = sub_field_path.split('.').next().unwrap();
+                        sub_sub_nested_structs
+                            .entry(sub_sub_nested_field_name.to_string())
+                            .or_default()
+                            .push(element.clone());
+                    } else {
+                        // Check if this direct field is itself a BackboneElement that needs a nested struct
+                        let is_backbone_element = element
+                            .element_type
+                            .as_ref()
+                            .and_then(|types| types.first())
+                            .and_then(|t| t.code.as_ref())
+                            .map(|code| code == "BackboneElement")
+                            .unwrap_or(false);
+
+                        if is_backbone_element {
+                            // Treat this as a further sub-nested struct even though it appears as a direct field
+                            sub_sub_nested_structs
+                                .entry(sub_field_path.to_string())
+                                .or_default()
+                                .push(element.clone());
+                        } else {
+                            // This is a direct field of this sub-nested struct
+                            sub_direct_fields.push(element.clone());
                         }
+                    }
+                }
+
+                // First, recursively generate any further sub-nested structs
+                for (sub_sub_nested_field_name, sub_sub_nested_elements) in &sub_sub_nested_structs
+                {
+                    self.generate_deeply_nested_struct(
+                        &sub_nested_struct_name,
+                        sub_sub_nested_field_name,
+                        sub_sub_nested_elements,
+                        &sub_base_path,
+                    )?;
+                }
+
+                // Then, process direct fields (now further sub-nested structs are available)
+                for element in sub_direct_fields {
+                    let fields = self.create_fields_from_element(&element)?;
+                    for field in fields {
+                        sub_nested_struct.add_field(field);
                     }
                 }
 
                 // Store the sub-nested struct in cache
                 self.type_cache
-                    .insert(sub_nested_struct_name, sub_nested_struct);
+                    .insert(sub_nested_struct_name.clone(), sub_nested_struct);
+
+                // Register the sub-nested struct in TypeRegistry with proper classification
+                // Use the parent struct name (first level nested struct's parent is the resource)
+                crate::generators::type_registry::TypeRegistry::register_type_classification_only(
+                    &sub_nested_struct_name,
+                    crate::generators::type_registry::TypeClassification::NestedStructure {
+                        parent_resource: parent_struct_name.to_string(),
+                    },
+                );
+            }
+
+            // Now create a field in the parent struct that references this sub-nested struct
+            // Find the BackboneElement definition for this field
+            let backbone_element_def = sub_nested_elements
+                .iter()
+                .find(|e| e.path == format!("{base_path}.{sub_nested_field_name}"));
+
+            if let Some(element) = backbone_element_def {
+                let fields = self.create_fields_from_element(element)?;
+                for field in fields {
+                    nested_struct.add_field(field);
+                }
             }
         }
 
@@ -345,6 +441,132 @@ impl<'a> StructGenerator<'a> {
         }
 
         Ok(Some(nested_struct))
+    }
+
+    /// Recursively generate deeply nested structs (for arbitrary nesting levels)
+    fn generate_deeply_nested_struct(
+        &mut self,
+        parent_nested_struct_name: &str,
+        field_name: &str,
+        elements: &[crate::fhir_types::ElementDefinition],
+        parent_base_path: &str,
+    ) -> CodegenResult<()> {
+        let nested_struct_name = format!(
+            "{}{}",
+            parent_nested_struct_name,
+            crate::naming::Naming::to_pascal_case(field_name)
+        );
+
+        if !self.type_cache.contains_key(&nested_struct_name) {
+            let mut nested_struct = RustStruct::new(nested_struct_name.clone());
+
+            nested_struct.doc_comment = Some(
+                DocumentationGenerator::generate_sub_nested_struct_documentation(
+                    parent_nested_struct_name,
+                    field_name,
+                ),
+            );
+
+            // Use config to determine derives
+            let mut derives = vec!["Debug".to_string(), "Clone".to_string()];
+            if self.config.with_serde {
+                derives.extend(vec!["Serialize".to_string(), "Deserialize".to_string()]);
+            }
+            nested_struct.derives = derives;
+            nested_struct.base_definition = Some("BackboneElement".to_string());
+
+            // Process the nested elements with full recursive support
+            let base_path = format!("{parent_base_path}.{field_name}");
+
+            // Separate nested elements into direct fields and further nested structures
+            let mut direct_fields = Vec::new();
+            let mut sub_nested_structs: HashMap<String, Vec<crate::fhir_types::ElementDefinition>> =
+                HashMap::new();
+
+            for element in elements {
+                if !element.path.starts_with(&base_path) {
+                    continue;
+                }
+
+                // Skip the BackboneElement definition itself (where path == base_path)
+                if element.path == base_path {
+                    continue;
+                }
+
+                let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+
+                if field_path.contains('.') {
+                    // This is a further nested field - collect it for recursive generation
+                    let sub_nested_field_name = field_path.split('.').next().unwrap();
+                    sub_nested_structs
+                        .entry(sub_nested_field_name.to_string())
+                        .or_default()
+                        .push(element.clone());
+                } else {
+                    // Check if this direct field is itself a BackboneElement that needs a nested struct
+                    let is_backbone_element = element
+                        .element_type
+                        .as_ref()
+                        .and_then(|types| types.first())
+                        .and_then(|t| t.code.as_ref())
+                        .map(|code| code == "BackboneElement")
+                        .unwrap_or(false);
+
+                    if is_backbone_element {
+                        // Treat this as a further nested struct even though it appears as a direct field
+                        sub_nested_structs
+                            .entry(field_path.to_string())
+                            .or_default()
+                            .push(element.clone());
+                    } else {
+                        // This is a direct field of this nested struct
+                        direct_fields.push(element.clone());
+                    }
+                }
+            }
+
+            // First, recursively generate any further nested structs
+            for (sub_nested_field_name, sub_nested_elements) in &sub_nested_structs {
+                self.generate_deeply_nested_struct(
+                    &nested_struct_name,
+                    sub_nested_field_name,
+                    sub_nested_elements,
+                    &base_path,
+                )?;
+            }
+
+            // Then, process direct fields (now further nested structs are available)
+            for element in direct_fields {
+                let fields = self.create_fields_from_element(&element)?;
+                for field in fields {
+                    nested_struct.add_field(field);
+                }
+            }
+
+            // Store the nested struct in cache
+            self.type_cache
+                .insert(nested_struct_name.clone(), nested_struct);
+
+            // Register the deeply nested struct in TypeRegistry with proper classification
+            // Extract the root parent resource name (e.g., "MedicationKnowledge" from "MedicationKnowledgeAdministrationguidelinesDosage")
+            let root_parent_resource = Self::extract_root_parent_resource(&nested_struct_name);
+            crate::generators::type_registry::TypeRegistry::register_type_classification_only(
+                &nested_struct_name,
+                crate::generators::type_registry::TypeClassification::NestedStructure {
+                    parent_resource: root_parent_resource,
+                },
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Extract the root parent resource name from a deeply nested struct name
+    /// For example: "MedicationKnowledgeAdministrationguidelinesDosage" -> "MedicationKnowledge"
+    fn extract_root_parent_resource(nested_struct_name: &str) -> String {
+        // Use the TypeRegistry's method for consistency
+        crate::generators::type_registry::TypeRegistry::extract_parent_from_name(nested_struct_name)
+            .unwrap_or_else(|| nested_struct_name.to_string())
     }
 
     /// Check if a field should use a nested struct type instead of BackboneElement

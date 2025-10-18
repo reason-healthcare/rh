@@ -94,8 +94,25 @@ impl<'a> NestedStructGenerator<'a> {
                     .or_insert_with(Vec::new)
                     .push(element.clone());
             } else {
-                // This is a direct field of this nested struct
-                direct_fields.push(element.clone());
+                // Check if this direct field is itself a BackboneElement that needs a nested struct
+                let is_backbone_element = element
+                    .element_type
+                    .as_ref()
+                    .and_then(|types| types.first())
+                    .and_then(|t| t.code.as_ref())
+                    .map(|code| code == "BackboneElement")
+                    .unwrap_or(false);
+
+                if is_backbone_element {
+                    // Treat this as a sub-nested struct even though it appears as a direct field
+                    sub_nested_structs
+                        .entry(field_path.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(element.clone());
+                } else {
+                    // This is a direct field of this nested struct
+                    direct_fields.push(element.clone());
+                }
             }
         }
 
@@ -193,8 +210,25 @@ impl<'a> NestedStructGenerator<'a> {
                         .or_default()
                         .push(element.clone());
                 } else {
-                    // This is a direct field of this sub-nested struct
-                    direct_fields.push(element.clone());
+                    // Check if this direct field is itself a BackboneElement that needs a nested struct
+                    let is_backbone_element = element
+                        .element_type
+                        .as_ref()
+                        .and_then(|types| types.first())
+                        .and_then(|t| t.code.as_ref())
+                        .map(|code| code == "BackboneElement")
+                        .unwrap_or(false);
+
+                    if is_backbone_element {
+                        // Treat this as a further sub-nested struct even though it appears as a direct field
+                        sub_sub_nested_structs
+                            .entry(field_path.to_string())
+                            .or_default()
+                            .push(element.clone());
+                    } else {
+                        // This is a direct field of this sub-nested struct
+                        direct_fields.push(element.clone());
+                    }
                 }
             }
 
