@@ -114,13 +114,17 @@ impl TraitImplGenerator {
 
         let struct_name = Naming::struct_name(structure_def);
 
-        // Generate Resource trait implementation for all resources
+        // Generate Resource trait implementations (Accessors, Mutators, Existence)
         trait_impls.push(self.generate_resource_trait_impl(&struct_name, structure_def));
+        trait_impls.push(self.generate_resource_mutators_trait_impl(&struct_name, structure_def));
+        trait_impls.push(self.generate_resource_existence_trait_impl(&struct_name, structure_def));
 
-        // Generate DomainResource trait implementation for domain resources
+        // Generate DomainResource trait implementations for domain resources
         if let Some(base_def) = &structure_def.base_definition {
             if base_def.contains("DomainResource") {
                 trait_impls.push(self.generate_domain_resource_trait_impl(&struct_name));
+                trait_impls.push(self.generate_domain_resource_mutators_trait_impl(&struct_name));
+                trait_impls.push(self.generate_domain_resource_existence_trait_impl(&struct_name));
             }
         }
 
@@ -133,6 +137,22 @@ impl TraitImplGenerator {
             // Only include specific trait impl if it has methods
             if !specific_trait_impl.is_empty() {
                 trait_impls.push(specific_trait_impl);
+            }
+
+            // Generate specific mutators trait implementation
+            let specific_mutators_trait_impl =
+                self.generate_specific_resource_mutators_trait_impl(&struct_name, structure_def);
+
+            if !specific_mutators_trait_impl.is_empty() {
+                trait_impls.push(specific_mutators_trait_impl);
+            }
+
+            // Generate specific existence trait implementation
+            let specific_existence_trait_impl =
+                self.generate_specific_resource_existence_trait_impl(&struct_name, structure_def);
+
+            if !specific_existence_trait_impl.is_empty() {
+                trait_impls.push(specific_existence_trait_impl);
             }
         }
 
@@ -263,6 +283,286 @@ impl TraitImplGenerator {
         trait_impl
     }
 
+    /// Generate Resource mutators trait implementation
+    fn generate_resource_mutators_trait_impl(
+        &self,
+        struct_name: &str,
+        structure_def: &StructureDefinition,
+    ) -> RustTraitImpl {
+        let mut trait_impl = RustTraitImpl::new(
+            "crate::traits::resource::ResourceMutators".to_string(),
+            struct_name.to_string(),
+        );
+
+        // Determine the base access pattern based on the inheritance chain
+        let (base_access, _use_trait_methods) =
+            self.get_resource_base_access(struct_name, structure_def);
+
+        // new method
+        let new_method = RustTraitImplMethod::new("new".to_string())
+            .with_return_type("Self".to_string())
+            .with_body("Self::default()".to_string());
+        trait_impl.add_method(new_method);
+
+        // set_id method
+        let set_id_method = RustTraitImplMethod::new("set_id".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::String,
+            ))
+            .with_return_type("Self".to_string())
+            .with_body(format!(
+                "let mut resource = self.clone();\n        resource.{base_access}.id = Some(value);\n        resource"
+            ));
+        trait_impl.add_method(set_id_method);
+
+        // set_meta method
+        let set_meta_method = RustTraitImplMethod::new("set_meta".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::Custom("crate::datatypes::meta::Meta".to_string()),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body(format!(
+                "let mut resource = self.clone();\n        resource.{base_access}.meta = Some(value);\n        resource"
+            ));
+        trait_impl.add_method(set_meta_method);
+
+        // set_implicit_rules method
+        let set_implicit_rules_method = RustTraitImplMethod::new("set_implicit_rules".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::String,
+            ))
+            .with_return_type("Self".to_string())
+            .with_body(format!(
+                "let mut resource = self.clone();\n        resource.{base_access}.implicit_rules = Some(value);\n        resource"
+            ));
+        trait_impl.add_method(set_implicit_rules_method);
+
+        // set_language method
+        let set_language_method = RustTraitImplMethod::new("set_language".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::String,
+            ))
+            .with_return_type("Self".to_string())
+            .with_body(format!(
+                "let mut resource = self.clone();\n        resource.{base_access}.language = Some(value);\n        resource"
+            ));
+        trait_impl.add_method(set_language_method);
+
+        trait_impl
+    }
+
+    /// Generate Resource existence trait implementation
+    fn generate_resource_existence_trait_impl(
+        &self,
+        struct_name: &str,
+        structure_def: &StructureDefinition,
+    ) -> RustTraitImpl {
+        let mut trait_impl = RustTraitImpl::new(
+            "crate::traits::resource::ResourceExistence".to_string(),
+            struct_name.to_string(),
+        );
+
+        // Determine the base access pattern based on the inheritance chain
+        let (base_access, use_trait_methods) =
+            self.get_resource_base_access(struct_name, structure_def);
+
+        // has_id method
+        let has_id_method = RustTraitImplMethod::new("has_id".to_string())
+            .with_return_type("bool".to_string())
+            .with_body(if use_trait_methods {
+                format!("{base_access}.has_id()")
+            } else {
+                format!("{base_access}.id.is_some()")
+            });
+        trait_impl.add_method(has_id_method);
+
+        // has_meta method
+        let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
+            .with_return_type("bool".to_string())
+            .with_body(if use_trait_methods {
+                format!("{base_access}.has_meta()")
+            } else {
+                format!("{base_access}.meta.is_some()")
+            });
+        trait_impl.add_method(has_meta_method);
+
+        // has_implicit_rules method
+        let has_implicit_rules_method = RustTraitImplMethod::new("has_implicit_rules".to_string())
+            .with_return_type("bool".to_string())
+            .with_body(if use_trait_methods {
+                format!("{base_access}.has_implicit_rules()")
+            } else {
+                format!("{base_access}.implicit_rules.is_some()")
+            });
+        trait_impl.add_method(has_implicit_rules_method);
+
+        // has_language method
+        let has_language_method = RustTraitImplMethod::new("has_language".to_string())
+            .with_return_type("bool".to_string())
+            .with_body(if use_trait_methods {
+                format!("{base_access}.has_language()")
+            } else {
+                format!("{base_access}.language.is_some()")
+            });
+        trait_impl.add_method(has_language_method);
+
+        trait_impl
+    }
+
+    /// Generate DomainResource mutators trait implementation
+    fn generate_domain_resource_mutators_trait_impl(&self, struct_name: &str) -> RustTraitImpl {
+        let mut trait_impl = RustTraitImpl::new(
+            "crate::traits::domain_resource::DomainResourceMutators".to_string(),
+            struct_name.to_string(),
+        );
+
+        // new method
+        let new_method = RustTraitImplMethod::new("new".to_string())
+            .with_return_type("Self".to_string())
+            .with_body("Self::default()".to_string());
+        trait_impl.add_method(new_method);
+
+        // set_text method
+        let set_text_method = RustTraitImplMethod::new("set_text".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::Custom("crate::datatypes::narrative::Narrative".to_string()),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.text = Some(value);\n        resource".to_string());
+        trait_impl.add_method(set_text_method);
+
+        // set_contained method
+        let set_contained_method = RustTraitImplMethod::new("set_contained".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::resources::resource::Resource".to_string()))),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.contained = Some(value);\n        resource".to_string());
+        trait_impl.add_method(set_contained_method);
+
+        // add_contained method
+        let add_contained_method = RustTraitImplMethod::new("add_contained".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "item".to_string(),
+                crate::rust_types::RustType::Custom("crate::resources::resource::Resource".to_string()),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.contained.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+        trait_impl.add_method(add_contained_method);
+
+        // set_extension method
+        let set_extension_method = RustTraitImplMethod::new("set_extension".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()))),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.extension = Some(value);\n        resource".to_string());
+        trait_impl.add_method(set_extension_method);
+
+        // add_extension method
+        let add_extension_method = RustTraitImplMethod::new("add_extension".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "item".to_string(),
+                crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+        trait_impl.add_method(add_extension_method);
+
+        // set_modifier_extension method
+        let set_modifier_extension_method = RustTraitImplMethod::new("set_modifier_extension".to_string())
+            .with_param(crate::rust_types::RustMethodParam::new(
+                "value".to_string(),
+                crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()))),
+            ))
+            .with_return_type("Self".to_string())
+            .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension = Some(value);\n        resource".to_string());
+        trait_impl.add_method(set_modifier_extension_method);
+
+        // add_modifier_extension method
+        let add_modifier_extension_method =
+            RustTraitImplMethod::new("add_modifier_extension".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "item".to_string(),
+                    crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()),
+                ))
+                .with_return_type("Self".to_string())
+                .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+        trait_impl.add_method(add_modifier_extension_method);
+
+        trait_impl
+    }
+
+    /// Generate DomainResource existence trait implementation
+    fn generate_domain_resource_existence_trait_impl(&self, struct_name: &str) -> RustTraitImpl {
+        let mut trait_impl = RustTraitImpl::new(
+            "crate::traits::domain_resource::DomainResourceExistence".to_string(),
+            struct_name.to_string(),
+        );
+
+        // Duplicate methods from ResourceExistence (required by trait inheritance)
+        // has_id method
+        let has_id_method = RustTraitImplMethod::new("has_id".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.id.is_some()".to_string());
+        trait_impl.add_method(has_id_method);
+
+        // has_meta method
+        let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.meta.is_some()".to_string());
+        trait_impl.add_method(has_meta_method);
+
+        // has_implicit_rules method
+        let has_implicit_rules_method = RustTraitImplMethod::new("has_implicit_rules".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.implicit_rules.is_some()".to_string());
+        trait_impl.add_method(has_implicit_rules_method);
+
+        // has_language method
+        let has_language_method = RustTraitImplMethod::new("has_language".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.language.is_some()".to_string());
+        trait_impl.add_method(has_language_method);
+
+        // has_text method
+        let has_text_method = RustTraitImplMethod::new("has_text".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.text.is_some()".to_string());
+        trait_impl.add_method(has_text_method);
+
+        // has_contained method
+        let has_contained_method = RustTraitImplMethod::new("has_contained".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.contained.as_ref().is_some_and(|c| !c.is_empty())".to_string());
+        trait_impl.add_method(has_contained_method);
+
+        // has_extension method
+        let has_extension_method = RustTraitImplMethod::new("has_extension".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.extension.as_ref().is_some_and(|e| !e.is_empty())".to_string());
+        trait_impl.add_method(has_extension_method);
+
+        // has_modifier_extension method
+        let has_modifier_extension_method =
+            RustTraitImplMethod::new("has_modifier_extension".to_string())
+                .with_return_type("bool".to_string())
+                .with_body(
+                    "self.base.modifier_extension.as_ref().is_some_and(|m| !m.is_empty())"
+                        .to_string(),
+                );
+        trait_impl.add_method(has_modifier_extension_method);
+
+        trait_impl
+    }
+
     /// Generate specific resource trait implementation
     fn generate_specific_resource_trait_impl(
         &self,
@@ -292,6 +592,169 @@ impl TraitImplGenerator {
                 if let Some(method) = self.generate_field_accessor_method(element) {
                     trait_impl.add_method(method);
                 }
+            }
+        }
+
+        trait_impl
+    }
+
+    /// Generate specific resource mutators trait implementation
+    fn generate_specific_resource_mutators_trait_impl(
+        &self,
+        struct_name: &str,
+        structure_def: &StructureDefinition,
+    ) -> RustTraitImpl {
+        let trait_name = format!(
+            "crate::traits::{}::{}Mutators",
+            crate::naming::Naming::to_snake_case(struct_name),
+            struct_name
+        );
+
+        let mut trait_impl = RustTraitImpl::new(trait_name, struct_name.to_string());
+
+        // new method
+        let new_method = RustTraitImplMethod::new("new".to_string())
+            .with_return_type("Self".to_string())
+            .with_body("Self::default()".to_string());
+        trait_impl.add_method(new_method);
+
+        // Extract element definitions to generate trait methods
+        let elements = if let Some(differential) = &structure_def.differential {
+            &differential.element
+        } else if let Some(snapshot) = &structure_def.snapshot {
+            &snapshot.element
+        } else {
+            return trait_impl; // No elements to process
+        };
+
+        // Generate mutator methods for all direct fields
+        for element in elements {
+            if self.should_generate_accessor_impl(element, structure_def) {
+                if let Some(methods) = self.generate_field_mutator_methods(element) {
+                    for method in methods {
+                        trait_impl.add_method(method);
+                    }
+                }
+            }
+        }
+
+        trait_impl
+    }
+
+    /// Generate specific resource existence trait implementation
+    fn generate_specific_resource_existence_trait_impl(
+        &self,
+        struct_name: &str,
+        structure_def: &StructureDefinition,
+    ) -> RustTraitImpl {
+        let trait_name = format!(
+            "crate::traits::{}::{}Existence",
+            crate::naming::Naming::to_snake_case(struct_name),
+            struct_name
+        );
+
+        let mut trait_impl = RustTraitImpl::new(trait_name, struct_name.to_string());
+
+        // Add inherited methods from ResourceExistence
+        // has_id method
+        let has_id_method = RustTraitImplMethod::new("has_id".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.id.is_some()".to_string());
+        trait_impl.add_method(has_id_method);
+
+        // has_meta method
+        let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.meta.is_some()".to_string());
+        trait_impl.add_method(has_meta_method);
+
+        // has_implicit_rules method
+        let has_implicit_rules_method = RustTraitImplMethod::new("has_implicit_rules".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.implicit_rules.is_some()".to_string());
+        trait_impl.add_method(has_implicit_rules_method);
+
+        // has_language method
+        let has_language_method = RustTraitImplMethod::new("has_language".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.base.language.is_some()".to_string());
+        trait_impl.add_method(has_language_method);
+
+        // Add inherited methods from DomainResourceExistence
+        // has_text method
+        let has_text_method = RustTraitImplMethod::new("has_text".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.text.is_some()".to_string());
+        trait_impl.add_method(has_text_method);
+
+        // has_contained method
+        let has_contained_method = RustTraitImplMethod::new("has_contained".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.contained.as_ref().is_some_and(|c| !c.is_empty())".to_string());
+        trait_impl.add_method(has_contained_method);
+
+        // has_extension method
+        let has_extension_method = RustTraitImplMethod::new("has_extension".to_string())
+            .with_return_type("bool".to_string())
+            .with_body("self.base.extension.as_ref().is_some_and(|e| !e.is_empty())".to_string());
+        trait_impl.add_method(has_extension_method);
+
+        // has_modifier_extension method
+        let has_modifier_extension_method =
+            RustTraitImplMethod::new("has_modifier_extension".to_string())
+                .with_return_type("bool".to_string())
+                .with_body(
+                    "self.base.modifier_extension.as_ref().is_some_and(|m| !m.is_empty())"
+                        .to_string(),
+                );
+        trait_impl.add_method(has_modifier_extension_method);
+
+        // Extract element definitions to generate trait methods for specific fields
+        let elements = if let Some(differential) = &structure_def.differential {
+            &differential.element
+        } else if let Some(snapshot) = &structure_def.snapshot {
+            &snapshot.element
+        } else {
+            return trait_impl; // No elements to process
+        };
+
+        // First, collect choice-type fields (those ending with [x])
+        let mut choice_fields = std::collections::HashSet::new();
+        for element in elements {
+            let path_parts: Vec<&str> = element.path.split('.').collect();
+            if path_parts.len() == 2 && path_parts[0] == structure_def.name {
+                let field_name = path_parts[1];
+                if field_name.ends_with("[x]") {
+                    choice_fields.insert(field_name.trim_end_matches("[x]").to_string());
+                }
+            }
+        }
+
+        // Generate existence check methods for choice types
+        for choice_field in &choice_fields {
+            // Find the element with this choice field name + [x]
+            let choice_path = format!("{}.{}[x]", structure_def.name, choice_field);
+            if let Some(choice_element) = elements.iter().find(|e| e.path == choice_path) {
+                if let Some(method) =
+                    self.generate_choice_type_existence_method(choice_field, choice_element)
+                {
+                    trait_impl.add_method(method);
+                }
+            }
+        }
+
+        // Generate existence check methods for all direct non-choice fields
+        for element in elements {
+            let path_parts: Vec<&str> = element.path.split('.').collect();
+            if path_parts.len() == 2 && path_parts[0] == structure_def.name {
+                let field_name = path_parts[1];
+                // Skip choice type fields (they were handled above)
+                if !field_name.ends_with("[x]")
+                    && self.should_generate_accessor_impl(element, structure_def) {
+                        if let Some(method) = self.generate_field_existence_method(element) {
+                            trait_impl.add_method(method);
+                        }
+                    }
             }
         }
 
@@ -424,6 +887,216 @@ impl TraitImplGenerator {
         )
     }
 
+    /// Generate field mutator methods for a trait implementation (returns both set and add for arrays)
+    fn generate_field_mutator_methods(
+        &self,
+        element: &crate::fhir_types::ElementDefinition,
+    ) -> Option<Vec<RustTraitImplMethod>> {
+        use crate::generators::TypeUtilities;
+
+        let path_parts: Vec<&str> = element.path.split('.').collect();
+        let field_name = path_parts.last()?.to_string();
+        let rust_field_name = crate::naming::Naming::field_name(&field_name);
+
+        let is_array = element.max.as_deref() == Some("*")
+            || element
+                .max
+                .as_deref()
+                .unwrap_or("1")
+                .parse::<i32>()
+                .unwrap_or(1)
+                > 1;
+
+        // Check if field is optional based on minimum cardinality
+        let is_optional = element.min.unwrap_or(0) == 0;
+
+        // Get the FHIR types for this element
+        let element_type = element.element_type.as_ref()?.first()?;
+
+        // Use TypeUtilities::map_fhir_type_to_rust for consistency with trait generator
+        // This returns String for enum/code types, which matches the trait signature
+        let rust_type =
+            TypeUtilities::map_fhir_type_to_rust(element_type, &field_name, &element.path).ok()?;
+
+        let mut methods = Vec::new();
+
+        // Generate methods based on array vs single value
+        if is_array {
+            // For arrays, generate both set_xxx and add_xxx methods
+            let inner_type = match &rust_type {
+                crate::rust_types::RustType::Vec(inner) => inner.to_string(),
+                crate::rust_types::RustType::Option(inner) => {
+                    if let crate::rust_types::RustType::Vec(vec_inner) = inner.as_ref() {
+                        vec_inner.to_string()
+                    } else {
+                        inner.to_string()
+                    }
+                }
+                _ => rust_type.to_string(),
+            };
+
+            // set_xxx method
+            let set_method_name = format!("set_{rust_field_name}");
+            let set_body = if is_optional {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name} = Some(value);\n        resource"
+                )
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name} = value;\n        resource"
+                )
+            };
+
+            methods.push(
+                RustTraitImplMethod::new(set_method_name)
+                    .with_param(crate::rust_types::RustMethodParam::new(
+                        "value".to_string(),
+                        crate::rust_types::RustType::Vec(Box::new(
+                            crate::rust_types::RustType::Custom(inner_type.clone()),
+                        )),
+                    ))
+                    .with_return_type("Self".to_string())
+                    .with_body(set_body),
+            );
+
+            // add_xxx method
+            let add_method_name = format!("add_{rust_field_name}");
+            let add_body = if is_optional {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name}.get_or_insert_with(Vec::new).push(item);\n        resource"
+                )
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name}.push(item);\n        resource"
+                )
+            };
+
+            methods.push(
+                RustTraitImplMethod::new(add_method_name)
+                    .with_param(crate::rust_types::RustMethodParam::new(
+                        "item".to_string(),
+                        crate::rust_types::RustType::Custom(inner_type),
+                    ))
+                    .with_return_type("Self".to_string())
+                    .with_body(add_body),
+            );
+        } else {
+            // For single values, generate set_xxx method only
+            let method_name = format!("set_{rust_field_name}");
+            let inner_type = match &rust_type {
+                crate::rust_types::RustType::Option(inner) => inner.to_string(),
+                _ => rust_type.to_string(),
+            };
+
+            let body = format!(
+                "let mut resource = self.clone();\n        resource.{rust_field_name} = Some(value);\n        resource"
+            );
+
+            methods.push(
+                RustTraitImplMethod::new(method_name)
+                    .with_param(crate::rust_types::RustMethodParam::new(
+                        "value".to_string(),
+                        crate::rust_types::RustType::Custom(inner_type),
+                    ))
+                    .with_return_type("Self".to_string())
+                    .with_body(body),
+            );
+        }
+
+        Some(methods)
+    }
+
+    /// Generate a field existence check method for a trait implementation
+    fn generate_field_existence_method(
+        &self,
+        element: &crate::fhir_types::ElementDefinition,
+    ) -> Option<RustTraitImplMethod> {
+        let path_parts: Vec<&str> = element.path.split('.').collect();
+        let field_name = path_parts.last()?.to_string();
+        let rust_field_name = crate::naming::Naming::field_name(&field_name);
+
+        let is_array = element.max.as_deref() == Some("*")
+            || element
+                .max
+                .as_deref()
+                .unwrap_or("1")
+                .parse::<i32>()
+                .unwrap_or(1)
+                > 1;
+
+        // Check if field is optional based on minimum cardinality
+        let is_optional = element.min.unwrap_or(0) == 0;
+
+        let method_name = format!("has_{rust_field_name}");
+
+        let body = if is_array {
+            if is_optional {
+                // Optional array: Option<Vec<T>> -> check if Some and not empty
+                format!("self.{rust_field_name}.as_ref().is_some_and(|v| !v.is_empty())")
+            } else {
+                // Required array: Vec<T> -> check if not empty
+                format!("!self.{rust_field_name}.is_empty()")
+            }
+        } else {
+            // For single values, check if Some
+            format!("self.{rust_field_name}.is_some()")
+        };
+
+        Some(
+            RustTraitImplMethod::new(method_name)
+                .with_return_type("bool".to_string())
+                .with_body(body),
+        )
+    }
+
+    /// Generate existence checker method for choice-type fields.
+    /// Choice types like subject[x] expand to multiple fields (subject_codeable_concept, subject_reference).
+    /// The has_subject() method should return true if ANY variant is present.
+    fn generate_choice_type_existence_method(
+        &self,
+        choice_field: &str,
+        choice_element: &crate::fhir_types::ElementDefinition,
+    ) -> Option<RustTraitImplMethod> {
+        // Get the types from the element - choice types have multiple type entries
+        let types = choice_element.element_type.as_ref()?;
+
+        if types.is_empty() {
+            return None;
+        }
+
+        // Generate field names for each type variant
+        // e.g., for "subject" with types [CodeableConcept, Reference] -> subject_codeable_concept, subject_reference
+        let mut variants = Vec::new();
+
+        for type_def in types {
+            if let Some(type_name) = &type_def.code {
+                // Capitalize first letter of type name and prepend choice field
+                // e.g., "subject" + "CodeableConcept" -> "subjectCodeableConcept"
+                let variant_name = format!("{choice_field}{type_name}");
+                let rust_field_name = Naming::to_snake_case(&variant_name);
+                variants.push(rust_field_name);
+            }
+        }
+
+        if variants.is_empty() {
+            return None;
+        }
+
+        let method_name = format!("has_{}", Naming::to_snake_case(choice_field));
+
+        // Generate body: self.variant1.is_some() || self.variant2.is_some() || ...
+        let body = variants
+            .iter()
+            .map(|v| format!("self.{v}.is_some()"))
+            .collect::<Vec<_>>()
+            .join(" || ");
+
+        Some(
+            RustTraitImplMethod::new(method_name)
+                .with_return_type("bool".to_string())
+                .with_body(body),
+        )
+    }
     /// Get the inner type for slice return type
     fn get_inner_type_for_slice(&self, rust_type: &crate::rust_types::RustType) -> String {
         match rust_type {

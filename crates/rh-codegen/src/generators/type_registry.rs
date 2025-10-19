@@ -1169,7 +1169,7 @@ mod tests {
     #[test]
     fn test_nested_structure_import_paths() {
         TypeRegistry::clear();
-        
+
         // Test that registering nested structures works correctly
         TypeRegistry::register_type_classification_only(
             "ConditionStage",
