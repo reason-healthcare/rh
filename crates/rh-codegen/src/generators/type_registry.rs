@@ -510,7 +510,7 @@ impl TypeRegistry {
     fn detect_parent_resource(structure_def: &StructureDefinition) -> Option<String> {
         // Check if the base_definition indicates this is a BackboneElement
         if let Some(base_def) = &structure_def.base_definition {
-            if base_def.contains("BackboneElement") {
+            if base_def.contains("BackboneElement") && base_def.contains('#') {
                 // Extract parent resource from the URL or name
                 // E.g., "http://hl7.org/fhir/StructureDefinition/Task#Task.restriction" -> "Task"
                 if let Some(fragment) = base_def.split('#').nth(1) {
