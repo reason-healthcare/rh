@@ -8,7 +8,7 @@
 //!
 //! ```rust
 //! use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
-//! use serde_json::json;
+//! use rh_fhirpath::serde_json::json;
 //!
 //! let parser = FhirPathParser::new();
 //! let expression = parser.parse("Patient.name.given").unwrap();
@@ -38,3 +38,4 @@ pub use error::{FhirPathError, FhirPathResult};
 pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue};
 pub use extensions::ExtensionRegistry;
 pub use parser::FhirPathParser;
+pub use serde_json;
