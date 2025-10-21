@@ -399,6 +399,15 @@ impl<'a> FileGenerator<'a> {
 
         let mut formatted_code = prettyplease::unparse(&syntax_tree);
 
+        // Add Default implementation if needed (for non-profile resources)
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            let default_impl = self.generate_default_implementation(structure_def, rust_struct);
+            if !default_impl.is_empty() {
+                formatted_code.push_str("\n\n");
+                formatted_code.push_str(&default_impl);
+            }
+        }
+
         // Add trait implementations for FHIR resources
         if structure_def.kind == "resource" {
             formatted_code.push_str("\n\n");
@@ -772,7 +781,7 @@ impl<'a> FileGenerator<'a> {
             let impl_tokens = self.token_generator.generate_trait_impl(&trait_impl);
 
             // Parse and format the implementation
-            match syn::parse2(impl_tokens) {
+            match syn::parse2(impl_tokens.clone()) {
                 Ok(syntax_tree) => {
                     let formatted_impl = prettyplease::unparse(&syntax_tree);
                     implementations.push(formatted_impl);
@@ -782,6 +791,7 @@ impl<'a> FileGenerator<'a> {
                         "Warning: Failed to parse trait implementation for {}: {}",
                         trait_impl.struct_name, e
                     );
+                    eprintln!("Generated tokens:\n{impl_tokens}");
                 }
             }
         }
@@ -791,6 +801,123 @@ impl<'a> FileGenerator<'a> {
         } else {
             format!("// Trait implementations\n{}", implementations.join("\n\n"))
         }
+    }
+
+    /// Generate Default implementation for a struct if needed
+    fn generate_default_implementation(
+        &self,
+        structure_def: &StructureDefinition,
+        rust_struct: &RustStruct,
+    ) -> String {
+        // Skip if this is a profile - profiles already have Default derived
+        let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
+        if is_profile {
+            return String::new();
+        }
+
+        // Get the struct name
+        let struct_name = &rust_struct.name;
+
+        // Check if the struct has Default derive already
+        if rust_struct.derives.iter().any(|d| d == "Default") {
+            return String::new();
+        }
+
+        // Generate Default implementation using StructureDefinition as source of truth
+        let elements = if let Some(differential) = &structure_def.differential {
+            &differential.element
+        } else if let Some(snapshot) = &structure_def.snapshot {
+            &snapshot.element
+        } else {
+            // No elements - struct likely only has base field, but we still need Default
+            &Vec::new()
+        };
+
+        // Collect required fields (min >= 1)
+        let mut required_fields = Vec::new();
+        for element in elements {
+            let path_parts: Vec<&str> = element.path.split('.').collect();
+            if path_parts.len() == 2 && path_parts[0] == structure_def.name {
+                let field_name = path_parts[1];
+                if let Some(min) = element.min {
+                    if min >= 1 && !field_name.ends_with("[x]") {
+                        required_fields.push((field_name, element.clone()));
+                    }
+                }
+            }
+        }
+
+        // If no required fields, we could derive Default, but we'll generate it anyway for consistency
+        // Build the Default implementation
+        let mut field_inits = Vec::new();
+
+        // First, handle the base field if it exists (base fields are added by TokenGenerator, not in rust_struct.fields)
+        if let Some(base_def) = &rust_struct.base_definition {
+            // Extract the base type name (e.g., "DomainResource" from a URL or just "DomainResource")
+            let base_type = base_def.split('/').next_back().unwrap_or(base_def);
+            let base_type = crate::naming::Naming::to_rust_identifier(base_type);
+            let proper_base_type = if base_type
+                .chars()
+                .next()
+                .map(|c| c.is_lowercase())
+                .unwrap_or(false)
+            {
+                crate::naming::Naming::capitalize_first(&base_type)
+            } else {
+                base_type
+            };
+            field_inits.push(format!("base: {proper_base_type}::default()"));
+        }
+
+        // Then, process other fields from the struct
+        for field in &rust_struct.fields {
+            let field_name = &field.name;
+
+            // Check if this is a required field
+            let is_required = required_fields.iter().any(|(name, _)| {
+                let snake_name = crate::naming::Naming::to_snake_case(name);
+                snake_name == *field_name
+            });
+
+            if is_required {
+                // Generate appropriate default for required field based on type
+                let default_value = match field.field_type.to_string().as_str() {
+                    // Handle enums - use Default::default() if available
+                    s if s.contains("::") && !s.contains("Option") && !s.contains("Vec") => {
+                        format!("{s}::default()")
+                    }
+                    // Handle String
+                    "String" => "String::new()".to_string(),
+                    // Handle primitives
+                    "i32" | "i64" | "u32" | "u64" => "0".to_string(),
+                    "f32" | "f64" => "0.0".to_string(),
+                    "bool" => "false".to_string(),
+                    // Handle Vec
+                    s if s.starts_with("Vec<") => "Vec::new()".to_string(),
+                    // For unknown types, try Default::default()
+                    _ => format!("{}::default()", field.field_type.to_string()),
+                };
+                field_inits.push(format!("{field_name}: {default_value}"));
+            } else {
+                // Optional field - use Default
+                field_inits.push(format!("{field_name}: Default::default()"));
+            }
+        }
+
+        // Generate the impl block
+        let impl_block = format!(
+            r#"impl Default for {} {{
+    fn default() -> Self {{
+        Self {{
+            {}
+        }}
+    }}
+}}"#,
+            struct_name,
+            field_inits.join(",\n            ")
+        );
+
+        impl_block
     }
 
     /// Generate a complete crate structure with all necessary files and modules

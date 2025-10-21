@@ -63,7 +63,7 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
             let output_dir = match output {
                 Some(dir) => dir,
                 None => PackageLoader::get_default_packages_dir().map_err(|e| {
-                    anyhow::anyhow!("Failed to get default packages directory: {}", e)
+                    anyhow::anyhow!("Failed to get default packages directory: {e}")
                 })?,
             };
             download_package(

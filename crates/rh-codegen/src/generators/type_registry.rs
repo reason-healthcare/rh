@@ -1146,6 +1146,16 @@ mod tests {
         TypeRegistry::register_from_structure_definition(&task_intent);
         TypeRegistry::register_from_structure_definition(&publication_status);
 
+        // Additionally, explicitly register these as ValueSetEnums to override any conflicting registration
+        TypeRegistry::register_type_classification_only(
+            "TaskIntent",
+            TypeClassification::ValueSetEnum,
+        );
+        TypeRegistry::register_type_classification_only(
+            "PublicationStatus",
+            TypeClassification::ValueSetEnum,
+        );
+
         // Test that binding enums are correctly routed to bindings module
         let enum_types = vec!["TaskIntent", "PublicationStatus"];
 

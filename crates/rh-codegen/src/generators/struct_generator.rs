@@ -85,6 +85,14 @@ impl<'a> StructGenerator<'a> {
         if self.config.with_serde {
             derives.extend(vec!["Serialize".to_string(), "Deserialize".to_string()]);
         }
+
+        // Add Default derive for profiles since they only have a base field that implements Default
+        // Check using TypeRegistry to see if this is a profile
+        let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
+        if is_profile {
+            derives.push("Default".to_string());
+        }
+
         rust_struct.derives = derives;
 
         // Set the base definition for inheritance if present

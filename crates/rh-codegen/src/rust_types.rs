@@ -351,6 +351,8 @@ pub struct RustTraitMethod {
     pub doc_comment: Option<String>,
     pub is_default: bool,
     pub default_body: Option<String>,
+    /// The self parameter type: None (no self), Some("&self"), Some("&mut self"), Some("self")
+    pub self_param: Option<String>,
 }
 
 impl RustTraitMethod {
@@ -362,6 +364,7 @@ impl RustTraitMethod {
             doc_comment: None,
             is_default: false,
             default_body: None,
+            self_param: Some("&self".to_string()), // Default to &self for backward compatibility
         }
     }
 
@@ -393,6 +396,11 @@ impl RustTraitMethod {
 
     pub fn with_body(mut self, body: String) -> Self {
         self.default_body = Some(body);
+        self
+    }
+
+    pub fn with_self_param(mut self, self_param: Option<String>) -> Self {
+        self.self_param = self_param;
         self
     }
 }
@@ -445,7 +453,7 @@ impl RustTraitImpl {
 pub struct RustTraitImplMethod {
     /// The name of the method
     pub name: String,
-    /// The parameters of the method (excluding &self)
+    /// The parameters of the method (excluding self)
     pub params: Vec<RustMethodParam>,
     /// The return type of the method
     pub return_type: String,
@@ -453,6 +461,8 @@ pub struct RustTraitImplMethod {
     pub body: String,
     /// Documentation comment for the method
     pub doc_comment: Option<String>,
+    /// The self parameter type: None (no self), Some("&self"), Some("&mut self"), Some("self")
+    pub self_param: Option<String>,
 }
 
 impl RustTraitImplMethod {
@@ -463,6 +473,7 @@ impl RustTraitImplMethod {
             return_type: "()".to_string(),
             body: "todo!()".to_string(),
             doc_comment: None,
+            self_param: Some("&self".to_string()), // Default to &self for backward compatibility
         }
     }
 
@@ -487,6 +498,11 @@ impl RustTraitImplMethod {
 
     pub fn with_param(mut self, param: RustMethodParam) -> Self {
         self.params.push(param);
+        self
+    }
+
+    pub fn with_self_param(mut self, self_param: Option<String>) -> Self {
+        self.self_param = self_param;
         self
     }
 }

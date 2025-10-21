@@ -116,7 +116,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     // Run quality checks as a final step
     let quality_config = QualityConfig::default();
     run_quality_checks(params.output, &quality_config)
-        .map_err(|e| anyhow::anyhow!("Quality checks failed: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Quality checks failed: {e}"))?;
 
     Ok(())
 }

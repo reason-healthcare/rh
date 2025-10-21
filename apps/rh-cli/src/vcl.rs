@@ -117,14 +117,13 @@ fn parse_expression(expression: &str, format: &str) -> Result<()> {
             }
             _ => {
                 return Err(anyhow!(
-                    "Invalid format: {}. Use 'pretty', 'json', or 'debug'",
-                    format
+                    "Invalid format: {format}. Use 'pretty', 'json', or 'debug'"
                 ));
             }
         },
         Err(e) => {
             error!("❌ Failed to parse VCL expression: {}", e);
-            return Err(anyhow!("Parse error: {}", e));
+            return Err(anyhow!("Parse error: {e}"));
         }
     }
     Ok(())
@@ -137,8 +136,7 @@ fn translate_expression(
     default_system: Option<String>,
 ) -> Result<()> {
     // First parse the expression
-    let ast =
-        parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {}", e))?;
+    let ast = parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {e}"))?;
 
     // Then translate to FHIR
     // Use default system if provided - translator will handle mixed expressions correctly
@@ -149,7 +147,7 @@ fn translate_expression(
     };
     let fhir_compose = translator
         .translate(&ast)
-        .map_err(|e| anyhow!("Failed to translate to FHIR: {}", e))?;
+        .map_err(|e| anyhow!("Failed to translate to FHIR: {e}"))?;
 
     let output_content = match format {
         "json" => serde_json::to_string_pretty(&fhir_compose)?,
@@ -163,10 +161,7 @@ fn translate_expression(
             result
         }
         _ => {
-            return Err(anyhow!(
-                "Invalid format: {}. Use 'json' or 'pretty'",
-                format
-            ));
+            return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'"));
         }
     };
 
@@ -187,14 +182,13 @@ fn explain_expression(
     _default_system: Option<String>,
 ) -> Result<()> {
     // First parse the expression
-    let ast =
-        parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {}", e))?;
+    let ast = parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {e}"))?;
 
     // Create explainer and explain the expression
     let explainer = VclExplainer::new();
     let explanation_result = explainer
         .explain_with_text(&ast, expression)
-        .map_err(|e| anyhow!("Failed to explain VCL expression: {}", e))?;
+        .map_err(|e| anyhow!("Failed to explain VCL expression: {e}"))?;
 
     let output_content = match format {
         "json" => serde_json::to_string_pretty(&explanation_result)?,
@@ -225,10 +219,7 @@ fn explain_expression(
             result
         }
         _ => {
-            return Err(anyhow!(
-                "Invalid format: {}. Use 'json' or 'pretty'",
-                format
-            ));
+            return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'"));
         }
     };
 

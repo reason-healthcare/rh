@@ -298,10 +298,22 @@ impl TraitImplGenerator {
         let (base_access, _use_trait_methods) =
             self.get_resource_base_access(struct_name, structure_def);
 
-        // new method
+        // Transform base_access for use after cloning self into resource
+        // "self" -> "" (direct field access)
+        // "self.base" -> "base"
+        // "self.base.base" -> "base.base"
+        let resource_access = if base_access == "self" {
+            String::new()
+        } else {
+            base_access
+                .strip_prefix("self.")
+                .unwrap_or(&base_access)
+                .to_string()
+        }; // new method
         let new_method = RustTraitImplMethod::new("new".to_string())
             .with_return_type("Self".to_string())
-            .with_body("Self::default()".to_string());
+            .with_body("Self::default()".to_string())
+            .with_self_param(None); // No self parameter for constructor
         trait_impl.add_method(new_method);
 
         // set_id method
@@ -311,9 +323,14 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::String,
             ))
             .with_return_type("Self".to_string())
-            .with_body(format!(
-                "let mut resource = self.clone();\n        resource.{base_access}.id = Some(value);\n        resource"
-            ));
+            .with_body(if resource_access.is_empty() {
+                "let mut resource = self.clone();\n        resource.id = Some(value);\n        resource".to_string()
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{resource_access}.id = Some(value);\n        resource"
+                )
+            })
+            .with_self_param(Some("self".to_string())); // Take self by value
         trait_impl.add_method(set_id_method);
 
         // set_meta method
@@ -323,9 +340,14 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Custom("crate::datatypes::meta::Meta".to_string()),
             ))
             .with_return_type("Self".to_string())
-            .with_body(format!(
-                "let mut resource = self.clone();\n        resource.{base_access}.meta = Some(value);\n        resource"
-            ));
+            .with_body(if resource_access.is_empty() {
+                "let mut resource = self.clone();\n        resource.meta = Some(value);\n        resource".to_string()
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{resource_access}.meta = Some(value);\n        resource"
+                )
+            })
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_meta_method);
 
         // set_implicit_rules method
@@ -335,9 +357,14 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::String,
             ))
             .with_return_type("Self".to_string())
-            .with_body(format!(
-                "let mut resource = self.clone();\n        resource.{base_access}.implicit_rules = Some(value);\n        resource"
-            ));
+            .with_body(if resource_access.is_empty() {
+                "let mut resource = self.clone();\n        resource.implicit_rules = Some(value);\n        resource".to_string()
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{resource_access}.implicit_rules = Some(value);\n        resource"
+                )
+            })
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_implicit_rules_method);
 
         // set_language method
@@ -347,9 +374,14 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::String,
             ))
             .with_return_type("Self".to_string())
-            .with_body(format!(
-                "let mut resource = self.clone();\n        resource.{base_access}.language = Some(value);\n        resource"
-            ));
+            .with_body(if resource_access.is_empty() {
+                "let mut resource = self.clone();\n        resource.language = Some(value);\n        resource".to_string()
+            } else {
+                format!(
+                    "let mut resource = self.clone();\n        resource.{resource_access}.language = Some(value);\n        resource"
+                )
+            })
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_language_method);
 
         trait_impl
@@ -423,7 +455,8 @@ impl TraitImplGenerator {
         // new method
         let new_method = RustTraitImplMethod::new("new".to_string())
             .with_return_type("Self".to_string())
-            .with_body("Self::default()".to_string());
+            .with_body("Self::default()".to_string())
+            .with_self_param(None); // No self for constructor
         trait_impl.add_method(new_method);
 
         // set_text method
@@ -433,7 +466,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Custom("crate::datatypes::narrative::Narrative".to_string()),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.text = Some(value);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.text = Some(value);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_text_method);
 
         // set_contained method
@@ -443,7 +477,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::resources::resource::Resource".to_string()))),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.contained = Some(value);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.contained = Some(value);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_contained_method);
 
         // add_contained method
@@ -453,7 +488,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Custom("crate::resources::resource::Resource".to_string()),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.contained.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.contained.get_or_insert_with(Vec::new).push(item);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(add_contained_method);
 
         // set_extension method
@@ -463,7 +499,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()))),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.extension = Some(value);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.extension = Some(value);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_extension_method);
 
         // add_extension method
@@ -473,7 +510,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(add_extension_method);
 
         // set_modifier_extension method
@@ -483,7 +521,8 @@ impl TraitImplGenerator {
                 crate::rust_types::RustType::Vec(Box::new(crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()))),
             ))
             .with_return_type("Self".to_string())
-            .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension = Some(value);\n        resource".to_string());
+            .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension = Some(value);\n        resource".to_string())
+            .with_self_param(Some("self".to_string()));
         trait_impl.add_method(set_modifier_extension_method);
 
         // add_modifier_extension method
@@ -494,7 +533,8 @@ impl TraitImplGenerator {
                     crate::rust_types::RustType::Custom("crate::datatypes::extension::Extension".to_string()),
                 ))
                 .with_return_type("Self".to_string())
-                .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string());
+                .with_body("let mut resource = self.clone();\n        resource.base.modifier_extension.get_or_insert_with(Vec::new).push(item);\n        resource".to_string())
+                .with_self_param(Some("self".to_string()));
         trait_impl.add_method(add_modifier_extension_method);
 
         trait_impl
@@ -615,7 +655,8 @@ impl TraitImplGenerator {
         // new method
         let new_method = RustTraitImplMethod::new("new".to_string())
             .with_return_type("Self".to_string())
-            .with_body("Self::default()".to_string());
+            .with_body("Self::default()".to_string())
+            .with_self_param(None); // No self for constructor
         trait_impl.add_method(new_method);
 
         // Extract element definitions to generate trait methods
@@ -655,59 +696,82 @@ impl TraitImplGenerator {
 
         let mut trait_impl = RustTraitImpl::new(trait_name, struct_name.to_string());
 
-        // Add inherited methods from ResourceExistence
-        // has_id method
-        let has_id_method = RustTraitImplMethod::new("has_id".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.id.is_some()".to_string());
-        trait_impl.add_method(has_id_method);
+        // Check if this is a profile - profiles extend ResourceExistence and shouldn't redefine inherited methods
+        let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
 
-        // has_meta method
-        let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.meta.is_some()".to_string());
-        trait_impl.add_method(has_meta_method);
+        // Check if this resource extends DomainResource (vs extending Resource directly)
+        let extends_domain_resource = structure_def
+            .base_definition
+            .as_ref()
+            .map(|base| base.ends_with("/DomainResource"))
+            .unwrap_or(false);
 
-        // has_implicit_rules method
-        let has_implicit_rules_method = RustTraitImplMethod::new("has_implicit_rules".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.implicit_rules.is_some()".to_string());
-        trait_impl.add_method(has_implicit_rules_method);
-
-        // has_language method
-        let has_language_method = RustTraitImplMethod::new("has_language".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.language.is_some()".to_string());
-        trait_impl.add_method(has_language_method);
-
-        // Add inherited methods from DomainResourceExistence
-        // has_text method
-        let has_text_method = RustTraitImplMethod::new("has_text".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.text.is_some()".to_string());
-        trait_impl.add_method(has_text_method);
-
-        // has_contained method
-        let has_contained_method = RustTraitImplMethod::new("has_contained".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.contained.as_ref().is_some_and(|c| !c.is_empty())".to_string());
-        trait_impl.add_method(has_contained_method);
-
-        // has_extension method
-        let has_extension_method = RustTraitImplMethod::new("has_extension".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.extension.as_ref().is_some_and(|e| !e.is_empty())".to_string());
-        trait_impl.add_method(has_extension_method);
-
-        // has_modifier_extension method
-        let has_modifier_extension_method =
-            RustTraitImplMethod::new("has_modifier_extension".to_string())
+        // Only add inherited methods for non-profiles
+        // Profiles extend ResourceExistence or DomainResourceExistence, so they inherit these methods automatically
+        if !is_profile {
+            // Add inherited methods from ResourceExistence
+            // has_id method
+            let has_id_method = RustTraitImplMethod::new("has_id".to_string())
                 .with_return_type("bool".to_string())
-                .with_body(
-                    "self.base.modifier_extension.as_ref().is_some_and(|m| !m.is_empty())"
-                        .to_string(),
-                );
-        trait_impl.add_method(has_modifier_extension_method);
+                .with_body("self.base.base.id.is_some()".to_string());
+            trait_impl.add_method(has_id_method);
+
+            // has_meta method
+            let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
+                .with_return_type("bool".to_string())
+                .with_body("self.base.base.meta.is_some()".to_string());
+            trait_impl.add_method(has_meta_method);
+
+            // has_implicit_rules method
+            let has_implicit_rules_method =
+                RustTraitImplMethod::new("has_implicit_rules".to_string())
+                    .with_return_type("bool".to_string())
+                    .with_body("self.base.base.implicit_rules.is_some()".to_string());
+            trait_impl.add_method(has_implicit_rules_method);
+
+            // has_language method
+            let has_language_method = RustTraitImplMethod::new("has_language".to_string())
+                .with_return_type("bool".to_string())
+                .with_body("self.base.base.language.is_some()".to_string());
+            trait_impl.add_method(has_language_method);
+
+            // Only add DomainResource-specific methods if this resource extends DomainResource
+            // Resources like Binary, Bundle, Parameters extend Resource directly and don't have these fields
+            if extends_domain_resource {
+                // Add inherited methods from DomainResourceExistence
+                // has_text method
+                let has_text_method = RustTraitImplMethod::new("has_text".to_string())
+                    .with_return_type("bool".to_string())
+                    .with_body("self.base.text.is_some()".to_string());
+                trait_impl.add_method(has_text_method);
+
+                // has_contained method
+                let has_contained_method = RustTraitImplMethod::new("has_contained".to_string())
+                    .with_return_type("bool".to_string())
+                    .with_body(
+                        "self.base.contained.as_ref().is_some_and(|c| !c.is_empty())".to_string(),
+                    );
+                trait_impl.add_method(has_contained_method);
+
+                // has_extension method
+                let has_extension_method = RustTraitImplMethod::new("has_extension".to_string())
+                    .with_return_type("bool".to_string())
+                    .with_body(
+                        "self.base.extension.as_ref().is_some_and(|e| !e.is_empty())".to_string(),
+                    );
+                trait_impl.add_method(has_extension_method);
+
+                // has_modifier_extension method
+                let has_modifier_extension_method =
+                    RustTraitImplMethod::new("has_modifier_extension".to_string())
+                        .with_return_type("bool".to_string())
+                        .with_body(
+                            "self.base.modifier_extension.as_ref().is_some_and(|m| !m.is_empty())"
+                                .to_string(),
+                        );
+                trait_impl.add_method(has_modifier_extension_method);
+            }
+        }
 
         // Extract element definitions to generate trait methods for specific fields
         let elements = if let Some(differential) = &structure_def.differential {
@@ -750,11 +814,12 @@ impl TraitImplGenerator {
                 let field_name = path_parts[1];
                 // Skip choice type fields (they were handled above)
                 if !field_name.ends_with("[x]")
-                    && self.should_generate_accessor_impl(element, structure_def) {
-                        if let Some(method) = self.generate_field_existence_method(element) {
-                            trait_impl.add_method(method);
-                        }
+                    && self.should_generate_accessor_impl(element, structure_def)
+                {
+                    if let Some(method) = self.generate_field_existence_method(element) {
+                        trait_impl.add_method(method);
                     }
+                }
             }
         }
 
@@ -956,7 +1021,8 @@ impl TraitImplGenerator {
                         )),
                     ))
                     .with_return_type("Self".to_string())
-                    .with_body(set_body),
+                    .with_body(set_body)
+                    .with_self_param(Some("self".to_string())),
             );
 
             // add_xxx method
@@ -978,7 +1044,8 @@ impl TraitImplGenerator {
                         crate::rust_types::RustType::Custom(inner_type),
                     ))
                     .with_return_type("Self".to_string())
-                    .with_body(add_body),
+                    .with_body(add_body)
+                    .with_self_param(Some("self".to_string())),
             );
         } else {
             // For single values, generate set_xxx method only
@@ -999,7 +1066,8 @@ impl TraitImplGenerator {
                         crate::rust_types::RustType::Custom(inner_type),
                     ))
                     .with_return_type("Self".to_string())
-                    .with_body(body),
+                    .with_body(body)
+                    .with_self_param(Some("self".to_string())),
             );
         }
 
@@ -1037,9 +1105,12 @@ impl TraitImplGenerator {
                 // Required array: Vec<T> -> check if not empty
                 format!("!self.{rust_field_name}.is_empty()")
             }
-        } else {
-            // For single values, check if Some
+        } else if is_optional {
+            // Optional single value: Option<T> -> check if Some
             format!("self.{rust_field_name}.is_some()")
+        } else {
+            // Required single value: T -> always true (field always exists)
+            "true".to_string()
         };
 
         Some(
@@ -1064,6 +1135,9 @@ impl TraitImplGenerator {
             return None;
         }
 
+        // Check if the choice type itself is optional or required
+        let is_optional = choice_element.min.unwrap_or(0) == 0;
+
         // Generate field names for each type variant
         // e.g., for "subject" with types [CodeableConcept, Reference] -> subject_codeable_concept, subject_reference
         let mut variants = Vec::new();
@@ -1084,12 +1158,22 @@ impl TraitImplGenerator {
 
         let method_name = format!("has_{}", Naming::to_snake_case(choice_field));
 
-        // Generate body: self.variant1.is_some() || self.variant2.is_some() || ...
-        let body = variants
-            .iter()
-            .map(|v| format!("self.{v}.is_some()"))
-            .collect::<Vec<_>>()
-            .join(" || ");
+        // Generate body based on whether the choice type is optional or required
+        let body = if is_optional {
+            // Optional choice type: each variant is Option<T> -> check with .is_some()
+            variants
+                .iter()
+                .map(|v| format!("self.{v}.is_some()"))
+                .collect::<Vec<_>>()
+                .join(" || ")
+        } else {
+            // Required choice type: at least one variant must be present
+            // For required choice types, variants are not Option<T>, so existence is always true
+            // But we still need to check which variant is being used
+            // Since Rust doesn't allow multiple non-Option fields for a choice, this case shouldn't happen
+            // in well-formed generated code. However, if it does, we return true.
+            "true".to_string()
+        };
 
         Some(
             RustTraitImplMethod::new(method_name)

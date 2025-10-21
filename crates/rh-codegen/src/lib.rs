@@ -101,9 +101,9 @@ pub fn generate_organized_directories_with_traits<P: AsRef<std::path::Path>>(
     // First generate the main structure
     generator.generate_to_organized_directories(structure_def, &base_output_dir)?;
 
-    // Then generate trait if this is a resource
+    // Then generate trait if this is a resource or profile
     let category = generator.classify_fhir_structure_def(structure_def);
-    if category == FhirTypeCategory::Resource {
+    if category == FhirTypeCategory::Resource || category == FhirTypeCategory::Profile {
         generate_resource_trait_for_structure(generator, structure_def, &base_output_dir)?;
     }
 
@@ -131,7 +131,16 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     // }
 
     // 2. Generate the specific resource trait with choice type methods
-    let trait_filename = trait_filename_from_name(&structure_def.name);
+    // For profiles, use the struct name to ensure consistency with trait implementation references
+    // For regular resources, use the name field which may have spaces/special chars
+    let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
+    let trait_filename = if is_profile {
+        let struct_name = crate::naming::Naming::struct_name(structure_def);
+        crate::naming::Naming::to_snake_case(&struct_name)
+    } else {
+        crate::naming::Naming::trait_module_name(&structure_def.name)
+    };
+
     let specific_trait_file = traits_dir.join(format!("{trait_filename}.rs"));
     match generator.generate_trait_to_file(structure_def, &specific_trait_file) {
         Ok(()) => {
@@ -142,11 +151,6 @@ pub fn generate_resource_trait_for_structure<P: AsRef<std::path::Path>>(
     }
 
     Ok(())
-}
-
-/// Convert a FHIR structure definition name to a proper snake_case filename for traits
-fn trait_filename_from_name(name: &str) -> String {
-    crate::naming::Naming::trait_module_name(name)
 }
 
 /// Update the traits/mod.rs file to include the resource module

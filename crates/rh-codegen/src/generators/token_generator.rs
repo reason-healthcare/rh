@@ -253,12 +253,39 @@ impl TokenGenerator {
             quote! {}
         };
 
+        // Generate Default implementation using the first variant
+        let default_impl = if !rust_enum.variants.is_empty() {
+            let first_variant = &rust_enum.variants[0];
+            let first_variant_name = format_ident!("{}", first_variant.name);
+
+            // Check if the first variant has data (tuple variant)
+            let default_value = if first_variant.data.is_some() {
+                // For variants with data, we can't easily generate a Default
+                // Skip Default implementation for enums with data variants
+                quote! {}
+            } else {
+                // For unit variants, generate Default implementation
+                quote! {
+                    impl Default for #name {
+                        fn default() -> Self {
+                            Self::#first_variant_name
+                        }
+                    }
+                }
+            };
+            default_value
+        } else {
+            quote! {}
+        };
+
         quote! {
             #doc_attrs
             #[derive(#(#derive_idents),*)]
             #vis enum #name {
                 #(#variants),*
             }
+
+            #default_impl
         }
     }
 
@@ -475,14 +502,25 @@ impl TokenGenerator {
             })
             .collect();
 
-        // Add implicit &self parameter for trait methods
-        let self_param = quote! { &self };
-        let all_params = if params.is_empty() {
-            vec![self_param]
+        // Add self parameter if specified
+        let all_params = if let Some(self_param_str) = &method.self_param {
+            let self_param: TokenStream = match self_param_str.as_str() {
+                "self" => quote! { self },
+                "&self" => quote! { &self },
+                "&mut self" => quote! { &mut self },
+                "mut self" => quote! { mut self },
+                _ => self_param_str.parse().unwrap_or_else(|_| quote! { &self }),
+            };
+            if params.is_empty() {
+                vec![self_param]
+            } else {
+                let mut all = vec![self_param];
+                all.extend(params);
+                all
+            }
         } else {
-            let mut all = vec![self_param];
-            all.extend(params);
-            all
+            // No self parameter (e.g., for associated functions like new())
+            params
         };
 
         // Generate return type
@@ -646,7 +684,7 @@ impl TokenGenerator {
                     quote! { unimplemented!() }
                 });
 
-                // Generate parameters (excluding self which is implicit)
+                // Generate parameters (excluding self which may or may not be present)
                 let params: Vec<TokenStream> = method
                     .params
                     .iter()
@@ -662,8 +700,29 @@ impl TokenGenerator {
                     })
                     .collect();
 
+                // Build the complete parameter list with self if specified
+                let all_params = if let Some(self_param_str) = &method.self_param {
+                    let self_param: TokenStream = match self_param_str.as_str() {
+                        "self" => quote! { self },
+                        "&self" => quote! { &self },
+                        "&mut self" => quote! { &mut self },
+                        "mut self" => quote! { mut self },
+                        _ => self_param_str.parse().unwrap_or_else(|_| quote! { &self }),
+                    };
+                    if params.is_empty() {
+                        vec![self_param]
+                    } else {
+                        let mut all = vec![self_param];
+                        all.extend(params);
+                        all
+                    }
+                } else {
+                    // No self parameter (e.g., for associated functions like new())
+                    params
+                };
+
                 quote! {
-                    fn #method_name(&self #(, #params)*) -> #return_type {
+                    fn #method_name(#(#all_params),*) -> #return_type {
                         #body
                     }
                 }

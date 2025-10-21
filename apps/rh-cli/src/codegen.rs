@@ -107,7 +107,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
         PathBuf::from(dir)
     } else {
         PackageLoader::get_default_packages_dir()
-            .map_err(|e| anyhow::anyhow!("Failed to get default packages directory: {}", e))?
+            .map_err(|e| anyhow::anyhow!("Failed to get default packages directory: {e}"))?
     };
 
     // Download package if not already downloaded
@@ -152,7 +152,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     // This ensures correct import paths for enum types referenced by resources
     generator
         .pre_register_value_set_enums(effective_package_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to pre-register ValueSet enums: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to pre-register ValueSet enums: {e}"))?;
 
     info!("Pre-registered ValueSet enums for correct import path generation");
 
@@ -163,11 +163,11 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     let bindings_dir = output_path.join("src").join("bindings");
     generator
         .generate_enum_files(&bindings_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to generate enum files: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to generate enum files: {e}"))?;
 
     generator
         .generate_enums_mod_file(&bindings_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to generate enums mod file: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to generate enums mod file: {e}"))?;
 
     info!("Generated ValueSet enums to: {}", bindings_dir.display());
 
@@ -188,7 +188,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
 
     let (canonical, author, description) =
         parse_package_metadata(&effective_package_dir.join("package.json"))
-            .map_err(|e| anyhow::anyhow!("Failed to parse package metadata: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse package metadata: {e}"))?;
 
     info!("Using canonical URL from package.json: {}", canonical);
 

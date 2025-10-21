@@ -143,7 +143,8 @@ impl MutatorTraitGenerator {
             ))
             .with_parameter("value".to_string(), parameter_type)
             .with_return_type(RustType::Custom("Self".to_string()))
-            .with_body(format!("self.{field_name} = value; self"));
+            .with_body(format!("self.{field_name} = value; self"))
+            .with_self_param(Some("self".to_string())); // Take self by value for builder pattern
 
         rust_trait.add_method(method);
         Ok(())
@@ -164,7 +165,8 @@ impl MutatorTraitGenerator {
             ))
             .with_parameter("item".to_string(), rust_type.clone())
             .with_return_type(RustType::Custom("Self".to_string()))
-            .with_body(format!("self.{field_name}.push(item); self"));
+            .with_body(format!("self.{field_name}.push(item); self"))
+            .with_self_param(Some("self".to_string())); // Take self by value for builder pattern
 
         rust_trait.add_method(method);
         Ok(())
@@ -192,7 +194,8 @@ impl MutatorTraitGenerator {
             .with_doc(format!(
                 "Create a new {struct_name} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nlet resource = {struct_name}::new()\n    .set_status(\"active\".to_string())\n    .set_name(\"Example Name\".to_string());\n```"
             ))
-            .with_return_type(RustType::Custom("Self".to_string()));
+            .with_return_type(RustType::Custom("Self".to_string()))
+            .with_self_param(None); // No self parameter for constructor
 
         rust_trait.add_method(new_method);
 
