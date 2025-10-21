@@ -295,7 +295,7 @@ impl TraitImplGenerator {
         );
 
         // Determine the base access pattern based on the inheritance chain
-        let (base_access, _use_trait_methods) =
+        let (base_access, use_trait_methods) =
             self.get_resource_base_access(struct_name, structure_def);
 
         // Transform base_access for use after cloning self into resource
@@ -309,80 +309,130 @@ impl TraitImplGenerator {
                 .strip_prefix("self.")
                 .unwrap_or(&base_access)
                 .to_string()
-        }; // new method
+        };
+
+        // new method
         let new_method = RustTraitImplMethod::new("new".to_string())
             .with_return_type("Self".to_string())
             .with_body("Self::default()".to_string())
             .with_self_param(None); // No self parameter for constructor
         trait_impl.add_method(new_method);
 
-        // set_id method
-        let set_id_method = RustTraitImplMethod::new("set_id".to_string())
-            .with_param(crate::rust_types::RustMethodParam::new(
-                "value".to_string(),
-                crate::rust_types::RustType::String,
-            ))
-            .with_return_type("Self".to_string())
-            .with_body(if resource_access.is_empty() {
-                "let mut resource = self.clone();\n        resource.id = Some(value);\n        resource".to_string()
-            } else {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{resource_access}.id = Some(value);\n        resource"
-                )
-            })
-            .with_self_param(Some("self".to_string())); // Take self by value
-        trait_impl.add_method(set_id_method);
+        // For profiles that extend other profiles, delegate through trait methods
+        // For core resources, access fields directly
+        if use_trait_methods {
+            // set_id method - delegate to base's set_id
+            let set_id_method = RustTraitImplMethod::new("set_id".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body("let mut resource = self.clone();\n        resource.base = resource.base.set_id(value);\n        resource".to_string())
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_id_method);
 
-        // set_meta method
-        let set_meta_method = RustTraitImplMethod::new("set_meta".to_string())
-            .with_param(crate::rust_types::RustMethodParam::new(
-                "value".to_string(),
-                crate::rust_types::RustType::Custom("crate::datatypes::meta::Meta".to_string()),
-            ))
-            .with_return_type("Self".to_string())
-            .with_body(if resource_access.is_empty() {
-                "let mut resource = self.clone();\n        resource.meta = Some(value);\n        resource".to_string()
-            } else {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{resource_access}.meta = Some(value);\n        resource"
-                )
-            })
-            .with_self_param(Some("self".to_string()));
-        trait_impl.add_method(set_meta_method);
+            // set_meta method - delegate to base's set_meta
+            let set_meta_method = RustTraitImplMethod::new("set_meta".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::Custom("crate::datatypes::meta::Meta".to_string()),
+                ))
+                .with_return_type("Self".to_string())
+                .with_body("let mut resource = self.clone();\n        resource.base = resource.base.set_meta(value);\n        resource".to_string())
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_meta_method);
 
-        // set_implicit_rules method
-        let set_implicit_rules_method = RustTraitImplMethod::new("set_implicit_rules".to_string())
-            .with_param(crate::rust_types::RustMethodParam::new(
-                "value".to_string(),
-                crate::rust_types::RustType::String,
-            ))
-            .with_return_type("Self".to_string())
-            .with_body(if resource_access.is_empty() {
-                "let mut resource = self.clone();\n        resource.implicit_rules = Some(value);\n        resource".to_string()
-            } else {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{resource_access}.implicit_rules = Some(value);\n        resource"
-                )
-            })
-            .with_self_param(Some("self".to_string()));
-        trait_impl.add_method(set_implicit_rules_method);
+            // set_implicit_rules method - delegate to base's set_implicit_rules
+            let set_implicit_rules_method = RustTraitImplMethod::new("set_implicit_rules".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body("let mut resource = self.clone();\n        resource.base = resource.base.set_implicit_rules(value);\n        resource".to_string())
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_implicit_rules_method);
 
-        // set_language method
-        let set_language_method = RustTraitImplMethod::new("set_language".to_string())
-            .with_param(crate::rust_types::RustMethodParam::new(
-                "value".to_string(),
-                crate::rust_types::RustType::String,
-            ))
-            .with_return_type("Self".to_string())
-            .with_body(if resource_access.is_empty() {
-                "let mut resource = self.clone();\n        resource.language = Some(value);\n        resource".to_string()
-            } else {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{resource_access}.language = Some(value);\n        resource"
-                )
-            })
-            .with_self_param(Some("self".to_string()));
-        trait_impl.add_method(set_language_method);
+            // set_language method - delegate to base's set_language
+            let set_language_method = RustTraitImplMethod::new("set_language".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body("let mut resource = self.clone();\n        resource.base = resource.base.set_language(value);\n        resource".to_string())
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_language_method);
+        } else {
+            // set_id method - direct field access
+            let set_id_method = RustTraitImplMethod::new("set_id".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body(if resource_access.is_empty() {
+                    "let mut resource = self.clone();\n        resource.id = Some(value);\n        resource".to_string()
+                } else {
+                    format!(
+                        "let mut resource = self.clone();\n        resource.{resource_access}.id = Some(value);\n        resource"
+                    )
+                })
+                .with_self_param(Some("self".to_string())); // Take self by value
+            trait_impl.add_method(set_id_method);
+
+            // set_meta method - direct field access
+            let set_meta_method = RustTraitImplMethod::new("set_meta".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::Custom("crate::datatypes::meta::Meta".to_string()),
+                ))
+                .with_return_type("Self".to_string())
+                .with_body(if resource_access.is_empty() {
+                    "let mut resource = self.clone();\n        resource.meta = Some(value);\n        resource".to_string()
+                } else {
+                    format!(
+                        "let mut resource = self.clone();\n        resource.{resource_access}.meta = Some(value);\n        resource"
+                    )
+                })
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_meta_method);
+
+            // set_implicit_rules method - direct field access
+            let set_implicit_rules_method = RustTraitImplMethod::new("set_implicit_rules".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body(if resource_access.is_empty() {
+                    "let mut resource = self.clone();\n        resource.implicit_rules = Some(value);\n        resource".to_string()
+                } else {
+                    format!(
+                        "let mut resource = self.clone();\n        resource.{resource_access}.implicit_rules = Some(value);\n        resource"
+                    )
+                })
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_implicit_rules_method);
+
+            // set_language method - direct field access
+            let set_language_method = RustTraitImplMethod::new("set_language".to_string())
+                .with_param(crate::rust_types::RustMethodParam::new(
+                    "value".to_string(),
+                    crate::rust_types::RustType::String,
+                ))
+                .with_return_type("Self".to_string())
+                .with_body(if resource_access.is_empty() {
+                    "let mut resource = self.clone();\n        resource.language = Some(value);\n        resource".to_string()
+                } else {
+                    format!(
+                        "let mut resource = self.clone();\n        resource.{resource_access}.language = Some(value);\n        resource"
+                    )
+                })
+                .with_self_param(Some("self".to_string()));
+            trait_impl.add_method(set_language_method);
+        }
 
         trait_impl
     }
@@ -706,33 +756,60 @@ impl TraitImplGenerator {
             .map(|base| base.ends_with("/DomainResource"))
             .unwrap_or(false);
 
+        // Check if this resource extends Resource directly (not DomainResource)
+        let extends_resource_directly = structure_def
+            .base_definition
+            .as_ref()
+            .map(|base| base.ends_with("/Resource") && !base.ends_with("/DomainResource"))
+            .unwrap_or(false);
+
         // Only add inherited methods for non-profiles
         // Profiles extend ResourceExistence or DomainResourceExistence, so they inherit these methods automatically
         if !is_profile {
+            // Determine the correct base access path based on inheritance
+            let (id_access, meta_access, implicit_rules_access, language_access) =
+                if extends_resource_directly {
+                    // Binary, Bundle, Parameters extend Resource directly -> self.base.id
+                    (
+                        "self.base.id.is_some()".to_string(),
+                        "self.base.meta.is_some()".to_string(),
+                        "self.base.implicit_rules.is_some()".to_string(),
+                        "self.base.language.is_some()".to_string(),
+                    )
+                } else {
+                    // Most resources extend DomainResource -> self.base.base.id
+                    (
+                        "self.base.base.id.is_some()".to_string(),
+                        "self.base.base.meta.is_some()".to_string(),
+                        "self.base.base.implicit_rules.is_some()".to_string(),
+                        "self.base.base.language.is_some()".to_string(),
+                    )
+                };
+
             // Add inherited methods from ResourceExistence
             // has_id method
             let has_id_method = RustTraitImplMethod::new("has_id".to_string())
                 .with_return_type("bool".to_string())
-                .with_body("self.base.base.id.is_some()".to_string());
+                .with_body(id_access);
             trait_impl.add_method(has_id_method);
 
             // has_meta method
             let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
                 .with_return_type("bool".to_string())
-                .with_body("self.base.base.meta.is_some()".to_string());
+                .with_body(meta_access);
             trait_impl.add_method(has_meta_method);
 
             // has_implicit_rules method
             let has_implicit_rules_method =
                 RustTraitImplMethod::new("has_implicit_rules".to_string())
                     .with_return_type("bool".to_string())
-                    .with_body("self.base.base.implicit_rules.is_some()".to_string());
+                    .with_body(implicit_rules_access);
             trait_impl.add_method(has_implicit_rules_method);
 
             // has_language method
             let has_language_method = RustTraitImplMethod::new("has_language".to_string())
                 .with_return_type("bool".to_string())
-                .with_body("self.base.base.language.is_some()".to_string());
+                .with_body(language_access);
             trait_impl.add_method(has_language_method);
 
             // Only add DomainResource-specific methods if this resource extends DomainResource
@@ -1141,15 +1218,19 @@ impl TraitImplGenerator {
         let is_optional = choice_element.min.unwrap_or(0) == 0;
 
         // Generate field names for each type variant
-        // e.g., for "subject" with types [CodeableConcept, Reference] -> subject_codeable_concept, subject_reference
+        // Use the same naming approach as field_generator.rs to ensure consistency
+        // e.g., for "occurrence" with type "DateTime" -> "occurrence_date_time"
         let mut variants = Vec::new();
 
         for type_def in types {
-            if let Some(type_name) = &type_def.code {
-                // Capitalize first letter of type name and prepend choice field
-                // e.g., "subject" + "CodeableConcept" -> "subjectCodeableConcept"
-                let variant_name = format!("{choice_field}{type_name}");
-                let rust_field_name = Naming::to_snake_case(&variant_name);
+            if let Some(type_code) = &type_def.code {
+                // Use type_suffix to convert type code to snake_case with underscores
+                // e.g., "DateTime" -> "date_time"
+                let type_suffix = Naming::type_suffix(type_code);
+                // Combine base field name with type suffix
+                // e.g., "occurrence" + "_" + "date_time" -> "occurrence_date_time"
+                let field_name = format!("{choice_field}_{type_suffix}");
+                let rust_field_name = Naming::field_name(&field_name);
                 variants.push(rust_field_name);
             }
         }
