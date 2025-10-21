@@ -96,12 +96,8 @@ impl MutatorTraitGenerator {
                 .unwrap_or(1)
                 > 1;
 
-        let Some(element_type) = element.element_type.as_ref().and_then(|t| t.first()) else {
-            return Ok(());
-        };
-
-        let rust_type =
-            TypeUtilities::map_fhir_type_to_rust(element_type, &field_name, &element.path)?;
+        // Use binding-aware type mapping
+        let rust_type = self.get_field_rust_type(element, &field_name)?;
 
         // Always add set_ method
         self.add_set_method(
@@ -200,5 +196,55 @@ impl MutatorTraitGenerator {
         rust_trait.add_method(new_method);
 
         Ok(())
+    }
+
+    /// Get the Rust type for a field element, considering ValueSet bindings.
+    /// For code fields with required bindings, returns the enum type name.
+    /// Otherwise, delegates to TypeUtilities for standard type mapping.
+    fn get_field_rust_type(
+        &self,
+        element: &ElementDefinition,
+        field_name: &str,
+    ) -> CodegenResult<RustType> {
+        let Some(element_type) = element.element_type.as_ref().and_then(|t| t.first()) else {
+            return Ok(RustType::String);
+        };
+
+        let Some(code) = &element_type.code else {
+            return Ok(RustType::String);
+        };
+
+        // Check if this is a code type with a required binding - if so, use enum type
+        if code == "code" {
+            if let Some(binding) = &element.binding {
+                if binding.strength == "required" {
+                    if let Some(value_set_url) = &binding.value_set {
+                        // Extract enum name from ValueSet URL
+                        // E.g., http://hl7.org/fhir/ValueSet/account-status|4.0.1 -> AccountStatus
+                        if let Some(enum_name) =
+                            self.extract_enum_name_from_value_set(value_set_url)
+                        {
+                            return Ok(RustType::Custom(enum_name));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Otherwise, use the standard type mapping
+        TypeUtilities::map_fhir_type_to_rust(element_type, field_name, &element.path)
+    }
+
+    /// Extract enum type name from a ValueSet URL
+    /// E.g., "http://hl7.org/fhir/ValueSet/account-status" -> "AccountStatus"
+    fn extract_enum_name_from_value_set(&self, url: &str) -> Option<String> {
+        // Remove version suffix if present (e.g., |4.0.1)
+        let url_without_version = url.split('|').next().unwrap_or(url);
+
+        // Extract the last part after the last /
+        let value_set_name = url_without_version.split('/').last()?;
+
+        // Convert to valid Rust identifier (handles hyphens, spaces, etc.)
+        Some(crate::naming::Naming::to_rust_identifier(value_set_name))
     }
 }

@@ -957,8 +957,6 @@ impl TraitImplGenerator {
         &self,
         element: &crate::fhir_types::ElementDefinition,
     ) -> Option<Vec<RustTraitImplMethod>> {
-        use crate::generators::TypeUtilities;
-
         let path_parts: Vec<&str> = element.path.split('.').collect();
         let field_name = path_parts.last()?.to_string();
         let rust_field_name = crate::naming::Naming::field_name(&field_name);
@@ -975,13 +973,8 @@ impl TraitImplGenerator {
         // Check if field is optional based on minimum cardinality
         let is_optional = element.min.unwrap_or(0) == 0;
 
-        // Get the FHIR types for this element
-        let element_type = element.element_type.as_ref()?.first()?;
-
-        // Use TypeUtilities::map_fhir_type_to_rust for consistency with trait generator
-        // This returns String for enum/code types, which matches the trait signature
-        let rust_type =
-            TypeUtilities::map_fhir_type_to_rust(element_type, &field_name, &element.path).ok()?;
+        // Use binding-aware type mapping to get the correct Rust type
+        let rust_type = self.get_field_rust_type(element, &field_name).ok()?;
 
         let mut methods = Vec::new();
 
@@ -1055,9 +1048,18 @@ impl TraitImplGenerator {
                 _ => rust_type.to_string(),
             };
 
-            let body = format!(
-                "let mut resource = self.clone();\n        resource.{rust_field_name} = Some(value);\n        resource"
-            );
+            // Generate the setter body based on field optionality
+            let body = if is_optional {
+                // Optional field: wrap value in Some()
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name} = Some(value);\n        resource"
+                )
+            } else {
+                // Required field: assign value directly without Some()
+                format!(
+                    "let mut resource = self.clone();\n        resource.{rust_field_name} = value;\n        resource"
+                )
+            };
 
             methods.push(
                 RustTraitImplMethod::new(method_name)
@@ -1431,6 +1433,58 @@ impl TraitImplGenerator {
                 rust_type
             }
         }
+    }
+
+    /// Get the Rust type for a field element, considering ValueSet bindings.
+    /// For code fields with required bindings, returns the enum type name.
+    /// Otherwise, delegates to TypeUtilities for standard type mapping.
+    fn get_field_rust_type(
+        &self,
+        element: &crate::fhir_types::ElementDefinition,
+        field_name: &str,
+    ) -> CodegenResult<crate::rust_types::RustType> {
+        use crate::rust_types::RustType;
+
+        let Some(element_type) = element.element_type.as_ref().and_then(|t| t.first()) else {
+            return Ok(RustType::String);
+        };
+
+        let Some(code) = &element_type.code else {
+            return Ok(RustType::String);
+        };
+
+        // Check if this is a code type with a required binding - if so, use enum type
+        if code == "code" {
+            if let Some(binding) = &element.binding {
+                if binding.strength == "required" {
+                    if let Some(value_set_url) = &binding.value_set {
+                        // Extract enum name from ValueSet URL
+                        if let Some(enum_name) =
+                            self.extract_enum_name_from_value_set(value_set_url)
+                        {
+                            return Ok(RustType::Custom(enum_name));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Otherwise, use the standard type mapping
+        use crate::generators::TypeUtilities;
+        TypeUtilities::map_fhir_type_to_rust(element_type, field_name, &element.path)
+    }
+
+    /// Extract enum type name from a ValueSet URL
+    /// E.g., "http://hl7.org/fhir/ValueSet/account-status" -> "AccountStatus"
+    fn extract_enum_name_from_value_set(&self, url: &str) -> Option<String> {
+        // Remove version suffix if present (e.g., |4.0.1)
+        let url_without_version = url.split('|').next().unwrap_or(url);
+
+        // Extract the last part after the last /
+        let value_set_name = url_without_version.split('/').last()?;
+
+        // Convert to valid Rust identifier (handles hyphens, spaces, etc.)
+        Some(crate::naming::Naming::to_rust_identifier(value_set_name))
     }
 }
 
