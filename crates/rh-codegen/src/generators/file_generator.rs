@@ -406,6 +406,16 @@ impl<'a> FileGenerator<'a> {
                 formatted_code.push_str("\n\n");
                 formatted_code.push_str(&default_impl);
             }
+
+            // Also generate Default implementations for nested structs
+            for nested in nested_structs {
+                let nested_default_impl =
+                    self.generate_nested_struct_default_implementation(structure_def, nested);
+                if !nested_default_impl.is_empty() {
+                    formatted_code.push_str("\n\n");
+                    formatted_code.push_str(&nested_default_impl);
+                }
+            }
         }
 
         // Add trait implementations for FHIR resources
@@ -871,6 +881,134 @@ impl<'a> FileGenerator<'a> {
 
         // Then, process other fields from the struct
         for field in &rust_struct.fields {
+            let field_name = &field.name;
+
+            // Check if this is a required field
+            let is_required = required_fields.iter().any(|(name, _)| {
+                let snake_name = crate::naming::Naming::to_snake_case(name);
+                snake_name == *field_name
+            });
+
+            if is_required {
+                // Generate appropriate default for required field based on type
+                let default_value = match field.field_type.to_string().as_str() {
+                    // Handle enums - use Default::default() if available
+                    s if s.contains("::") && !s.contains("Option") && !s.contains("Vec") => {
+                        format!("{s}::default()")
+                    }
+                    // Handle String
+                    "String" => "String::new()".to_string(),
+                    // Handle primitives
+                    "i32" | "i64" | "u32" | "u64" => "0".to_string(),
+                    "f32" | "f64" => "0.0".to_string(),
+                    "bool" => "false".to_string(),
+                    // Handle Vec
+                    s if s.starts_with("Vec<") => "Vec::new()".to_string(),
+                    // For unknown types, try Default::default()
+                    _ => format!("{}::default()", field.field_type.to_string()),
+                };
+                field_inits.push(format!("{field_name}: {default_value}"));
+            } else {
+                // Optional field - use Default
+                field_inits.push(format!("{field_name}: Default::default()"));
+            }
+        }
+
+        // Generate the impl block
+        let impl_block = format!(
+            r#"impl Default for {} {{
+    fn default() -> Self {{
+        Self {{
+            {}
+        }}
+    }}
+}}"#,
+            struct_name,
+            field_inits.join(",\n            ")
+        );
+
+        impl_block
+    }
+
+    /// Generate Default implementation for a nested struct
+    /// Nested structs are BackboneElements within a parent resource, so we need to
+    /// extract the relevant elements from the parent StructureDefinition using the
+    /// nested struct's base path (e.g., "AuditEvent.source" for AuditEventSource)
+    fn generate_nested_struct_default_implementation(
+        &self,
+        parent_structure_def: &StructureDefinition,
+        nested_struct: &RustStruct,
+    ) -> String {
+        // Get the struct name
+        let struct_name = &nested_struct.name;
+
+        // Check if the struct has Default derive already
+        if nested_struct.derives.iter().any(|d| d == "Default") {
+            return String::new();
+        }
+
+        // Determine the base path for this nested struct from the parent StructureDefinition
+        // Example: "AuditEventSource" -> "AuditEvent.source"
+        let parent_name = &parent_structure_def.name;
+        let nested_field_name = if struct_name.starts_with(parent_name) {
+            let suffix = &struct_name[parent_name.len()..];
+            crate::naming::Naming::to_snake_case(suffix)
+        } else {
+            // Fallback - should not happen in practice
+            return String::new();
+        };
+
+        let base_path = format!("{parent_name}.{nested_field_name}");
+
+        // Get elements from the parent StructureDefinition
+        let elements = if let Some(differential) = &parent_structure_def.differential {
+            &differential.element
+        } else if let Some(snapshot) = &parent_structure_def.snapshot {
+            &snapshot.element
+        } else {
+            &Vec::new()
+        };
+
+        // Collect required fields for this nested struct (elements under base_path with min >= 1)
+        let mut required_fields = Vec::new();
+        for element in elements {
+            // Match elements like "AuditEvent.source.observer"
+            if element.path.starts_with(&format!("{base_path}.")) {
+                let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+                // Only direct fields (no dots in remaining path)
+                if !field_path.contains('.') && !field_path.ends_with("[x]") {
+                    if let Some(min) = element.min {
+                        if min >= 1 {
+                            required_fields.push((field_path, element.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Build the Default implementation
+        let mut field_inits = Vec::new();
+
+        // First, handle the base field (use the actual base type from the struct definition)
+        if let Some(base_def) = &nested_struct.base_definition {
+            // Extract the base type name (e.g., "BackboneElement", "Element", "Extension")
+            let base_type = base_def.split('/').next_back().unwrap_or(base_def);
+            let base_type = crate::naming::Naming::to_rust_identifier(base_type);
+            let proper_base_type = if base_type
+                .chars()
+                .next()
+                .map(|c| c.is_lowercase())
+                .unwrap_or(false)
+            {
+                crate::naming::Naming::capitalize_first(&base_type)
+            } else {
+                base_type
+            };
+            field_inits.push(format!("base: {proper_base_type}::default()"));
+        }
+
+        // Then, process other fields from the struct
+        for field in &nested_struct.fields {
             let field_name = &field.name;
 
             // Check if this is a required field

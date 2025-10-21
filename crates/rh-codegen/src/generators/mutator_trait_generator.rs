@@ -242,7 +242,7 @@ impl MutatorTraitGenerator {
         let url_without_version = url.split('|').next().unwrap_or(url);
 
         // Extract the last part after the last /
-        let value_set_name = url_without_version.split('/').last()?;
+        let value_set_name = url_without_version.split('/').next_back()?;
 
         // Use the same logic as ValueSetManager::generate_enum_name for consistency
         // Split on hyphens and capitalize each part to get PascalCase

@@ -259,7 +259,7 @@ impl TokenGenerator {
             let first_variant_name = format_ident!("{}", first_variant.name);
 
             // Check if the first variant has data (tuple variant)
-            let default_value = if first_variant.data.is_some() {
+            if first_variant.data.is_some() {
                 // For variants with data, we can't easily generate a Default
                 // Skip Default implementation for enums with data variants
                 quote! {}
@@ -272,8 +272,7 @@ impl TokenGenerator {
                         }
                     }
                 }
-            };
-            default_value
+            }
         } else {
             quote! {}
         };
