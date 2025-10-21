@@ -244,7 +244,25 @@ impl MutatorTraitGenerator {
         // Extract the last part after the last /
         let value_set_name = url_without_version.split('/').last()?;
 
-        // Convert to valid Rust identifier (handles hyphens, spaces, etc.)
-        Some(crate::naming::Naming::to_rust_identifier(value_set_name))
+        // Use the same logic as ValueSetManager::generate_enum_name for consistency
+        // Split on hyphens and capitalize each part to get PascalCase
+        let name = value_set_name
+            .split(&['-', '.'][..])
+            .filter(|part| !part.is_empty())
+            .map(|part| {
+                let mut chars = part.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            })
+            .collect::<String>();
+
+        // Ensure it's a valid Rust identifier
+        if name.chars().next().unwrap_or('0').is_ascii_digit() {
+            Some(format!("ValueSet{name}"))
+        } else {
+            Some(name)
+        }
     }
 }
