@@ -28,7 +28,7 @@
 //!
 //! ```rust
 //! use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext};
-//! use serde_json::json;
+//! use rh_fhirpath::serde_json::json;
 //!
 //! let parser = FhirPathParser::new();
 //! let evaluator = FhirPathEvaluator::new();

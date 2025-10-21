@@ -406,8 +406,12 @@ mod tests {
     use std::fs;
 
     /// Helper function to create a temporary directory for testing
-    fn create_temp_test_dir() -> PathBuf {
-        let temp_dir = std::env::temp_dir().join(format!("rh_loader_test_{}", std::process::id()));
+    fn create_temp_test_dir(test_name: &str) -> PathBuf {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "rh_loader_test_{}_{}",
+            std::process::id(),
+            test_name
+        ));
         fs::create_dir_all(&temp_dir).expect("Failed to create temp test directory");
         temp_dir
     }
@@ -536,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_package_directory_with_cleanup() {
-        let temp_dir = create_temp_test_dir();
+        let temp_dir = create_temp_test_dir("package_directory_cleanup");
 
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
@@ -586,7 +590,7 @@ mod tests {
 
     #[test]
     fn test_extract_tarball_cleanup() {
-        let temp_dir = create_temp_test_dir();
+        let temp_dir = create_temp_test_dir("extract_tarball_cleanup");
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
 

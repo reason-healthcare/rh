@@ -98,7 +98,7 @@ impl<'a> FieldGenerator<'a> {
                     // Map the type
                     let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
                     let field_type = type_mapper.map_fhir_type_with_binding(
-                        &[element_type.clone()],
+                        std::slice::from_ref(element_type),
                         element.binding.as_ref(),
                         is_array,
                     );

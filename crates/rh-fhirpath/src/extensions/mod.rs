@@ -15,7 +15,7 @@
 //!
 //! ```rust
 //! use rh_fhirpath::{FhirPathEvaluator, FhirPathParser, EvaluationContext};
-//! use serde_json::json;
+//! use rh_fhirpath::serde_json::json;
 //!
 //! let parser = FhirPathParser::new();
 //! let evaluator = FhirPathEvaluator::new(); // Extensions auto-registered
