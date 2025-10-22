@@ -24,6 +24,7 @@ pub mod file_io_manager;
 pub mod import_manager;
 // #[cfg(test)]
 // pub mod import_manager_integration_test;
+pub mod metadata_generator;
 pub mod mutator_trait_generator;
 pub mod naming_manager;
 pub mod nested_struct_generator;
@@ -47,6 +48,7 @@ pub use field_generator::FieldGenerator;
 pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
 pub use import_manager::ImportManager;
+pub use metadata_generator::{build_metadata_registry, generate_metadata_code};
 pub use mutator_trait_generator::MutatorTraitGenerator;
 pub use naming_manager::NamingManager;
 pub use nested_struct_generator::NestedStructGenerator;

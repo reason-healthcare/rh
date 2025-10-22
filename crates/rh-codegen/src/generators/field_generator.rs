@@ -49,10 +49,12 @@ impl<'a> FieldGenerator<'a> {
             return self.create_choice_type_fields(element);
         }
 
-        // Check if this is a primitive type that should use macro calls
+        // Check if this is a primitive type that should use explicit field generation
         if self.config.use_macro_calls {
-            if let Some(macro_field) = self.create_primitive_field_macro_call(element)? {
-                return Ok(vec![macro_field]);
+            if let Some(primitive_field) = self.create_primitive_field_macro_call(element)? {
+                // Also create the companion extension field
+                let companion_field = self.create_companion_extension_field(field_name)?;
+                return Ok(vec![primitive_field, companion_field]);
             }
         }
 
@@ -503,8 +505,8 @@ impl<'a> FieldGenerator<'a> {
         "Element".to_string()
     }
 
-    /// Generate macro calls for primitive fields instead of direct field generation
-    /// This creates a RustField with a macro call that can be embedded in generated code
+    /// Generate explicit primitive fields with companion extension fields
+    /// This creates two RustField instances: the primitive field and its companion Element field
     pub fn create_primitive_field_macro_call(
         &mut self,
         element: &ElementDefinition,
@@ -526,35 +528,43 @@ impl<'a> FieldGenerator<'a> {
                         // Determine if this field is optional (min = 0)
                         let is_optional = element.min.unwrap_or(0) == 0;
 
-                        // Generate appropriate macro call based on primitive type
-                        let macro_name = match type_code.as_str() {
-                            "string" => "primitive_string",
-                            "boolean" => "primitive_boolean",
-                            "integer" => "primitive_integer",
-                            "decimal" => "primitive_decimal",
-                            "dateTime" => "primitive_datetime",
-                            "date" => "primitive_date",
-                            "time" => "primitive_time",
-                            "uri" => "primitive_uri",
-                            "canonical" => "primitive_canonical",
-                            "base64Binary" => "primitive_base64binary",
-                            "instant" => "primitive_instant",
-                            "positiveInt" => "primitive_positiveint",
-                            "unsignedInt" => "primitive_unsignedint",
-                            "id" => "primitive_id",
-                            "oid" => "primitive_oid",
-                            "uuid" => "primitive_uuid",
-                            "code" => "primitive_code",
-                            "markdown" => "primitive_markdown",
-                            "url" => "primitive_url",
+                        // Map FHIR primitive type to Rust type
+                        let rust_type_name = match type_code.as_str() {
+                            "string" => "StringType",
+                            "boolean" => "BooleanType",
+                            "integer" => "IntegerType",
+                            "decimal" => "DecimalType",
+                            "dateTime" => "DateTimeType",
+                            "date" => "DateType",
+                            "time" => "TimeType",
+                            "uri" => "UriType",
+                            "canonical" => "CanonicalType",
+                            "base64Binary" => "Base64BinaryType",
+                            "instant" => "InstantType",
+                            "positiveInt" => "PositiveIntType",
+                            "unsignedInt" => "UnsignedIntType",
+                            "id" => "IdType",
+                            "oid" => "OidType",
+                            "uuid" => "UuidType",
+                            "code" => "CodeType",
+                            "markdown" => "MarkdownType",
+                            "url" => "UrlType",
                             _ => return Ok(None), // Unknown primitive type
                         };
 
-                        // Create the macro call
-                        let macro_call = format!("{macro_name}!(\"{field_name}\", {is_optional})");
+                        // Create the main primitive field with proper type
+                        let rust_type =
+                            RustType::Custom(format!("crate::primitives::{rust_type_name}"));
+                        let mut field = RustField::new(field_name.to_string(), rust_type);
 
-                        // Create a RustField with the macro call
-                        let field = RustField::new_macro_call(macro_call);
+                        if is_optional {
+                            field = field.optional();
+                        }
+
+                        field = field.with_doc(format!("Field: {field_name}"));
+
+                        // Note: The companion extension field will be handled separately by the caller
+                        // to maintain clean separation of concerns
 
                         return Ok(Some(field));
                     }
@@ -563,6 +573,22 @@ impl<'a> FieldGenerator<'a> {
         }
 
         Ok(None)
+    }
+
+    /// Generate the companion extension field for a primitive field
+    /// Returns a RustField representing the _fieldname extension companion
+    pub fn create_companion_extension_field(&self, field_name: &str) -> CodegenResult<RustField> {
+        let companion_name = format!("_{field_name}");
+        let element_type = RustType::Custom("crate::datatypes::element::Element".to_string());
+
+        let mut companion_field = RustField::new(companion_name.clone(), element_type);
+        companion_field = companion_field.optional(); // Companion fields are always optional
+        companion_field = companion_field.with_doc(format!(
+            "Extension element for the '{field_name}' primitive field. Contains metadata and extensions."
+        ));
+        companion_field = companion_field.with_serde_rename(companion_name);
+
+        Ok(companion_field)
     }
 }
 
@@ -777,14 +803,26 @@ mod tests {
         assert!(result.is_ok());
 
         let fields = result.unwrap();
-        assert_eq!(fields.len(), 1); // Should return one macro call field
+        assert_eq!(fields.len(), 2); // Should return primitive field + companion extension field
 
-        let macro_field = &fields[0];
-        assert_eq!(macro_field.name, "active");
-        assert!(macro_field.macro_call.is_some());
+        // Check the main primitive field
+        let primitive_field = &fields[0];
+        assert_eq!(primitive_field.name, "active");
+        assert!(primitive_field.is_optional);
+        assert!(primitive_field
+            .field_type
+            .to_string()
+            .contains("BooleanType"));
+        assert_eq!(
+            primitive_field.doc_comment,
+            Some("Field: active".to_string())
+        );
 
-        let macro_call = macro_field.macro_call.as_ref().unwrap();
-        assert_eq!(macro_call, "primitive_boolean!(\"active\", true)");
+        // Check the companion extension field
+        let companion_field = &fields[1];
+        assert_eq!(companion_field.name, "_active");
+        assert!(companion_field.is_optional); // Companion fields are always optional
+        assert!(companion_field.field_type.to_string().contains("Element"));
     }
 
     #[test]

@@ -877,8 +877,10 @@ impl TypeRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_valueset_enum_registration() {
         TypeRegistry::clear();
 
@@ -914,6 +916,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_nested_structure_registration() {
         TypeRegistry::clear();
 
@@ -954,6 +957,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_resource_registration() {
         TypeRegistry::clear();
 
@@ -1065,6 +1069,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_is_binding_enum() {
         TypeRegistry::clear();
 
@@ -1103,6 +1108,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_enum_import_paths() {
         TypeRegistry::clear();
 
@@ -1177,6 +1183,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_nested_structure_import_paths() {
         TypeRegistry::clear();
 
@@ -1207,6 +1214,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_naming_collision_valueset_vs_nested_structure() {
         // Test the collision scenario: ValueSet registered first, then nested structure
         TypeRegistry::clear();
@@ -1249,6 +1257,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_priority_nested_structure_over_valueset() {
         // Test that once a nested structure is registered, ValueSets cannot overwrite it
         TypeRegistry::clear();

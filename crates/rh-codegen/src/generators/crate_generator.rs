@@ -138,7 +138,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-paste = "1.0"
+phf = {{ version = "0.11", features = ["macros"] }}
 
 [lib]
 name = "{crate_name}"
@@ -184,6 +184,7 @@ fn generate_lib_rs_idiomatic() -> Result<String> {
 #![allow(clippy::derivable_impls)]
 
 pub mod macros;
+pub mod metadata;
 pub mod primitives;
 pub mod datatypes;
 pub mod extensions;
@@ -378,7 +379,7 @@ fn generate_readme_md(
     content.push_str(&format!("**Generated FHIR Types for {package}**\n\n"));
     content.push_str(&format!("This crate contains automatically generated Rust types for FHIR (Fast Healthcare Interoperability Resources) based on the `{package}` package.\n\n"));
 
-    content.push_str("## ⚠️ Important Notice\n\n");
+    content.push_str("## Important Notice\n\n");
     content
         .push_str("**This crate was automatically generated using the RH codegen CLI tool.**\n\n");
     content.push_str(&format!(
@@ -386,7 +387,7 @@ fn generate_readme_md(
     ));
     content.push_str(&format!("- **Generation timestamp**: {}\n\n", Local::now()));
 
-    content.push_str("## 📦 Package Information\n\n");
+    content.push_str("## Package Information\n\n");
 
     content.push_str(&format!("* **Package Name** {package}\n"));
     content.push_str(&format!("* **Package Author** {author}\n"));
@@ -394,46 +395,59 @@ fn generate_readme_md(
     content.push_str(&format!("* **Canonical URL** `{canonical_url}`\n\n"));
 
     content.push_str(&format!(
-        "**📊 There are {} structs, {} enums, with a total of {} types**\n\n",
+        "**Statistics: {} structs, {} enums, {} total types**\n\n",
         stats.num_structs, stats.num_enums, stats.total_types
     ));
 
-    content.push_str(&format!("## 📚 Description\n\n{description}"));
+    content.push_str(&format!("## Description\n\n{description}"));
 
     content.push_str("\n\n");
 
-    content.push_str("## 🚀 Usage\n\n");
+    content.push_str("## Features\n\n");
+    content.push_str(
+        "- **Complete FHIR type definitions** - All resources, datatypes, and primitives\n",
+    );
+    content.push_str(
+        "- **Serde serialization** - Built-in JSON serialization/deserialization support\n",
+    );
+    content.push_str(
+        "- **Type metadata** - Compile-time metadata for field types and path resolution\n",
+    );
+    content.push_str(
+        "- **Idiomatic Rust** - Clean, organized module structure with proper naming conventions\n",
+    );
+    content.push_str("- **Zero-cost abstractions** - PHF (perfect hash function) maps for O(1) metadata lookups\n\n");
+
+    content.push_str("## Usage\n\n");
     content.push_str("Add this crate to your `Cargo.toml`:\n\n");
     content.push_str("```toml\n");
     content.push_str("[dependencies]\n");
     content.push_str(&format!("{crate_name} = \"0.1.0\"\n"));
     content.push_str("```\n\n");
 
-    content.push_str("Example usage:\n\n");
-    content.push_str("### Deserializing from JSON\n\n");
+    content.push_str("### Deserializing FHIR Resources\n\n");
     content.push_str("```rust\n");
-    content.push_str(&format!("use {crate_name}::*;\n"));
+    content.push_str(&format!("use {crate_name}::resources::patient::Patient;\n"));
     content.push_str("use serde_json;\n\n");
-    content.push_str("// All types include serde serialization support\n");
     content.push_str("let json_data = r#\"{\\\"resourceType\\\": \\\"Patient\\\", \\\"id\\\": \\\"example\\\"}\"#;\n");
     content.push_str("let patient: Patient = serde_json::from_str(json_data)?;\n\n");
     content.push_str("println!(\"Patient ID: {}\", patient.id.unwrap_or_default());\n");
     content.push_str("```\n\n");
 
-    content.push_str("### Creating resources procedurally\n\n");
+    content.push_str("### Creating Resources Programmatically\n\n");
     content.push_str("```rust\n");
-    content.push_str(&format!("use {crate_name}::*;\n"));
-    content.push_str("use serde_json;\n\n");
-    content.push_str("// Create a new Patient resource\n");
+    content.push_str(&format!("use {crate_name}::resources::patient::Patient;\n"));
+    content.push_str(&format!(
+        "use {crate_name}::datatypes::human_name::HumanName;\n"
+    ));
+    content.push_str(&format!(
+        "use {crate_name}::bindings::administrative_gender::AdministrativeGender;\n"
+    ));
+    content.push_str(&format!(
+        "use {crate_name}::primitives::date::DateType;\n\n"
+    ));
     content.push_str("let patient = Patient {\n");
     content.push_str("    id: Some(\"patient-123\".to_string()),\n");
-    content.push_str("    meta: None,\n");
-    content.push_str("    implicit_rules: None,\n");
-    content.push_str("    language: None,\n");
-    content.push_str("    text: None,\n");
-    content.push_str("    contained: vec![],\n");
-    content.push_str("    extension: vec![],\n");
-    content.push_str("    modifier_extension: vec![],\n");
     content.push_str("    active: Some(true),\n");
     content.push_str("    name: vec![HumanName {\n");
     content.push_str("        family: Some(\"Doe\".to_string()),\n");
@@ -441,44 +455,77 @@ fn generate_readme_md(
     content.push_str("        ..Default::default()\n");
     content.push_str("    }],\n");
     content.push_str("    gender: Some(AdministrativeGender::Male),\n");
+    content.push_str("    birth_date: Some(\"1990-01-15\".to_string()),\n");
     content.push_str("    ..Default::default()\n");
-    content.push_str("};\n\n");
-    content.push_str("// Serialize to JSON\n");
-    content.push_str("let json = serde_json::to_string_pretty(&patient)?;\n");
-    content.push_str("println!(\"Patient JSON: {}\", json);\n");
+    content.push_str("};\n");
     content.push_str("```\n\n");
 
-    content.push_str("## 🏗️ Structure\n\n");
-    content.push_str(
-        "This crate uses an idiomatic Rust module structure organized by FHIR type category:\n\n",
-    );
-    content.push_str(
-        "- **`src/resources/`** - FHIR resource types (Patient, Observation, Bundle, etc.)\n",
-    );
-    content.push_str(
-        "- **`src/profiles/`** - FHIR profiles derived from core resources (vital signs, BMI, etc.)\n",
-    );
-    content.push_str(
-        "- **`src/datatypes/`** - FHIR data types (Narrative, Extension, Coding, etc.)\n",
-    );
-    content.push_str(
-        "- **`src/primitives/`** - FHIR primitive types (string, boolean, dateTime, etc.)\n",
-    );
-    content.push_str("- **`src/traits/`** - Common trait interfaces for FHIR functionality\n");
-    content.push_str("- **`src/lib.rs`** - Main library file that re-exports all modules\n\n");
+    content.push_str("### Using Type Metadata\n\n");
+    content.push_str("This crate includes compile-time metadata for all FHIR types, enabling runtime type introspection and path resolution:\n\n");
+    content.push_str("```rust\n");
+    content.push_str(&format!("use {crate_name}::metadata::{{resolve_path, get_field_info, FhirFieldType, FhirPrimitiveType}};\n\n"));
+    content.push_str("// Resolve nested paths to their FHIR types\n");
+    content.push_str("if let Some(field_type) = resolve_path(\"Patient.birthDate\") {\n");
+    content.push_str("    match field_type {\n");
+    content.push_str("        FhirFieldType::Primitive(FhirPrimitiveType::Date) => {\n");
+    content.push_str("            println!(\"birthDate is a FHIR date type\");\n");
+    content.push_str("        }\n");
+    content.push_str("        _ => {}\n");
+    content.push_str("    }\n");
+    content.push_str("}\n\n");
+    content.push_str("// Resolve complex nested paths\n");
+    content.push_str("if let Some(field_type) = resolve_path(\"Patient.name.given\") {\n");
+    content.push_str("    match field_type {\n");
+    content.push_str("        FhirFieldType::Primitive(FhirPrimitiveType::String) => {\n");
+    content.push_str("            println!(\"name.given is a string array\");\n");
+    content.push_str("        }\n");
+    content.push_str("        _ => {}\n");
+    content.push_str("    }\n");
+    content.push_str("}\n\n");
+    content.push_str("// Get field information directly\n");
+    content.push_str("if let Some(field_info) = get_field_info(\"Patient\", \"active\") {\n");
+    content.push_str("    println!(\"Min cardinality: {}\", field_info.min);\n");
+    content.push_str("    println!(\"Max cardinality: {:?}\", field_info.max);\n");
+    content.push_str("    println!(\"Is choice type: {}\", field_info.is_choice_type);\n");
+    content.push_str("}\n");
+    content.push_str("```\n\n");
 
-    content.push_str("## 🔄 Regeneration\n\n");
-    content.push_str("To regenerate this crate with updated FHIR definitions, run:\n\n");
+    content.push_str("The metadata system enables:\n");
+    content.push_str("- **Path resolution** - Navigate nested paths like `Patient.name.given`\n");
+    content.push_str("- **Type introspection** - Determine field types at runtime\n");
+    content.push_str("- **Cardinality information** - Min/max occurrence constraints\n");
+    content.push_str("- **Choice type detection** - Identify polymorphic fields\n");
+    content
+        .push_str("- **Zero runtime cost** - All lookups use compile-time perfect hash maps\n\n");
+
+    content.push_str("## Structure\n\n");
+    content.push_str("This crate organizes FHIR types into logical modules:\n\n");
+    content.push_str("- **resources/** - All FHIR resources (Patient, Observation, etc.)\n");
+    content.push_str(
+        "- **datatypes/** - Complex and primitive datatypes (HumanName, Address, etc.)\n",
+    );
+    content.push_str("- **bindings/** - ValueSet enumerations (AdministrativeGender, etc.)\n");
+    content.push_str("- **primitives/** - Base primitive types (DateType, DateTimeType, etc.)\n");
+    content.push_str("- **metadata.rs** - Type metadata and path resolution functions\n\n");
+
+    content.push_str("## Regenerating This Crate\n\n");
+    content.push_str("To regenerate this crate with updated FHIR definitions:\n\n");
     content.push_str("```bash\n");
     content.push_str(command_invoked);
     content.push_str("\n```\n\n");
 
-    content.push_str("## ⚖️ License\n\n");
+    content.push_str("## License\n\n");
     content.push_str("This generated crate is provided under MIT OR Apache-2.0 license.\n\n");
 
-    content.push_str("## 🔗 Related Links\n\n");
+    content.push_str("## Related Links\n\n");
     content.push_str("- [FHIR Specification](https://hl7.org/fhir/)\n");
-    content.push_str("- [RH Codegen Tool](https://github.com/reason-healthcare/rh)\n");
+    content.push_str("- [FHIR Package Registry](https://packages.fhir.org/)\n");
+    content.push_str("- [RH Project](https://github.com/reasonhealth/rh)\n\n");
+    content.push_str("---\n\n");
+    content.push_str(&format!(
+        "*Generated by RH codegen tool at {}*\n",
+        Local::now()
+    ));
 
     content
 }

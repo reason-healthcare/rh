@@ -29,6 +29,7 @@ pub mod fhir_types;
 mod generator;
 pub mod generators;
 pub mod macros;
+pub mod metadata;
 pub mod naming;
 pub mod quality;
 mod rust_types;

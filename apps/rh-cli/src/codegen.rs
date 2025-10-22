@@ -278,11 +278,11 @@ fn process_json_files_organized(
         "Phase 2: Generating code for {} StructureDefinitions...",
         structure_definitions.len()
     );
-    for structure_def in structure_definitions {
+    for structure_def in &structure_definitions {
         // Use the library function to generate structure and traits
         match rh_codegen::generate_organized_directories_with_traits(
             generator,
-            &structure_def,
+            structure_def,
             output_dir,
         ) {
             Ok(()) => {
@@ -306,6 +306,15 @@ fn process_json_files_organized(
         .map_err(|e| anyhow::anyhow!("Failed to generate enums mod file: {e}"))?;
 
     info!("Generated ValueSet enums to: {}", bindings_dir.display());
+
+    // Phase 2.5: Generate metadata module
+    info!("Generating metadata module...");
+    let metadata_registry = rh_codegen::generators::build_metadata_registry(&structure_definitions);
+    let metadata_code = rh_codegen::generators::generate_metadata_code(&metadata_registry);
+    let metadata_path = output_dir.join("src").join("metadata.rs");
+    fs::write(&metadata_path, metadata_code)
+        .map_err(|e| anyhow::anyhow!("Failed to write metadata.rs: {e}"))?;
+    info!("Generated metadata module to: {}", metadata_path.display());
 
     // Phase 3: Finalize crate by regenerating all mod.rs files
     info!("Phase 3: Finalizing crate structure...");

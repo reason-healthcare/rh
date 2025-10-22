@@ -1155,7 +1155,6 @@ edition = "2021"
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-paste = "1.0"
 "#
         );
 
@@ -1262,6 +1261,6 @@ mod tests {
         assert!(cargo_content.contains("name = \"test-crate\""));
         assert!(cargo_content.contains("edition = \"2021\""));
         assert!(cargo_content.contains("serde"));
-        assert!(cargo_content.contains("paste"));
+        assert!(!cargo_content.contains("paste")); // paste should NOT be in dependencies
     }
 }
