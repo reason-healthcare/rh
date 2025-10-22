@@ -14,7 +14,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | Status | Component | Description |
 |--------|-----------|-------------|
 | 🚀 | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
-| 🔜 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
+| 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
 | 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
 | 🔜 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
@@ -23,6 +23,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | 🔜 | rh-cql  | CQL tools |
+| 🚀 | [rh-fhir-r4](crates/rh-fhir-r4/README.md)  | **Generated** R4 FHIR for Rust |
 
 ## Quick Start
 

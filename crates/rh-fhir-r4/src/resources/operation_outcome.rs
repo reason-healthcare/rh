@@ -1,0 +1,297 @@
+use crate::bindings::issue_severity::IssueSeverity;
+use crate::bindings::issue_type::IssueType;
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::element::Element;
+use crate::primitives::string::StringType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// OperationOutcome
+///
+/// A collection of error, warning, or information messages that result from a system action.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/OperationOutcome
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: OperationOutcome
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationOutcome {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// A single issue associated with the action
+    pub issue: Vec<OperationOutcomeIssue>,
+}
+/// OperationOutcome nested structure for the 'issue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationOutcomeIssue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// fatal | error | warning | information
+    pub severity: IssueSeverity,
+    /// Extension element for the 'severity' primitive field. Contains metadata and extensions.
+    pub _severity: Option<Element>,
+    /// Error or warning code
+    pub code: IssueType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Additional details about the error
+    ///
+    /// Binding: example (A code that provides details as the exact issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/operation-outcome
+    pub details: Option<CodeableConcept>,
+    /// Additional diagnostic information about the issue
+    pub diagnostics: Option<StringType>,
+    /// Extension element for the 'diagnostics' primitive field. Contains metadata and extensions.
+    pub _diagnostics: Option<Element>,
+    /// Deprecated: Path of element(s) related to issue
+    pub location: Option<Vec<StringType>>,
+    /// Extension element for the 'location' primitive field. Contains metadata and extensions.
+    pub _location: Option<Element>,
+    /// FHIRPath of element(s) related to issue
+    pub expression: Option<Vec<StringType>>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+}
+
+impl Default for OperationOutcome {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            issue: Vec::new(),
+        }
+    }
+}
+
+impl Default for OperationOutcomeIssue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            severity: IssueSeverity::default(),
+            _severity: Default::default(),
+            code: IssueType::default(),
+            _code: Default::default(),
+            details: Default::default(),
+            diagnostics: Default::default(),
+            _diagnostics: Default::default(),
+            location: Default::default(),
+            _location: Default::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+        }
+    }
+}
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for OperationOutcome {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for OperationOutcome {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for OperationOutcome {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for OperationOutcome {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for OperationOutcome {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for OperationOutcome {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::operation_outcome::OperationOutcomeAccessors for OperationOutcome {
+    fn issue(&self) -> &[OperationOutcomeIssue] {
+        &self.issue
+    }
+}
+
+impl crate::traits::operation_outcome::OperationOutcomeMutators for OperationOutcome {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_issue(self, value: Vec<OperationOutcomeIssue>) -> Self {
+        let mut resource = self.clone();
+        resource.issue = value;
+        resource
+    }
+    fn add_issue(self, item: OperationOutcomeIssue) -> Self {
+        let mut resource = self.clone();
+        resource.issue.push(item);
+        resource
+    }
+}
+
+impl crate::traits::operation_outcome::OperationOutcomeExistence for OperationOutcome {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_issue(&self) -> bool {
+        !self.issue.is_empty()
+    }
+}

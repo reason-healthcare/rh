@@ -1,0 +1,260 @@
+use crate::bindings::codesystem_content_mode::CodesystemContentMode;
+use crate::bindings::codesystem_hierarchy_meaning::CodesystemHierarchyMeaning;
+use crate::bindings::publication_status::PublicationStatus;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::contact_detail::ContactDetail;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::usage_context::UsageContext;
+use crate::primitives::boolean::BooleanType;
+use crate::primitives::date_time::DateTimeType;
+use crate::primitives::string::StringType;
+use crate::primitives::unsigned_int::UnsignedIntType;
+use crate::resources::code_system::CodeSystemConcept;
+use crate::resources::code_system::CodeSystemFilter;
+use crate::resources::code_system::CodeSystemProperty;
+use crate::traits::domain_resource::DomainResourceAccessors;
+use crate::traits::domain_resource::DomainResourceExistence;
+use crate::traits::domain_resource::DomainResourceMutators;
+/// CodeSystem Trait
+///
+/// This trait provides common functionality and access patterns for this FHIR resource type.
+///
+/// The CodeSystem resource is used to declare the existence of and describe a code system or code system supplement and its key properties, and optionally define a part or all of its content.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/CodeSystem
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: CodeSystem
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+pub trait CodeSystemAccessors: DomainResourceAccessors {
+    /// Returns a reference to the url field.
+    fn url(&self) -> Option<StringType>;
+    /// Returns a reference to the identifier field.
+    fn identifier(&self) -> &[Identifier];
+    /// Returns a reference to the version field.
+    fn version(&self) -> Option<StringType>;
+    /// Returns a reference to the name field.
+    fn name(&self) -> Option<StringType>;
+    /// Returns a reference to the title field.
+    fn title(&self) -> Option<StringType>;
+    /// Returns a reference to the status field.
+    fn status(&self) -> PublicationStatus;
+    /// Returns a reference to the experimental field.
+    fn experimental(&self) -> Option<BooleanType>;
+    /// Returns a reference to the date field.
+    fn date(&self) -> Option<DateTimeType>;
+    /// Returns a reference to the publisher field.
+    fn publisher(&self) -> Option<StringType>;
+    /// Returns a reference to the contact field.
+    fn contact(&self) -> &[ContactDetail];
+    /// Returns a reference to the description field.
+    fn description(&self) -> Option<StringType>;
+    /// Returns a reference to the useContext field.
+    fn use_context(&self) -> &[UsageContext];
+    /// Returns a reference to the jurisdiction field.
+    fn jurisdiction(&self) -> &[CodeableConcept];
+    /// Returns a reference to the purpose field.
+    fn purpose(&self) -> Option<StringType>;
+    /// Returns a reference to the copyright field.
+    fn copyright(&self) -> Option<StringType>;
+    /// Returns a reference to the caseSensitive field.
+    fn case_sensitive(&self) -> Option<BooleanType>;
+    /// Returns a reference to the valueSet field.
+    fn value_set(&self) -> Option<StringType>;
+    /// Returns a reference to the hierarchyMeaning field.
+    fn hierarchy_meaning(&self) -> Option<CodesystemHierarchyMeaning>;
+    /// Returns a reference to the compositional field.
+    fn compositional(&self) -> Option<BooleanType>;
+    /// Returns a reference to the versionNeeded field.
+    fn version_needed(&self) -> Option<BooleanType>;
+    /// Returns a reference to the content field.
+    fn content(&self) -> CodesystemContentMode;
+    /// Returns a reference to the supplements field.
+    fn supplements(&self) -> Option<StringType>;
+    /// Returns a reference to the count field.
+    fn count(&self) -> Option<UnsignedIntType>;
+    /// Returns a reference to the filter field.
+    fn filter(&self) -> &[CodeSystemFilter];
+    /// Returns a reference to the property field.
+    fn property(&self) -> &[CodeSystemProperty];
+    /// Returns a reference to the concept field.
+    fn concept(&self) -> &[CodeSystemConcept];
+}
+/// CodeSystem Trait
+///
+/// This trait provides common functionality and access patterns for this FHIR resource type.
+///
+/// The CodeSystem resource is used to declare the existence of and describe a code system or code system supplement and its key properties, and optionally define a part or all of its content.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/CodeSystem
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: CodeSystem
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+pub trait CodeSystemMutators: DomainResourceMutators {
+    /// Create a new CodeSystem with default/empty values.
+    ///
+    /// All optional fields will be set to None and array fields will be empty vectors.
+    /// Supports method chaining with set_xxx() and add_xxx() methods.
+    ///
+    /// # Example
+    /// ```rust
+    /// use hl7_fhir_r4_core::resources::code_system::CodeSystem;
+    /// use hl7_fhir_r4_core::traits::code_system::CodeSystemMutators;
+    ///
+    /// let resource = CodeSystem::new();
+    /// // Can be used with method chaining:
+    /// // resource.set_field(value).add_item(item);
+    /// ```
+    fn new() -> Self;
+    /// Sets the url field and returns self for chaining.
+    fn set_url(self, value: String) -> Self;
+    /// Sets the identifier field and returns self for chaining.
+    fn set_identifier(self, value: Vec<Identifier>) -> Self;
+    /// Adds an item to the identifier field and returns self for chaining.
+    fn add_identifier(self, item: Identifier) -> Self;
+    /// Sets the version field and returns self for chaining.
+    fn set_version(self, value: String) -> Self;
+    /// Sets the name field and returns self for chaining.
+    fn set_name(self, value: String) -> Self;
+    /// Sets the title field and returns self for chaining.
+    fn set_title(self, value: String) -> Self;
+    /// Sets the status field and returns self for chaining.
+    fn set_status(self, value: PublicationStatus) -> Self;
+    /// Sets the experimental field and returns self for chaining.
+    fn set_experimental(self, value: bool) -> Self;
+    /// Sets the date field and returns self for chaining.
+    fn set_date(self, value: String) -> Self;
+    /// Sets the publisher field and returns self for chaining.
+    fn set_publisher(self, value: String) -> Self;
+    /// Sets the contact field and returns self for chaining.
+    fn set_contact(self, value: Vec<ContactDetail>) -> Self;
+    /// Adds an item to the contact field and returns self for chaining.
+    fn add_contact(self, item: ContactDetail) -> Self;
+    /// Sets the description field and returns self for chaining.
+    fn set_description(self, value: String) -> Self;
+    /// Sets the useContext field and returns self for chaining.
+    fn set_use_context(self, value: Vec<UsageContext>) -> Self;
+    /// Adds an item to the useContext field and returns self for chaining.
+    fn add_use_context(self, item: UsageContext) -> Self;
+    /// Sets the jurisdiction field and returns self for chaining.
+    fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self;
+    /// Adds an item to the jurisdiction field and returns self for chaining.
+    fn add_jurisdiction(self, item: CodeableConcept) -> Self;
+    /// Sets the purpose field and returns self for chaining.
+    fn set_purpose(self, value: String) -> Self;
+    /// Sets the copyright field and returns self for chaining.
+    fn set_copyright(self, value: String) -> Self;
+    /// Sets the caseSensitive field and returns self for chaining.
+    fn set_case_sensitive(self, value: bool) -> Self;
+    /// Sets the valueSet field and returns self for chaining.
+    fn set_value_set(self, value: String) -> Self;
+    /// Sets the hierarchyMeaning field and returns self for chaining.
+    fn set_hierarchy_meaning(self, value: CodesystemHierarchyMeaning) -> Self;
+    /// Sets the compositional field and returns self for chaining.
+    fn set_compositional(self, value: bool) -> Self;
+    /// Sets the versionNeeded field and returns self for chaining.
+    fn set_version_needed(self, value: bool) -> Self;
+    /// Sets the content field and returns self for chaining.
+    fn set_content(self, value: CodesystemContentMode) -> Self;
+    /// Sets the supplements field and returns self for chaining.
+    fn set_supplements(self, value: String) -> Self;
+    /// Sets the count field and returns self for chaining.
+    fn set_count(self, value: i32) -> Self;
+    /// Sets the filter field and returns self for chaining.
+    fn set_filter(self, value: Vec<CodeSystemFilter>) -> Self;
+    /// Adds an item to the filter field and returns self for chaining.
+    fn add_filter(self, item: CodeSystemFilter) -> Self;
+    /// Sets the property field and returns self for chaining.
+    fn set_property(self, value: Vec<CodeSystemProperty>) -> Self;
+    /// Adds an item to the property field and returns self for chaining.
+    fn add_property(self, item: CodeSystemProperty) -> Self;
+    /// Sets the concept field and returns self for chaining.
+    fn set_concept(self, value: Vec<CodeSystemConcept>) -> Self;
+    /// Adds an item to the concept field and returns self for chaining.
+    fn add_concept(self, item: CodeSystemConcept) -> Self;
+}
+/// CodeSystem Existence Checks
+///
+/// This trait provides existence check methods for this FHIR resource type.
+///
+/// The CodeSystem resource is used to declare the existence of and describe a code system or code system supplement and its key properties, and optionally define a part or all of its content.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/CodeSystem
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: CodeSystem
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+pub trait CodeSystemExistence: DomainResourceExistence {
+    /// Returns true if the id field is present (Some).
+    fn has_id(&self) -> bool;
+    /// Returns true if the meta field is present (Some).
+    fn has_meta(&self) -> bool;
+    /// Returns true if the implicit_rules field is present (Some).
+    fn has_implicit_rules(&self) -> bool;
+    /// Returns true if the language field is present (Some).
+    fn has_language(&self) -> bool;
+    /// Returns true if the text field is present (Some).
+    fn has_text(&self) -> bool;
+    /// Returns true if the contained field is not empty.
+    fn has_contained(&self) -> bool;
+    /// Returns true if the extension field is not empty.
+    fn has_extension(&self) -> bool;
+    /// Returns true if the modifier_extension field is not empty.
+    fn has_modifier_extension(&self) -> bool;
+    /// Returns true if the url field is present (Some).
+    fn has_url(&self) -> bool;
+    /// Returns true if the identifier field is not empty.
+    fn has_identifier(&self) -> bool;
+    /// Returns true if the version field is present (Some).
+    fn has_version(&self) -> bool;
+    /// Returns true if the name field is present (Some).
+    fn has_name(&self) -> bool;
+    /// Returns true if the title field is present (Some).
+    fn has_title(&self) -> bool;
+    /// Returns true if the status field is present (Some).
+    fn has_status(&self) -> bool;
+    /// Returns true if the experimental field is present (Some).
+    fn has_experimental(&self) -> bool;
+    /// Returns true if the date field is present (Some).
+    fn has_date(&self) -> bool;
+    /// Returns true if the publisher field is present (Some).
+    fn has_publisher(&self) -> bool;
+    /// Returns true if the contact field is not empty.
+    fn has_contact(&self) -> bool;
+    /// Returns true if the description field is present (Some).
+    fn has_description(&self) -> bool;
+    /// Returns true if the use_context field is not empty.
+    fn has_use_context(&self) -> bool;
+    /// Returns true if the jurisdiction field is not empty.
+    fn has_jurisdiction(&self) -> bool;
+    /// Returns true if the purpose field is present (Some).
+    fn has_purpose(&self) -> bool;
+    /// Returns true if the copyright field is present (Some).
+    fn has_copyright(&self) -> bool;
+    /// Returns true if the case_sensitive field is present (Some).
+    fn has_case_sensitive(&self) -> bool;
+    /// Returns true if the value_set field is present (Some).
+    fn has_value_set(&self) -> bool;
+    /// Returns true if the hierarchy_meaning field is present (Some).
+    fn has_hierarchy_meaning(&self) -> bool;
+    /// Returns true if the compositional field is present (Some).
+    fn has_compositional(&self) -> bool;
+    /// Returns true if the version_needed field is present (Some).
+    fn has_version_needed(&self) -> bool;
+    /// Returns true if the content field is present (Some).
+    fn has_content(&self) -> bool;
+    /// Returns true if the supplements field is present (Some).
+    fn has_supplements(&self) -> bool;
+    /// Returns true if the count field is present (Some).
+    fn has_count(&self) -> bool;
+    /// Returns true if the filter field is not empty.
+    fn has_filter(&self) -> bool;
+    /// Returns true if the property field is not empty.
+    fn has_property(&self) -> bool;
+    /// Returns true if the concept field is not empty.
+    fn has_concept(&self) -> bool;
+}

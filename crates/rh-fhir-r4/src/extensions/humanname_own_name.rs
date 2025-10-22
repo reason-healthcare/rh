@@ -1,0 +1,26 @@
+use crate::datatypes::extension::Extension;
+use serde::{Deserialize, Serialize};
+/// own-name
+///
+/// The portion of the family name that is derived from the person's own surname, as distinguished from any portion that is derived from the surname of the person's partner or spouse.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/humanname-own-name
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HumannameOwnName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+
+impl Default for HumannameOwnName {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
