@@ -5,9 +5,11 @@
 //! - `operations`: All operation evaluators (arithmetic, comparison, collection, etc.)
 //! - `types`: Type system and value types
 //! - `functions`: Built-in function registry and implementations
+//! - `metadata`: FHIR type metadata integration
 
 pub mod core;
 pub mod functions;
+pub mod metadata;
 pub mod operations;
 pub mod types;
 

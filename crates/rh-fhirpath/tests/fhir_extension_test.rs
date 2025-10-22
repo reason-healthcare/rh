@@ -485,10 +485,10 @@ mod tests {
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
 
-        // Test date primitive (birthDate)
+        // Test date primitive (birthDate) - now correctly typed as Date
         let parsed = parser.parse("birthDate.getValue()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        assert_eq!(result, FhirPathValue::String("1990-01-01".to_string()));
+        assert_eq!(result, FhirPathValue::Date("1990-01-01".to_string()));
 
         // Test integer extension
         let parsed = parser

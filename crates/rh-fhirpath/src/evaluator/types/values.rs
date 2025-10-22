@@ -49,6 +49,13 @@ impl FhirPathValue {
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
             (FhirPathValue::DateTimePrecision(a), FhirPathValue::DateTimePrecision(b)) => a == b,
+            // Date/DateTime/Time implicit string conversion for equality
+            (FhirPathValue::Date(a), FhirPathValue::String(b)) => a == b,
+            (FhirPathValue::String(a), FhirPathValue::Date(b)) => a == b,
+            (FhirPathValue::DateTime(a), FhirPathValue::String(b)) => a == b,
+            (FhirPathValue::String(a), FhirPathValue::DateTime(b)) => a == b,
+            (FhirPathValue::Time(a), FhirPathValue::String(b)) => a == b,
+            (FhirPathValue::String(a), FhirPathValue::Time(b)) => a == b,
             (FhirPathValue::Empty, FhirPathValue::Empty) => true,
             (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
                 a.len() == b.len()
@@ -240,6 +247,14 @@ impl FhirPathValue {
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => Ok(a.cmp(b) as i32),
+
+            // Date/Time comparisons with implicit string conversion
+            (FhirPathValue::Date(a), FhirPathValue::String(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::String(a), FhirPathValue::Date(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::DateTime(a), FhirPathValue::String(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::String(a), FhirPathValue::DateTime(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Time(a), FhirPathValue::String(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::String(a), FhirPathValue::Time(b)) => Ok(a.cmp(b) as i32),
 
             // Quantity comparisons with unit conversion
             (

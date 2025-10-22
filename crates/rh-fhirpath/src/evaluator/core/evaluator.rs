@@ -247,18 +247,28 @@ impl FhirPathEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Object(obj) => {
+                // Extract resource type for metadata lookup
+                let resource_type = obj
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
                 // Check if member is the resourceType - if so, return the object itself
                 // This enables expressions like Patient.id to work on Patient resources
-                if let Some(resource_type) = obj.get("resourceType") {
-                    if let Some(resource_type_str) = resource_type.as_str() {
-                        if resource_type_str == member {
-                            // The member matches the resourceType, return the object itself
-                            return Ok(FhirPathValue::Object(obj.clone()));
-                        }
+                if let Some(ref resource_type_str) = resource_type {
+                    if resource_type_str == member {
+                        // The member matches the resourceType, return the object itself
+                        return Ok(FhirPathValue::Object(obj.clone()));
                     }
                 }
 
                 if let Some(value) = obj.get(member) {
+                    // Apply FHIR type metadata if we have resource type information
+                    if let Some(ref rt) = resource_type {
+                        return Ok(crate::evaluator::metadata::apply_fhir_typing(
+                            value, rt, member,
+                        ));
+                    }
                     Ok(FhirPathValue::from_json(value))
                 } else {
                     // Check for FHIR choice type polymorphic access (e.g., value[x])
@@ -270,6 +280,14 @@ impl FhirPathEvaluator {
                                 // This ensures "value" matches "valueBoolean" but not "valueFoo" with lowercase
                                 if let Some(next_char) = key.chars().nth(member.len()) {
                                     if next_char.is_uppercase() {
+                                        // Apply metadata typing for choice types too
+                                        if let Some(ref rt) = resource_type {
+                                            return Ok(
+                                                crate::evaluator::metadata::apply_fhir_typing(
+                                                    value, rt, key,
+                                                ),
+                                            );
+                                        }
                                         return Ok(FhirPathValue::from_json(value));
                                     }
                                 }

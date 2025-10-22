@@ -22,6 +22,9 @@ nom = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
 
+# FHIR type metadata
+hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }
+
 # WASM dependencies - only included when targeting wasm32
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
