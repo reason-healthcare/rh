@@ -46,7 +46,7 @@ pub use config::CodegenConfig;
 pub use fhir_types::StructureDefinition;
 pub use generator::CodeGenerator;
 pub use generators::crate_generator::{
-    generate_crate_structure, parse_package_metadata, CrateGenerationParams,
+    generate_crate_structure, generate_module_files, parse_package_metadata, CrateGenerationParams,
 };
 pub use generators::file_generator::{FhirTypeCategory, FileGenerator};
 pub use generators::token_generator::TokenGenerator;

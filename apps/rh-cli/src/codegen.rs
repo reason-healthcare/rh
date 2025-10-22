@@ -7,8 +7,8 @@ use tracing::{info, warn};
 
 use rh_codegen::quality::run_quality_checks;
 use rh_codegen::{
-    generate_crate_structure, parse_package_metadata, CodeGenerator, CodegenConfig,
-    CrateGenerationParams, QualityConfig,
+    generate_crate_structure, generate_module_files, parse_package_metadata, CodeGenerator,
+    CodegenConfig, CrateGenerationParams, QualityConfig,
 };
 use rh_loader::{LoaderConfig, PackageLoader};
 
@@ -148,30 +148,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     // Create output directory
     fs::create_dir_all(output_path)?;
 
-    // Pre-register all ValueSet enums before processing resources
-    // This ensures correct import paths for enum types referenced by resources
-    generator
-        .pre_register_value_set_enums(effective_package_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to pre-register ValueSet enums: {e}"))?;
-
-    info!("Pre-registered ValueSet enums for correct import path generation");
-
-    // Process JSON files using organized structure
-    process_json_files_organized(&mut generator, effective_package_dir, output_path)?;
-
-    // Generate ValueSet enums in src/bindings directory
-    let bindings_dir = output_path.join("src").join("bindings");
-    generator
-        .generate_enum_files(&bindings_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to generate enum files: {e}"))?;
-
-    generator
-        .generate_enums_mod_file(&bindings_dir)
-        .map_err(|e| anyhow::anyhow!("Failed to generate enums mod file: {e}"))?;
-
-    info!("Generated ValueSet enums to: {}", bindings_dir.display());
-
-    // Generate complete crate structure
+    // Generate complete crate structure metadata first
     let command_invoked = format!(
         "rh codegen {} {} --output {}{}{}{}",
         args.package,
@@ -192,6 +169,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
 
     info!("Using canonical URL from package.json: {}", canonical);
 
+    // Generate crate structure (Cargo.toml, lib.rs, directory structure) BEFORE processing files
     generate_crate_structure(CrateGenerationParams {
         output: output_path,
         package: &args.package,
@@ -202,9 +180,21 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
         command_invoked: &command_invoked,
     })?;
 
-    info!("Generated complete organized Rust crate structure");
+    info!("Generated initial crate structure with Cargo.toml and directories");
+
+    // Pre-register all ValueSet enums before processing resources
+    // This ensures correct import paths for enum types referenced by resources
+    generator
+        .pre_register_value_set_enums(effective_package_dir)
+        .map_err(|e| anyhow::anyhow!("Failed to pre-register ValueSet enums: {e}"))?;
+
+    info!("Pre-registered ValueSet enums for correct import path generation");
+
+    // Process JSON files using organized structure (includes enum generation and Phase 3)
+    process_json_files_organized(&mut generator, effective_package_dir, output_path)?;
+
     info!(
-        "Successfully installed package and generated crate at: {}",
+        "Successfully generated complete crate at: {}",
         output_path.display()
     );
 
@@ -301,6 +291,47 @@ fn process_json_files_organized(
             Err(e) => {
                 warn!("Failed to generate {}: {}", structure_def.name, e);
             }
+        }
+    }
+
+    // Generate ValueSet enums before finalizing module files
+    info!("Generating ValueSet enums...");
+    let bindings_dir = output_dir.join("src").join("bindings");
+    generator
+        .generate_enum_files(&bindings_dir)
+        .map_err(|e| anyhow::anyhow!("Failed to generate enum files: {e}"))?;
+
+    generator
+        .generate_enums_mod_file(&bindings_dir)
+        .map_err(|e| anyhow::anyhow!("Failed to generate enums mod file: {e}"))?;
+
+    info!("Generated ValueSet enums to: {}", bindings_dir.display());
+
+    // Phase 3: Finalize crate by regenerating all mod.rs files
+    info!("Phase 3: Finalizing crate structure...");
+    let src_dir = output_dir.join("src");
+    let resource_dir = src_dir.join("resources");
+    let datatypes_dir = src_dir.join("datatypes");
+    let extensions_dir = src_dir.join("extensions");
+    let primitives_dir = src_dir.join("primitives");
+    let traits_dir = src_dir.join("traits");
+    let bindings_dir = src_dir.join("bindings");
+    let profiles_dir = src_dir.join("profiles");
+
+    match generate_module_files(
+        &resource_dir,
+        &datatypes_dir,
+        &extensions_dir,
+        &primitives_dir,
+        &traits_dir,
+        &bindings_dir,
+        &profiles_dir,
+    ) {
+        Ok(()) => {
+            info!("Successfully regenerated all module files");
+        }
+        Err(e) => {
+            warn!("Failed to regenerate module files: {}", e);
         }
     }
 

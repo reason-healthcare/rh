@@ -185,10 +185,17 @@ impl MutatorTraitGenerator {
     ) -> CodegenResult<()> {
         let struct_name = crate::naming::Naming::struct_name(structure_def);
 
+        // Determine the module path for the import
+        let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
+        let module = if is_profile { "profiles" } else { "resources" };
+        let snake_name = crate::naming::Naming::to_snake_case(&struct_name);
+        let struct_import = format!("hl7_fhir_r4_core::{module}::{snake_name}::{struct_name}");
+        let trait_import = format!("hl7_fhir_r4_core::traits::{snake_name}::{struct_name}Mutators");
+
         // Basic constructor with no parameters - supports method chaining
         let new_method = RustTraitMethod::new("new".to_string())
             .with_doc(format!(
-                "Create a new {struct_name} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nlet resource = {struct_name}::new()\n    .set_status(\"active\".to_string())\n    .set_name(\"Example Name\".to_string());\n```"
+                "Create a new {struct_name} with default/empty values.\n\nAll optional fields will be set to None and array fields will be empty vectors.\nSupports method chaining with set_xxx() and add_xxx() methods.\n\n# Example\n```rust\nuse {struct_import};\nuse {trait_import};\n\nlet resource = {struct_name}::new();\n// Can be used with method chaining:\n// resource.set_field(value).add_item(item);\n```"
             ))
             .with_return_type(RustType::Custom("Self".to_string()))
             .with_self_param(None); // No self parameter for constructor

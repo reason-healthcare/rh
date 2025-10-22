@@ -1009,7 +1009,14 @@ impl TraitImplGenerator {
                     _ => rust_type.to_string(),
                 };
                 let return_type = format!("Option<{inner_type}>");
-                let body = format!("self.{rust_field_name}.clone()");
+
+                // For Copy types, don't clone - they're automatically copied
+                let body = if self.is_copy_type(&rust_type) {
+                    format!("self.{rust_field_name}")
+                } else {
+                    format!("self.{rust_field_name}.clone()")
+                };
+
                 (return_type, body)
             } else {
                 // Field is required (min cardinality is 1+), return T directly
@@ -1017,7 +1024,14 @@ impl TraitImplGenerator {
                     crate::rust_types::RustType::Option(inner) => inner.to_string(),
                     _ => rust_type.to_string(),
                 };
-                let body = format!("self.{rust_field_name}.clone()");
+
+                // For Copy types, don't clone - they're automatically copied
+                let body = if self.is_copy_type(&rust_type) {
+                    format!("self.{rust_field_name}")
+                } else {
+                    format!("self.{rust_field_name}.clone()")
+                };
+
                 (return_type, body)
             }
         };
@@ -1285,6 +1299,42 @@ impl TraitImplGenerator {
             crate::rust_types::RustType::Option(inner) => inner.to_string(),
             _ => rust_type.to_string(),
         }
+    }
+
+    /// Check if a RustType implements the Copy trait
+    /// Copy types can be returned by value without cloning
+    fn is_copy_type(&self, rust_type: &crate::rust_types::RustType) -> bool {
+        match rust_type {
+            // Primitive types are Copy
+            crate::rust_types::RustType::Boolean
+            | crate::rust_types::RustType::Integer
+            | crate::rust_types::RustType::Float => true,
+
+            // Option<T> is Copy if T is Copy
+            crate::rust_types::RustType::Option(inner) => self.is_copy_type(inner),
+
+            // Check if Custom type is a FHIR primitive type (which are type aliases to Copy types)
+            crate::rust_types::RustType::Custom(type_name) => {
+                self.is_copy_primitive_type(type_name)
+            }
+
+            // String, Vec, and other types are not Copy
+            _ => false,
+        }
+    }
+
+    /// Check if a custom type name represents a FHIR primitive type that is Copy
+    /// FHIR primitive types are often type aliases to Copy Rust types
+    fn is_copy_primitive_type(&self, type_name: &str) -> bool {
+        matches!(
+            type_name,
+            "BooleanType"
+                | "IntegerType"
+                | "UnsignedIntType"
+                | "PositiveIntType"
+                | "DecimalType"
+                | "Integer64Type"
+        )
     }
 
     /// Check if a rust type represents an enum
