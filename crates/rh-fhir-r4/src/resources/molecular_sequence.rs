@@ -80,55 +80,6 @@ pub struct MolecularSequence {
     #[serde(rename = "structureVariant")]
     pub structure_variant: Option<Vec<MolecularSequenceStructurevariant>>,
 }
-/// MolecularSequenceStructurevariant nested structure for the 'inner' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceStructurevariantInner {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Structural variant inner start
-    pub start: Option<IntegerType>,
-    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
-    pub _start: Option<Element>,
-    /// Structural variant inner end
-    pub end: Option<IntegerType>,
-    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
-    pub _end: Option<Element>,
-}
-/// MolecularSequence nested structure for the 'variant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceVariant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Start position of the variant on the  reference sequence
-    pub start: Option<IntegerType>,
-    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
-    pub _start: Option<Element>,
-    /// End position of the variant on the reference sequence
-    pub end: Option<IntegerType>,
-    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
-    pub _end: Option<Element>,
-    /// Allele that was observed
-    #[serde(rename = "observedAllele")]
-    pub observed_allele: Option<StringType>,
-    /// Extension element for the 'observedAllele' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_observedAllele")]
-    pub _observed_allele: Option<Element>,
-    /// Allele in the reference sequence
-    #[serde(rename = "referenceAllele")]
-    pub reference_allele: Option<StringType>,
-    /// Extension element for the 'referenceAllele' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_referenceAllele")]
-    pub _reference_allele: Option<Element>,
-    /// Extended CIGAR string for aligning the sequence with reference bases
-    pub cigar: Option<StringType>,
-    /// Extension element for the 'cigar' primitive field. Contains metadata and extensions.
-    pub _cigar: Option<Element>,
-    /// Pointer to observed variant information
-    #[serde(rename = "variantPointer")]
-    pub variant_pointer: Option<Reference>,
-}
 /// MolecularSequenceStructurevariant nested structure for the 'outer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolecularSequenceStructurevariantOuter {
@@ -143,6 +94,126 @@ pub struct MolecularSequenceStructurevariantOuter {
     pub end: Option<IntegerType>,
     /// Extension element for the 'end' primitive field. Contains metadata and extensions.
     pub _end: Option<Element>,
+}
+/// MolecularSequence nested structure for the 'referenceSeq' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceReferenceseq {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Chromosome containing genetic finding
+    ///
+    /// Binding: example (Chromosome number for human.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/chromosome-human
+    pub chromosome: Option<CodeableConcept>,
+    /// The Genome Build used for reference, following GRCh build versions e.g. 'GRCh 37'
+    #[serde(rename = "genomeBuild")]
+    pub genome_build: Option<StringType>,
+    /// Extension element for the 'genomeBuild' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_genomeBuild")]
+    pub _genome_build: Option<Element>,
+    /// sense | antisense
+    pub orientation: Option<OrientationType>,
+    /// Extension element for the 'orientation' primitive field. Contains metadata and extensions.
+    pub _orientation: Option<Element>,
+    /// Reference identifier
+    ///
+    /// Binding: example (Reference identifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/sequence-referenceSeq
+    #[serde(rename = "referenceSeqId")]
+    pub reference_seq_id: Option<CodeableConcept>,
+    /// A pointer to another MolecularSequence entity as reference sequence
+    #[serde(rename = "referenceSeqPointer")]
+    pub reference_seq_pointer: Option<Reference>,
+    /// A string to represent reference sequence
+    #[serde(rename = "referenceSeqString")]
+    pub reference_seq_string: Option<StringType>,
+    /// Extension element for the 'referenceSeqString' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_referenceSeqString")]
+    pub _reference_seq_string: Option<Element>,
+    /// watson | crick
+    pub strand: Option<StrandType>,
+    /// Extension element for the 'strand' primitive field. Contains metadata and extensions.
+    pub _strand: Option<Element>,
+    /// Start position of the window on the  reference sequence
+    #[serde(rename = "windowStart")]
+    pub window_start: Option<IntegerType>,
+    /// Extension element for the 'windowStart' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_windowStart")]
+    pub _window_start: Option<Element>,
+    /// End position of the window on the reference sequence
+    #[serde(rename = "windowEnd")]
+    pub window_end: Option<IntegerType>,
+    /// Extension element for the 'windowEnd' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_windowEnd")]
+    pub _window_end: Option<Element>,
+}
+/// MolecularSequence nested structure for the 'structureVariant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceStructurevariant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Structural variant inner
+    pub inner: Option<MolecularSequenceStructurevariantInner>,
+    /// Structural variant outer
+    pub outer: Option<MolecularSequenceStructurevariantOuter>,
+    /// Structural variant change type
+    #[serde(rename = "variantType")]
+    pub variant_type: Option<CodeableConcept>,
+    /// Does the structural variant have base pair resolution breakpoints?
+    pub exact: Option<BooleanType>,
+    /// Extension element for the 'exact' primitive field. Contains metadata and extensions.
+    pub _exact: Option<Element>,
+    /// Structural variant length
+    pub length: Option<IntegerType>,
+    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
+    pub _length: Option<Element>,
+}
+/// MolecularSequenceQuality nested structure for the 'roc' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceQualityRoc {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Genotype quality score
+    pub score: Option<Vec<IntegerType>>,
+    /// Extension element for the 'score' primitive field. Contains metadata and extensions.
+    pub _score: Option<Element>,
+    /// Roc score true positive numbers
+    #[serde(rename = "numTP")]
+    pub num_t_p: Option<Vec<IntegerType>>,
+    /// Extension element for the 'numTP' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numTP")]
+    pub _num_t_p: Option<Element>,
+    /// Roc score false positive numbers
+    #[serde(rename = "numFP")]
+    pub num_f_p: Option<Vec<IntegerType>>,
+    /// Extension element for the 'numFP' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numFP")]
+    pub _num_f_p: Option<Element>,
+    /// Roc score false negative numbers
+    #[serde(rename = "numFN")]
+    pub num_f_n: Option<Vec<IntegerType>>,
+    /// Extension element for the 'numFN' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numFN")]
+    pub _num_f_n: Option<Element>,
+    /// Precision of the GQ score
+    pub precision: Option<Vec<DecimalType>>,
+    /// Extension element for the 'precision' primitive field. Contains metadata and extensions.
+    pub _precision: Option<Element>,
+    /// Sensitivity of the GQ score
+    pub sensitivity: Option<Vec<DecimalType>>,
+    /// Extension element for the 'sensitivity' primitive field. Contains metadata and extensions.
+    pub _sensitivity: Option<Element>,
+    /// FScore of the GQ score
+    #[serde(rename = "fMeasure")]
+    pub f_measure: Option<Vec<DecimalType>>,
+    /// Extension element for the 'fMeasure' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_fMeasure")]
+    pub _f_measure: Option<Element>,
 }
 /// MolecularSequence nested structure for the 'quality' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,126 +296,6 @@ pub struct MolecularSequenceQuality {
     #[serde(rename = "_fScore")]
     pub _f_score: Option<Element>,
 }
-/// MolecularSequence nested structure for the 'structureVariant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceStructurevariant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Structural variant outer
-    pub outer: Option<MolecularSequenceStructurevariantOuter>,
-    /// Structural variant inner
-    pub inner: Option<MolecularSequenceStructurevariantInner>,
-    /// Structural variant change type
-    #[serde(rename = "variantType")]
-    pub variant_type: Option<CodeableConcept>,
-    /// Does the structural variant have base pair resolution breakpoints?
-    pub exact: Option<BooleanType>,
-    /// Extension element for the 'exact' primitive field. Contains metadata and extensions.
-    pub _exact: Option<Element>,
-    /// Structural variant length
-    pub length: Option<IntegerType>,
-    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
-    pub _length: Option<Element>,
-}
-/// MolecularSequenceQuality nested structure for the 'roc' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceQualityRoc {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Genotype quality score
-    pub score: Option<Vec<IntegerType>>,
-    /// Extension element for the 'score' primitive field. Contains metadata and extensions.
-    pub _score: Option<Element>,
-    /// Roc score true positive numbers
-    #[serde(rename = "numTP")]
-    pub num_t_p: Option<Vec<IntegerType>>,
-    /// Extension element for the 'numTP' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numTP")]
-    pub _num_t_p: Option<Element>,
-    /// Roc score false positive numbers
-    #[serde(rename = "numFP")]
-    pub num_f_p: Option<Vec<IntegerType>>,
-    /// Extension element for the 'numFP' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numFP")]
-    pub _num_f_p: Option<Element>,
-    /// Roc score false negative numbers
-    #[serde(rename = "numFN")]
-    pub num_f_n: Option<Vec<IntegerType>>,
-    /// Extension element for the 'numFN' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numFN")]
-    pub _num_f_n: Option<Element>,
-    /// Precision of the GQ score
-    pub precision: Option<Vec<DecimalType>>,
-    /// Extension element for the 'precision' primitive field. Contains metadata and extensions.
-    pub _precision: Option<Element>,
-    /// Sensitivity of the GQ score
-    pub sensitivity: Option<Vec<DecimalType>>,
-    /// Extension element for the 'sensitivity' primitive field. Contains metadata and extensions.
-    pub _sensitivity: Option<Element>,
-    /// FScore of the GQ score
-    #[serde(rename = "fMeasure")]
-    pub f_measure: Option<Vec<DecimalType>>,
-    /// Extension element for the 'fMeasure' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_fMeasure")]
-    pub _f_measure: Option<Element>,
-}
-/// MolecularSequence nested structure for the 'referenceSeq' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceReferenceseq {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Chromosome containing genetic finding
-    ///
-    /// Binding: example (Chromosome number for human.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/chromosome-human
-    pub chromosome: Option<CodeableConcept>,
-    /// The Genome Build used for reference, following GRCh build versions e.g. 'GRCh 37'
-    #[serde(rename = "genomeBuild")]
-    pub genome_build: Option<StringType>,
-    /// Extension element for the 'genomeBuild' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_genomeBuild")]
-    pub _genome_build: Option<Element>,
-    /// sense | antisense
-    pub orientation: Option<OrientationType>,
-    /// Extension element for the 'orientation' primitive field. Contains metadata and extensions.
-    pub _orientation: Option<Element>,
-    /// Reference identifier
-    ///
-    /// Binding: example (Reference identifier.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/sequence-referenceSeq
-    #[serde(rename = "referenceSeqId")]
-    pub reference_seq_id: Option<CodeableConcept>,
-    /// A pointer to another MolecularSequence entity as reference sequence
-    #[serde(rename = "referenceSeqPointer")]
-    pub reference_seq_pointer: Option<Reference>,
-    /// A string to represent reference sequence
-    #[serde(rename = "referenceSeqString")]
-    pub reference_seq_string: Option<StringType>,
-    /// Extension element for the 'referenceSeqString' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_referenceSeqString")]
-    pub _reference_seq_string: Option<Element>,
-    /// watson | crick
-    pub strand: Option<StrandType>,
-    /// Extension element for the 'strand' primitive field. Contains metadata and extensions.
-    pub _strand: Option<Element>,
-    /// Start position of the window on the  reference sequence
-    #[serde(rename = "windowStart")]
-    pub window_start: Option<IntegerType>,
-    /// Extension element for the 'windowStart' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_windowStart")]
-    pub _window_start: Option<Element>,
-    /// End position of the window on the reference sequence
-    #[serde(rename = "windowEnd")]
-    pub window_end: Option<IntegerType>,
-    /// Extension element for the 'windowEnd' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_windowEnd")]
-    pub _window_end: Option<Element>,
-}
 /// MolecularSequence nested structure for the 'repository' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolecularSequenceRepository {
@@ -383,6 +334,55 @@ pub struct MolecularSequenceRepository {
     #[serde(rename = "_readsetId")]
     pub _readset_id: Option<Element>,
 }
+/// MolecularSequence nested structure for the 'variant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceVariant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Start position of the variant on the  reference sequence
+    pub start: Option<IntegerType>,
+    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
+    pub _start: Option<Element>,
+    /// End position of the variant on the reference sequence
+    pub end: Option<IntegerType>,
+    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
+    pub _end: Option<Element>,
+    /// Allele that was observed
+    #[serde(rename = "observedAllele")]
+    pub observed_allele: Option<StringType>,
+    /// Extension element for the 'observedAllele' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_observedAllele")]
+    pub _observed_allele: Option<Element>,
+    /// Allele in the reference sequence
+    #[serde(rename = "referenceAllele")]
+    pub reference_allele: Option<StringType>,
+    /// Extension element for the 'referenceAllele' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_referenceAllele")]
+    pub _reference_allele: Option<Element>,
+    /// Extended CIGAR string for aligning the sequence with reference bases
+    pub cigar: Option<StringType>,
+    /// Extension element for the 'cigar' primitive field. Contains metadata and extensions.
+    pub _cigar: Option<Element>,
+    /// Pointer to observed variant information
+    #[serde(rename = "variantPointer")]
+    pub variant_pointer: Option<Reference>,
+}
+/// MolecularSequenceStructurevariant nested structure for the 'inner' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceStructurevariantInner {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Structural variant inner start
+    pub start: Option<IntegerType>,
+    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
+    pub _start: Option<Element>,
+    /// Structural variant inner end
+    pub end: Option<IntegerType>,
+    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
+    pub _end: Option<Element>,
+}
 
 impl Default for MolecularSequence {
     fn default() -> Self {
@@ -412,37 +412,6 @@ impl Default for MolecularSequence {
     }
 }
 
-impl Default for MolecularSequenceStructurevariantInner {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            start: Default::default(),
-            _start: Default::default(),
-            end: Default::default(),
-            _end: Default::default(),
-        }
-    }
-}
-
-impl Default for MolecularSequenceVariant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            start: Default::default(),
-            _start: Default::default(),
-            end: Default::default(),
-            _end: Default::default(),
-            observed_allele: Default::default(),
-            _observed_allele: Default::default(),
-            reference_allele: Default::default(),
-            _reference_allele: Default::default(),
-            cigar: Default::default(),
-            _cigar: Default::default(),
-            variant_pointer: Default::default(),
-        }
-    }
-}
-
 impl Default for MolecularSequenceStructurevariantOuter {
     fn default() -> Self {
         Self {
@@ -451,6 +420,66 @@ impl Default for MolecularSequenceStructurevariantOuter {
             _start: Default::default(),
             end: Default::default(),
             _end: Default::default(),
+        }
+    }
+}
+
+impl Default for MolecularSequenceReferenceseq {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            chromosome: Default::default(),
+            genome_build: Default::default(),
+            _genome_build: Default::default(),
+            orientation: Default::default(),
+            _orientation: Default::default(),
+            reference_seq_id: Default::default(),
+            reference_seq_pointer: Default::default(),
+            reference_seq_string: Default::default(),
+            _reference_seq_string: Default::default(),
+            strand: Default::default(),
+            _strand: Default::default(),
+            window_start: Default::default(),
+            _window_start: Default::default(),
+            window_end: Default::default(),
+            _window_end: Default::default(),
+        }
+    }
+}
+
+impl Default for MolecularSequenceStructurevariant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            inner: Default::default(),
+            outer: Default::default(),
+            variant_type: Default::default(),
+            exact: Default::default(),
+            _exact: Default::default(),
+            length: Default::default(),
+            _length: Default::default(),
+        }
+    }
+}
+
+impl Default for MolecularSequenceQualityRoc {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            score: Default::default(),
+            _score: Default::default(),
+            num_t_p: Default::default(),
+            _num_t_p: Default::default(),
+            num_f_p: Default::default(),
+            _num_f_p: Default::default(),
+            num_f_n: Default::default(),
+            _num_f_n: Default::default(),
+            precision: Default::default(),
+            _precision: Default::default(),
+            sensitivity: Default::default(),
+            _sensitivity: Default::default(),
+            f_measure: Default::default(),
+            _f_measure: Default::default(),
         }
     }
 }
@@ -489,66 +518,6 @@ impl Default for MolecularSequenceQuality {
     }
 }
 
-impl Default for MolecularSequenceStructurevariant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            outer: Default::default(),
-            inner: Default::default(),
-            variant_type: Default::default(),
-            exact: Default::default(),
-            _exact: Default::default(),
-            length: Default::default(),
-            _length: Default::default(),
-        }
-    }
-}
-
-impl Default for MolecularSequenceQualityRoc {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            score: Default::default(),
-            _score: Default::default(),
-            num_t_p: Default::default(),
-            _num_t_p: Default::default(),
-            num_f_p: Default::default(),
-            _num_f_p: Default::default(),
-            num_f_n: Default::default(),
-            _num_f_n: Default::default(),
-            precision: Default::default(),
-            _precision: Default::default(),
-            sensitivity: Default::default(),
-            _sensitivity: Default::default(),
-            f_measure: Default::default(),
-            _f_measure: Default::default(),
-        }
-    }
-}
-
-impl Default for MolecularSequenceReferenceseq {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            chromosome: Default::default(),
-            genome_build: Default::default(),
-            _genome_build: Default::default(),
-            orientation: Default::default(),
-            _orientation: Default::default(),
-            reference_seq_id: Default::default(),
-            reference_seq_pointer: Default::default(),
-            reference_seq_string: Default::default(),
-            _reference_seq_string: Default::default(),
-            strand: Default::default(),
-            _strand: Default::default(),
-            window_start: Default::default(),
-            _window_start: Default::default(),
-            window_end: Default::default(),
-            _window_end: Default::default(),
-        }
-    }
-}
-
 impl Default for MolecularSequenceRepository {
     fn default() -> Self {
         Self {
@@ -565,6 +534,37 @@ impl Default for MolecularSequenceRepository {
             _variantset_id: Default::default(),
             readset_id: Default::default(),
             _readset_id: Default::default(),
+        }
+    }
+}
+
+impl Default for MolecularSequenceVariant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            start: Default::default(),
+            _start: Default::default(),
+            end: Default::default(),
+            _end: Default::default(),
+            observed_allele: Default::default(),
+            _observed_allele: Default::default(),
+            reference_allele: Default::default(),
+            _reference_allele: Default::default(),
+            cigar: Default::default(),
+            _cigar: Default::default(),
+            variant_pointer: Default::default(),
+        }
+    }
+}
+
+impl Default for MolecularSequenceStructurevariantInner {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            start: Default::default(),
+            _start: Default::default(),
+            end: Default::default(),
+            _end: Default::default(),
         }
     }
 }

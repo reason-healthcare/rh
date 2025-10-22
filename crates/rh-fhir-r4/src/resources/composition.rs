@@ -89,6 +89,57 @@ pub struct Composition {
     /// Composition is broken into sections
     pub section: Option<Vec<CompositionSection>>,
 }
+/// Composition nested structure for the 'attester' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionAttester {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// personal | professional | legal | official
+    pub mode: CompositionAttestationMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// When the composition was attested
+    pub time: Option<DateTimeType>,
+    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
+    pub _time: Option<Element>,
+    /// Who attested the composition
+    pub party: Option<Reference>,
+}
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code(s) that apply to the event being documented
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    pub code: Option<Vec<CodeableConcept>>,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented
+    pub detail: Option<Vec<Reference>>,
+}
+/// Composition nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship (Identifier)
+    #[serde(rename = "targetIdentifier")]
+    pub target_identifier: Identifier,
+    /// Target of the relationship (Reference)
+    #[serde(rename = "targetReference")]
+    pub target_reference: Reference,
+}
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionSection {
@@ -145,57 +196,6 @@ pub struct CompositionSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
-/// Composition nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code(s) that apply to the event being documented
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub code: Option<Vec<CodeableConcept>>,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented
-    pub detail: Option<Vec<Reference>>,
-}
-/// Composition nested structure for the 'attester' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionAttester {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// personal | professional | legal | official
-    pub mode: CompositionAttestationMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// When the composition was attested
-    pub time: Option<DateTimeType>,
-    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
-    pub _time: Option<Element>,
-    /// Who attested the composition
-    pub party: Option<Reference>,
-}
-/// Composition nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship (Identifier)
-    #[serde(rename = "targetIdentifier")]
-    pub target_identifier: Identifier,
-    /// Target of the relationship (Reference)
-    #[serde(rename = "targetReference")]
-    pub target_reference: Reference,
-}
 
 impl Default for Composition {
     fn default() -> Self {
@@ -224,6 +224,42 @@ impl Default for Composition {
     }
 }
 
+impl Default for CompositionAttester {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: CompositionAttestationMode::default(),
+            _mode: Default::default(),
+            time: Default::default(),
+            _time: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionEvent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            period: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target_identifier: Default::default(),
+            target_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for CompositionSection {
     fn default() -> Self {
         Self {
@@ -240,42 +276,6 @@ impl Default for CompositionSection {
             entry: Default::default(),
             empty_reason: Default::default(),
             section: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionEvent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            period: Default::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionAttester {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: CompositionAttestationMode::default(),
-            _mode: Default::default(),
-            time: Default::default(),
-            _time: Default::default(),
-            party: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target_identifier: Default::default(),
-            target_reference: Default::default(),
         }
     }
 }

@@ -160,18 +160,82 @@ pub struct Observation {
     /// Component results
     pub component: Option<Vec<ObservationComponent>>,
 }
-/// Time-offset
+/// bodyPosition
 ///
-/// A specific offset time in milliseconds from the stated time in the Observation.appliesDateTime to allow for representation of sequential recording  of sampled data from the same lead or data stream.  For example, an ECG recorder may record sequentially 3 leads four time to receive 12-lead ECG, see [ISO 22077](https://www.iso.org/obp/ui/#iso:std:61871:en).
+/// The position of the body when the observation was done, e.g. standing, sitting. To be used only when the body position in not precoordinated in the observation code.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-timeOffset
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-bodyPosition
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationTimeOffset {
+pub struct ObservationBodyPosition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Observation-genetics
+///
+/// Describes how the observation resource is used to report structured genetic test results
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-genetics
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: Observation
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Observation
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ObservationGenetics {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Observation,
+}
+/// Gateway Device
+///
+/// The Provenance/AuditEvent resources can represent the same information.  Note that the Provenance/AuditEvent resources can represent the same information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-gatewayDevice
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGatewayDevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// PhaseSet
+///
+/// Phase set information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsPhaseSet
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsPhaseSet {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Allele
+///
+/// Allele information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsAllele {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -192,70 +256,6 @@ pub struct ObservationGeneticsCopyNumberEvent {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// AminoAcidChange
-///
-/// AminoAcidChange information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAminoAcidChange
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsAminoAcidChange {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Gateway Device
-///
-/// The Provenance/AuditEvent resources can represent the same information.  Note that the Provenance/AuditEvent resources can represent the same information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-gatewayDevice
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGatewayDevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Interpretation
-///
-/// Clinical Interpretations for variant. It's a reference to an Observation resource.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsInterpretation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// bodyPosition
-///
-/// The position of the body when the observation was done, e.g. standing, sitting. To be used only when the body position in not precoordinated in the observation code.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-bodyPosition
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationBodyPosition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Specimen Code
 ///
 /// A code representing the the type of specimen used for this observation.  Should only be used if not implicit in the code found in `Observation.code`.
@@ -272,84 +272,50 @@ pub struct ObservationSpecimenCode {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Observation nested structure for the 'referenceRange' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationReferencerange {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Low Range, if relevant
-    pub low: Option<Quantity>,
-    /// High Range, if relevant
-    pub high: Option<Quantity>,
-    /// Reference range qualifier
-    ///
-    /// Binding: preferred (Code for the meaning of a reference range.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/referencerange-meaning
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Reference range population
-    ///
-    /// Binding: example (Codes identifying the population the reference range applies to.)
-    ///
-    /// Available values:
-    /// - `248153007`
-    /// - `248152002`
-    /// - `77386006`
-    #[serde(rename = "appliesTo")]
-    pub applies_to: Option<Vec<CodeableConcept>>,
-    /// Applicable age range, if relevant
-    pub age: Option<Range>,
-    /// Text based reference range in an observation
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
-/// Precondition
+/// Ancestry
 ///
-/// Other preceding or concurrent observations that must be known to correctly interpret the the observation.  For example an fiO2 measure taken alongside of a SpO2 measurement.  See the [Observation notes](observation.html#notes) section for additional guidance.
+/// Ancestry information.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-precondition
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAncestry
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationPrecondition {
+pub struct ObservationGeneticsAncestry {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Sequel To
+/// Secondary Finding
 ///
-/// This observation follows the target observation (e.g. timed tests such as Glucose Tolerance Test).
+/// Secondary findings are genetic test results that provide information about variants in a gene unrelated to the primary purpose for the testing, most often discovered when [Whole Exome Sequencing (WES)](https://en.wikipedia.org/wiki/Exome_sequencing) or [Whole Genome Sequencing (WGS)](https://en.wikipedia.org/wiki/Whole_genome_sequencing) is performed. This extension should be used to denote when a genetic finding is being shared as a secondary finding, and ideally refer to a corresponding guideline or policy statement.  For more detail, please see: https://ghr.nlm.nih.gov/primer/testing/secondaryfindings.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-sequelTo
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-secondaryFinding
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationSequelTo {
+pub struct ObservationSecondaryFinding {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Device Code
+/// Interpretation
 ///
-/// A code representing the the type of device used for this observation.  Should only be used if not implicit in the code found in `Observation.code`.
+/// Clinical Interpretations for variant. It's a reference to an Observation resource.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-deviceCode
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDeviceCode {
+pub struct ObservationGeneticsInterpretation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -416,178 +382,18 @@ pub struct ObservationComponent {
     #[serde(rename = "referenceRange")]
     pub reference_range: Option<Vec<StringType>>,
 }
-/// DNARegionName
+/// Time-offset
 ///
-/// A human readable name for the region of interest. Typically Exon #, Intron # or other. NOTE: This is not standardized and is mainly for convenience and display purposes.  LOINC Code: ([47999-8](http://loinc.org/47999-8)).
+/// A specific offset time in milliseconds from the stated time in the Observation.appliesDateTime to allow for representation of sequential recording  of sampled data from the same lead or data stream.  For example, an ECG recorder may record sequentially 3 leads four time to receive 12-lead ECG, see [ISO 22077](https://www.iso.org/obp/ui/#iso:std:61871:en).
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsDNARegionName
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-timeOffset
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsDNARegionName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// delta
-///
-/// The qualitative change in the value relative to the previous measurement. Usually only recorded if the change is clinically significant.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-delta
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDelta {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Observation-genetics
-///
-/// Describes how the observation resource is used to report structured genetic test results
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-genetics
-/// - Version: 4.0.1
-/// - Kind: resource
-/// - Type: Observation
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Observation
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ObservationGenetics {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Observation,
-}
-/// Focal Subject Code
-///
-/// A code representing the  focus of an observation when the focus is not the patient of record.  In other words, the focus of the observation is different from `Observation.subject`.   An example use case would be using the *Observation* resource to capture whether the mother is trained to change her child's tracheostomy tube.  In this example, the child is the patient of record and the mother is focal subject referenced using this extension.  Other example focal subjects include spouses, related persons, feti, or  donors.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-focusCode
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationFocusCode {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Ancestry
-///
-/// Ancestry information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAncestry
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsAncestry {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Gene
-///
-/// A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions ([SO:0000704](http://www.sequenceontology.org/browser/current_svn/term/SO:0000704)). This element is the official gene symbol approved by the HGNC, which is a short abbreviated form of the gene name ([HGNC](http://www.genenames.org)). LOINC Code: ([48018-6](http://loinc.org/48018-6)).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGene
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsGene {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Variant
-///
-/// Variant information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsVariant
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsVariant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Allele
-///
-/// Allele information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsAllele {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// GenomicSourceClass
-///
-/// Source of sample used to determine the sequence in sequencing lab -- germline, somatic, prenatal. LOINC Code: ([48002-0](http://loinc.org/48002-0)).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGenomicSourceClass
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsGenomicSourceClass {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Reagent
-///
-/// Reference to reagents used to generate this observation.  This is intended for this for in-lab transactions between instruments and Laboratory Information Systems (LIS).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-reagent
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationReagent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// PhaseSet
-///
-/// Phase set information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsPhaseSet
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsPhaseSet {
+pub struct ObservationTimeOffset {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -608,18 +414,212 @@ pub struct ObservationReplaces {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Secondary Finding
+/// Device Code
 ///
-/// Secondary findings are genetic test results that provide information about variants in a gene unrelated to the primary purpose for the testing, most often discovered when [Whole Exome Sequencing (WES)](https://en.wikipedia.org/wiki/Exome_sequencing) or [Whole Genome Sequencing (WGS)](https://en.wikipedia.org/wiki/Whole_genome_sequencing) is performed. This extension should be used to denote when a genetic finding is being shared as a secondary finding, and ideally refer to a corresponding guideline or policy statement.  For more detail, please see: https://ghr.nlm.nih.gov/primer/testing/secondaryfindings.
+/// A code representing the the type of device used for this observation.  Should only be used if not implicit in the code found in `Observation.code`.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-secondaryFinding
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-deviceCode
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationSecondaryFinding {
+pub struct ObservationDeviceCode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// delta
+///
+/// The qualitative change in the value relative to the previous measurement. Usually only recorded if the change is clinically significant.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-delta
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationDelta {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Gene
+///
+/// A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions ([SO:0000704](http://www.sequenceontology.org/browser/current_svn/term/SO:0000704)). This element is the official gene symbol approved by the HGNC, which is a short abbreviated form of the gene name ([HGNC](http://www.genenames.org)). LOINC Code: ([48018-6](http://loinc.org/48018-6)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGene
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsGene {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Observation nested structure for the 'referenceRange' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationReferencerange {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Low Range, if relevant
+    pub low: Option<Quantity>,
+    /// High Range, if relevant
+    pub high: Option<Quantity>,
+    /// Reference range qualifier
+    ///
+    /// Binding: preferred (Code for the meaning of a reference range.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/referencerange-meaning
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Reference range population
+    ///
+    /// Binding: example (Codes identifying the population the reference range applies to.)
+    ///
+    /// Available values:
+    /// - `248153007`
+    /// - `248152002`
+    /// - `77386006`
+    #[serde(rename = "appliesTo")]
+    pub applies_to: Option<Vec<CodeableConcept>>,
+    /// Applicable age range, if relevant
+    pub age: Option<Range>,
+    /// Text based reference range in an observation
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+}
+/// Sequel To
+///
+/// This observation follows the target observation (e.g. timed tests such as Glucose Tolerance Test).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-sequelTo
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationSequelTo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Reagent
+///
+/// Reference to reagents used to generate this observation.  This is intended for this for in-lab transactions between instruments and Laboratory Information Systems (LIS).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-reagent
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationReagent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// GenomicSourceClass
+///
+/// Source of sample used to determine the sequence in sequencing lab -- germline, somatic, prenatal. LOINC Code: ([48002-0](http://loinc.org/48002-0)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGenomicSourceClass
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsGenomicSourceClass {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// AminoAcidChange
+///
+/// AminoAcidChange information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAminoAcidChange
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsAminoAcidChange {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Precondition
+///
+/// Other preceding or concurrent observations that must be known to correctly interpret the the observation.  For example an fiO2 measure taken alongside of a SpO2 measurement.  See the [Observation notes](observation.html#notes) section for additional guidance.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-precondition
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationPrecondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Focal Subject Code
+///
+/// A code representing the  focus of an observation when the focus is not the patient of record.  In other words, the focus of the observation is different from `Observation.subject`.   An example use case would be using the *Observation* resource to capture whether the mother is trained to change her child's tracheostomy tube.  In this example, the child is the patient of record and the mother is focal subject referenced using this extension.  Other example focal subjects include spouses, related persons, feti, or  donors.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-focusCode
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationFocusCode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Variant
+///
+/// Variant information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsVariant
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsVariant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// DNARegionName
+///
+/// A human readable name for the region of interest. Typically Exon #, Intron # or other. NOTE: This is not standardized and is mainly for convenience and display purposes.  LOINC Code: ([47999-8](http://loinc.org/47999-8)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsDNARegionName
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsDNARegionName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -672,23 +672,7 @@ impl Default for Observation {
     }
 }
 
-impl Default for ObservationTimeOffset {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsCopyNumberEvent {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsAminoAcidChange {
+impl Default for ObservationBodyPosition {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -704,7 +688,7 @@ impl Default for ObservationGatewayDevice {
     }
 }
 
-impl Default for ObservationGeneticsInterpretation {
+impl Default for ObservationGeneticsPhaseSet {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -712,7 +696,15 @@ impl Default for ObservationGeneticsInterpretation {
     }
 }
 
-impl Default for ObservationBodyPosition {
+impl Default for ObservationGeneticsAllele {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsCopyNumberEvent {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -728,22 +720,7 @@ impl Default for ObservationSpecimenCode {
     }
 }
 
-impl Default for ObservationReferencerange {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            low: Default::default(),
-            high: Default::default(),
-            type_: Default::default(),
-            applies_to: Default::default(),
-            age: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-        }
-    }
-}
-
-impl Default for ObservationPrecondition {
+impl Default for ObservationGeneticsAncestry {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -751,7 +728,7 @@ impl Default for ObservationPrecondition {
     }
 }
 
-impl Default for ObservationSequelTo {
+impl Default for ObservationSecondaryFinding {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -759,7 +736,7 @@ impl Default for ObservationSequelTo {
     }
 }
 
-impl Default for ObservationDeviceCode {
+impl Default for ObservationGeneticsInterpretation {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -790,79 +767,7 @@ impl Default for ObservationComponent {
     }
 }
 
-impl Default for ObservationGeneticsDNARegionName {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationDelta {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationFocusCode {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsAncestry {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsGene {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsVariant {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsAllele {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsGenomicSourceClass {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationReagent {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ObservationGeneticsPhaseSet {
+impl Default for ObservationTimeOffset {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -878,7 +783,102 @@ impl Default for ObservationReplaces {
     }
 }
 
-impl Default for ObservationSecondaryFinding {
+impl Default for ObservationDeviceCode {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationDelta {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsGene {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationReferencerange {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            low: Default::default(),
+            high: Default::default(),
+            type_: Default::default(),
+            applies_to: Default::default(),
+            age: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+        }
+    }
+}
+
+impl Default for ObservationSequelTo {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationReagent {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsGenomicSourceClass {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsAminoAcidChange {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationPrecondition {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationFocusCode {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsVariant {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ObservationGeneticsDNARegionName {
     fn default() -> Self {
         Self {
             base: Extension::default(),

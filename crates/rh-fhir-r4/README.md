@@ -13,7 +13,7 @@ This crate contains automatically generated Rust types for FHIR (Fast Healthcare
 rh codegen hl7.fhir.r4.core 4.0.1 --output ../generated/rh-fhir-r4 --force
 ```
 
-- **Generation timestamp**: 2025-10-21 23:49:38.447447 -04:00
+- **Generation timestamp**: 2025-10-22 00:39:50.485653 -04:00
 
 ## 📦 Package Information
 

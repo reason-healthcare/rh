@@ -42,15 +42,6 @@ pub struct MedicinalProductPharmaceutical {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<MedicinalProductPharmaceuticalRouteofadministration>,
 }
-/// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the species
-    pub code: CodeableConcept,
-}
 /// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
@@ -78,6 +69,15 @@ pub struct MedicinalProductPharmaceuticalCharacteristics {
     pub code: CodeableConcept,
     /// The status of characteristic e.g. assigned or pending
     pub status: Option<CodeableConcept>,
+}
+/// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the species
+    pub code: CodeableConcept,
 }
 /// MedicinalProductPharmaceutical nested structure for the 'routeOfAdministration' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,15 +123,6 @@ impl Default for MedicinalProductPharmaceutical {
     }
 }
 
-impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
     fn default() -> Self {
         Self {
@@ -150,6 +141,15 @@ impl Default for MedicinalProductPharmaceuticalCharacteristics {
             base: BackboneElement::default(),
             code: CodeableConcept::default(),
             status: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
         }
     }
 }

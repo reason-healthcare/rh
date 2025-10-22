@@ -32,6 +32,7 @@ use crate::datatypes::trigger_definition::TriggerDefinition;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::base64binary::Base64BinaryType;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::instant::InstantType;
@@ -72,7 +73,7 @@ pub struct Extension {
     pub value_code: Option<StringType>,
     /// Value of extension (date)
     #[serde(rename = "valueDate")]
-    pub value_date: Option<StringType>,
+    pub value_date: Option<DateType>,
     /// Value of extension (dateTime)
     #[serde(rename = "valueDateTime")]
     pub value_date_time: Option<DateTimeType>,

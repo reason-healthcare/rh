@@ -14,6 +14,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::positive_int::PositiveIntType;
@@ -179,50 +180,210 @@ pub struct ExplanationOfBenefit {
     #[serde(rename = "benefitBalance")]
     pub benefit_balance: Option<Vec<ExplanationOfBenefitBenefitbalance>>,
 }
-/// ExplanationOfBenefit nested structure for the 'benefitBalance' field
+/// ExplanationOfBenefitBenefitbalance nested structure for the 'financial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitBenefitbalance {
+pub struct ExplanationOfBenefitBenefitbalanceFinancial {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Benefit Summary
-    pub financial: Option<Vec<ExplanationOfBenefitBenefitbalanceFinancial>>,
+    /// Benefit classification
+    ///
+    /// Binding: example (Deductable, visits, co-pay, etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Benefits allowed (unsignedInt)
+    #[serde(rename = "allowedUnsignedInt")]
+    pub allowed_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits allowed (string)
+    #[serde(rename = "allowedString")]
+    pub allowed_string: Option<StringType>,
+    /// Benefits allowed (Money)
+    #[serde(rename = "allowedMoney")]
+    pub allowed_money: Option<Money>,
+    /// Benefits used (unsignedInt)
+    #[serde(rename = "usedUnsignedInt")]
+    pub used_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits used (Money)
+    #[serde(rename = "usedMoney")]
+    pub used_money: Option<Money>,
+}
+/// ExplanationOfBenefit nested structure for the 'addItem' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitAdditem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Insurer added line items
+    pub detail: Option<Vec<ExplanationOfBenefitAdditemDetail>>,
+    /// Item sequence number
+    #[serde(rename = "itemSequence")]
+    pub item_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_itemSequence")]
+    pub _item_sequence: Option<Element>,
+    /// Detail sequence number
+    #[serde(rename = "detailSequence")]
+    pub detail_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    pub _detail_sequence: Option<Element>,
+    /// Subdetail sequence number
+    #[serde(rename = "subDetailSequence")]
+    pub sub_detail_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subDetailSequence")]
+    pub _sub_detail_sequence: Option<Element>,
+    /// Authorized providers
+    pub provider: Option<Vec<Reference>>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Program the product or service is provided under
+    ///
+    /// Binding: example (Program specific reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    pub program_code: Option<Vec<CodeableConcept>>,
+    /// Date or dates of service or product delivery (date)
+    #[serde(rename = "servicedDate")]
+    pub serviced_date: Option<DateType>,
+    /// Date or dates of service or product delivery (Period)
+    #[serde(rename = "servicedPeriod")]
+    pub serviced_period: Option<Period>,
+    /// Place of service or where product was supplied (CodeableConcept)
+    #[serde(rename = "locationCodeableConcept")]
+    pub location_codeable_concept: Option<CodeableConcept>,
+    /// Place of service or where product was supplied (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Place of service or where product was supplied (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Anatomical location
+    ///
+    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<CodeableConcept>,
+    /// Anatomical sub-location
+    ///
+    /// Binding: example (The code for the tooth surface and surface combinations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
+    #[serde(rename = "subSite")]
+    pub sub_site: Option<Vec<CodeableConcept>>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Added items adjudication
+    pub adjudication: Option<Vec<StringType>>,
+}
+/// ExplanationOfBenefit nested structure for the 'total' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitTotal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of adjudication information
+    ///
+    /// Binding: example (The adjudication codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    pub category: CodeableConcept,
+    /// Financial total for the category
+    pub amount: Money,
+}
+/// ExplanationOfBenefitItem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitItemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Product or service provided
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Revenue or cost center code
+    ///
+    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
+    pub revenue: Option<CodeableConcept>,
     /// Benefit classification
     ///
     /// Binding: example (Benefit categories such as: oral, medical, vision, oral-basic etc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: CodeableConcept,
-    /// Excluded from the plan
-    pub excluded: Option<BooleanType>,
-    /// Extension element for the 'excluded' primitive field. Contains metadata and extensions.
-    pub _excluded: Option<Element>,
-    /// Short name for the benefit
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Description of the benefit or services covered
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// In or out of network
+    pub category: Option<CodeableConcept>,
+    /// Billing, service, product, or drug code
     ///
-    /// Binding: example (Code to classify in or out of network services.)
+    /// Binding: example (Allowable service and product codes.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-network
-    pub network: Option<CodeableConcept>,
-    /// Individual or family
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
     ///
-    /// Binding: example (Unit covered/serviced - individual or family.)
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-unit
-    pub unit: Option<CodeableConcept>,
-    /// Annual or lifetime
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Program the product or service is provided under
     ///
-    /// Binding: example (Coverage unit - annual, lifetime.)
+    /// Binding: example (Program specific reason codes.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-term
-    pub term: Option<CodeableConcept>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    pub program_code: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Unique device identifier
+    pub udi: Option<Vec<Reference>>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Detail level adjudication details
+    pub adjudication: Option<Vec<StringType>>,
 }
 /// ExplanationOfBenefit nested structure for the 'processNote' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -299,248 +460,6 @@ pub struct ExplanationOfBenefitDiagnosis {
     #[serde(rename = "packageCode")]
     pub package_code: Option<CodeableConcept>,
 }
-/// ExplanationOfBenefit nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additional items
-    pub detail: Option<Vec<ExplanationOfBenefitItemDetail>>,
-    /// Adjudication details
-    pub adjudication: Option<Vec<ExplanationOfBenefitItemAdjudication>>,
-    /// Item instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Applicable care team members
-    #[serde(rename = "careTeamSequence")]
-    pub care_team_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'careTeamSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_careTeamSequence")]
-    pub _care_team_sequence: Option<Element>,
-    /// Applicable diagnoses
-    #[serde(rename = "diagnosisSequence")]
-    pub diagnosis_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'diagnosisSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_diagnosisSequence")]
-    pub _diagnosis_sequence: Option<Element>,
-    /// Applicable procedures
-    #[serde(rename = "procedureSequence")]
-    pub procedure_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'procedureSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_procedureSequence")]
-    pub _procedure_sequence: Option<Element>,
-    /// Applicable exception and supporting information
-    #[serde(rename = "informationSequence")]
-    pub information_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'informationSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_informationSequence")]
-    pub _information_sequence: Option<Element>,
-    /// Revenue or cost center code
-    ///
-    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
-    pub revenue: Option<CodeableConcept>,
-    /// Benefit classification
-    ///
-    /// Binding: example (Benefit categories such as: oral, medical, vision, oral-basic etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: Option<CodeableConcept>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Product or service billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
-    pub program_code: Option<Vec<CodeableConcept>>,
-    /// Date or dates of service or product delivery (date)
-    #[serde(rename = "servicedDate")]
-    pub serviced_date: Option<StringType>,
-    /// Date or dates of service or product delivery (Period)
-    #[serde(rename = "servicedPeriod")]
-    pub serviced_period: Option<Period>,
-    /// Place of service or where product was supplied (CodeableConcept)
-    #[serde(rename = "locationCodeableConcept")]
-    pub location_codeable_concept: Option<CodeableConcept>,
-    /// Place of service or where product was supplied (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Place of service or where product was supplied (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Unique device identifier
-    pub udi: Option<Vec<Reference>>,
-    /// Anatomical location
-    ///
-    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
-    #[serde(rename = "bodySite")]
-    pub body_site: Option<CodeableConcept>,
-    /// Anatomical sub-location
-    ///
-    /// Binding: example (The code for the tooth surface and surface combinations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
-    #[serde(rename = "subSite")]
-    pub sub_site: Option<Vec<CodeableConcept>>,
-    /// Encounters related to this billed item
-    pub encounter: Option<Vec<Reference>>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-}
-/// ExplanationOfBenefit nested structure for the 'accident' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitAccident {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When the incident occurred
-    pub date: Option<StringType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// The nature of the accident
-    ///
-    /// Binding: extensible (Type of accident: work place, auto, etc.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Where the event occurred (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Where the event occurred (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
-}
-/// ExplanationOfBenefit nested structure for the 'addItem' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitAdditem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Insurer added line items
-    pub detail: Option<Vec<ExplanationOfBenefitAdditemDetail>>,
-    /// Item sequence number
-    #[serde(rename = "itemSequence")]
-    pub item_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_itemSequence")]
-    pub _item_sequence: Option<Element>,
-    /// Detail sequence number
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Subdetail sequence number
-    #[serde(rename = "subDetailSequence")]
-    pub sub_detail_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subDetailSequence")]
-    pub _sub_detail_sequence: Option<Element>,
-    /// Authorized providers
-    pub provider: Option<Vec<Reference>>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
-    pub program_code: Option<Vec<CodeableConcept>>,
-    /// Date or dates of service or product delivery (date)
-    #[serde(rename = "servicedDate")]
-    pub serviced_date: Option<StringType>,
-    /// Date or dates of service or product delivery (Period)
-    #[serde(rename = "servicedPeriod")]
-    pub serviced_period: Option<Period>,
-    /// Place of service or where product was supplied (CodeableConcept)
-    #[serde(rename = "locationCodeableConcept")]
-    pub location_codeable_concept: Option<CodeableConcept>,
-    /// Place of service or where product was supplied (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Place of service or where product was supplied (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Anatomical location
-    ///
-    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
-    #[serde(rename = "bodySite")]
-    pub body_site: Option<CodeableConcept>,
-    /// Anatomical sub-location
-    ///
-    /// Binding: example (The code for the tooth surface and surface combinations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
-    #[serde(rename = "subSite")]
-    pub sub_site: Option<Vec<CodeableConcept>>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items adjudication
-    pub adjudication: Option<Vec<StringType>>,
-}
 /// ExplanationOfBenefitItemDetail nested structure for the 'subDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExplanationOfBenefitItemDetailSubdetail {
@@ -605,109 +524,66 @@ pub struct ExplanationOfBenefitItemDetailSubdetail {
     /// Subdetail level adjudication details
     pub adjudication: Option<Vec<StringType>>,
 }
-/// ExplanationOfBenefit nested structure for the 'total' field
+/// ExplanationOfBenefit nested structure for the 'benefitBalance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitTotal {
+pub struct ExplanationOfBenefitBenefitbalance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of adjudication information
+    /// Benefit Summary
+    pub financial: Option<Vec<ExplanationOfBenefitBenefitbalanceFinancial>>,
+    /// Benefit classification
     ///
-    /// Binding: example (The adjudication codes.)
+    /// Binding: example (Benefit categories such as: oral, medical, vision, oral-basic etc.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
     pub category: CodeableConcept,
-    /// Financial total for the category
-    pub amount: Money,
+    /// Excluded from the plan
+    pub excluded: Option<BooleanType>,
+    /// Extension element for the 'excluded' primitive field. Contains metadata and extensions.
+    pub _excluded: Option<Element>,
+    /// Short name for the benefit
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Description of the benefit or services covered
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// In or out of network
+    ///
+    /// Binding: example (Code to classify in or out of network services.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-network
+    pub network: Option<CodeableConcept>,
+    /// Individual or family
+    ///
+    /// Binding: example (Unit covered/serviced - individual or family.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-unit
+    pub unit: Option<CodeableConcept>,
+    /// Annual or lifetime
+    ///
+    /// Binding: example (Coverage unit - annual, lifetime.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-term
+    pub term: Option<CodeableConcept>,
 }
-/// ExplanationOfBenefitAdditemDetail nested structure for the 'subDetail' field
+/// ExplanationOfBenefit nested structure for the 'payee' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitAdditemDetailSubdetail {
+pub struct ExplanationOfBenefitPayee {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Billing, service, product, or drug code
+    /// Category of recipient
     ///
-    /// Binding: example (Allowable service and product codes.)
+    /// Binding: example (A code for the party to be reimbursed.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items adjudication
-    pub adjudication: Option<Vec<StringType>>,
-}
-/// ExplanationOfBenefit nested structure for the 'supportingInfo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitSupportinginfo {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Classification of the supplied information
-    ///
-    /// Binding: example (The valuset used for additional information category codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
-    pub category: CodeableConcept,
-    /// Type of information
-    ///
-    /// Binding: example (The valuset used for additional information codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
-    pub code: Option<CodeableConcept>,
-    /// When it occurred (date)
-    #[serde(rename = "timingDate")]
-    pub timing_date: Option<StringType>,
-    /// When it occurred (Period)
-    #[serde(rename = "timingPeriod")]
-    pub timing_period: Option<Period>,
-    /// Data to be provided (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Data to be provided (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Data to be provided (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// Data to be provided (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Option<Attachment>,
-    /// Data to be provided (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Option<Reference>,
-    /// Explanation for the information
-    ///
-    /// Binding: example (Reason codes for the missing teeth.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
-    pub reason: Option<Coding>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Recipient reference
+    pub party: Option<Reference>,
 }
 /// ExplanationOfBenefit nested structure for the 'careTeam' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -737,173 +613,6 @@ pub struct ExplanationOfBenefitCareteam {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/provider-qualification
     pub qualification: Option<CodeableConcept>,
-}
-/// ExplanationOfBenefit nested structure for the 'payee' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitPayee {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of recipient
-    ///
-    /// Binding: example (A code for the party to be reimbursed.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Recipient reference
-    pub party: Option<Reference>,
-}
-/// ExplanationOfBenefitAdditem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitAdditemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items adjudication
-    pub adjudication: Option<Vec<StringType>>,
-}
-/// ExplanationOfBenefitItem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitItemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Product or service provided
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Revenue or cost center code
-    ///
-    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
-    pub revenue: Option<CodeableConcept>,
-    /// Benefit classification
-    ///
-    /// Binding: example (Benefit categories such as: oral, medical, vision, oral-basic etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: Option<CodeableConcept>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
-    pub program_code: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Unique device identifier
-    pub udi: Option<Vec<Reference>>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Detail level adjudication details
-    pub adjudication: Option<Vec<StringType>>,
-}
-/// ExplanationOfBenefitBenefitbalance nested structure for the 'financial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitBenefitbalanceFinancial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefit classification
-    ///
-    /// Binding: example (Deductable, visits, co-pay, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Benefits allowed (unsignedInt)
-    #[serde(rename = "allowedUnsignedInt")]
-    pub allowed_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits allowed (string)
-    #[serde(rename = "allowedString")]
-    pub allowed_string: Option<StringType>,
-    /// Benefits allowed (Money)
-    #[serde(rename = "allowedMoney")]
-    pub allowed_money: Option<Money>,
-    /// Benefits used (unsignedInt)
-    #[serde(rename = "usedUnsignedInt")]
-    pub used_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits used (Money)
-    #[serde(rename = "usedMoney")]
-    pub used_money: Option<Money>,
-}
-/// ExplanationOfBenefit nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coverage to be used for adjudication
-    pub focal: BooleanType,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Prior authorization reference number
-    #[serde(rename = "preAuthRef")]
-    pub pre_auth_ref: Option<Vec<StringType>>,
-    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_preAuthRef")]
-    pub _pre_auth_ref: Option<Element>,
 }
 /// ExplanationOfBenefitItem nested structure for the 'adjudication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -953,30 +662,13 @@ pub struct ExplanationOfBenefitPayment {
     #[serde(rename = "adjustmentReason")]
     pub adjustment_reason: Option<CodeableConcept>,
     /// Expected date of payment
-    pub date: Option<StringType>,
+    pub date: Option<DateType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
     /// Payable amount after adjustment
     pub amount: Option<Money>,
     /// Business identifier for the payment
     pub identifier: Option<Identifier>,
-}
-/// ExplanationOfBenefit nested structure for the 'related' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExplanationOfBenefitRelated {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the related claim
-    pub claim: Option<Reference>,
-    /// How the reference claim is related
-    ///
-    /// Binding: example (Relationship of this claim to a related Claim.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
-    pub relationship: Option<CodeableConcept>,
-    /// File or case reference
-    pub reference: Option<Identifier>,
 }
 /// ExplanationOfBenefit nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1007,6 +699,315 @@ pub struct ExplanationOfBenefitProcedure {
     pub procedure_reference: Reference,
     /// Unique device identifier
     pub udi: Option<Vec<Reference>>,
+}
+/// ExplanationOfBenefitAdditemDetail nested structure for the 'subDetail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitAdditemDetailSubdetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Added items adjudication
+    pub adjudication: Option<Vec<StringType>>,
+}
+/// ExplanationOfBenefit nested structure for the 'accident' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitAccident {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When the incident occurred
+    pub date: Option<DateType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// The nature of the accident
+    ///
+    /// Binding: extensible (Type of accident: work place, auto, etc.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Where the event occurred (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Where the event occurred (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+}
+/// ExplanationOfBenefit nested structure for the 'supportingInfo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitSupportinginfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Classification of the supplied information
+    ///
+    /// Binding: example (The valuset used for additional information category codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
+    pub category: CodeableConcept,
+    /// Type of information
+    ///
+    /// Binding: example (The valuset used for additional information codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
+    pub code: Option<CodeableConcept>,
+    /// When it occurred (date)
+    #[serde(rename = "timingDate")]
+    pub timing_date: Option<DateType>,
+    /// When it occurred (Period)
+    #[serde(rename = "timingPeriod")]
+    pub timing_period: Option<Period>,
+    /// Data to be provided (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Data to be provided (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Data to be provided (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// Data to be provided (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Option<Attachment>,
+    /// Data to be provided (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Option<Reference>,
+    /// Explanation for the information
+    ///
+    /// Binding: example (Reason codes for the missing teeth.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
+    pub reason: Option<Coding>,
+}
+/// ExplanationOfBenefit nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Adjudication details
+    pub adjudication: Option<Vec<ExplanationOfBenefitItemAdjudication>>,
+    /// Additional items
+    pub detail: Option<Vec<ExplanationOfBenefitItemDetail>>,
+    /// Item instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Applicable care team members
+    #[serde(rename = "careTeamSequence")]
+    pub care_team_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'careTeamSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_careTeamSequence")]
+    pub _care_team_sequence: Option<Element>,
+    /// Applicable diagnoses
+    #[serde(rename = "diagnosisSequence")]
+    pub diagnosis_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'diagnosisSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_diagnosisSequence")]
+    pub _diagnosis_sequence: Option<Element>,
+    /// Applicable procedures
+    #[serde(rename = "procedureSequence")]
+    pub procedure_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'procedureSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_procedureSequence")]
+    pub _procedure_sequence: Option<Element>,
+    /// Applicable exception and supporting information
+    #[serde(rename = "informationSequence")]
+    pub information_sequence: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'informationSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_informationSequence")]
+    pub _information_sequence: Option<Element>,
+    /// Revenue or cost center code
+    ///
+    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
+    pub revenue: Option<CodeableConcept>,
+    /// Benefit classification
+    ///
+    /// Binding: example (Benefit categories such as: oral, medical, vision, oral-basic etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
+    pub category: Option<CodeableConcept>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Product or service billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Program the product or service is provided under
+    ///
+    /// Binding: example (Program specific reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    pub program_code: Option<Vec<CodeableConcept>>,
+    /// Date or dates of service or product delivery (date)
+    #[serde(rename = "servicedDate")]
+    pub serviced_date: Option<DateType>,
+    /// Date or dates of service or product delivery (Period)
+    #[serde(rename = "servicedPeriod")]
+    pub serviced_period: Option<Period>,
+    /// Place of service or where product was supplied (CodeableConcept)
+    #[serde(rename = "locationCodeableConcept")]
+    pub location_codeable_concept: Option<CodeableConcept>,
+    /// Place of service or where product was supplied (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Place of service or where product was supplied (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Unique device identifier
+    pub udi: Option<Vec<Reference>>,
+    /// Anatomical location
+    ///
+    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<CodeableConcept>,
+    /// Anatomical sub-location
+    ///
+    /// Binding: example (The code for the tooth surface and surface combinations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
+    #[serde(rename = "subSite")]
+    pub sub_site: Option<Vec<CodeableConcept>>,
+    /// Encounters related to this billed item
+    pub encounter: Option<Vec<Reference>>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+}
+/// ExplanationOfBenefitAdditem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitAdditemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Added items adjudication
+    pub adjudication: Option<Vec<StringType>>,
+}
+/// ExplanationOfBenefit nested structure for the 'related' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitRelated {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the related claim
+    pub claim: Option<Reference>,
+    /// How the reference claim is related
+    ///
+    /// Binding: example (Relationship of this claim to a related Claim.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
+    pub relationship: Option<CodeableConcept>,
+    /// File or case reference
+    pub reference: Option<Identifier>,
+}
+/// ExplanationOfBenefit nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplanationOfBenefitInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coverage to be used for adjudication
+    pub focal: BooleanType,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Prior authorization reference number
+    #[serde(rename = "preAuthRef")]
+    pub pre_auth_ref: Option<Vec<StringType>>,
+    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_preAuthRef")]
+    pub _pre_auth_ref: Option<Element>,
 }
 
 impl Default for ExplanationOfBenefit {
@@ -1067,105 +1068,16 @@ impl Default for ExplanationOfBenefit {
     }
 }
 
-impl Default for ExplanationOfBenefitBenefitbalance {
+impl Default for ExplanationOfBenefitBenefitbalanceFinancial {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            financial: Default::default(),
-            category: Default::default(),
-            excluded: Default::default(),
-            _excluded: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            network: Default::default(),
-            unit: Default::default(),
-            term: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitProcessnote {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            number: Default::default(),
-            _number: Default::default(),
             type_: Default::default(),
-            _type: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-            language: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            diagnosis_codeable_concept: Default::default(),
-            diagnosis_reference: Default::default(),
-            type_: Default::default(),
-            on_admission: Default::default(),
-            package_code: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail: Default::default(),
-            adjudication: Default::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            care_team_sequence: Default::default(),
-            _care_team_sequence: Default::default(),
-            diagnosis_sequence: Default::default(),
-            _diagnosis_sequence: Default::default(),
-            procedure_sequence: Default::default(),
-            _procedure_sequence: Default::default(),
-            information_sequence: Default::default(),
-            _information_sequence: Default::default(),
-            revenue: Default::default(),
-            category: Default::default(),
-            product_or_service: CodeableConcept::default(),
-            modifier: Default::default(),
-            program_code: Default::default(),
-            serviced_date: Default::default(),
-            serviced_period: Default::default(),
-            location_codeable_concept: Default::default(),
-            location_address: Default::default(),
-            location_reference: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            udi: Default::default(),
-            body_site: Default::default(),
-            sub_site: Default::default(),
-            encounter: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitAccident {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            type_: Default::default(),
-            location_address: Default::default(),
-            location_reference: Default::default(),
+            allowed_unsigned_int: Default::default(),
+            allowed_string: Default::default(),
+            allowed_money: Default::default(),
+            used_unsigned_int: Default::default(),
+            used_money: Default::default(),
         }
     }
 }
@@ -1204,117 +1116,12 @@ impl Default for ExplanationOfBenefitAdditem {
     }
 }
 
-impl Default for ExplanationOfBenefitItemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            revenue: Default::default(),
-            category: Default::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            program_code: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            udi: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
 impl Default for ExplanationOfBenefitTotal {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             category: CodeableConcept::default(),
             amount: Money::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitAdditemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitSupportinginfo {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            category: Default::default(),
-            code: Default::default(),
-            timing_date: Default::default(),
-            timing_period: Default::default(),
-            value_boolean: Default::default(),
-            value_string: Default::default(),
-            value_quantity: Default::default(),
-            value_attachment: Default::default(),
-            value_reference: Default::default(),
-            reason: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitCareteam {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            provider: Default::default(),
-            responsible: Default::default(),
-            _responsible: Default::default(),
-            role: Default::default(),
-            qualification: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitPayee {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            party: Default::default(),
-        }
-    }
-}
-
-impl Default for ExplanationOfBenefitAdditemDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
         }
     }
 }
@@ -1343,29 +1150,100 @@ impl Default for ExplanationOfBenefitItemDetail {
     }
 }
 
-impl Default for ExplanationOfBenefitBenefitbalanceFinancial {
+impl Default for ExplanationOfBenefitProcessnote {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            number: Default::default(),
+            _number: Default::default(),
             type_: Default::default(),
-            allowed_unsigned_int: Default::default(),
-            allowed_string: Default::default(),
-            allowed_money: Default::default(),
-            used_unsigned_int: Default::default(),
-            used_money: Default::default(),
+            _type: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            language: Default::default(),
         }
     }
 }
 
-impl Default for ExplanationOfBenefitInsurance {
+impl Default for ExplanationOfBenefitDiagnosis {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            focal: BooleanType::default(),
-            _focal: Default::default(),
-            coverage: Reference::default(),
-            pre_auth_ref: Default::default(),
-            _pre_auth_ref: Default::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            diagnosis_codeable_concept: Default::default(),
+            diagnosis_reference: Default::default(),
+            type_: Default::default(),
+            on_admission: Default::default(),
+            package_code: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitItemDetailSubdetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            revenue: Default::default(),
+            category: Default::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            program_code: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            udi: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitBenefitbalance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            financial: Default::default(),
+            category: Default::default(),
+            excluded: Default::default(),
+            _excluded: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            network: Default::default(),
+            unit: Default::default(),
+            term: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitPayee {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitCareteam {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            provider: Default::default(),
+            responsible: Default::default(),
+            _responsible: Default::default(),
+            role: Default::default(),
+            qualification: Default::default(),
         }
     }
 }
@@ -1398,17 +1276,6 @@ impl Default for ExplanationOfBenefitPayment {
     }
 }
 
-impl Default for ExplanationOfBenefitRelated {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            claim: Default::default(),
-            relationship: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
 impl Default for ExplanationOfBenefitProcedure {
     fn default() -> Self {
         Self {
@@ -1421,6 +1288,140 @@ impl Default for ExplanationOfBenefitProcedure {
             procedure_codeable_concept: Default::default(),
             procedure_reference: Default::default(),
             udi: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitAdditemDetailSubdetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitAccident {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            type_: Default::default(),
+            location_address: Default::default(),
+            location_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitSupportinginfo {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            category: Default::default(),
+            code: Default::default(),
+            timing_date: Default::default(),
+            timing_period: Default::default(),
+            value_boolean: Default::default(),
+            value_string: Default::default(),
+            value_quantity: Default::default(),
+            value_attachment: Default::default(),
+            value_reference: Default::default(),
+            reason: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            adjudication: Default::default(),
+            detail: Default::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            care_team_sequence: Default::default(),
+            _care_team_sequence: Default::default(),
+            diagnosis_sequence: Default::default(),
+            _diagnosis_sequence: Default::default(),
+            procedure_sequence: Default::default(),
+            _procedure_sequence: Default::default(),
+            information_sequence: Default::default(),
+            _information_sequence: Default::default(),
+            revenue: Default::default(),
+            category: Default::default(),
+            product_or_service: CodeableConcept::default(),
+            modifier: Default::default(),
+            program_code: Default::default(),
+            serviced_date: Default::default(),
+            serviced_period: Default::default(),
+            location_codeable_concept: Default::default(),
+            location_address: Default::default(),
+            location_reference: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            udi: Default::default(),
+            body_site: Default::default(),
+            sub_site: Default::default(),
+            encounter: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitAdditemDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitRelated {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            claim: Default::default(),
+            relationship: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ExplanationOfBenefitInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            focal: BooleanType::default(),
+            _focal: Default::default(),
+            coverage: Reference::default(),
+            pre_auth_ref: Default::default(),
+            _pre_auth_ref: Default::default(),
         }
     }
 }

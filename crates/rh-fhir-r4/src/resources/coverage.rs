@@ -87,22 +87,6 @@ pub struct Coverage {
     /// Contract details
     pub contract: Option<Vec<Reference>>,
 }
-/// CoverageCosttobeneficiary nested structure for the 'exception' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageCosttobeneficiaryException {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Exception category
-    ///
-    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The effective period of the exception
-    pub period: Option<Period>,
-}
 /// Coverage nested structure for the 'class' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageClass {
@@ -124,6 +108,22 @@ pub struct CoverageClass {
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
+}
+/// CoverageCosttobeneficiary nested structure for the 'exception' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageCosttobeneficiaryException {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Exception category
+    ///
+    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The effective period of the exception
+    pub period: Option<Period>,
 }
 /// Coverage nested structure for the 'costToBeneficiary' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,16 +179,6 @@ impl Default for Coverage {
     }
 }
 
-impl Default for CoverageCosttobeneficiaryException {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
 impl Default for CoverageClass {
     fn default() -> Self {
         Self {
@@ -198,6 +188,16 @@ impl Default for CoverageClass {
             _value: Default::default(),
             name: Default::default(),
             _name: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageCosttobeneficiaryException {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
         }
     }
 }

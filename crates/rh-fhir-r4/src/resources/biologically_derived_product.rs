@@ -62,44 +62,6 @@ pub struct BiologicallyDerivedProduct {
     /// Product storage
     pub storage: Option<Vec<BiologicallyDerivedProductStorage>>,
 }
-/// BiologicallyDerivedProduct nested structure for the 'collection' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BiologicallyDerivedProductCollection {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Individual performing collection
-    pub collector: Option<Reference>,
-    /// Who is product from
-    pub source: Option<Reference>,
-    /// Time of product collection (dateTime)
-    #[serde(rename = "collectedDateTime")]
-    pub collected_date_time: Option<DateTimeType>,
-    /// Time of product collection (Period)
-    #[serde(rename = "collectedPeriod")]
-    pub collected_period: Option<Period>,
-}
-/// BiologicallyDerivedProduct nested structure for the 'storage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BiologicallyDerivedProductStorage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of storage
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Storage temperature
-    pub temperature: Option<DecimalType>,
-    /// Extension element for the 'temperature' primitive field. Contains metadata and extensions.
-    pub _temperature: Option<Element>,
-    /// farenheit | celsius | kelvin
-    pub scale: Option<ProductStorageScale>,
-    /// Extension element for the 'scale' primitive field. Contains metadata and extensions.
-    pub _scale: Option<Element>,
-    /// Storage timeperiod
-    pub duration: Option<Period>,
-}
 /// BiologicallyDerivedProduct nested structure for the 'processing' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BiologicallyDerivedProductProcessing {
@@ -142,6 +104,44 @@ pub struct BiologicallyDerivedProductManipulation {
     #[serde(rename = "timePeriod")]
     pub time_period: Option<Period>,
 }
+/// BiologicallyDerivedProduct nested structure for the 'collection' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiologicallyDerivedProductCollection {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Individual performing collection
+    pub collector: Option<Reference>,
+    /// Who is product from
+    pub source: Option<Reference>,
+    /// Time of product collection (dateTime)
+    #[serde(rename = "collectedDateTime")]
+    pub collected_date_time: Option<DateTimeType>,
+    /// Time of product collection (Period)
+    #[serde(rename = "collectedPeriod")]
+    pub collected_period: Option<Period>,
+}
+/// BiologicallyDerivedProduct nested structure for the 'storage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiologicallyDerivedProductStorage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of storage
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Storage temperature
+    pub temperature: Option<DecimalType>,
+    /// Extension element for the 'temperature' primitive field. Contains metadata and extensions.
+    pub _temperature: Option<Element>,
+    /// farenheit | celsius | kelvin
+    pub scale: Option<ProductStorageScale>,
+    /// Extension element for the 'scale' primitive field. Contains metadata and extensions.
+    pub _scale: Option<Element>,
+    /// Storage timeperiod
+    pub duration: Option<Period>,
+}
 
 impl Default for BiologicallyDerivedProduct {
     fn default() -> Self {
@@ -161,6 +161,32 @@ impl Default for BiologicallyDerivedProduct {
             processing: Default::default(),
             manipulation: Default::default(),
             storage: Default::default(),
+        }
+    }
+}
+
+impl Default for BiologicallyDerivedProductProcessing {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            procedure: Default::default(),
+            additive: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
+        }
+    }
+}
+
+impl Default for BiologicallyDerivedProductManipulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
         }
     }
 }
@@ -188,32 +214,6 @@ impl Default for BiologicallyDerivedProductStorage {
             scale: Default::default(),
             _scale: Default::default(),
             duration: Default::default(),
-        }
-    }
-}
-
-impl Default for BiologicallyDerivedProductProcessing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            procedure: Default::default(),
-            additive: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
-impl Default for BiologicallyDerivedProductManipulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
         }
     }
 }

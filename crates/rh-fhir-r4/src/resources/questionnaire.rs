@@ -16,6 +16,7 @@ use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::integer::IntegerType;
@@ -109,13 +110,13 @@ pub struct Questionnaire {
     pub _copyright: Option<Element>,
     /// When the questionnaire was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the questionnaire was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -131,22 +132,6 @@ pub struct Questionnaire {
     /// Questions and sections within the Questionnaire
     pub item: Option<Vec<QuestionnaireItem>>,
 }
-/// signatureRequired
-///
-/// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-signatureRequired
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSignatureRequired {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// QuestionnaireItem nested structure for the 'answerOption' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItemAnsweroption {
@@ -158,7 +143,7 @@ pub struct QuestionnaireItemAnsweroption {
     pub value_integer: IntegerType,
     /// Answer value (date)
     #[serde(rename = "valueDate")]
-    pub value_date: StringType,
+    pub value_date: DateType,
     /// Answer value (time)
     #[serde(rename = "valueTime")]
     pub value_time: TimeType,
@@ -177,97 +162,6 @@ pub struct QuestionnaireItemAnsweroption {
     /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
     #[serde(rename = "_initialSelected")]
     pub _initial_selected: Option<Element>,
-}
-/// hidden
-///
-/// If true, indicates that the extended item should not be displayed to the user.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-hidden
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireHidden {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// choiceOrientation
-///
-/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireChoiceOrientation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// minOccurs
-///
-/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireMinOccurs {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// QuestionnaireItem nested structure for the 'initial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemInitial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Actual value for initializing the question (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Actual value for initializing the question (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Actual value for initializing the question (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Actual value for initializing the question (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: StringType,
-    /// Actual value for initializing the question (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Actual value for initializing the question (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Actual value for initializing the question (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Actual value for initializing the question (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Actual value for initializing the question (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Actual value for initializing the question (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Actual value for initializing the question (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Actual value for initializing the question (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
 }
 /// Questionnaire nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -347,6 +241,38 @@ pub struct QuestionnaireItem {
     /// Nested questionnaire items
     pub item: Option<Vec<StringType>>,
 }
+/// hidden
+///
+/// If true, indicates that the extended item should not be displayed to the user.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-hidden
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireHidden {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// choiceOrientation
+///
+/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireChoiceOrientation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// QuestionnaireItem nested structure for the 'enableWhen' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItemEnablewhen {
@@ -372,7 +298,7 @@ pub struct QuestionnaireItemEnablewhen {
     pub answer_integer: IntegerType,
     /// Value for question comparison based on operator (date)
     #[serde(rename = "answerDate")]
-    pub answer_date: StringType,
+    pub answer_date: DateType,
     /// Value for question comparison based on operator (dateTime)
     #[serde(rename = "answerDateTime")]
     pub answer_date_time: DateTimeType,
@@ -407,6 +333,81 @@ pub struct QuestionnaireSupportLink {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// minOccurs
+///
+/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireMinOccurs {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// signatureRequired
+///
+/// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-signatureRequired
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSignatureRequired {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// QuestionnaireItem nested structure for the 'initial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemInitial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual value for initializing the question (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Actual value for initializing the question (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Actual value for initializing the question (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Actual value for initializing the question (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Actual value for initializing the question (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Actual value for initializing the question (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Actual value for initializing the question (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Actual value for initializing the question (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Actual value for initializing the question (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Actual value for initializing the question (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Actual value for initializing the question (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Actual value for initializing the question (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
 }
 
 impl Default for Questionnaire {
@@ -454,14 +455,6 @@ impl Default for Questionnaire {
     }
 }
 
-impl Default for QuestionnaireSignatureRequired {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireItemAnsweroption {
     fn default() -> Self {
         Self {
@@ -474,50 +467,6 @@ impl Default for QuestionnaireItemAnsweroption {
             value_reference: Default::default(),
             initial_selected: Default::default(),
             _initial_selected: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireHidden {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireChoiceOrientation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireMinOccurs {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItemInitial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_boolean: Default::default(),
-            value_decimal: Default::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_date_time: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_uri: Default::default(),
-            value_attachment: Default::default(),
-            value_coding: Default::default(),
-            value_quantity: Default::default(),
-            value_reference: Default::default(),
         }
     }
 }
@@ -557,6 +506,22 @@ impl Default for QuestionnaireItem {
     }
 }
 
+impl Default for QuestionnaireHidden {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireChoiceOrientation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for QuestionnaireItemEnablewhen {
     fn default() -> Self {
         Self {
@@ -583,6 +548,42 @@ impl Default for QuestionnaireSupportLink {
     fn default() -> Self {
         Self {
             base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireMinOccurs {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSignatureRequired {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireItemInitial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_boolean: Default::default(),
+            value_decimal: Default::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_uri: Default::default(),
+            value_attachment: Default::default(),
+            value_coding: Default::default(),
+            value_quantity: Default::default(),
+            value_reference: Default::default(),
         }
     }
 }
@@ -794,10 +795,10 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

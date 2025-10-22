@@ -137,39 +137,16 @@ pub struct CodeSystem {
     /// Concepts in the code system
     pub concept: Option<Vec<CodeSystemConcept>>,
 }
-/// CodeSystem nested structure for the 'filter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that identifies the filter
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// How or why the filter is used
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
-    pub operator: Vec<FilterOperator>,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// What to use for the value
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// CodeSystem nested structure for the 'concept' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeSystemConcept {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Property value for the concept
-    pub property: Option<Vec<CodeSystemConceptProperty>>,
     /// Additional representations for the concept
     pub designation: Option<Vec<CodeSystemConceptDesignation>>,
+    /// Property value for the concept
+    pub property: Option<Vec<CodeSystemConceptProperty>>,
     /// Code that identifies concept
     pub code: StringType,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
@@ -184,45 +161,6 @@ pub struct CodeSystemConcept {
     pub _definition: Option<Element>,
     /// Child Concepts (is-a/contains/categorizes)
     pub concept: Option<Vec<StringType>>,
-}
-/// CodeSystemConcept nested structure for the 'designation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConceptDesignation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Human language of the designation
-    ///
-    /// Binding: preferred (A human language.)
-    ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `da`: Danish
-    /// - `de`: German
-    /// - `de-AT`: German (Austria)
-    /// - `de-CH`: German (Switzerland)
-    /// - `de-DE`: German (Germany)
-    /// - `el`: Greek
-    /// - `en`: English
-    /// - ... and 46 more values
-    pub language: Option<StringType>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Details how this designation would be used
-    ///
-    /// Binding: extensible (Details of how a designation would be used.)
-    ///
-    /// Available values:
-    /// - `900000000000003001`
-    /// - `900000000000013009`
-    #[serde(rename = "use")]
-    pub use_: Option<Coding>,
-    /// The text value for this designation
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
 }
 /// CodeSystem nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -280,6 +218,68 @@ pub struct CodeSystemConceptProperty {
     #[serde(rename = "valueDecimal")]
     pub value_decimal: DecimalType,
 }
+/// CodeSystemConcept nested structure for the 'designation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemConceptDesignation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Human language of the designation
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `da`: Danish
+    /// - `de`: German
+    /// - `de-AT`: German (Austria)
+    /// - `de-CH`: German (Switzerland)
+    /// - `de-DE`: German (Germany)
+    /// - `el`: Greek
+    /// - `en`: English
+    /// - ... and 46 more values
+    pub language: Option<StringType>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Details how this designation would be used
+    ///
+    /// Binding: extensible (Details of how a designation would be used.)
+    ///
+    /// Available values:
+    /// - `900000000000003001`
+    /// - `900000000000013009`
+    #[serde(rename = "use")]
+    pub use_: Option<Coding>,
+    /// The text value for this designation
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// CodeSystem nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies the filter
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// How or why the filter is used
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
+    pub operator: Vec<FilterOperator>,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// What to use for the value
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 
 impl Default for CodeSystem {
     fn default() -> Self {
@@ -334,28 +334,12 @@ impl Default for CodeSystem {
     }
 }
 
-impl Default for CodeSystemFilter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            operator: Vec::new(),
-            _operator: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
 impl Default for CodeSystemConcept {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            property: Default::default(),
             designation: Default::default(),
+            property: Default::default(),
             code: StringType::default(),
             _code: Default::default(),
             display: Default::default(),
@@ -363,19 +347,6 @@ impl Default for CodeSystemConcept {
             definition: Default::default(),
             _definition: Default::default(),
             concept: Default::default(),
-        }
-    }
-}
-
-impl Default for CodeSystemConceptDesignation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            use_: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -409,6 +380,35 @@ impl Default for CodeSystemConceptProperty {
             value_boolean: Default::default(),
             value_date_time: Default::default(),
             value_decimal: Default::default(),
+        }
+    }
+}
+
+impl Default for CodeSystemConceptDesignation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            use_: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for CodeSystemFilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: StringType::default(),
+            _code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            operator: Vec::new(),
+            _operator: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
         }
     }
 }

@@ -16,6 +16,7 @@ use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::timing::Timing;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -118,13 +119,13 @@ pub struct ResearchElementDefinition {
     pub _copyright: Option<Element>,
     /// When the research element definition was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the research element definition was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -561,10 +562,10 @@ impl crate::traits::research_element_definition::ResearchElementDefinitionAccess
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

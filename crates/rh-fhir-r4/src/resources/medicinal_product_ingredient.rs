@@ -41,30 +41,16 @@ pub struct MedicinalProductIngredient {
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
 }
-/// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
+/// MedicinalProductIngredient nested structure for the 'substance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
+pub struct MedicinalProductIngredientSubstance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The quantity of substance in the unit of presentation, or in the volume (or mass) of the single pharmaceutical product or manufactured item
-    pub presentation: Ratio,
-    /// A lower limit for the quantity of substance in the unit of presentation. For use when there is a range of strengths, this is the lower limit, with the presentation attribute becoming the upper limit
-    #[serde(rename = "presentationLowLimit")]
-    pub presentation_low_limit: Option<Ratio>,
-    /// The strength per unitary volume (or mass)
-    pub concentration: Option<Ratio>,
-    /// A lower limit for the strength per unitary volume (or mass), for when there is a range. The concentration attribute then becomes the upper limit
-    #[serde(rename = "concentrationLowLimit")]
-    pub concentration_low_limit: Option<Ratio>,
-    /// For when strength is measured at a particular point or distance
-    #[serde(rename = "measurementPoint")]
-    pub measurement_point: Option<StringType>,
-    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_measurementPoint")]
-    pub _measurement_point: Option<Element>,
-    /// The country or countries for which the strength range applies
-    pub country: Option<Vec<CodeableConcept>>,
+    /// The ingredient substance
+    pub code: CodeableConcept,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<StringType>>,
 }
 /// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,16 +89,30 @@ pub struct MedicinalProductIngredientSpecifiedsubstance {
     /// Confidentiality level of the specified substance as the ingredient
     pub confidentiality: Option<CodeableConcept>,
 }
-/// MedicinalProductIngredient nested structure for the 'substance' field
+/// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSubstance {
+pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The ingredient substance
-    pub code: CodeableConcept,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<StringType>>,
+    /// The quantity of substance in the unit of presentation, or in the volume (or mass) of the single pharmaceutical product or manufactured item
+    pub presentation: Ratio,
+    /// A lower limit for the quantity of substance in the unit of presentation. For use when there is a range of strengths, this is the lower limit, with the presentation attribute becoming the upper limit
+    #[serde(rename = "presentationLowLimit")]
+    pub presentation_low_limit: Option<Ratio>,
+    /// The strength per unitary volume (or mass)
+    pub concentration: Option<Ratio>,
+    /// A lower limit for the strength per unitary volume (or mass), for when there is a range. The concentration attribute then becomes the upper limit
+    #[serde(rename = "concentrationLowLimit")]
+    pub concentration_low_limit: Option<Ratio>,
+    /// For when strength is measured at a particular point or distance
+    #[serde(rename = "measurementPoint")]
+    pub measurement_point: Option<StringType>,
+    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_measurementPoint")]
+    pub _measurement_point: Option<Element>,
+    /// The country or countries for which the strength range applies
+    pub country: Option<Vec<CodeableConcept>>,
 }
 
 impl Default for MedicinalProductIngredient {
@@ -130,17 +130,12 @@ impl Default for MedicinalProductIngredient {
     }
 }
 
-impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
+impl Default for MedicinalProductIngredientSubstance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            presentation: Default::default(),
-            presentation_low_limit: Default::default(),
-            concentration: Default::default(),
-            concentration_low_limit: Default::default(),
-            measurement_point: Default::default(),
-            _measurement_point: Default::default(),
-            country: Default::default(),
+            code: CodeableConcept::default(),
+            strength: Default::default(),
         }
     }
 }
@@ -171,12 +166,17 @@ impl Default for MedicinalProductIngredientSpecifiedsubstance {
     }
 }
 
-impl Default for MedicinalProductIngredientSubstance {
+impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            strength: Default::default(),
+            presentation: Default::default(),
+            presentation_low_limit: Default::default(),
+            concentration: Default::default(),
+            concentration_low_limit: Default::default(),
+            measurement_point: Default::default(),
+            _measurement_point: Default::default(),
+            country: Default::default(),
         }
     }
 }

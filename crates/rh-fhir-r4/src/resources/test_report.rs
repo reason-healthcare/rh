@@ -64,13 +64,6 @@ pub struct TestReport {
     /// The results of running the series of required clean up steps
     pub teardown: Option<TestReportTeardown>,
 }
-/// TestReportSetup nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetupAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-}
 /// TestReport nested structure for the 'teardown' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestReportTeardown {
@@ -79,35 +72,6 @@ pub struct TestReportTeardown {
     pub base: BackboneElement,
     /// One or more teardown operations performed
     pub action: Vec<TestReportTeardownAction>,
-}
-/// TestReportTest nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTestAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The operation performed
-    pub operation: Option<StringType>,
-    /// The assertion performed
-    pub assert: Option<StringType>,
-}
-/// TestReport nested structure for the 'setup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A setup operation or assert that was executed
-    pub action: Vec<TestReportSetupAction>,
-}
-/// TestReportTeardown nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTeardownAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The teardown operation performed
-    pub operation: StringType,
 }
 /// TestReport nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,22 +93,23 @@ pub struct TestReportParticipant {
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
 }
-/// TestReport nested structure for the 'test' field
+/// TestReport nested structure for the 'setup' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTest {
+pub struct TestReportSetup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A test operation or assert that was performed
-    pub action: Vec<TestReportTestAction>,
-    /// Tracking/logging name of this test
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Tracking/reporting short description of the test
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
+    /// A setup operation or assert that was executed
+    pub action: Vec<TestReportSetupAction>,
+}
+/// TestReportTeardown nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTeardownAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The teardown operation performed
+    pub operation: StringType,
 }
 /// TestReportSetupAction nested structure for the 'assert' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,6 +130,17 @@ pub struct TestReportSetupActionAssert {
     /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
     pub _detail: Option<Element>,
 }
+/// TestReportTest nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTestAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The operation performed
+    pub operation: Option<StringType>,
+    /// The assertion performed
+    pub assert: Option<StringType>,
+}
 /// TestReportSetupAction nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestReportSetupActionOperation {
@@ -183,6 +159,30 @@ pub struct TestReportSetupActionOperation {
     pub detail: Option<StringType>,
     /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
     pub _detail: Option<Element>,
+}
+/// TestReport nested structure for the 'test' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A test operation or assert that was performed
+    pub action: Vec<TestReportTestAction>,
+    /// Tracking/logging name of this test
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Tracking/reporting short description of the test
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// TestReportSetup nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportSetupAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
 }
 
 impl Default for TestReport {
@@ -211,14 +211,6 @@ impl Default for TestReport {
     }
 }
 
-impl Default for TestReportSetupAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-        }
-    }
-}
-
 impl Default for TestReportTeardown {
     fn default() -> Self {
         Self {
@@ -228,12 +220,16 @@ impl Default for TestReportTeardown {
     }
 }
 
-impl Default for TestReportTestAction {
+impl Default for TestReportParticipant {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            operation: Default::default(),
-            assert: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            uri: StringType::default(),
+            _uri: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
         }
     }
 }
@@ -256,16 +252,40 @@ impl Default for TestReportTeardownAction {
     }
 }
 
-impl Default for TestReportParticipant {
+impl Default for TestReportSetupActionAssert {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            uri: StringType::default(),
-            _uri: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
+            result: Default::default(),
+            _result: Default::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            detail: Default::default(),
+            _detail: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportTestAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+            assert: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportSetupActionOperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            result: Default::default(),
+            _result: Default::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            detail: Default::default(),
+            _detail: Default::default(),
         }
     }
 }
@@ -283,30 +303,10 @@ impl Default for TestReportTest {
     }
 }
 
-impl Default for TestReportSetupActionAssert {
+impl Default for TestReportSetupAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            result: Default::default(),
-            _result: Default::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            detail: Default::default(),
-            _detail: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportSetupActionOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            result: Default::default(),
-            _result: Default::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            detail: Default::default(),
-            _detail: Default::default(),
         }
     }
 }

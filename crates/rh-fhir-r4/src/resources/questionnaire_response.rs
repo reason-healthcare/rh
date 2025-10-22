@@ -7,6 +7,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::integer::IntegerType;
@@ -77,7 +78,7 @@ pub struct QuestionnaireResponseItemAnswer {
     pub value_integer: Option<IntegerType>,
     /// Single-valued answer to the question (date)
     #[serde(rename = "valueDate")]
-    pub value_date: Option<StringType>,
+    pub value_date: Option<DateType>,
     /// Single-valued answer to the question (dateTime)
     #[serde(rename = "valueDateTime")]
     pub value_date_time: Option<DateTimeType>,

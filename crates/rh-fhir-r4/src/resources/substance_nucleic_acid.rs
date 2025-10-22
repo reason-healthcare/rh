@@ -43,25 +43,6 @@ pub struct SubstanceNucleicAcid {
     /// Subunits are listed in order of decreasing length; sequences of the same length will be ordered by molecular weight; subunits that have identical sequences will be repeated multiple times
     pub subunit: Option<Vec<SubstanceNucleicAcidSubunit>>,
 }
-/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunitSugar {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
-    pub identifier: Option<Identifier>,
-    /// The name of the sugar or sugar-like component that make up the nucleotide
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
-    #[serde(rename = "residueSite")]
-    pub residue_site: Option<StringType>,
-    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_residueSite")]
-    pub _residue_site: Option<Element>,
-}
 /// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceNucleicAcidSubunitLinkage {
@@ -79,6 +60,25 @@ pub struct SubstanceNucleicAcidSubunitLinkage {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// Residues shall be captured as described in 5.3.6.8.3
+    #[serde(rename = "residueSite")]
+    pub residue_site: Option<StringType>,
+    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_residueSite")]
+    pub _residue_site: Option<Element>,
+}
+/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunitSugar {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
+    pub identifier: Option<Identifier>,
+    /// The name of the sugar or sugar-like component that make up the nucleotide
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
     #[serde(rename = "residueSite")]
     pub residue_site: Option<StringType>,
     /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
@@ -133,10 +133,12 @@ impl Default for SubstanceNucleicAcid {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunitSugar {
+impl Default for SubstanceNucleicAcidSubunitLinkage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            connectivity: Default::default(),
+            _connectivity: Default::default(),
             identifier: Default::default(),
             name: Default::default(),
             _name: Default::default(),
@@ -146,12 +148,10 @@ impl Default for SubstanceNucleicAcidSubunitSugar {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunitLinkage {
+impl Default for SubstanceNucleicAcidSubunitSugar {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            connectivity: Default::default(),
-            _connectivity: Default::default(),
             identifier: Default::default(),
             name: Default::default(),
             _name: Default::default(),

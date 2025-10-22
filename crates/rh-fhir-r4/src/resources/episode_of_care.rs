@@ -59,19 +59,6 @@ pub struct EpisodeOfCare {
     /// The set of accounts that may be used for billing for this EpisodeOfCare
     pub account: Option<Vec<Reference>>,
 }
-/// EpisodeOfCare nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EpisodeOfCareStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
-    pub status: EpisodeOfCareStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// Duration the EpisodeOfCare was in the specified status
-    pub period: Period,
-}
 /// EpisodeOfCare nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EpisodeOfCareDiagnosis {
@@ -90,6 +77,19 @@ pub struct EpisodeOfCareDiagnosis {
     pub rank: Option<PositiveIntType>,
     /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
     pub _rank: Option<Element>,
+}
+/// EpisodeOfCare nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpisodeOfCareStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
+    pub status: EpisodeOfCareStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// Duration the EpisodeOfCare was in the specified status
+    pub period: Period,
 }
 
 impl Default for EpisodeOfCare {
@@ -113,17 +113,6 @@ impl Default for EpisodeOfCare {
     }
 }
 
-impl Default for EpisodeOfCareStatushistory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
 impl Default for EpisodeOfCareDiagnosis {
     fn default() -> Self {
         Self {
@@ -132,6 +121,17 @@ impl Default for EpisodeOfCareDiagnosis {
             role: Default::default(),
             rank: Default::default(),
             _rank: Default::default(),
+        }
+    }
+}
+
+impl Default for EpisodeOfCareStatushistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            period: Default::default(),
         }
     }
 }

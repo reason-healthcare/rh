@@ -127,6 +127,18 @@ pub struct DeviceDefinitionSpecialization {
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
 }
+/// DeviceDefinition nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of capability
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Description of capability
+    pub description: Option<Vec<CodeableConcept>>,
+}
 /// DeviceDefinition nested structure for the 'material' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionMaterial {
@@ -162,17 +174,21 @@ pub struct DeviceDefinitionProperty {
     #[serde(rename = "valueCode")]
     pub value_code: Option<Vec<CodeableConcept>>,
 }
-/// DeviceDefinition nested structure for the 'capability' field
+/// DeviceDefinition nested structure for the 'deviceName' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionCapability {
+pub struct DeviceDefinitionDevicename {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of capability
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
     #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Description of capability
-    pub description: Option<Vec<CodeableConcept>>,
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
 }
 /// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,22 +210,6 @@ pub struct DeviceDefinitionUdideviceidentifier {
     pub jurisdiction: StringType,
     /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
     pub _jurisdiction: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'deviceName' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionDevicename {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
 }
 
 impl Default for DeviceDefinition {
@@ -259,6 +259,16 @@ impl Default for DeviceDefinitionSpecialization {
     }
 }
 
+impl Default for DeviceDefinitionCapability {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            description: Default::default(),
+        }
+    }
+}
+
 impl Default for DeviceDefinitionMaterial {
     fn default() -> Self {
         Self {
@@ -283,12 +293,14 @@ impl Default for DeviceDefinitionProperty {
     }
 }
 
-impl Default for DeviceDefinitionCapability {
+impl Default for DeviceDefinitionDevicename {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
             type_: Default::default(),
-            description: Default::default(),
+            _type: Default::default(),
         }
     }
 }
@@ -303,18 +315,6 @@ impl Default for DeviceDefinitionUdideviceidentifier {
             _issuer: Default::default(),
             jurisdiction: Default::default(),
             _jurisdiction: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionDevicename {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
         }
     }
 }

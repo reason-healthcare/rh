@@ -4,8 +4,8 @@ use crate::datatypes::element::Element;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::money::Money;
 use crate::datatypes::reference::Reference;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
-use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
 use serde::{Deserialize, Serialize};
 /// PaymentNotice
@@ -43,7 +43,7 @@ pub struct PaymentNotice {
     pub payment: Reference,
     /// Payment or clearing date
     #[serde(rename = "paymentDate")]
-    pub payment_date: Option<StringType>,
+    pub payment_date: Option<DateType>,
     /// Extension element for the 'paymentDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_paymentDate")]
     pub _payment_date: Option<Element>,
@@ -262,7 +262,7 @@ impl crate::traits::payment_notice::PaymentNoticeAccessors for PaymentNotice {
     fn payment(&self) -> Reference {
         self.payment.clone()
     }
-    fn payment_date(&self) -> Option<StringType> {
+    fn payment_date(&self) -> Option<DateType> {
         self.payment_date.clone()
     }
     fn payee(&self) -> Option<Reference> {

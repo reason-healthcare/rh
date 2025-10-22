@@ -8,6 +8,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::money::Money;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -56,7 +57,7 @@ pub struct PaymentReconciliation {
     pub _disposition: Option<Element>,
     /// When payment issued
     #[serde(rename = "paymentDate")]
-    pub payment_date: StringType,
+    pub payment_date: DateType,
     /// Extension element for the 'paymentDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_paymentDate")]
     pub _payment_date: Option<Element>,
@@ -119,7 +120,7 @@ pub struct PaymentReconciliationDetail {
     /// Response committing to a payment
     pub response: Option<Reference>,
     /// Date of commitment to pay
-    pub date: Option<StringType>,
+    pub date: Option<DateType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
     /// Contact for the response
@@ -147,7 +148,7 @@ impl Default for PaymentReconciliation {
             _outcome: Default::default(),
             disposition: Default::default(),
             _disposition: Default::default(),
-            payment_date: StringType::default(),
+            payment_date: DateType::default(),
             _payment_date: Default::default(),
             payment_amount: Money::default(),
             payment_identifier: Default::default(),
@@ -374,7 +375,7 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationAccessors
     fn disposition(&self) -> Option<StringType> {
         self.disposition.clone()
     }
-    fn payment_date(&self) -> StringType {
+    fn payment_date(&self) -> DateType {
         self.payment_date.clone()
     }
     fn payment_amount(&self) -> Money {

@@ -141,220 +141,6 @@ pub struct CapabilityStatement {
     /// Document definition
     pub document: Option<Vec<CapabilityStatementDocument>>,
 }
-/// CapabilityStatement nested structure for the 'rest' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What operations are supported?
-    pub interaction: Option<Vec<CapabilityStatementRestInteraction>>,
-    /// Resource served on the REST interface
-    pub resource: Option<Vec<CapabilityStatementRestResource>>,
-    /// Information about security of implementation
-    pub security: Option<CapabilityStatementRestSecurity>,
-    /// client | server
-    pub mode: RestfulCapabilityMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// General description of implementation
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-    /// Search parameters for searching all resources
-    #[serde(rename = "searchParam")]
-    pub search_param: Option<Vec<StringType>>,
-    /// Definition of a system level operation
-    pub operation: Option<Vec<StringType>>,
-    /// Compartments served/used by system
-    pub compartment: Option<Vec<StringType>>,
-    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
-    pub _compartment: Option<Element>,
-}
-/// CapabilityStatementMessaging nested structure for the 'endpoint' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessagingEndpoint {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// http | ftp | mllp +
-    ///
-    /// Binding: extensible (The protocol used for message transport.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/message-transport
-    pub protocol: Coding,
-    /// Network address or identifier of the end-point
-    pub address: StringType,
-    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
-    pub _address: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
-    pub code: TypeRestfulInteraction,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Anything special about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRest nested structure for the 'security' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestSecurity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Adds CORS Headers (http://enable-cors.org/)
-    pub cors: Option<BooleanType>,
-    /// Extension element for the 'cors' primitive field. Contains metadata and extensions.
-    pub _cors: Option<Element>,
-    /// OAuth | SMART-on-FHIR | NTLM | Basic | Kerberos | Certificates
-    ///
-    /// Binding: extensible (Types of security services used with FHIR.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/restful-security-service
-    pub service: Option<Vec<CodeableConcept>>,
-    /// General description of how security works
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'document' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementDocument {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// producer | consumer
-    pub mode: DocumentMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Description of document support
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-    /// Constraint on the resources used in the document
-    pub profile: StringType,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'messaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Messages supported by this system
-    #[serde(rename = "supportedMessage")]
-    pub supported_message: Option<Vec<CapabilityStatementMessagingSupportedmessage>>,
-    /// Where messages should be sent
-    pub endpoint: Option<Vec<CapabilityStatementMessagingEndpoint>>,
-    /// Reliable Message Cache Length (min)
-    #[serde(rename = "reliableCache")]
-    pub reliable_cache: Option<UnsignedIntType>,
-    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_reliableCache")]
-    pub _reliable_cache: Option<Element>,
-    /// Messaging interface behavior details
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementMessaging nested structure for the 'supportedMessage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessagingSupportedmessage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// sender | receiver
-    pub mode: EventCapabilityMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Message supported by this system
-    pub definition: StringType,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'searchParam' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceSearchparam {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of search parameter
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Source of definition for parameter
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// number | date | string | token | reference | composite | quantity | uri | special
-    #[serde(rename = "type")]
-    pub type_: SearchParamType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Server-specific usage
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRest nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// transaction | batch | search-system | history-system
-    pub code: SystemRestfulInteraction,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Anything special about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'operation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceOperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name by which the operation/query is invoked
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The defined operation/query
-    pub definition: StringType,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Specific details about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'implementation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementImplementation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes this specific instance
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Base URL for the installation
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Organization that manages the data
-    pub custodian: Option<Reference>,
-}
 /// CapabilityStatementRest nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityStatementRestResource {
@@ -439,6 +225,27 @@ pub struct CapabilityStatementRestResource {
     #[serde(rename = "_searchRevInclude")]
     pub _search_rev_include: Option<Element>,
 }
+/// CapabilityStatementRest nested structure for the 'security' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestSecurity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Adds CORS Headers (http://enable-cors.org/)
+    pub cors: Option<BooleanType>,
+    /// Extension element for the 'cors' primitive field. Contains metadata and extensions.
+    pub _cors: Option<Element>,
+    /// OAuth | SMART-on-FHIR | NTLM | Basic | Kerberos | Certificates
+    ///
+    /// Binding: extensible (Types of security services used with FHIR.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/restful-security-service
+    pub service: Option<Vec<CodeableConcept>>,
+    /// General description of how security works
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// CapabilityStatement nested structure for the 'software' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityStatementSoftware {
@@ -459,6 +266,199 @@ pub struct CapabilityStatementSoftware {
     /// Extension element for the 'releaseDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_releaseDate")]
     pub _release_date: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'operation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceOperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name by which the operation/query is invoked
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The defined operation/query
+    pub definition: StringType,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Specific details about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'searchParam' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceSearchparam {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of search parameter
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Source of definition for parameter
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// number | date | string | token | reference | composite | quantity | uri | special
+    #[serde(rename = "type")]
+    pub type_: SearchParamType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Server-specific usage
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementMessaging nested structure for the 'supportedMessage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementMessagingSupportedmessage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// sender | receiver
+    pub mode: EventCapabilityMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Message supported by this system
+    pub definition: StringType,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'implementation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementImplementation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Describes this specific instance
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Base URL for the installation
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Organization that manages the data
+    pub custodian: Option<Reference>,
+}
+/// CapabilityStatement nested structure for the 'messaging' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementMessaging {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Where messages should be sent
+    pub endpoint: Option<Vec<CapabilityStatementMessagingEndpoint>>,
+    /// Messages supported by this system
+    #[serde(rename = "supportedMessage")]
+    pub supported_message: Option<Vec<CapabilityStatementMessagingSupportedmessage>>,
+    /// Reliable Message Cache Length (min)
+    #[serde(rename = "reliableCache")]
+    pub reliable_cache: Option<UnsignedIntType>,
+    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_reliableCache")]
+    pub _reliable_cache: Option<Element>,
+    /// Messaging interface behavior details
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementRest nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// transaction | batch | search-system | history-system
+    pub code: SystemRestfulInteraction,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Anything special about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'document' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementDocument {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// producer | consumer
+    pub mode: DocumentMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Description of document support
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+    /// Constraint on the resources used in the document
+    pub profile: StringType,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'rest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What operations are supported?
+    pub interaction: Option<Vec<CapabilityStatementRestInteraction>>,
+    /// Information about security of implementation
+    pub security: Option<CapabilityStatementRestSecurity>,
+    /// Resource served on the REST interface
+    pub resource: Option<Vec<CapabilityStatementRestResource>>,
+    /// client | server
+    pub mode: RestfulCapabilityMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// General description of implementation
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+    /// Search parameters for searching all resources
+    #[serde(rename = "searchParam")]
+    pub search_param: Option<Vec<StringType>>,
+    /// Definition of a system level operation
+    pub operation: Option<Vec<StringType>>,
+    /// Compartments served/used by system
+    pub compartment: Option<Vec<StringType>>,
+    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
+    pub _compartment: Option<Element>,
+}
+/// CapabilityStatementMessaging nested structure for the 'endpoint' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementMessagingEndpoint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// http | ftp | mllp +
+    ///
+    /// Binding: extensible (The protocol used for message transport.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/message-transport
+    pub protocol: Coding,
+    /// Network address or identifier of the end-point
+    pub address: StringType,
+    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
+    pub _address: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
+    pub code: TypeRestfulInteraction,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Anything special about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
 }
 
 impl Default for CapabilityStatement {
@@ -513,156 +513,6 @@ impl Default for CapabilityStatement {
     }
 }
 
-impl Default for CapabilityStatementRest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            interaction: Default::default(),
-            resource: Default::default(),
-            security: Default::default(),
-            mode: RestfulCapabilityMode::default(),
-            _mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-            search_param: Default::default(),
-            operation: Default::default(),
-            compartment: Default::default(),
-            _compartment: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementMessagingEndpoint {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            protocol: Default::default(),
-            address: Default::default(),
-            _address: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestSecurity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            cors: Default::default(),
-            _cors: Default::default(),
-            service: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementDocument {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: DocumentMode::default(),
-            _mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-            profile: StringType::default(),
-            _profile: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementMessaging {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            supported_message: Default::default(),
-            endpoint: Default::default(),
-            reliable_cache: Default::default(),
-            _reliable_cache: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementMessagingSupportedmessage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceSearchparam {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementImplementation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: StringType::default(),
-            _description: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
-            custodian: Default::default(),
-        }
-    }
-}
-
 impl Default for CapabilityStatementRestResource {
     fn default() -> Self {
         Self {
@@ -699,6 +549,19 @@ impl Default for CapabilityStatementRestResource {
     }
 }
 
+impl Default for CapabilityStatementRestSecurity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            cors: Default::default(),
+            _cors: Default::default(),
+            service: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for CapabilityStatementSoftware {
     fn default() -> Self {
         Self {
@@ -709,6 +572,143 @@ impl Default for CapabilityStatementSoftware {
             _version: Default::default(),
             release_date: Default::default(),
             _release_date: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceOperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceSearchparam {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementMessagingSupportedmessage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementImplementation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: StringType::default(),
+            _description: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
+            custodian: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementMessaging {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            endpoint: Default::default(),
+            supported_message: Default::default(),
+            reliable_cache: Default::default(),
+            _reliable_cache: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementDocument {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: DocumentMode::default(),
+            _mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+            profile: StringType::default(),
+            _profile: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            interaction: Default::default(),
+            security: Default::default(),
+            resource: Default::default(),
+            mode: RestfulCapabilityMode::default(),
+            _mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+            search_param: Default::default(),
+            operation: Default::default(),
+            compartment: Default::default(),
+            _compartment: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementMessagingEndpoint {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            protocol: Default::default(),
+            address: Default::default(),
+            _address: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
         }
     }
 }

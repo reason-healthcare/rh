@@ -37,6 +37,7 @@ use crate::datatypes::trigger_definition::TriggerDefinition;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::base64binary::Base64BinaryType;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::instant::InstantType;
@@ -174,6 +175,22 @@ pub struct Task {
     /// Information produced as part of task
     pub output: Option<Vec<TaskOutput>>,
 }
+/// replaces
+///
+/// Completed or terminated task(s) whose function is taken by this new task.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-replaces
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskReplaces {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Task nested structure for the 'restriction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRestriction {
@@ -214,7 +231,7 @@ pub struct TaskOutput {
     pub value_code: StringType,
     /// Result of output (date)
     #[serde(rename = "valueDate")]
-    pub value_date: StringType,
+    pub value_date: DateType,
     /// Result of output (dateTime)
     #[serde(rename = "valueDateTime")]
     pub value_date_time: DateTimeType,
@@ -351,6 +368,22 @@ pub struct TaskOutput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// Candidate List
+///
+/// Identifies the individuals who are candidates for being the owner of the task.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskCandidateList {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskInput {
@@ -376,7 +409,7 @@ pub struct TaskInput {
     pub value_code: StringType,
     /// Content to use in performing the task (date)
     #[serde(rename = "valueDate")]
-    pub value_date: StringType,
+    pub value_date: DateType,
     /// Content to use in performing the task (dateTime)
     #[serde(rename = "valueDateTime")]
     pub value_date_time: DateTimeType,
@@ -513,38 +546,6 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Candidate List
-///
-/// Identifies the individuals who are candidates for being the owner of the task.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskCandidateList {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// replaces
-///
-/// Completed or terminated task(s) whose function is taken by this new task.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-replaces
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskReplaces {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Task {
     fn default() -> Self {
@@ -589,6 +590,14 @@ impl Default for Task {
             restriction: Default::default(),
             input: Default::default(),
             output: Default::default(),
+        }
+    }
+}
+
+impl Default for TaskReplaces {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -664,6 +673,14 @@ impl Default for TaskOutput {
     }
 }
 
+impl Default for TaskCandidateList {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for TaskInput {
     fn default() -> Self {
         Self {
@@ -719,22 +736,6 @@ impl Default for TaskInput {
             value_usage_context: Default::default(),
             value_dosage: Default::default(),
             value_meta: Default::default(),
-        }
-    }
-}
-
-impl Default for TaskCandidateList {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for TaskReplaces {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

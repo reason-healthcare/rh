@@ -9,6 +9,7 @@ use crate::datatypes::money::Money;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::primitives::unsigned_int::UnsignedIntType;
@@ -43,7 +44,7 @@ pub struct CoverageEligibilityResponse {
     pub patient: Reference,
     /// Estimated date or dates of service (date)
     #[serde(rename = "servicedDate")]
-    pub serviced_date: Option<StringType>,
+    pub serviced_date: Option<DateType>,
     /// Estimated date or dates of service (Period)
     #[serde(rename = "servicedPeriod")]
     pub serviced_period: Option<Period>,
@@ -177,19 +178,6 @@ pub struct CoverageEligibilityResponseInsurance {
     #[serde(rename = "benefitPeriod")]
     pub benefit_period: Option<Period>,
 }
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -221,6 +209,19 @@ pub struct CoverageEligibilityResponseInsuranceItemBenefit {
     /// Benefits used (Money)
     #[serde(rename = "usedMoney")]
     pub used_money: Option<Money>,
+}
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
 }
 
 impl Default for CoverageEligibilityResponse {
@@ -292,15 +293,6 @@ impl Default for CoverageEligibilityResponseInsurance {
     }
 }
 
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
@@ -312,6 +304,15 @@ impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
             used_unsigned_int: Default::default(),
             used_string: Default::default(),
             used_money: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
         }
     }
 }

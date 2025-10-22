@@ -85,6 +85,38 @@ pub struct ObservationDefinition {
     #[serde(rename = "criticalCodedValueSet")]
     pub critical_coded_value_set: Option<Reference>,
 }
+/// ObservationDefinition nested structure for the 'quantitativeDetails' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationDefinitionQuantitativedetails {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Customary unit for quantitative results
+    ///
+    /// Binding: extensible (Codes identifying units of measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
+    #[serde(rename = "customaryUnit")]
+    pub customary_unit: Option<CodeableConcept>,
+    /// SI unit for quantitative results
+    ///
+    /// Binding: extensible (Codes identifying units of measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
+    pub unit: Option<CodeableConcept>,
+    /// SI to Customary unit conversion factor
+    #[serde(rename = "conversionFactor")]
+    pub conversion_factor: Option<DecimalType>,
+    /// Extension element for the 'conversionFactor' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_conversionFactor")]
+    pub _conversion_factor: Option<Element>,
+    /// Decimal precision of observation quantitative results
+    #[serde(rename = "decimalPrecision")]
+    pub decimal_precision: Option<IntegerType>,
+    /// Extension element for the 'decimalPrecision' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_decimalPrecision")]
+    pub _decimal_precision: Option<Element>,
+}
 /// ObservationDefinition nested structure for the 'qualifiedInterval' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservationDefinitionQualifiedinterval {
@@ -127,38 +159,6 @@ pub struct ObservationDefinitionQualifiedinterval {
     /// Extension element for the 'condition' primitive field. Contains metadata and extensions.
     pub _condition: Option<Element>,
 }
-/// ObservationDefinition nested structure for the 'quantitativeDetails' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDefinitionQuantitativedetails {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Customary unit for quantitative results
-    ///
-    /// Binding: extensible (Codes identifying units of measure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
-    #[serde(rename = "customaryUnit")]
-    pub customary_unit: Option<CodeableConcept>,
-    /// SI unit for quantitative results
-    ///
-    /// Binding: extensible (Codes identifying units of measure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
-    pub unit: Option<CodeableConcept>,
-    /// SI to Customary unit conversion factor
-    #[serde(rename = "conversionFactor")]
-    pub conversion_factor: Option<DecimalType>,
-    /// Extension element for the 'conversionFactor' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_conversionFactor")]
-    pub _conversion_factor: Option<Element>,
-    /// Decimal precision of observation quantitative results
-    #[serde(rename = "decimalPrecision")]
-    pub decimal_precision: Option<IntegerType>,
-    /// Extension element for the 'decimalPrecision' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_decimalPrecision")]
-    pub _decimal_precision: Option<Element>,
-}
 
 impl Default for ObservationDefinition {
     fn default() -> Self {
@@ -184,6 +184,20 @@ impl Default for ObservationDefinition {
     }
 }
 
+impl Default for ObservationDefinitionQuantitativedetails {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            customary_unit: Default::default(),
+            unit: Default::default(),
+            conversion_factor: Default::default(),
+            _conversion_factor: Default::default(),
+            decimal_precision: Default::default(),
+            _decimal_precision: Default::default(),
+        }
+    }
+}
+
 impl Default for ObservationDefinitionQualifiedinterval {
     fn default() -> Self {
         Self {
@@ -199,20 +213,6 @@ impl Default for ObservationDefinitionQualifiedinterval {
             gestational_age: Default::default(),
             condition: Default::default(),
             _condition: Default::default(),
-        }
-    }
-}
-
-impl Default for ObservationDefinitionQuantitativedetails {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            customary_unit: Default::default(),
-            unit: Default::default(),
-            conversion_factor: Default::default(),
-            _conversion_factor: Default::default(),
-            decimal_precision: Default::default(),
-            _decimal_precision: Default::default(),
         }
     }
 }

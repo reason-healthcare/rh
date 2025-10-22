@@ -3,6 +3,7 @@ use crate::datatypes::annotation::Annotation;
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::reference::Reference;
+use crate::primitives::date::DateType;
 use crate::primitives::string::StringType;
 use crate::resources::goal::GoalTarget;
 use crate::traits::domain_resource::DomainResourceAccessors;
@@ -38,7 +39,7 @@ pub trait GoalAccessors: DomainResourceAccessors {
     /// Returns a reference to the target field.
     fn target(&self) -> &[GoalTarget];
     /// Returns a reference to the statusDate field.
-    fn status_date(&self) -> Option<StringType>;
+    fn status_date(&self) -> Option<DateType>;
     /// Returns a reference to the statusReason field.
     fn status_reason(&self) -> Option<StringType>;
     /// Returns a reference to the expressedBy field.

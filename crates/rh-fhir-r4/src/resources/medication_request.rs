@@ -190,6 +190,17 @@ pub struct MedicationRequestDispenserequest {
     /// Intended dispenser
     pub performer: Option<Reference>,
 }
+/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestDispenserequestInitialfill {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// First fill quantity
+    pub quantity: Option<Quantity>,
+    /// First fill duration
+    pub duration: Option<Duration>,
+}
 /// MedicationRequest nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationRequestSubstitution {
@@ -208,17 +219,6 @@ pub struct MedicationRequestSubstitution {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
     pub reason: Option<CodeableConcept>,
-}
-/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestDispenserequestInitialfill {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// First fill quantity
-    pub quantity: Option<Quantity>,
-    /// First fill duration
-    pub duration: Option<Duration>,
 }
 
 impl Default for MedicationRequest {
@@ -286,6 +286,16 @@ impl Default for MedicationRequestDispenserequest {
     }
 }
 
+impl Default for MedicationRequestDispenserequestInitialfill {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            duration: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationRequestSubstitution {
     fn default() -> Self {
         Self {
@@ -293,16 +303,6 @@ impl Default for MedicationRequestSubstitution {
             allowed_boolean: Default::default(),
             allowed_codeable_concept: Default::default(),
             reason: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationRequestDispenserequestInitialfill {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            duration: Default::default(),
         }
     }
 }

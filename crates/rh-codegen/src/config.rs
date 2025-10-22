@@ -42,7 +42,7 @@ impl Default for CodegenConfig {
         type_mappings.insert("markdown".to_string(), "StringType".to_string());
         type_mappings.insert("base64Binary".to_string(), "Base64BinaryType".to_string());
         type_mappings.insert("instant".to_string(), "InstantType".to_string());
-        type_mappings.insert("date".to_string(), "StringType".to_string()); // Will be DateType when implemented
+        type_mappings.insert("date".to_string(), "DateType".to_string());
         type_mappings.insert("dateTime".to_string(), "DateTimeType".to_string());
         type_mappings.insert("time".to_string(), "TimeType".to_string());
 

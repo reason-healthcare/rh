@@ -109,6 +109,19 @@ pub struct DocumentReference {
     /// Clinical context of document
     pub context: Option<DocumentReferenceContext>,
 }
+/// DocumentReference nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship
+    pub target: Reference,
+}
 /// DocumentReference nested structure for the 'context' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReferenceContext {
@@ -182,19 +195,6 @@ pub struct DocumentReferenceContent {
     /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
     pub format: Option<Coding>,
 }
-/// DocumentReference nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship
-    pub target: Reference,
-}
 
 impl Default for DocumentReference {
     fn default() -> Self {
@@ -224,6 +224,17 @@ impl Default for DocumentReference {
     }
 }
 
+impl Default for DocumentReferenceRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target: Default::default(),
+        }
+    }
+}
+
 impl Default for DocumentReferenceContext {
     fn default() -> Self {
         Self {
@@ -245,17 +256,6 @@ impl Default for DocumentReferenceContent {
             base: BackboneElement::default(),
             attachment: Attachment::default(),
             format: Default::default(),
-        }
-    }
-}
-
-impl Default for DocumentReferenceRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target: Default::default(),
         }
     }
 }

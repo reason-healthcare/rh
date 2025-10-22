@@ -10,6 +10,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::usage_context::UsageContext;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::integer::IntegerType;
@@ -84,13 +85,13 @@ pub struct EffectEvidenceSynthesis {
     pub _copyright: Option<Element>,
     /// When the effect evidence synthesis was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the effect evidence synthesis was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -149,6 +150,24 @@ pub struct EffectEvidenceSynthesis {
     /// How certain is the effect
     pub certainty: Option<Vec<EffectEvidenceSynthesisCertainty>>,
 }
+/// EffectEvidenceSynthesis nested structure for the 'certainty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisCertainty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    pub certainty_subcomponent: Option<Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
+}
 /// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectEvidenceSynthesisEffectestimate {
@@ -184,46 +203,6 @@ pub struct EffectEvidenceSynthesisEffectestimate {
     #[serde(rename = "unitOfMeasure")]
     pub unit_of_measure: Option<CodeableConcept>,
 }
-/// EffectEvidenceSynthesis nested structure for the 'certainty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertainty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    pub certainty_subcomponent: Option<Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of subcomponent of certainty rating
-    ///
-    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Subcomponent certainty rating
-    ///
-    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
 /// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectEvidenceSynthesisSamplesize {
@@ -246,6 +225,28 @@ pub struct EffectEvidenceSynthesisSamplesize {
     /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
     #[serde(rename = "_numberOfParticipants")]
     pub _number_of_participants: Option<Element>,
+}
+/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of subcomponent of certainty rating
+    ///
+    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Subcomponent certainty rating
+    ///
+    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
 }
 /// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,6 +354,17 @@ impl Default for EffectEvidenceSynthesis {
     }
 }
 
+impl Default for EffectEvidenceSynthesisCertainty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            certainty_subcomponent: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
 impl Default for EffectEvidenceSynthesisEffectestimate {
     fn default() -> Self {
         Self {
@@ -369,13 +381,16 @@ impl Default for EffectEvidenceSynthesisEffectestimate {
     }
 }
 
-impl Default for EffectEvidenceSynthesisCertainty {
+impl Default for EffectEvidenceSynthesisSamplesize {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            certainty_subcomponent: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }
@@ -387,20 +402,6 @@ impl Default for EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
             type_: Default::default(),
             rating: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
         }
     }
 }
@@ -634,10 +635,10 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisAccessors
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

@@ -20,6 +20,7 @@ use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::timing::Timing;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -112,13 +113,13 @@ pub struct ActivityDefinition {
     pub _copyright: Option<Element>,
     /// When the activity definition was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the activity definition was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -574,10 +575,10 @@ impl crate::traits::activity_definition::ActivityDefinitionAccessors for Activit
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {
@@ -1016,9 +1017,6 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
     fn has_subject(&self) -> bool {
         self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
     }
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
-    }
     fn has_timing(&self) -> bool {
         self.timing_timing.is_some()
             || self.timing_date_time.is_some()
@@ -1026,6 +1024,9 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
             || self.timing_period.is_some()
             || self.timing_range.is_some()
             || self.timing_duration.is_some()
+    }
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

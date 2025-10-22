@@ -2,7 +2,7 @@ use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::element::Element;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::reference::Reference;
-use crate::primitives::string::StringType;
+use crate::primitives::date::DateType;
 use crate::resources::domain_resource::DomainResource;
 use serde::{Deserialize, Serialize};
 /// Basic
@@ -31,7 +31,7 @@ pub struct Basic {
     /// Identifies the focus of this resource
     pub subject: Option<Reference>,
     /// When created
-    pub created: Option<StringType>,
+    pub created: Option<DateType>,
     /// Extension element for the 'created' primitive field. Contains metadata and extensions.
     pub _created: Option<Element>,
     /// Who created
@@ -217,7 +217,7 @@ impl crate::traits::basic::BasicAccessors for Basic {
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
     }
-    fn created(&self) -> Option<StringType> {
+    fn created(&self) -> Option<DateType> {
         self.created.clone()
     }
     fn author(&self) -> Option<Reference> {

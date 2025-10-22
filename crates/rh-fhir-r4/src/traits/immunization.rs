@@ -5,6 +5,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::immunization::ImmunizationEducation;
@@ -52,7 +53,7 @@ pub trait ImmunizationAccessors: DomainResourceAccessors {
     /// Returns a reference to the lotNumber field.
     fn lot_number(&self) -> Option<StringType>;
     /// Returns a reference to the expirationDate field.
-    fn expiration_date(&self) -> Option<StringType>;
+    fn expiration_date(&self) -> Option<DateType>;
     /// Returns a reference to the site field.
     fn site(&self) -> Option<CodeableConcept>;
     /// Returns a reference to the route field.

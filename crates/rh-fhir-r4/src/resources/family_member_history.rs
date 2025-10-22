@@ -10,6 +10,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::range::Range;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -81,7 +82,7 @@ pub struct FamilyMemberHistory {
     pub born_period: Option<Period>,
     /// (approximate) date of birth (date)
     #[serde(rename = "bornDate")]
-    pub born_date: Option<StringType>,
+    pub born_date: Option<DateType>,
     /// (approximate) date of birth (string)
     #[serde(rename = "bornString")]
     pub born_string: Option<StringType>,
@@ -111,7 +112,7 @@ pub struct FamilyMemberHistory {
     pub deceased_range: Option<Range>,
     /// Dead? How old/when? (date)
     #[serde(rename = "deceasedDate")]
-    pub deceased_date: Option<StringType>,
+    pub deceased_date: Option<DateType>,
     /// Dead? How old/when? (string)
     #[serde(rename = "deceasedString")]
     pub deceased_string: Option<StringType>,
@@ -608,9 +609,6 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_born(&self) -> bool {
-        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
-    }
     fn has_age(&self) -> bool {
         self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
@@ -620,6 +618,9 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             || self.deceased_range.is_some()
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
+    }
+    fn has_born(&self) -> bool {
+        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

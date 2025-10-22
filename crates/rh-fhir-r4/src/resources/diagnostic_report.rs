@@ -91,54 +91,6 @@ pub struct DiagnosticReport {
     #[serde(rename = "presentedForm")]
     pub presented_form: Option<Vec<Attachment>>,
 }
-/// Summary Of
-///
-/// A summary report that points to subordinate target reports.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportSummaryOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Addendum Of
-///
-/// The supplements or provides additional information for the target report.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-addendumOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportAddendumOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// References
-///
-/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsReferences {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// FamilyMemberHistory
 ///
 /// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
@@ -167,6 +119,54 @@ pub struct DiagnosticReportMedia {
     pub _comment: Option<Element>,
     /// Reference to the image source
     pub link: Reference,
+}
+/// Addendum Of
+///
+/// The supplements or provides additional information for the target report.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-addendumOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportAddendumOf {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Summary Of
+///
+/// A summary report that points to subordinate target reports.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportSummaryOf {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// References
+///
+/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsReferences {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for DiagnosticReport {
@@ -199,30 +199,6 @@ impl Default for DiagnosticReport {
     }
 }
 
-impl Default for DiagnosticReportSummaryOf {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for DiagnosticReportAddendumOf {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for DiagnosticReportGeneticsReferences {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
     fn default() -> Self {
         Self {
@@ -238,6 +214,30 @@ impl Default for DiagnosticReportMedia {
             comment: Default::default(),
             _comment: Default::default(),
             link: Reference::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportAddendumOf {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportSummaryOf {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsReferences {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }

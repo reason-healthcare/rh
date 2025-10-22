@@ -2,6 +2,7 @@ use crate::bindings::verificationresult_status::VerificationresultStatus;
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::timing::Timing;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::verification_result::VerificationResultAttestation;
@@ -42,7 +43,7 @@ pub trait VerificationResultAccessors: DomainResourceAccessors {
     /// Returns a reference to the lastPerformed field.
     fn last_performed(&self) -> Option<DateTimeType>;
     /// Returns a reference to the nextScheduled field.
-    fn next_scheduled(&self) -> Option<StringType>;
+    fn next_scheduled(&self) -> Option<DateType>;
     /// Returns a reference to the failureAction field.
     fn failure_action(&self) -> Option<CodeableConcept>;
     /// Returns a reference to the primarySource field.

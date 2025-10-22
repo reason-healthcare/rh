@@ -37,6 +37,35 @@ pub struct SubstanceReferenceInformation {
     /// Todo
     pub target: Option<Vec<SubstanceReferenceInformationTarget>>,
 }
+/// SubstanceReferenceInformation nested structure for the 'classification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationClassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub domain: Option<CodeableConcept>,
+    /// Todo
+    pub classification: Option<CodeableConcept>,
+    /// Todo
+    pub subtype: Option<Vec<CodeableConcept>>,
+    /// Todo
+    pub source: Option<Vec<Reference>>,
+}
+/// SubstanceReferenceInformation nested structure for the 'geneElement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGeneelement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub element: Option<Identifier>,
+    /// Todo
+    pub source: Option<Vec<Reference>>,
+}
 /// SubstanceReferenceInformation nested structure for the 'gene' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceReferenceInformationGene {
@@ -84,35 +113,6 @@ pub struct SubstanceReferenceInformationTarget {
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceReferenceInformation nested structure for the 'geneElement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGeneelement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub element: Option<Identifier>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceReferenceInformation nested structure for the 'classification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationClassification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub domain: Option<CodeableConcept>,
-    /// Todo
-    pub classification: Option<CodeableConcept>,
-    /// Todo
-    pub subtype: Option<Vec<CodeableConcept>>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
-}
 
 impl Default for SubstanceReferenceInformation {
     fn default() -> Self {
@@ -124,6 +124,29 @@ impl Default for SubstanceReferenceInformation {
             gene_element: Default::default(),
             classification: Default::default(),
             target: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceReferenceInformationClassification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            domain: Default::default(),
+            classification: Default::default(),
+            subtype: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceReferenceInformationGeneelement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            element: Default::default(),
+            source: Default::default(),
         }
     }
 }
@@ -152,29 +175,6 @@ impl Default for SubstanceReferenceInformationTarget {
             amount_range: Default::default(),
             amount_string: Default::default(),
             amount_type: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceReferenceInformationGeneelement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            element: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceReferenceInformationClassification {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            domain: Default::default(),
-            classification: Default::default(),
-            subtype: Default::default(),
             source: Default::default(),
         }
     }

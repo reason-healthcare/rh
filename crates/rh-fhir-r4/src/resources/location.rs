@@ -98,37 +98,6 @@ pub struct Location {
     /// Technical endpoints providing access to services operated for the location
     pub endpoint: Option<Vec<Reference>>,
 }
-/// Location nested structure for the 'hoursOfOperation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationHoursofoperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// mon | tue | wed | thu | fri | sat | sun
-    #[serde(rename = "daysOfWeek")]
-    pub days_of_week: Option<Vec<DaysOfWeek>>,
-    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_daysOfWeek")]
-    pub _days_of_week: Option<Element>,
-    /// The Location is open all day
-    #[serde(rename = "allDay")]
-    pub all_day: Option<BooleanType>,
-    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_allDay")]
-    pub _all_day: Option<Element>,
-    /// Time that the Location opens
-    #[serde(rename = "openingTime")]
-    pub opening_time: Option<TimeType>,
-    /// Extension element for the 'openingTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_openingTime")]
-    pub _opening_time: Option<Element>,
-    /// Time that the Location closes
-    #[serde(rename = "closingTime")]
-    pub closing_time: Option<TimeType>,
-    /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_closingTime")]
-    pub _closing_time: Option<Element>,
-}
 /// Distance
 ///
 /// A calculated distance between the resource and a provided location.
@@ -164,6 +133,37 @@ pub struct LocationPosition {
     /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
     pub _altitude: Option<Element>,
 }
+/// Location nested structure for the 'hoursOfOperation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationHoursofoperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// mon | tue | wed | thu | fri | sat | sun
+    #[serde(rename = "daysOfWeek")]
+    pub days_of_week: Option<Vec<DaysOfWeek>>,
+    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_daysOfWeek")]
+    pub _days_of_week: Option<Element>,
+    /// The Location is open all day
+    #[serde(rename = "allDay")]
+    pub all_day: Option<BooleanType>,
+    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_allDay")]
+    pub _all_day: Option<Element>,
+    /// Time that the Location opens
+    #[serde(rename = "openingTime")]
+    pub opening_time: Option<TimeType>,
+    /// Extension element for the 'openingTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_openingTime")]
+    pub _opening_time: Option<Element>,
+    /// Time that the Location closes
+    #[serde(rename = "closingTime")]
+    pub closing_time: Option<TimeType>,
+    /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_closingTime")]
+    pub _closing_time: Option<Element>,
+}
 
 impl Default for Location {
     fn default() -> Self {
@@ -196,22 +196,6 @@ impl Default for Location {
     }
 }
 
-impl Default for LocationHoursofoperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            days_of_week: Default::default(),
-            _days_of_week: Default::default(),
-            all_day: Default::default(),
-            _all_day: Default::default(),
-            opening_time: Default::default(),
-            _opening_time: Default::default(),
-            closing_time: Default::default(),
-            _closing_time: Default::default(),
-        }
-    }
-}
-
 impl Default for LocationDistance {
     fn default() -> Self {
         Self {
@@ -230,6 +214,22 @@ impl Default for LocationPosition {
             _latitude: Default::default(),
             altitude: Default::default(),
             _altitude: Default::default(),
+        }
+    }
+}
+
+impl Default for LocationHoursofoperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            days_of_week: Default::default(),
+            _days_of_week: Default::default(),
+            all_day: Default::default(),
+            _all_day: Default::default(),
+            opening_time: Default::default(),
+            _opening_time: Default::default(),
+            closing_time: Default::default(),
+            _closing_time: Default::default(),
         }
     }
 }

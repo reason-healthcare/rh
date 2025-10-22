@@ -10,6 +10,7 @@ use crate::datatypes::reference::Reference;
 use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -102,13 +103,13 @@ pub struct Measure {
     pub _copyright: Option<Element>,
     /// When the measure was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the measure was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -199,6 +200,40 @@ pub struct Measure {
     #[serde(rename = "supplementalData")]
     pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
 }
+/// MeasureGroupStratifier nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifierComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Meaning of the stratifier component
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier component
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Component of how the measure should be stratified
+    pub criteria: Expression,
+}
+/// MeasureGroup nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this population criteria
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The criteria that defines this population
+    pub criteria: Expression,
+}
 /// Measure nested structure for the 'supplementalData' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureSupplementaldata {
@@ -226,50 +261,16 @@ pub struct MeasureGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Stratifier criteria for the measure
     pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Meaning of the group
     pub code: Option<CodeableConcept>,
     /// Summary description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-}
-/// MeasureGroup nested structure for the 'population' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupPopulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this population criteria
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// The criteria that defines this population
-    pub criteria: Expression,
-}
-/// MeasureGroupStratifier nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifierComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Meaning of the stratifier component
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier component
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Component of how the measure should be stratified
-    pub criteria: Expression,
 }
 /// MeasureGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -360,6 +361,30 @@ impl Default for Measure {
     }
 }
 
+impl Default for MeasureGroupStratifierComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureSupplementaldata {
     fn default() -> Self {
         Self {
@@ -377,35 +402,11 @@ impl Default for MeasureGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            population: Default::default(),
             stratifier: Default::default(),
+            population: Default::default(),
             code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureGroupPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureGroupStratifierComponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
         }
     }
 }
@@ -629,10 +630,10 @@ impl crate::traits::measure::MeasureAccessors for Measure {
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

@@ -8,7 +8,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
-use crate::primitives::string::StringType;
+use crate::primitives::date::DateType;
 use crate::resources::related_person::RelatedPersonCommunication;
 use crate::traits::domain_resource::DomainResourceAccessors;
 use crate::traits::domain_resource::DomainResourceExistence;
@@ -41,7 +41,7 @@ pub trait RelatedPersonAccessors: DomainResourceAccessors {
     /// Returns a reference to the gender field.
     fn gender(&self) -> Option<AdministrativeGender>;
     /// Returns a reference to the birthDate field.
-    fn birth_date(&self) -> Option<StringType>;
+    fn birth_date(&self) -> Option<DateType>;
     /// Returns a reference to the address field.
     fn address(&self) -> &[Address];
     /// Returns a reference to the photo field.

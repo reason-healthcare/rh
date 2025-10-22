@@ -9,6 +9,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::traits::domain_resource::DomainResourceAccessors;
@@ -64,9 +65,9 @@ pub trait LibraryAccessors: DomainResourceAccessors {
     /// Returns a reference to the copyright field.
     fn copyright(&self) -> Option<StringType>;
     /// Returns a reference to the approvalDate field.
-    fn approval_date(&self) -> Option<StringType>;
+    fn approval_date(&self) -> Option<DateType>;
     /// Returns a reference to the lastReviewDate field.
-    fn last_review_date(&self) -> Option<StringType>;
+    fn last_review_date(&self) -> Option<DateType>;
     /// Returns a reference to the effectivePeriod field.
     fn effective_period(&self) -> Option<Period>;
     /// Returns a reference to the topic field.

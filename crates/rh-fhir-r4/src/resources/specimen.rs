@@ -71,62 +71,6 @@ pub struct Specimen {
     /// Comments
     pub note: Option<Vec<Annotation>>,
 }
-/// Specimen nested structure for the 'processing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenProcessing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of procedure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Indicates the treatment step  applied to the specimen
-    ///
-    /// Binding: example (Type indicating the technique used to process the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
-    pub procedure: Option<CodeableConcept>,
-    /// Material used in the processing step
-    pub additive: Option<Vec<Reference>>,
-    /// Date and time of specimen processing (dateTime)
-    #[serde(rename = "timeDateTime")]
-    pub time_date_time: Option<DateTimeType>,
-    /// Date and time of specimen processing (Period)
-    #[serde(rename = "timePeriod")]
-    pub time_period: Option<Period>,
-}
-/// Specimen nested structure for the 'container' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenContainer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Id for the container
-    pub identifier: Option<Vec<Identifier>>,
-    /// Textual description of the container
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Kind of container directly associated with specimen
-    ///
-    /// Binding: example (Type of specimen container.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-container-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Container volume or size
-    pub capacity: Option<Quantity>,
-    /// Quantity of specimen within container
-    #[serde(rename = "specimenQuantity")]
-    pub specimen_quantity: Option<Quantity>,
-    /// Additive associated with container (CodeableConcept)
-    #[serde(rename = "additiveCodeableConcept")]
-    pub additive_codeable_concept: Option<CodeableConcept>,
-    /// Additive associated with container (Reference)
-    #[serde(rename = "additiveReference")]
-    pub additive_reference: Option<Reference>,
-}
 /// Specimen nested structure for the 'collection' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenCollection {
@@ -191,6 +135,62 @@ pub struct SpecimenSequenceNumber {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// Specimen nested structure for the 'container' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenContainer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Id for the container
+    pub identifier: Option<Vec<Identifier>>,
+    /// Textual description of the container
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Kind of container directly associated with specimen
+    ///
+    /// Binding: example (Type of specimen container.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-container-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Container volume or size
+    pub capacity: Option<Quantity>,
+    /// Quantity of specimen within container
+    #[serde(rename = "specimenQuantity")]
+    pub specimen_quantity: Option<Quantity>,
+    /// Additive associated with container (CodeableConcept)
+    #[serde(rename = "additiveCodeableConcept")]
+    pub additive_codeable_concept: Option<CodeableConcept>,
+    /// Additive associated with container (Reference)
+    #[serde(rename = "additiveReference")]
+    pub additive_reference: Option<Reference>,
+}
+/// Specimen nested structure for the 'processing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of procedure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Indicates the treatment step  applied to the specimen
+    ///
+    /// Binding: example (Type indicating the technique used to process the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
+    pub procedure: Option<CodeableConcept>,
+    /// Material used in the processing step
+    pub additive: Option<Vec<Reference>>,
+    /// Date and time of specimen processing (dateTime)
+    #[serde(rename = "timeDateTime")]
+    pub time_date_time: Option<DateTimeType>,
+    /// Date and time of specimen processing (Period)
+    #[serde(rename = "timePeriod")]
+    pub time_period: Option<Period>,
+}
 
 impl Default for Specimen {
     fn default() -> Self {
@@ -211,36 +211,6 @@ impl Default for Specimen {
             container: Default::default(),
             condition: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenProcessing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            procedure: Default::default(),
-            additive: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenContainer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            capacity: Default::default(),
-            specimen_quantity: Default::default(),
-            additive_codeable_concept: Default::default(),
-            additive_reference: Default::default(),
         }
     }
 }
@@ -266,6 +236,36 @@ impl Default for SpecimenSequenceNumber {
     fn default() -> Self {
         Self {
             base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenContainer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            capacity: Default::default(),
+            specimen_quantity: Default::default(),
+            additive_codeable_concept: Default::default(),
+            additive_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessing {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            procedure: Default::default(),
+            additive: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
         }
     }
 }

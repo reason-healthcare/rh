@@ -5,6 +5,7 @@ use crate::datatypes::element::Element;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::signature::Signature;
 use crate::datatypes::timing::Timing;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
@@ -72,7 +73,7 @@ pub struct VerificationResult {
     pub _last_performed: Option<Element>,
     /// The date when target is next validated, if appropriate
     #[serde(rename = "nextScheduled")]
-    pub next_scheduled: Option<StringType>,
+    pub next_scheduled: Option<DateType>,
     /// Extension element for the 'nextScheduled' primitive field. Contains metadata and extensions.
     #[serde(rename = "_nextScheduled")]
     pub _next_scheduled: Option<Element>,
@@ -108,47 +109,6 @@ pub struct VerificationResultValidator {
     /// Validator signature
     #[serde(rename = "attestationSignature")]
     pub attestation_signature: Option<Signature>,
-}
-/// VerificationResult nested structure for the 'attestation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerificationResultAttestation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The individual or organization attesting to information
-    pub who: Option<Reference>,
-    /// When the who is asserting on behalf of another (organization or individual)
-    #[serde(rename = "onBehalfOf")]
-    pub on_behalf_of: Option<Reference>,
-    /// The method by which attested information was submitted/retrieved
-    ///
-    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
-    #[serde(rename = "communicationMethod")]
-    pub communication_method: Option<CodeableConcept>,
-    /// The date the information was attested to
-    pub date: Option<StringType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// A digital identity certificate associated with the attestation source
-    #[serde(rename = "sourceIdentityCertificate")]
-    pub source_identity_certificate: Option<StringType>,
-    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceIdentityCertificate")]
-    pub _source_identity_certificate: Option<Element>,
-    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
-    #[serde(rename = "proxyIdentityCertificate")]
-    pub proxy_identity_certificate: Option<StringType>,
-    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_proxyIdentityCertificate")]
-    pub _proxy_identity_certificate: Option<Element>,
-    /// Proxy signature
-    #[serde(rename = "proxySignature")]
-    pub proxy_signature: Option<Signature>,
-    /// Attester signature
-    #[serde(rename = "sourceSignature")]
-    pub source_signature: Option<Signature>,
 }
 /// VerificationResult nested structure for the 'primarySource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,6 +160,47 @@ pub struct VerificationResultPrimarysource {
     #[serde(rename = "pushTypeAvailable")]
     pub push_type_available: Option<Vec<CodeableConcept>>,
 }
+/// VerificationResult nested structure for the 'attestation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResultAttestation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The individual or organization attesting to information
+    pub who: Option<Reference>,
+    /// When the who is asserting on behalf of another (organization or individual)
+    #[serde(rename = "onBehalfOf")]
+    pub on_behalf_of: Option<Reference>,
+    /// The method by which attested information was submitted/retrieved
+    ///
+    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
+    #[serde(rename = "communicationMethod")]
+    pub communication_method: Option<CodeableConcept>,
+    /// The date the information was attested to
+    pub date: Option<DateType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// A digital identity certificate associated with the attestation source
+    #[serde(rename = "sourceIdentityCertificate")]
+    pub source_identity_certificate: Option<StringType>,
+    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceIdentityCertificate")]
+    pub _source_identity_certificate: Option<Element>,
+    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
+    #[serde(rename = "proxyIdentityCertificate")]
+    pub proxy_identity_certificate: Option<StringType>,
+    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_proxyIdentityCertificate")]
+    pub _proxy_identity_certificate: Option<Element>,
+    /// Proxy signature
+    #[serde(rename = "proxySignature")]
+    pub proxy_signature: Option<Signature>,
+    /// Attester signature
+    #[serde(rename = "sourceSignature")]
+    pub source_signature: Option<Signature>,
+}
 
 impl Default for VerificationResult {
     fn default() -> Self {
@@ -240,6 +241,22 @@ impl Default for VerificationResultValidator {
     }
 }
 
+impl Default for VerificationResultPrimarysource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            who: Default::default(),
+            type_: Default::default(),
+            communication_method: Default::default(),
+            validation_status: Default::default(),
+            validation_date: Default::default(),
+            _validation_date: Default::default(),
+            can_push_updates: Default::default(),
+            push_type_available: Default::default(),
+        }
+    }
+}
+
 impl Default for VerificationResultAttestation {
     fn default() -> Self {
         Self {
@@ -255,22 +272,6 @@ impl Default for VerificationResultAttestation {
             _proxy_identity_certificate: Default::default(),
             proxy_signature: Default::default(),
             source_signature: Default::default(),
-        }
-    }
-}
-
-impl Default for VerificationResultPrimarysource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            who: Default::default(),
-            type_: Default::default(),
-            communication_method: Default::default(),
-            validation_status: Default::default(),
-            validation_date: Default::default(),
-            _validation_date: Default::default(),
-            can_push_updates: Default::default(),
-            push_type_available: Default::default(),
         }
     }
 }
@@ -458,7 +459,7 @@ impl crate::traits::verification_result::VerificationResultAccessors for Verific
     fn last_performed(&self) -> Option<DateTimeType> {
         self.last_performed.clone()
     }
-    fn next_scheduled(&self) -> Option<StringType> {
+    fn next_scheduled(&self) -> Option<DateType> {
         self.next_scheduled.clone()
     }
     fn failure_action(&self) -> Option<CodeableConcept> {

@@ -10,6 +10,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::usage_context::UsageContext;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::string::StringType;
@@ -97,13 +98,13 @@ pub struct ChargeItemDefinition {
     pub _copyright: Option<Element>,
     /// When the charge item definition was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the charge item definition was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -124,18 +125,6 @@ pub struct ChargeItemDefinition {
     #[serde(rename = "propertyGroup")]
     pub property_group: Option<Vec<ChargeItemDefinitionPropertygroup>>,
 }
-/// ChargeItemDefinition nested structure for the 'propertyGroup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChargeItemDefinitionPropertygroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    pub price_component: Option<Vec<ChargeItemDefinitionPropertygroupPricecomponent>>,
-    /// Conditions under which the priceComponent is applicable
-    pub applicability: Option<Vec<StringType>>,
-}
 /// ChargeItemDefinition nested structure for the 'applicability' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChargeItemDefinitionApplicability {
@@ -154,6 +143,18 @@ pub struct ChargeItemDefinitionApplicability {
     pub expression: Option<StringType>,
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
     pub _expression: Option<Element>,
+}
+/// ChargeItemDefinition nested structure for the 'propertyGroup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChargeItemDefinitionPropertygroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    pub price_component: Option<Vec<ChargeItemDefinitionPropertygroupPricecomponent>>,
+    /// Conditions under which the priceComponent is applicable
+    pub applicability: Option<Vec<StringType>>,
 }
 /// ChargeItemDefinitionPropertygroup nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -221,16 +222,6 @@ impl Default for ChargeItemDefinition {
     }
 }
 
-impl Default for ChargeItemDefinitionPropertygroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            price_component: Default::default(),
-            applicability: Default::default(),
-        }
-    }
-}
-
 impl Default for ChargeItemDefinitionApplicability {
     fn default() -> Self {
         Self {
@@ -241,6 +232,16 @@ impl Default for ChargeItemDefinitionApplicability {
             _language: Default::default(),
             expression: Default::default(),
             _expression: Default::default(),
+        }
+    }
+}
+
+impl Default for ChargeItemDefinitionPropertygroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            price_component: Default::default(),
+            applicability: Default::default(),
         }
     }
 }
@@ -463,10 +464,10 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionAccessors for Ch
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

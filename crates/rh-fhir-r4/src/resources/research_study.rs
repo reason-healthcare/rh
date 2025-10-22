@@ -113,24 +113,6 @@ pub struct ResearchStudy {
     /// A goal for the study
     pub objective: Option<Vec<ResearchStudyObjective>>,
 }
-/// ResearchStudy nested structure for the 'objective' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyObjective {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for the objective
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// primary | secondary | exploratory
-    ///
-    /// Binding: preferred (Codes for the kind of study objective.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-}
 /// ResearchStudy nested structure for the 'arm' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchStudyArm {
@@ -148,6 +130,24 @@ pub struct ResearchStudyArm {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+}
+/// ResearchStudy nested structure for the 'objective' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyObjective {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for the objective
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// primary | secondary | exploratory
+    ///
+    /// Binding: preferred (Codes for the kind of study objective.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
 }
 
 impl Default for ResearchStudy {
@@ -185,17 +185,6 @@ impl Default for ResearchStudy {
     }
 }
 
-impl Default for ResearchStudyObjective {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
 impl Default for ResearchStudyArm {
     fn default() -> Self {
         Self {
@@ -205,6 +194,17 @@ impl Default for ResearchStudyArm {
             type_: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyObjective {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
         }
     }
 }

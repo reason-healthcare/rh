@@ -9,6 +9,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::positive_int::PositiveIntType;
 use crate::primitives::string::StringType;
@@ -49,7 +50,7 @@ pub struct CoverageEligibilityRequest {
     pub patient: Reference,
     /// Estimated date or dates of service (date)
     #[serde(rename = "servicedDate")]
-    pub serviced_date: Option<StringType>,
+    pub serviced_date: Option<DateType>,
     /// Estimated date or dates of service (Period)
     #[serde(rename = "servicedPeriod")]
     pub serviced_period: Option<Period>,
@@ -73,24 +74,37 @@ pub struct CoverageEligibilityRequest {
     /// Item to be evaluated for eligibiity
     pub item: Option<Vec<CoverageEligibilityRequestItem>>,
 }
-/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
+/// CoverageEligibilityRequest nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestSupportinginfo {
+pub struct CoverageEligibilityRequestInsurance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Data to be provided
-    pub information: Reference,
-    /// Applies to all items
-    #[serde(rename = "appliesToAll")]
-    pub applies_to_all: Option<BooleanType>,
-    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_appliesToAll")]
-    pub _applies_to_all: Option<Element>,
+    /// Applicable coverage
+    pub focal: Option<BooleanType>,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Additional provider contract number
+    #[serde(rename = "businessArrangement")]
+    pub business_arrangement: Option<StringType>,
+    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_businessArrangement")]
+    pub _business_arrangement: Option<Element>,
+}
+/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestItemDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Nature of illness or problem (CodeableConcept)
+    #[serde(rename = "diagnosisCodeableConcept")]
+    pub diagnosis_codeable_concept: Option<CodeableConcept>,
+    /// Nature of illness or problem (Reference)
+    #[serde(rename = "diagnosisReference")]
+    pub diagnosis_reference: Option<Reference>,
 }
 /// CoverageEligibilityRequest nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,37 +151,24 @@ pub struct CoverageEligibilityRequestItem {
     /// Product or service details
     pub detail: Option<Vec<Reference>>,
 }
-/// CoverageEligibilityRequest nested structure for the 'insurance' field
+/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestInsurance {
+pub struct CoverageEligibilityRequestSupportinginfo {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Applicable coverage
-    pub focal: Option<BooleanType>,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Additional provider contract number
-    #[serde(rename = "businessArrangement")]
-    pub business_arrangement: Option<StringType>,
-    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_businessArrangement")]
-    pub _business_arrangement: Option<Element>,
-}
-/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestItemDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Nature of illness or problem (CodeableConcept)
-    #[serde(rename = "diagnosisCodeableConcept")]
-    pub diagnosis_codeable_concept: Option<CodeableConcept>,
-    /// Nature of illness or problem (Reference)
-    #[serde(rename = "diagnosisReference")]
-    pub diagnosis_reference: Option<Reference>,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Data to be provided
+    pub information: Reference,
+    /// Applies to all items
+    #[serde(rename = "appliesToAll")]
+    pub applies_to_all: Option<BooleanType>,
+    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_appliesToAll")]
+    pub _applies_to_all: Option<Element>,
 }
 
 impl Default for CoverageEligibilityRequest {
@@ -196,15 +197,25 @@ impl Default for CoverageEligibilityRequest {
     }
 }
 
-impl Default for CoverageEligibilityRequestSupportinginfo {
+impl Default for CoverageEligibilityRequestInsurance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            information: Default::default(),
-            applies_to_all: Default::default(),
-            _applies_to_all: Default::default(),
+            focal: Default::default(),
+            _focal: Default::default(),
+            coverage: Reference::default(),
+            business_arrangement: Default::default(),
+            _business_arrangement: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityRequestItemDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            diagnosis_codeable_concept: Default::default(),
+            diagnosis_reference: Default::default(),
         }
     }
 }
@@ -228,25 +239,15 @@ impl Default for CoverageEligibilityRequestItem {
     }
 }
 
-impl Default for CoverageEligibilityRequestInsurance {
+impl Default for CoverageEligibilityRequestSupportinginfo {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            focal: Default::default(),
-            _focal: Default::default(),
-            coverage: Reference::default(),
-            business_arrangement: Default::default(),
-            _business_arrangement: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityRequestItemDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            diagnosis_codeable_concept: Default::default(),
-            diagnosis_reference: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            information: Default::default(),
+            applies_to_all: Default::default(),
+            _applies_to_all: Default::default(),
         }
     }
 }

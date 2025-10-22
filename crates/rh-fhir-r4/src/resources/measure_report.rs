@@ -61,6 +61,22 @@ pub struct MeasureReport {
     #[serde(rename = "evaluatedResource")]
     pub evaluated_resource: Option<Vec<Reference>>,
 }
+/// MeasureReport nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The populations in the group
+    pub population: Option<Vec<MeasureReportGroupPopulation>>,
+    /// Stratification results
+    pub stratifier: Option<Vec<MeasureReportGroupStratifier>>,
+    /// Meaning of the group
+    pub code: Option<CodeableConcept>,
+    /// What score this group achieved
+    #[serde(rename = "measureScore")]
+    pub measure_score: Option<Quantity>,
+}
 /// MeasureReportGroupStratifierStratum nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroupStratifierStratumComponent {
@@ -72,9 +88,38 @@ pub struct MeasureReportGroupStratifierStratumComponent {
     /// The stratum component value, e.g. male
     pub value: CodeableConcept,
 }
+/// MeasureReportGroup nested structure for the 'stratifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupStratifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What stratifier of the group
+    pub code: Option<Vec<CodeableConcept>>,
+}
 /// MeasureReportGroupStratifierStratum nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroupStratifierStratumPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// Size of the population
+    pub count: Option<IntegerType>,
+    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
+    pub _count: Option<Element>,
+    /// For subject-list reports, the subject results in this population
+    #[serde(rename = "subjectResults")]
+    pub subject_results: Option<Reference>,
+}
+/// MeasureReportGroup nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupPopulation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
@@ -104,51 +149,6 @@ pub struct MeasureReportGroupStratifierStratum {
     #[serde(rename = "measureScore")]
     pub measure_score: Option<Quantity>,
 }
-/// MeasureReportGroup nested structure for the 'population' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupPopulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
-    pub code: Option<CodeableConcept>,
-    /// Size of the population
-    pub count: Option<IntegerType>,
-    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
-    pub _count: Option<Element>,
-    /// For subject-list reports, the subject results in this population
-    #[serde(rename = "subjectResults")]
-    pub subject_results: Option<Reference>,
-}
-/// MeasureReport nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Stratification results
-    pub stratifier: Option<Vec<MeasureReportGroupStratifier>>,
-    /// The populations in the group
-    pub population: Option<Vec<MeasureReportGroupPopulation>>,
-    /// Meaning of the group
-    pub code: Option<CodeableConcept>,
-    /// What score this group achieved
-    #[serde(rename = "measureScore")]
-    pub measure_score: Option<Quantity>,
-}
-/// MeasureReportGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What stratifier of the group
-    pub code: Option<Vec<CodeableConcept>>,
-}
 
 impl Default for MeasureReport {
     fn default() -> Self {
@@ -173,6 +173,18 @@ impl Default for MeasureReport {
     }
 }
 
+impl Default for MeasureReportGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            population: Default::default(),
+            stratifier: Default::default(),
+            code: Default::default(),
+            measure_score: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureReportGroupStratifierStratumComponent {
     fn default() -> Self {
         Self {
@@ -183,7 +195,28 @@ impl Default for MeasureReportGroupStratifierStratumComponent {
     }
 }
 
+impl Default for MeasureReportGroupStratifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureReportGroupStratifierStratumPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            count: Default::default(),
+            _count: Default::default(),
+            subject_results: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureReportGroupPopulation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -201,39 +234,6 @@ impl Default for MeasureReportGroupStratifierStratum {
             base: BackboneElement::default(),
             value: Default::default(),
             measure_score: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroupPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            count: Default::default(),
-            _count: Default::default(),
-            subject_results: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            stratifier: Default::default(),
-            population: Default::default(),
-            code: Default::default(),
-            measure_score: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
         }
     }
 }

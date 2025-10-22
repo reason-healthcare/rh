@@ -7,6 +7,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::quantity::Quantity;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::positive_int::PositiveIntType;
 use crate::primitives::string::StringType;
@@ -94,7 +95,7 @@ pub struct Immunization {
     pub _lot_number: Option<Element>,
     /// Vaccine expiration date
     #[serde(rename = "expirationDate")]
-    pub expiration_date: Option<StringType>,
+    pub expiration_date: Option<DateType>,
     /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_expirationDate")]
     pub _expiration_date: Option<Element>,
@@ -173,6 +174,35 @@ pub struct Immunization {
     #[serde(rename = "protocolApplied")]
     pub protocol_applied: Option<Vec<ImmunizationProtocolapplied>>,
 }
+/// Immunization nested structure for the 'education' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationEducation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Educational material document identifier
+    #[serde(rename = "documentType")]
+    pub document_type: Option<StringType>,
+    /// Extension element for the 'documentType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_documentType")]
+    pub _document_type: Option<Element>,
+    /// Educational material reference pointer
+    pub reference: Option<StringType>,
+    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
+    pub _reference: Option<Element>,
+    /// Educational material publication date
+    #[serde(rename = "publicationDate")]
+    pub publication_date: Option<DateTimeType>,
+    /// Extension element for the 'publicationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_publicationDate")]
+    pub _publication_date: Option<Element>,
+    /// Educational material presentation date
+    #[serde(rename = "presentationDate")]
+    pub presentation_date: Option<DateTimeType>,
+    /// Extension element for the 'presentationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_presentationDate")]
+    pub _presentation_date: Option<Element>,
+}
 /// Immunization nested structure for the 'protocolApplied' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationProtocolapplied {
@@ -214,34 +244,22 @@ pub struct ImmunizationProtocolapplied {
     #[serde(rename = "seriesDosesString")]
     pub series_doses_string: Option<StringType>,
 }
-/// Immunization nested structure for the 'education' field
+/// Immunization nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationEducation {
+pub struct ImmunizationReaction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Educational material document identifier
-    #[serde(rename = "documentType")]
-    pub document_type: Option<StringType>,
-    /// Extension element for the 'documentType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_documentType")]
-    pub _document_type: Option<Element>,
-    /// Educational material reference pointer
-    pub reference: Option<StringType>,
-    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
-    pub _reference: Option<Element>,
-    /// Educational material publication date
-    #[serde(rename = "publicationDate")]
-    pub publication_date: Option<DateTimeType>,
-    /// Extension element for the 'publicationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_publicationDate")]
-    pub _publication_date: Option<Element>,
-    /// Educational material presentation date
-    #[serde(rename = "presentationDate")]
-    pub presentation_date: Option<DateTimeType>,
-    /// Extension element for the 'presentationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_presentationDate")]
-    pub _presentation_date: Option<Element>,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub detail: Option<Reference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
 }
 /// Immunization nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -259,23 +277,6 @@ pub struct ImmunizationPerformer {
     pub function: Option<CodeableConcept>,
     /// Individual or organization who was performing
     pub actor: Reference,
-}
-/// Immunization nested structure for the 'reaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub detail: Option<Reference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
 }
 
 impl Default for Immunization {
@@ -321,22 +322,6 @@ impl Default for Immunization {
     }
 }
 
-impl Default for ImmunizationProtocolapplied {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            series: Default::default(),
-            _series: Default::default(),
-            authority: Default::default(),
-            target_disease: Default::default(),
-            dose_number_positive_int: Default::default(),
-            dose_number_string: Default::default(),
-            series_doses_positive_int: Default::default(),
-            series_doses_string: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationEducation {
     fn default() -> Self {
         Self {
@@ -353,12 +338,18 @@ impl Default for ImmunizationEducation {
     }
 }
 
-impl Default for ImmunizationPerformer {
+impl Default for ImmunizationProtocolapplied {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
+            series: Default::default(),
+            _series: Default::default(),
+            authority: Default::default(),
+            target_disease: Default::default(),
+            dose_number_positive_int: Default::default(),
+            dose_number_string: Default::default(),
+            series_doses_positive_int: Default::default(),
+            series_doses_string: Default::default(),
         }
     }
 }
@@ -372,6 +363,16 @@ impl Default for ImmunizationReaction {
             detail: Default::default(),
             reported: Default::default(),
             _reported: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -568,7 +569,7 @@ impl crate::traits::immunization::ImmunizationAccessors for Immunization {
     fn lot_number(&self) -> Option<StringType> {
         self.lot_number.clone()
     }
-    fn expiration_date(&self) -> Option<StringType> {
+    fn expiration_date(&self) -> Option<DateType> {
         self.expiration_date.clone()
     }
     fn site(&self) -> Option<CodeableConcept> {

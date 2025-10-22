@@ -5,6 +5,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::money::Money;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use crate::resources::payment_reconciliation::PaymentReconciliationDetail;
@@ -44,7 +45,7 @@ pub trait PaymentReconciliationAccessors: DomainResourceAccessors {
     /// Returns a reference to the disposition field.
     fn disposition(&self) -> Option<StringType>;
     /// Returns a reference to the paymentDate field.
-    fn payment_date(&self) -> StringType;
+    fn payment_date(&self) -> DateType;
     /// Returns a reference to the paymentAmount field.
     fn payment_amount(&self) -> Money;
     /// Returns a reference to the paymentIdentifier field.

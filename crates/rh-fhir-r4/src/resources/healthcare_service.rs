@@ -153,19 +153,6 @@ pub struct HealthcareService {
     /// Technical endpoints providing access to electronic services operated for the healthcare service
     pub endpoint: Option<Vec<Reference>>,
 }
-/// HealthcareService nested structure for the 'notAvailable' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthcareServiceNotavailable {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reason presented to the user explaining why time not available
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Service not available from this date
-    pub during: Option<Period>,
-}
 /// HealthcareService nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthcareServiceAvailabletime {
@@ -212,6 +199,19 @@ pub struct HealthcareServiceEligibility {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
 }
+/// HealthcareService nested structure for the 'notAvailable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthcareServiceNotavailable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reason presented to the user explaining why time not available
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Service not available from this date
+    pub during: Option<Period>,
+}
 
 impl Default for HealthcareService {
     fn default() -> Self {
@@ -251,17 +251,6 @@ impl Default for HealthcareService {
     }
 }
 
-impl Default for HealthcareServiceNotavailable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            during: Default::default(),
-        }
-    }
-}
-
 impl Default for HealthcareServiceAvailabletime {
     fn default() -> Self {
         Self {
@@ -285,6 +274,17 @@ impl Default for HealthcareServiceEligibility {
             code: Default::default(),
             comment: Default::default(),
             _comment: Default::default(),
+        }
+    }
+}
+
+impl Default for HealthcareServiceNotavailable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            during: Default::default(),
         }
     }
 }

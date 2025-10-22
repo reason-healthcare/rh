@@ -44,22 +44,6 @@ pub struct Resource {
     /// Extension element for the 'language' primitive field. Contains metadata and extensions.
     pub _language: Option<Element>,
 }
-/// Last Review Date
-///
-/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceLastReviewDate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Approval Date
 ///
 /// The date on which the asset content was approved by the publisher. Approval happens once when the content is officially approved for usage.
@@ -72,6 +56,22 @@ pub struct ResourceLastReviewDate {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceApprovalDate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Last Review Date
+///
+/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceLastReviewDate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -106,7 +106,7 @@ impl Default for Resource {
     }
 }
 
-impl Default for ResourceLastReviewDate {
+impl Default for ResourceApprovalDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -114,7 +114,7 @@ impl Default for ResourceLastReviewDate {
     }
 }
 
-impl Default for ResourceApprovalDate {
+impl Default for ResourceLastReviewDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),

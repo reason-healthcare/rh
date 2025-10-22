@@ -480,13 +480,13 @@ impl crate::traits::supply_request::SupplyRequestExistence for SupplyRequest {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_item(&self) -> bool {
-        true
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
+    }
+    fn has_item(&self) -> bool {
+        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

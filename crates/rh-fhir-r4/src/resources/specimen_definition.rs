@@ -68,72 +68,6 @@ pub struct SpecimenDefinition {
     #[serde(rename = "typeTested")]
     pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
 }
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Temperature qualifier
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// SpecimenDefinition nested structure for the 'typeTested' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetested {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The specimen's container
-    pub container: Option<SpecimenDefinitionTypetestedContainer>,
-    /// Specimen handling before testing
-    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
-    /// Primary or secondary specimen
-    #[serde(rename = "isDerived")]
-    pub is_derived: Option<BooleanType>,
-    /// Extension element for the 'isDerived' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDerived")]
-    pub _is_derived: Option<Element>,
-    /// Type of intended specimen
-    ///
-    /// Binding: example (The type of specimen conditioned in a container for lab testing.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0487
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// preferred | alternate
-    pub preference: SpecimenContainedPreference,
-    /// Extension element for the 'preference' primitive field. Contains metadata and extensions.
-    pub _preference: Option<Element>,
-    /// Specimen requirements
-    pub requirement: Option<StringType>,
-    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
-    pub _requirement: Option<Element>,
-    /// Specimen retention time
-    #[serde(rename = "retentionTime")]
-    pub retention_time: Option<Duration>,
-    /// Rejection criterion
-    ///
-    /// Binding: example (Criterion for rejection of the specimen by laboratory.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
-    #[serde(rename = "rejectionCriterion")]
-    pub rejection_criterion: Option<Vec<CodeableConcept>>,
-}
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedContainer {
@@ -192,6 +126,72 @@ pub struct SpecimenDefinitionTypetestedContainerAdditive {
     #[serde(rename = "additiveReference")]
     pub additive_reference: Reference,
 }
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Temperature qualifier
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
+/// SpecimenDefinition nested structure for the 'typeTested' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetested {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specimen handling before testing
+    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
+    /// The specimen's container
+    pub container: Option<SpecimenDefinitionTypetestedContainer>,
+    /// Primary or secondary specimen
+    #[serde(rename = "isDerived")]
+    pub is_derived: Option<BooleanType>,
+    /// Extension element for the 'isDerived' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDerived")]
+    pub _is_derived: Option<Element>,
+    /// Type of intended specimen
+    ///
+    /// Binding: example (The type of specimen conditioned in a container for lab testing.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0487
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// preferred | alternate
+    pub preference: SpecimenContainedPreference,
+    /// Extension element for the 'preference' primitive field. Contains metadata and extensions.
+    pub _preference: Option<Element>,
+    /// Specimen requirements
+    pub requirement: Option<StringType>,
+    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
+    pub _requirement: Option<Element>,
+    /// Specimen retention time
+    #[serde(rename = "retentionTime")]
+    pub retention_time: Option<Duration>,
+    /// Rejection criterion
+    ///
+    /// Binding: example (Criterion for rejection of the specimen by laboratory.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
+    #[serde(rename = "rejectionCriterion")]
+    pub rejection_criterion: Option<Vec<CodeableConcept>>,
+}
 
 impl Default for SpecimenDefinition {
     fn default() -> Self {
@@ -204,38 +204,6 @@ impl Default for SpecimenDefinition {
             _time_aspect: Default::default(),
             collection: Default::default(),
             type_tested: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetestedHandling {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            temperature_qualifier: Default::default(),
-            temperature_range: Default::default(),
-            max_duration: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetested {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            container: Default::default(),
-            handling: Default::default(),
-            is_derived: Default::default(),
-            _is_derived: Default::default(),
-            type_: Default::default(),
-            preference: Default::default(),
-            _preference: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
-            retention_time: Default::default(),
-            rejection_criterion: Default::default(),
         }
     }
 }
@@ -264,6 +232,38 @@ impl Default for SpecimenDefinitionTypetestedContainerAdditive {
             base: BackboneElement::default(),
             additive_codeable_concept: Default::default(),
             additive_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenDefinitionTypetestedHandling {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            temperature_qualifier: Default::default(),
+            temperature_range: Default::default(),
+            max_duration: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenDefinitionTypetested {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            handling: Default::default(),
+            container: Default::default(),
+            is_derived: Default::default(),
+            _is_derived: Default::default(),
+            type_: Default::default(),
+            preference: Default::default(),
+            _preference: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
+            retention_time: Default::default(),
+            rejection_criterion: Default::default(),
         }
     }
 }

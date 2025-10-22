@@ -150,10 +150,10 @@ pub struct ImagingStudySeries {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A single SOP instance from the series
-    pub instance: Option<Vec<ImagingStudySeriesInstance>>,
     /// Who performed the series
     pub performer: Option<Vec<ImagingStudySeriesPerformer>>,
+    /// A single SOP instance from the series
+    pub instance: Option<Vec<ImagingStudySeriesInstance>>,
     /// DICOM Series Instance UID for the series
     pub uid: StringType,
     /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
@@ -266,8 +266,8 @@ impl Default for ImagingStudySeries {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            instance: Default::default(),
             performer: Default::default(),
+            instance: Default::default(),
             uid: StringType::default(),
             _uid: Default::default(),
             number: Default::default(),

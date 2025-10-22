@@ -139,22 +139,22 @@ pub struct OperationDefinition {
     /// Define overloaded variants for when  generating code
     pub overload: Option<Vec<OperationDefinitionOverload>>,
 }
-/// OperationDefinitionParameter nested structure for the 'referencedFrom' field
+/// OperationDefinitionParameter nested structure for the 'binding' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationDefinitionParameterReferencedfrom {
+pub struct OperationDefinitionParameterBinding {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Referencing parameter
-    pub source: StringType,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// Element id of reference
-    #[serde(rename = "sourceId")]
-    pub source_id: Option<StringType>,
-    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceId")]
-    pub _source_id: Option<Element>,
+    /// required | extensible | preferred | example
+    pub strength: BindingStrength,
+    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
+    pub _strength: Option<Element>,
+    /// Source of value set
+    #[serde(rename = "valueSet")]
+    pub value_set: StringType,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
 }
 /// OperationDefinition nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,11 +162,11 @@ pub struct OperationDefinitionParameter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// ValueSet details if this is coded
+    pub binding: Option<OperationDefinitionParameterBinding>,
     /// References to this parameter
     #[serde(rename = "referencedFrom")]
     pub referenced_from: Option<Vec<OperationDefinitionParameterReferencedfrom>>,
-    /// ValueSet details if this is coded
-    pub binding: Option<OperationDefinitionParameterBinding>,
     /// Name in Parameters.parameter.name or in URL
     pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -208,22 +208,22 @@ pub struct OperationDefinitionParameter {
     /// Parts of a nested Parameter
     pub part: Option<Vec<StringType>>,
 }
-/// OperationDefinitionParameter nested structure for the 'binding' field
+/// OperationDefinitionParameter nested structure for the 'referencedFrom' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationDefinitionParameterBinding {
+pub struct OperationDefinitionParameterReferencedfrom {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// required | extensible | preferred | example
-    pub strength: BindingStrength,
-    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
-    pub _strength: Option<Element>,
-    /// Source of value set
-    #[serde(rename = "valueSet")]
-    pub value_set: StringType,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
+    /// Referencing parameter
+    pub source: StringType,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// Element id of reference
+    #[serde(rename = "sourceId")]
+    pub source_id: Option<StringType>,
+    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceId")]
+    pub _source_id: Option<Element>,
 }
 /// OperationDefinition nested structure for the 'overload' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -298,14 +298,14 @@ impl Default for OperationDefinition {
     }
 }
 
-impl Default for OperationDefinitionParameterReferencedfrom {
+impl Default for OperationDefinitionParameterBinding {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            source_id: Default::default(),
-            _source_id: Default::default(),
+            strength: Default::default(),
+            _strength: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
         }
     }
 }
@@ -314,8 +314,8 @@ impl Default for OperationDefinitionParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            referenced_from: Default::default(),
             binding: Default::default(),
+            referenced_from: Default::default(),
             name: StringType::default(),
             _name: Default::default(),
             use_: Default::default(),
@@ -337,14 +337,14 @@ impl Default for OperationDefinitionParameter {
     }
 }
 
-impl Default for OperationDefinitionParameterBinding {
+impl Default for OperationDefinitionParameterReferencedfrom {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            strength: Default::default(),
-            _strength: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            source_id: Default::default(),
+            _source_id: Default::default(),
         }
     }
 }

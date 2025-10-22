@@ -62,21 +62,6 @@ pub struct Group {
     /// Who or what is in group
     pub member: Option<Vec<GroupMember>>,
 }
-/// Group nested structure for the 'member' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GroupMember {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the group member
-    pub entity: Reference,
-    /// Period member belonged to the group
-    pub period: Option<Period>,
-    /// If member is no longer in group
-    pub inactive: Option<BooleanType>,
-    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
-    pub _inactive: Option<Element>,
-}
 /// Group nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupCharacteristic {
@@ -109,6 +94,21 @@ pub struct GroupCharacteristic {
     /// Period over which characteristic is tested
     pub period: Option<Period>,
 }
+/// Group nested structure for the 'member' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupMember {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the group member
+    pub entity: Reference,
+    /// Period member belonged to the group
+    pub period: Option<Period>,
+    /// If member is no longer in group
+    pub inactive: Option<BooleanType>,
+    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
+    pub _inactive: Option<Element>,
+}
 
 impl Default for Group {
     fn default() -> Self {
@@ -133,18 +133,6 @@ impl Default for Group {
     }
 }
 
-impl Default for GroupMember {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            entity: Reference::default(),
-            period: Default::default(),
-            inactive: Default::default(),
-            _inactive: Default::default(),
-        }
-    }
-}
-
 impl Default for GroupCharacteristic {
     fn default() -> Self {
         Self {
@@ -158,6 +146,18 @@ impl Default for GroupCharacteristic {
             exclude: BooleanType::default(),
             _exclude: Default::default(),
             period: Default::default(),
+        }
+    }
+}
+
+impl Default for GroupMember {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            entity: Reference::default(),
+            period: Default::default(),
+            inactive: Default::default(),
+            _inactive: Default::default(),
         }
     }
 }

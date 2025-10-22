@@ -10,7 +10,7 @@ use crate::datatypes::identifier::Identifier;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
-use crate::primitives::string::StringType;
+use crate::primitives::date::DateType;
 use crate::resources::domain_resource::DomainResource;
 use serde::{Deserialize, Serialize};
 /// RelatedPerson
@@ -52,7 +52,7 @@ pub struct RelatedPerson {
     pub _gender: Option<Element>,
     /// The date on which the related person was born
     #[serde(rename = "birthDate")]
-    pub birth_date: Option<StringType>,
+    pub birth_date: Option<DateType>,
     /// Extension element for the 'birthDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_birthDate")]
     pub _birth_date: Option<Element>,
@@ -305,7 +305,7 @@ impl crate::traits::related_person::RelatedPersonAccessors for RelatedPerson {
     fn gender(&self) -> Option<AdministrativeGender> {
         self.gender.clone()
     }
-    fn birth_date(&self) -> Option<StringType> {
+    fn birth_date(&self) -> Option<DateType> {
         self.birth_date.clone()
     }
     fn address(&self) -> &[Address] {

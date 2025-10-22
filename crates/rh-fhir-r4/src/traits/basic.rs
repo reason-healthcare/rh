@@ -1,7 +1,7 @@
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::reference::Reference;
-use crate::primitives::string::StringType;
+use crate::primitives::date::DateType;
 use crate::traits::domain_resource::DomainResourceAccessors;
 use crate::traits::domain_resource::DomainResourceExistence;
 use crate::traits::domain_resource::DomainResourceMutators;
@@ -25,7 +25,7 @@ pub trait BasicAccessors: DomainResourceAccessors {
     /// Returns a reference to the subject field.
     fn subject(&self) -> Option<Reference>;
     /// Returns a reference to the created field.
-    fn created(&self) -> Option<StringType>;
+    fn created(&self) -> Option<DateType>;
     /// Returns a reference to the author field.
     fn author(&self) -> Option<Reference>;
 }

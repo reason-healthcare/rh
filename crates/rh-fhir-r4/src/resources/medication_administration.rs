@@ -96,6 +96,21 @@ pub struct MedicationAdministration {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationAdministration nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationAdministrationPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performance
+    ///
+    /// Binding: example (A code describing the role an individual played in administering the medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/med-admin-perform-function
+    pub function: Option<CodeableConcept>,
+    /// Who performed the medication administration
+    pub actor: Reference,
+}
 /// MedicationAdministration nested structure for the 'dosage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationAdministrationDosage {
@@ -133,21 +148,6 @@ pub struct MedicationAdministrationDosage {
     #[serde(rename = "rateQuantity")]
     pub rate_quantity: Option<Quantity>,
 }
-/// MedicationAdministration nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationAdministrationPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performance
-    ///
-    /// Binding: example (A code describing the role an individual played in administering the medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/med-admin-perform-function
-    pub function: Option<CodeableConcept>,
-    /// Who performed the medication administration
-    pub actor: Reference,
-}
 
 impl Default for MedicationAdministration {
     fn default() -> Self {
@@ -180,6 +180,16 @@ impl Default for MedicationAdministration {
     }
 }
 
+impl Default for MedicationAdministrationPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for MedicationAdministrationDosage {
     fn default() -> Self {
         Self {
@@ -192,16 +202,6 @@ impl Default for MedicationAdministrationDosage {
             dose: Default::default(),
             rate_ratio: Default::default(),
             rate_quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationAdministrationPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }
@@ -610,10 +610,10 @@ impl crate::traits::medication_administration::MedicationAdministrationExistence
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_medication(&self) -> bool {
+    fn has_effective(&self) -> bool {
         true
     }
-    fn has_effective(&self) -> bool {
+    fn has_medication(&self) -> bool {
         true
     }
     fn has_identifier(&self) -> bool {

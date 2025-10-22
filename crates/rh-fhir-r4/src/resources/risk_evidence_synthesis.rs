@@ -9,6 +9,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::related_artifact::RelatedArtifact;
 use crate::datatypes::usage_context::UsageContext;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::decimal::DecimalType;
 use crate::primitives::integer::IntegerType;
@@ -83,13 +84,13 @@ pub struct RiskEvidenceSynthesis {
     pub _copyright: Option<Element>,
     /// When the risk evidence synthesis was approved by publisher
     #[serde(rename = "approvalDate")]
-    pub approval_date: Option<StringType>,
+    pub approval_date: Option<DateType>,
     /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_approvalDate")]
     pub _approval_date: Option<Element>,
     /// When the risk evidence synthesis was last reviewed
     #[serde(rename = "lastReviewDate")]
-    pub last_review_date: Option<StringType>,
+    pub last_review_date: Option<DateType>,
     /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_lastReviewDate")]
     pub _last_review_date: Option<Element>,
@@ -142,50 +143,6 @@ pub struct RiskEvidenceSynthesis {
     /// How certain is the risk
     pub certainty: Option<Vec<RiskEvidenceSynthesisCertainty>>,
 }
-/// RiskEvidenceSynthesis nested structure for the 'certainty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisCertainty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    pub certainty_subcomponent: Option<Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of precision estimate
-    ///
-    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Level of confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower bound
-    pub from: Option<DecimalType>,
-    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
-    pub _from: Option<Element>,
-    /// Upper bound
-    pub to: Option<DecimalType>,
-    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
-    pub _to: Option<Element>,
-}
 /// RiskEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
@@ -207,29 +164,6 @@ pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     pub rating: Option<Vec<CodeableConcept>>,
     /// Used for footnotes or explanatory notes
     pub note: Option<Vec<Annotation>>,
-}
-/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
 }
 /// RiskEvidenceSynthesis nested structure for the 'riskEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,6 +204,73 @@ pub struct RiskEvidenceSynthesisRiskestimate {
     /// Extension element for the 'numeratorCount' primitive field. Contains metadata and extensions.
     #[serde(rename = "_numeratorCount")]
     pub _numerator_count: Option<Element>,
+}
+/// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of precision estimate
+    ///
+    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Level of confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower bound
+    pub from: Option<DecimalType>,
+    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
+    pub _from: Option<Element>,
+    /// Upper bound
+    pub to: Option<DecimalType>,
+    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
+    pub _to: Option<Element>,
+}
+/// RiskEvidenceSynthesis nested structure for the 'certainty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisCertainty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    pub certainty_subcomponent: Option<Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
+}
+/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
 }
 
 impl Default for RiskEvidenceSynthesis {
@@ -322,32 +323,6 @@ impl Default for RiskEvidenceSynthesis {
     }
 }
 
-impl Default for RiskEvidenceSynthesisCertainty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            certainty_subcomponent: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
-impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            level: Default::default(),
-            _level: Default::default(),
-            from: Default::default(),
-            _from: Default::default(),
-            to: Default::default(),
-            _to: Default::default(),
-        }
-    }
-}
-
 impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     fn default() -> Self {
         Self {
@@ -355,20 +330,6 @@ impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
             type_: Default::default(),
             rating: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for RiskEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
         }
     }
 }
@@ -388,6 +349,46 @@ impl Default for RiskEvidenceSynthesisRiskestimate {
             _denominator_count: Default::default(),
             numerator_count: Default::default(),
             _numerator_count: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            level: Default::default(),
+            _level: Default::default(),
+            from: Default::default(),
+            _from: Default::default(),
+            to: Default::default(),
+            _to: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisCertainty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            certainty_subcomponent: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisSamplesize {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }
@@ -592,10 +593,10 @@ impl crate::traits::risk_evidence_synthesis::RiskEvidenceSynthesisAccessors
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
     }
-    fn approval_date(&self) -> Option<StringType> {
+    fn approval_date(&self) -> Option<DateType> {
         self.approval_date.clone()
     }
-    fn last_review_date(&self) -> Option<StringType> {
+    fn last_review_date(&self) -> Option<DateType> {
         self.last_review_date.clone()
     }
     fn effective_period(&self) -> Option<Period> {

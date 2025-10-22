@@ -120,7 +120,7 @@ impl<'a> TypeMapper<'a> {
             "decimal" => RustType::Custom("DecimalType".to_string()),
 
             // Date/time types
-            "date" => RustType::Custom("StringType".to_string()), // Will be DateType once we generate it
+            "date" => RustType::Custom("DateType".to_string()),
             "dateTime" => RustType::Custom("DateTimeType".to_string()),
             "instant" => RustType::Custom("InstantType".to_string()),
             "time" => RustType::Custom("TimeType".to_string()),

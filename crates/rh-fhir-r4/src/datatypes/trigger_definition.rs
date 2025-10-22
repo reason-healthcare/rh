@@ -4,6 +4,7 @@ use crate::datatypes::element::Element;
 use crate::datatypes::expression::Expression;
 use crate::datatypes::reference::Reference;
 use crate::datatypes::timing::Timing;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::string::StringType;
 use serde::{Deserialize, Serialize};
@@ -39,7 +40,7 @@ pub struct TriggerDefinition {
     pub timing_reference: Option<Reference>,
     /// Timing of the event (date)
     #[serde(rename = "timingDate")]
-    pub timing_date: Option<StringType>,
+    pub timing_date: Option<DateType>,
     /// Timing of the event (dateTime)
     #[serde(rename = "timingDateTime")]
     pub timing_date_time: Option<DateTimeType>,

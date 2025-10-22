@@ -3,8 +3,8 @@ use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::money::Money;
 use crate::datatypes::reference::Reference;
+use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
-use crate::primitives::string::StringType;
 use crate::traits::domain_resource::DomainResourceAccessors;
 use crate::traits::domain_resource::DomainResourceExistence;
 use crate::traits::domain_resource::DomainResourceMutators;
@@ -36,7 +36,7 @@ pub trait PaymentNoticeAccessors: DomainResourceAccessors {
     /// Returns a reference to the payment field.
     fn payment(&self) -> Reference;
     /// Returns a reference to the paymentDate field.
-    fn payment_date(&self) -> Option<StringType>;
+    fn payment_date(&self) -> Option<DateType>;
     /// Returns a reference to the payee field.
     fn payee(&self) -> Option<Reference>;
     /// Returns a reference to the recipient field.

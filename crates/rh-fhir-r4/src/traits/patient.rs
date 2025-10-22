@@ -7,7 +7,7 @@ use crate::datatypes::human_name::HumanName;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
-use crate::primitives::string::StringType;
+use crate::primitives::date::DateType;
 use crate::resources::patient::PatientCommunication;
 use crate::resources::patient::PatientContact;
 use crate::resources::patient::PatientLink;
@@ -38,7 +38,7 @@ pub trait PatientAccessors: DomainResourceAccessors {
     /// Returns a reference to the gender field.
     fn gender(&self) -> Option<AdministrativeGender>;
     /// Returns a reference to the birthDate field.
-    fn birth_date(&self) -> Option<StringType>;
+    fn birth_date(&self) -> Option<DateType>;
     /// Returns a reference to the address field.
     fn address(&self) -> &[Address];
     /// Returns a reference to the maritalStatus field.

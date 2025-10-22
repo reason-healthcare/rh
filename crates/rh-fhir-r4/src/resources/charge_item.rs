@@ -657,13 +657,13 @@ impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
+    }
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

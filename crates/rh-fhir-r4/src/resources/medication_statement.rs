@@ -489,11 +489,11 @@ impl crate::traits::medication_statement::MedicationStatementExistence for Medic
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_effective(&self) -> bool {
-        self.effective_date_time.is_some() || self.effective_period.is_some()
-    }
     fn has_medication(&self) -> bool {
         true
+    }
+    fn has_effective(&self) -> bool {
+        self.effective_date_time.is_some() || self.effective_period.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

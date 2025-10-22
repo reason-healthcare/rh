@@ -143,15 +143,6 @@ pub struct StructureDefinition {
     /// Differential view of the structure
     pub differential: Option<StructureDefinitionDifferential>,
 }
-/// StructureDefinition nested structure for the 'differential' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionDifferential {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
-}
 /// StructureDefinition nested structure for the 'snapshot' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinitionSnapshot {
@@ -160,6 +151,22 @@ pub struct StructureDefinitionSnapshot {
     pub base: BackboneElement,
     /// Definition of elements in the resource (if no StructureDefinition)
     pub element: Vec<ElementDefinition>,
+}
+/// StructureDefinition nested structure for the 'context' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionContext {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// fhirpath | element | extension
+    #[serde(rename = "type")]
+    pub type_: ExtensionContextType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Where the extension can be used in instances
+    pub expression: StringType,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
 }
 /// StructureDefinition nested structure for the 'mapping' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -184,21 +191,14 @@ pub struct StructureDefinitionMapping {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
 }
-/// StructureDefinition nested structure for the 'context' field
+/// StructureDefinition nested structure for the 'differential' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionContext {
+pub struct StructureDefinitionDifferential {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// fhirpath | element | extension
-    #[serde(rename = "type")]
-    pub type_: ExtensionContextType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Where the extension can be used in instances
-    pub expression: StringType,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
 }
 
 impl Default for StructureDefinition {
@@ -254,7 +254,7 @@ impl Default for StructureDefinition {
     }
 }
 
-impl Default for StructureDefinitionDifferential {
+impl Default for StructureDefinitionSnapshot {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -263,11 +263,14 @@ impl Default for StructureDefinitionDifferential {
     }
 }
 
-impl Default for StructureDefinitionSnapshot {
+impl Default for StructureDefinitionContext {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            element: Vec::new(),
+            type_: Default::default(),
+            _type: Default::default(),
+            expression: StringType::default(),
+            _expression: Default::default(),
         }
     }
 }
@@ -288,14 +291,11 @@ impl Default for StructureDefinitionMapping {
     }
 }
 
-impl Default for StructureDefinitionContext {
+impl Default for StructureDefinitionDifferential {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            expression: StringType::default(),
-            _expression: Default::default(),
+            element: Vec::new(),
         }
     }
 }
