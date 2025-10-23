@@ -1,0 +1,14 @@
+# rust-analyzer configuration
+# This file is tracked in git and applies to the workspace
+
+[cargo]
+# Enable all features when analyzing
+features = "all"
+
+[procMacro]
+# Enable procedural macro expansion
+enable = true
+
+[procMacro.attributes]
+# Enable attribute macro expansion
+enable = true
