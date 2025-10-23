@@ -20,28 +20,14 @@
 
 use anyhow::Result;
 use serde_json::Value;
-use thiserror::Error;
 
+pub mod error;
 pub mod setup;
 pub mod validator;
 
-// Re-export commonly used types for backward compatibility
-pub use setup::{FhirPackageMapping, FhirSetup, FhirValidationError};
+pub use error::{Result as ValidatorResult, ValidatorError};
+pub use setup::{FhirPackageMapping, FhirSetup};
 pub use validator::FhirValidator;
-
-/// Validation errors that can occur during JSON validation
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum ValidationError {
-    #[error("JSON syntax error: {message} at line {line}, column {column}")]
-    JsonSyntax {
-        message: String,
-        line: usize,
-        column: usize,
-    },
-
-    #[error("Schema validation error: {message}")]
-    Schema { message: String },
-}
 
 /// Result of validation operation
 #[derive(Debug, Clone, PartialEq)]
@@ -49,7 +35,7 @@ pub enum ValidationResult {
     /// JSON is valid
     Valid,
     /// JSON has validation errors
-    Invalid(Vec<ValidationError>),
+    Invalid(Vec<ValidatorError>),
 }
 
 impl ValidationResult {
@@ -59,7 +45,7 @@ impl ValidationResult {
     }
 
     /// Get validation errors if any
-    pub fn errors(&self) -> Option<&[ValidationError]> {
+    pub fn errors(&self) -> Option<&[ValidatorError]> {
         match self {
             ValidationResult::Valid => None,
             ValidationResult::Invalid(errors) => Some(errors),
@@ -140,12 +126,12 @@ impl JsonValidator {
         &self,
         value: &Value,
         current_depth: usize,
-    ) -> std::result::Result<(), Vec<ValidationError>> {
+    ) -> std::result::Result<(), Vec<ValidatorError>> {
         let mut errors = Vec::new();
 
         // Check nesting depth
         if current_depth > self.max_nesting_depth {
-            errors.push(ValidationError::Schema {
+            errors.push(ValidatorError::Schema {
                 message: format!(
                     "Maximum nesting depth of {} exceeded at depth {}",
                     self.max_nesting_depth, current_depth
@@ -166,7 +152,7 @@ impl JsonValidator {
 
                     // Validate key is not empty
                     if key.is_empty() {
-                        errors.push(ValidationError::Schema {
+                        errors.push(ValidatorError::Schema {
                             message: "Object keys cannot be empty".to_string(),
                         });
                     }
@@ -184,7 +170,7 @@ impl JsonValidator {
             Value::String(s) => {
                 // Check for extremely long strings that might cause issues
                 if s.len() > 1_000_000 {
-                    errors.push(ValidationError::Schema {
+                    errors.push(ValidatorError::Schema {
                         message: format!(
                             "String value exceeds maximum length of 1,000,000 characters: {} characters",
                             s.len()
@@ -196,7 +182,7 @@ impl JsonValidator {
                 // Validate number is finite
                 if let Some(f) = n.as_f64() {
                     if !f.is_finite() {
-                        errors.push(ValidationError::Schema {
+                        errors.push(ValidatorError::Schema {
                             message: format!("Number must be finite, found: {f}"),
                         });
                     }
@@ -214,8 +200,8 @@ impl JsonValidator {
         }
     }
 
-    /// Parse a serde_json error and convert it to a ValidationError
-    fn parse_json_error(&self, error: serde_json::Error) -> ValidationError {
+    /// Parse a serde_json error and convert it to a ValidatorError
+    fn parse_json_error(&self, error: serde_json::Error) -> ValidatorError {
         let line = error.line();
         let column = error.column();
 
@@ -230,7 +216,7 @@ impl JsonValidator {
             format!("JSON parsing error: {error}")
         };
 
-        ValidationError::JsonSyntax {
+        ValidatorError::JsonSyntax {
             message,
             line,
             column,
@@ -290,10 +276,9 @@ mod tests {
 
             if let ValidationResult::Invalid(errors) = result {
                 assert!(!errors.is_empty());
-                // Should have a JSON syntax error
                 assert!(errors
                     .iter()
-                    .any(|e| matches!(e, ValidationError::JsonSyntax { .. })));
+                    .any(|e| matches!(e, ValidatorError::JsonSyntax { .. })));
             }
         }
     }
@@ -302,12 +287,10 @@ mod tests {
     fn test_nesting_depth_validation() {
         let validator = JsonValidator::with_max_depth(2);
 
-        // Within depth limit
         let shallow = r#"{"level1": {"level2": "value"}}"#;
         let result = validator.validate(shallow).unwrap();
         assert!(result.is_valid());
 
-        // Exceeds depth limit
         let deep = r#"{"level1": {"level2": {"level3": {"level4": "value"}}}}"#;
         let result = validator.validate(deep).unwrap();
         assert!(!result.is_valid());
@@ -315,7 +298,7 @@ mod tests {
         if let ValidationResult::Invalid(errors) = result {
             assert!(errors
                 .iter()
-                .any(|e| matches!(e, ValidationError::Schema { .. })));
+                .any(|e| matches!(e, ValidatorError::Schema { .. })));
         }
     }
 
@@ -330,7 +313,7 @@ mod tests {
         if let ValidationResult::Invalid(errors) = result {
             assert!(errors
                 .iter()
-                .any(|e| matches!(e, ValidationError::Schema { .. })));
+                .any(|e| matches!(e, ValidatorError::Schema { .. })));
         }
     }
 
@@ -346,10 +329,10 @@ mod tests {
         let results = validator.validate_multiple(ndjson).unwrap();
         assert_eq!(results.len(), 4);
 
-        assert!(results[0].1.is_valid()); // Line 1: valid
-        assert!(results[1].1.is_valid()); // Line 2: valid
-        assert!(!results[2].1.is_valid()); // Line 3: invalid
-        assert!(results[3].1.is_valid()); // Line 4: valid
+        assert!(results[0].1.is_valid());
+        assert!(results[1].1.is_valid());
+        assert!(!results[2].1.is_valid());
+        assert!(results[3].1.is_valid());
     }
 
     #[test]
@@ -365,8 +348,8 @@ mod tests {
         assert!(!result.is_valid());
 
         if let ValidationResult::Invalid(errors) = result {
-            if let Some(ValidationError::JsonSyntax { line, column, .. }) = errors.first() {
-                assert!(*line > 1); // Should be on line 3 or so
+            if let Some(ValidatorError::JsonSyntax { line, column, .. }) = errors.first() {
+                assert!(*line > 1);
                 assert!(*column > 0);
             } else {
                 panic!("Expected JSON syntax error with line/column info");

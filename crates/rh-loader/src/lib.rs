@@ -49,27 +49,25 @@ use url::Url;
 
 use rh_foundation::FoundationError;
 
-/// Errors that can occur during package loading operations
+/// Errors that can occur during package loading operations.
+///
+/// This error type extends FoundationError with domain-specific
+/// error variants for package loading and management.
 #[derive(Error, Debug)]
 pub enum LoaderError {
-    #[error("HTTP request failed: {0}")]
-    Http(#[from] reqwest::Error),
-
-    #[error("URL parsing failed: {0}")]
-    UrlParse(#[from] url::ParseError),
-
+    /// Package not found in registry
     #[error("Package not found: {package}@{version}")]
     PackageNotFound { package: String, version: String },
 
+    /// Invalid package manifest structure or content
     #[error("Invalid package manifest: {message}")]
     InvalidManifest { message: String },
 
+    /// Archive extraction failed
     #[error("Archive extraction failed: {message}")]
     ArchiveError { message: String },
 
-    #[error("Authentication failed: {message}")]
-    Authentication { message: String },
-
+    /// Package already exists at target location
     #[error(
         "Package already exists: {package}@{version} at {path}. Use --overwrite to replace it."
     )]
@@ -79,14 +77,26 @@ pub enum LoaderError {
         path: String,
     },
 
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("JSON parsing error: {0}")]
-    Json(#[from] serde_json::Error),
-
-    #[error("Foundation error: {0}")]
+    /// Foundation error (covers IO, JSON, HTTP, URL parsing, Authentication)
+    #[error(transparent)]
     Foundation(#[from] FoundationError),
+
+    /// URL parsing error
+    #[error("URL parsing failed: {0}")]
+    UrlParse(#[from] url::ParseError),
+}
+
+// Implement From for common types that should go through FoundationError
+impl From<std::io::Error> for LoaderError {
+    fn from(err: std::io::Error) -> Self {
+        LoaderError::Foundation(FoundationError::Io(err))
+    }
+}
+
+impl From<serde_json::Error> for LoaderError {
+    fn from(err: serde_json::Error) -> Self {
+        LoaderError::Foundation(FoundationError::Serialization(err))
+    }
 }
 
 /// Result type for loader operations
@@ -153,36 +163,28 @@ impl Default for LoaderConfig {
 
 /// FHIR package loader for downloading from npm-style registries
 pub struct PackageLoader {
-    client: reqwest::Client,
+    http_client: rh_foundation::http::HttpClient,
     config: LoaderConfig,
 }
 
 impl PackageLoader {
     /// Create a new package loader with the given configuration
     pub fn new(config: LoaderConfig) -> LoaderResult<Self> {
-        let mut headers = reqwest::header::HeaderMap::new();
+        let mut builder = rh_foundation::http::HttpClient::builder()
+            .timeout(std::time::Duration::from_secs(config.timeout_seconds))
+            .user_agent("rh-loader/0.1.0")?;
 
         // Add authentication header if token is provided
         if let Some(token) = &config.auth_token {
-            let auth_value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
-                .map_err(|e| LoaderError::Authentication {
-                    message: format!("Invalid auth token: {e}"),
-                })?;
-            headers.insert(reqwest::header::AUTHORIZATION, auth_value);
+            builder = builder.bearer_auth(token)?;
         }
 
-        // Add User-Agent header
-        headers.insert(
-            reqwest::header::USER_AGENT,
-            reqwest::header::HeaderValue::from_static("rh-loader/0.1.0"),
-        );
+        let http_client = builder.build()?;
 
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(config.timeout_seconds))
-            .default_headers(headers)
-            .build()?;
-
-        Ok(Self { client, config })
+        Ok(Self {
+            http_client,
+            config,
+        })
     }
 
     pub fn is_package_downloaded(
@@ -245,10 +247,10 @@ impl PackageLoader {
         let home_dir = env::var("HOME")
             .or_else(|_| env::var("USERPROFILE"))
             .map_err(|_| {
-                LoaderError::Io(std::io::Error::new(
+                LoaderError::Foundation(FoundationError::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "Could not determine home directory",
-                ))
+                )))
             })?;
 
         Ok(PathBuf::from(home_dir).join(".fhir").join("packages"))
@@ -301,16 +303,15 @@ impl PackageLoader {
 
         tracing::debug!("Fetching registry response from: {}", package_url);
 
-        let response = self.client.get(package_url).send().await?;
-
-        if !response.status().is_success() {
-            return Err(LoaderError::PackageNotFound {
+        let registry_response: RegistryResponse = self
+            .http_client
+            .download_json(package_url.as_str())
+            .await
+            .map_err(|_| LoaderError::PackageNotFound {
                 package: package_name.to_string(),
                 version: "any".to_string(),
-            });
-        }
+            })?;
 
-        let registry_response: RegistryResponse = response.json().await?;
         Ok(registry_response)
     }
 
@@ -339,19 +340,14 @@ impl PackageLoader {
 
         let mut retries = 0;
         loop {
-            match self.client.get(tarball_url).send().await {
-                Ok(response) => {
-                    if response.status().is_success() {
-                        let bytes = response.bytes().await?;
-                        return Ok(bytes.to_vec());
-                    } else {
-                        return Err(LoaderError::Http(response.error_for_status().unwrap_err()));
-                    }
+            match self.http_client.download(tarball_url).await {
+                Ok(bytes) => {
+                    return Ok(bytes);
                 }
                 Err(e) => {
                     retries += 1;
                     if retries >= self.config.max_retries {
-                        return Err(LoaderError::Http(e));
+                        return Err(LoaderError::Foundation(e));
                     }
                     tracing::warn!(
                         "Download attempt {} failed, retrying... Error: {}",

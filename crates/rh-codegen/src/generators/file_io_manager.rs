@@ -11,7 +11,7 @@ use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
 use crate::generators::{FileGenerator, TokenGenerator};
 use crate::rust_types::{RustStruct, RustTrait};
-use crate::{CodegenError, CodegenResult};
+use crate::CodegenResult;
 
 // Re-export for convenience
 pub use crate::generators::file_generator::FhirTypeCategory;
@@ -35,10 +35,9 @@ impl<'a> FileIoManager<'a> {
     pub fn load_structure_definition<P: AsRef<Path>>(
         path: P,
     ) -> CodegenResult<StructureDefinition> {
-        let content = fs::read_to_string(&path).map_err(CodegenError::Io)?;
+        let content = fs::read_to_string(&path)?;
 
-        let structure_def: StructureDefinition =
-            serde_json::from_str(&content).map_err(CodegenError::Json)?;
+        let structure_def: StructureDefinition = serde_json::from_str(&content)?;
 
         Ok(structure_def)
     }
@@ -63,7 +62,7 @@ impl<'a> FileIoManager<'a> {
         };
 
         // Ensure the target directory exists
-        std::fs::create_dir_all(&target_dir).map_err(CodegenError::Io)?;
+        std::fs::create_dir_all(&target_dir)?;
 
         // Generate the file in the appropriate directory
         let filename = crate::naming::Naming::filename(structure_def);
@@ -82,7 +81,7 @@ impl<'a> FileIoManager<'a> {
         let traits_dir = base_output_dir.as_ref().join("src").join("traits");
 
         // Ensure the traits directory exists
-        std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
+        std::fs::create_dir_all(&traits_dir)?;
 
         // Generate the trait file
         let struct_name = crate::naming::Naming::struct_name(structure_def);
@@ -106,7 +105,7 @@ impl<'a> FileIoManager<'a> {
         let traits_dir = base_output_dir.as_ref().join("src").join("traits");
 
         // Ensure the traits directory exists
-        std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
+        std::fs::create_dir_all(&traits_dir)?;
 
         // Generate the trait file
         let struct_name = crate::naming::Naming::struct_name(structure_def);
@@ -285,9 +284,10 @@ impl<'a> FileIoManager<'a> {
         file_generator.classify_fhir_structure_def(structure_def)
     }
 
-    /// Ensure a directory exists, creating it if necessary
-    pub fn ensure_directory_exists<P: AsRef<Path>>(dir_path: P) -> CodegenResult<()> {
-        std::fs::create_dir_all(dir_path).map_err(CodegenError::Io)
+    /// Ensure the given directory exists, creating it if necessary
+    pub fn ensure_directory(dir_path: &Path) -> CodegenResult<()> {
+        std::fs::create_dir_all(dir_path)?;
+        Ok(())
     }
 
     /// Generate the appropriate file path for a structure definition
@@ -435,7 +435,7 @@ mod tests {
         // Directory shouldn't exist initially
         assert!(!new_dir.exists());
 
-        let result = FileIoManager::ensure_directory_exists(&new_dir);
+        let result = FileIoManager::ensure_directory(&new_dir);
         assert!(result.is_ok(), "Should create directory successfully");
 
         // Directory should now exist

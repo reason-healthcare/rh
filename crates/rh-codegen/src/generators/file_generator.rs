@@ -57,7 +57,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path, formatted_code)?;
 
         Ok(())
     }
@@ -120,7 +120,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path, formatted_code)?;
 
         Ok(())
     }
@@ -152,7 +152,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(mod_file_path, formatted_code).map_err(CodegenError::Io)?;
+        fs::write(mod_file_path, formatted_code)?;
 
         Ok(())
     }
@@ -193,7 +193,7 @@ impl<'a> FileGenerator<'a> {
         let formatted_code = prettyplease::unparse(&syntax_tree);
 
         // Write to file
-        fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path, formatted_code)?;
 
         Ok(())
     }
@@ -224,7 +224,7 @@ impl<'a> FileGenerator<'a> {
         };
 
         // Ensure the target directory exists
-        std::fs::create_dir_all(&target_dir).map_err(CodegenError::Io)?;
+        std::fs::create_dir_all(&target_dir)?;
 
         // Separate nested structs that are extensions from those that should remain
         // embedded in the parent file. Extension-like nested structs should be
@@ -254,7 +254,7 @@ impl<'a> FileGenerator<'a> {
         // across resource files.
         if !external_extensions.is_empty() {
             let extensions_dir = base_dir.join("src").join("extensions");
-            std::fs::create_dir_all(&extensions_dir).map_err(CodegenError::Io)?;
+            std::fs::create_dir_all(&extensions_dir)?;
 
             for ext in external_extensions {
                 // Write each extension struct to its own file. If a file already
@@ -276,7 +276,7 @@ impl<'a> FileGenerator<'a> {
         let traits_dir = base_output_dir.as_ref().join("src").join("traits");
 
         // Ensure the traits directory exists
-        std::fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
+        std::fs::create_dir_all(&traits_dir)?;
 
         // Generate the trait file
         let struct_name = crate::naming::Naming::struct_name(structure_def);
@@ -469,7 +469,7 @@ impl<'a> FileGenerator<'a> {
         }
 
         // Write to file
-        fs::write(output_path.as_ref(), formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path.as_ref(), formatted_code)?;
 
         Ok(())
     }
@@ -529,7 +529,7 @@ impl<'a> FileGenerator<'a> {
         }
 
         // Write to file
-        fs::write(output_path.as_ref(), formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path.as_ref(), formatted_code)?;
 
         Ok(())
     }
@@ -592,7 +592,7 @@ impl<'a> FileGenerator<'a> {
         }
 
         // Write to file
-        fs::write(output_path.as_ref(), formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path.as_ref(), formatted_code)?;
 
         Ok(())
     }
@@ -607,7 +607,7 @@ impl<'a> FileGenerator<'a> {
 
         // Create the enums directory if it doesn't exist
         if !enums_dir.exists() {
-            fs::create_dir_all(enums_dir).map_err(CodegenError::Io)?;
+            fs::create_dir_all(enums_dir)?;
         }
 
         // Generate a file for each cached enum
@@ -643,7 +643,7 @@ impl<'a> FileGenerator<'a> {
             }
 
             // Write enum to its own file
-            fs::write(&enum_file_path, formatted_code).map_err(CodegenError::Io)?;
+            fs::write(&enum_file_path, formatted_code)?;
         }
 
         Ok(())
@@ -686,7 +686,7 @@ impl<'a> FileGenerator<'a> {
             );
         }
 
-        fs::write(&mod_file_path, final_content).map_err(CodegenError::Io)?;
+        fs::write(&mod_file_path, final_content)?;
 
         Ok(())
     }
@@ -734,7 +734,7 @@ impl<'a> FileGenerator<'a> {
         }
 
         // Write to file
-        fs::write(output_path.as_ref(), formatted_code).map_err(CodegenError::Io)?;
+        fs::write(output_path.as_ref(), formatted_code)?;
 
         Ok(())
     }
@@ -795,7 +795,7 @@ impl<'a> FileGenerator<'a> {
         let output_path = dir.join(filename);
 
         // Write file
-        std::fs::write(output_path, formatted_code).map_err(CodegenError::Io)?;
+        std::fs::write(output_path, formatted_code)?;
 
         Ok(())
     }
@@ -1099,7 +1099,7 @@ impl<'a> FileGenerator<'a> {
 
         // Create main directories
         let src_dir = output_dir.join("src");
-        fs::create_dir_all(&src_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&src_dir)?;
 
         // Create module directories
         let primitives_dir = src_dir.join("primitives");
@@ -1108,11 +1108,11 @@ impl<'a> FileGenerator<'a> {
         let resource_dir = src_dir.join("resource");
         let traits_dir = src_dir.join("traits");
 
-        fs::create_dir_all(&primitives_dir).map_err(CodegenError::Io)?;
-        fs::create_dir_all(&datatypes_dir).map_err(CodegenError::Io)?;
-        fs::create_dir_all(&extensions_dir).map_err(CodegenError::Io)?;
-        fs::create_dir_all(&resource_dir).map_err(CodegenError::Io)?;
-        fs::create_dir_all(&traits_dir).map_err(CodegenError::Io)?;
+        fs::create_dir_all(&primitives_dir)?;
+        fs::create_dir_all(&datatypes_dir)?;
+        fs::create_dir_all(&extensions_dir)?;
+        fs::create_dir_all(&resource_dir)?;
+        fs::create_dir_all(&traits_dir)?;
 
         // Generate main lib.rs
         self.generate_lib_file(src_dir.join("lib.rs"))?;
@@ -1158,7 +1158,7 @@ serde_json = "1.0"
 "#
         );
 
-        fs::write(cargo_path, cargo_content).map_err(CodegenError::Io)?;
+        fs::write(cargo_path, cargo_content)?;
         Ok(())
     }
 }

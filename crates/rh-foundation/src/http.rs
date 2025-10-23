@@ -24,22 +24,105 @@ pub struct HttpClient {
     timeout: Duration,
 }
 
-impl HttpClient {
-    /// Create a new HTTP client with default settings (30 second timeout).
-    pub fn new() -> Result<Self> {
-        Self::with_timeout(Duration::from_secs(30))
+/// Builder for configuring an HttpClient.
+///
+/// # Example
+/// ```no_run
+/// use rh_foundation::http::HttpClientBuilder;
+/// use std::time::Duration;
+///
+/// # fn example() -> rh_foundation::Result<()> {
+/// let client = HttpClientBuilder::new()
+///     .timeout(Duration::from_secs(60))
+///     .bearer_auth("my-token")?
+///     .user_agent("my-app/1.0")?
+///     .build()?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct HttpClientBuilder {
+    timeout: Duration,
+    headers: reqwest::header::HeaderMap,
+}
+
+impl HttpClientBuilder {
+    /// Create a new builder with default settings.
+    pub fn new() -> Self {
+        Self {
+            timeout: Duration::from_secs(30),
+            headers: reqwest::header::HeaderMap::new(),
+        }
     }
 
-    /// Create a new HTTP client with a custom timeout.
-    pub fn with_timeout(timeout: Duration) -> Result<Self> {
+    /// Set the request timeout.
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    /// Add a bearer token for authentication.
+    pub fn bearer_auth(mut self, token: &str) -> Result<Self> {
+        let value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
+            .map_err(|e| FoundationError::Authentication(format!("Invalid auth token: {e}")))?;
+        self.headers.insert(reqwest::header::AUTHORIZATION, value);
+        Ok(self)
+    }
+
+    /// Set the User-Agent header.
+    pub fn user_agent(mut self, user_agent: &str) -> Result<Self> {
+        let value = reqwest::header::HeaderValue::from_str(user_agent).map_err(|e| {
+            FoundationError::InvalidInput(format!("Invalid user-agent header: {e}"))
+        })?;
+        self.headers.insert(reqwest::header::USER_AGENT, value);
+        Ok(self)
+    }
+
+    /// Add a custom header.
+    pub fn header(mut self, key: reqwest::header::HeaderName, value: &str) -> Result<Self> {
+        let value = reqwest::header::HeaderValue::from_str(value).map_err(|e| {
+            FoundationError::InvalidInput(format!("Invalid header value for {key}: {e}"))
+        })?;
+        self.headers.insert(key, value);
+        Ok(self)
+    }
+
+    /// Build the HttpClient.
+    pub fn build(self) -> Result<HttpClient> {
         let client = reqwest::Client::builder()
-            .timeout(timeout)
+            .timeout(self.timeout)
+            .default_headers(self.headers)
             .build()
             .map_err(|e| {
                 FoundationError::Other(anyhow::anyhow!("Failed to build HTTP client: {e}"))
             })?;
 
-        Ok(Self { client, timeout })
+        Ok(HttpClient {
+            client,
+            timeout: self.timeout,
+        })
+    }
+}
+
+impl Default for HttpClientBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl HttpClient {
+    /// Create a new HTTP client with default settings (30 second timeout).
+    pub fn new() -> Result<Self> {
+        HttpClientBuilder::new().build()
+    }
+
+    /// Create a builder for configuring an HTTP client.
+    pub fn builder() -> HttpClientBuilder {
+        HttpClientBuilder::new()
+    }
+
+    /// Create a new HTTP client with a custom timeout.
+    pub fn with_timeout(timeout: Duration) -> Result<Self> {
+        HttpClientBuilder::new().timeout(timeout).build()
     }
 
     /// Get the configured timeout.

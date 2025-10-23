@@ -2,8 +2,9 @@
 //!
 //! This module handles the actual FHIR resource validation logic.
 
-use crate::setup::{FhirSetup, FhirValidationError};
-use crate::{ValidationError, ValidationResult};
+use crate::error::{Result as ValidatorResult, ValidatorError};
+use crate::setup::FhirSetup;
+use crate::ValidationResult;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -15,14 +16,14 @@ pub struct FhirValidator {
 
 impl FhirValidator {
     /// Create a new FHIR validator with default settings
-    pub fn new() -> Result<Self, FhirValidationError> {
+    pub fn new() -> ValidatorResult<Self> {
         Ok(Self {
             setup: FhirSetup::new()?,
         })
     }
 
     /// Create a new FHIR validator with custom base directory
-    pub fn with_base_dir(base_dir: PathBuf) -> Result<Self, FhirValidationError> {
+    pub fn with_base_dir(base_dir: PathBuf) -> ValidatorResult<Self> {
         Ok(Self {
             setup: FhirSetup::with_base_dir(base_dir)?,
         })
@@ -55,28 +56,24 @@ impl FhirValidator {
         &self,
         content: &str,
         version: Option<&str>,
-    ) -> Result<Vec<(usize, ValidationResult)>, FhirValidationError> {
+    ) -> ValidatorResult<Vec<(usize, ValidationResult)>> {
         let mut results = Vec::new();
-        let default_version = "4.0.1"; // Default FHIR version
+        let default_version = "4.0.1";
         let version_to_use = version.unwrap_or(default_version);
 
-        // Split content by lines and try to parse each line as a separate JSON resource
         for (line_number, line) in content.lines().enumerate() {
             let line = line.trim();
 
-            // Skip empty lines
             if line.is_empty() {
                 continue;
             }
 
-            // Try to parse and validate each line as a FHIR resource
             match self.validate_with_version(line, version_to_use).await {
                 Ok(validation_result) => {
-                    results.push((line_number + 1, validation_result)); // 1-indexed line numbers
+                    results.push((line_number + 1, validation_result));
                 }
                 Err(e) => {
-                    // Convert validation errors to Invalid results
-                    let error = ValidationError::Schema {
+                    let error = ValidatorError::Schema {
                         message: format!("Line {}: {}", line_number + 1, e),
                     };
                     results.push((line_number + 1, ValidationResult::Invalid(vec![error])));
@@ -92,11 +89,9 @@ impl FhirValidator {
         &self,
         content: &str,
         version: &str,
-    ) -> Result<ValidationResult, FhirValidationError> {
-        // Parse the JSON content
+    ) -> ValidatorResult<ValidationResult> {
         let resource: Value = serde_json::from_str(content)?;
 
-        // Perform basic structure validation
         self.validate_basic_structure(&resource, version)
     }
 
@@ -105,12 +100,11 @@ impl FhirValidator {
         &self,
         resource: &Value,
         _version: &str,
-    ) -> Result<ValidationResult, FhirValidationError> {
+    ) -> ValidatorResult<ValidationResult> {
         let mut errors = Vec::new();
 
-        // Check if it's an object
         if !resource.is_object() {
-            errors.push(ValidationError::Schema {
+            errors.push(ValidatorError::Schema {
                 message: "FHIR resource must be a JSON object".to_string(),
             });
             return Ok(ValidationResult::Invalid(errors));
@@ -118,22 +112,21 @@ impl FhirValidator {
 
         let obj = resource.as_object().unwrap();
 
-        // Check for required resourceType field
         match obj.get("resourceType") {
             Some(Value::String(resource_type)) => {
                 if resource_type.is_empty() {
-                    errors.push(ValidationError::Schema {
+                    errors.push(ValidatorError::Schema {
                         message: "resourceType cannot be empty".to_string(),
                     });
                 }
             }
             Some(_) => {
-                errors.push(ValidationError::Schema {
+                errors.push(ValidatorError::Schema {
                     message: "resourceType must be a string".to_string(),
                 });
             }
             None => {
-                errors.push(ValidationError::Schema {
+                errors.push(ValidatorError::Schema {
                     message: "Missing required field: resourceType".to_string(),
                 });
             }

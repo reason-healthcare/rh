@@ -1,9 +1,10 @@
 //! Error types for VCL parsing
 
+use rh_foundation::FoundationError;
 use thiserror::Error;
 
 /// Errors that can occur during VCL parsing
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[derive(Error, Debug)]
 pub enum VclError {
     /// Parse error with context
     #[error("Parse error at position {position}: {message}")]
@@ -36,6 +37,114 @@ pub enum VclError {
     /// Translation error - expression cannot be translated to FHIR
     #[error("Translation error: {message}")]
     TranslationError { message: String },
+
+    /// Foundation error (covers IO, JSON, etc.)
+    #[error(transparent)]
+    Foundation(#[from] FoundationError),
+
+    /// Generic error with context
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl Clone for VclError {
+    fn clone(&self) -> Self {
+        match self {
+            Self::ParseError {
+                message,
+                position,
+                input,
+            } => Self::ParseError {
+                message: message.clone(),
+                position: *position,
+                input: input.clone(),
+            },
+            Self::UnexpectedEof { position } => Self::UnexpectedEof {
+                position: *position,
+            },
+            Self::InvalidToken { token, position } => Self::InvalidToken {
+                token: token.clone(),
+                position: *position,
+            },
+            Self::InvalidUri { uri } => Self::InvalidUri { uri: uri.clone() },
+            Self::InvalidQuotedString { message, position } => Self::InvalidQuotedString {
+                message: message.clone(),
+                position: *position,
+            },
+            Self::NestingTooDeep { max_depth } => Self::NestingTooDeep {
+                max_depth: *max_depth,
+            },
+            Self::TranslationError { message } => Self::TranslationError {
+                message: message.clone(),
+            },
+            Self::Foundation(e) => Self::Other(anyhow::anyhow!("{e}")),
+            Self::Other(e) => Self::Other(anyhow::anyhow!("{e}")),
+        }
+    }
+}
+
+impl PartialEq for VclError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::ParseError {
+                    message: m1,
+                    position: p1,
+                    input: i1,
+                },
+                Self::ParseError {
+                    message: m2,
+                    position: p2,
+                    input: i2,
+                },
+            ) => m1 == m2 && p1 == p2 && i1 == i2,
+            (Self::UnexpectedEof { position: p1 }, Self::UnexpectedEof { position: p2 }) => {
+                p1 == p2
+            }
+            (
+                Self::InvalidToken {
+                    token: t1,
+                    position: p1,
+                },
+                Self::InvalidToken {
+                    token: t2,
+                    position: p2,
+                },
+            ) => t1 == t2 && p1 == p2,
+            (Self::InvalidUri { uri: u1 }, Self::InvalidUri { uri: u2 }) => u1 == u2,
+            (
+                Self::InvalidQuotedString {
+                    message: m1,
+                    position: p1,
+                },
+                Self::InvalidQuotedString {
+                    message: m2,
+                    position: p2,
+                },
+            ) => m1 == m2 && p1 == p2,
+            (Self::NestingTooDeep { max_depth: d1 }, Self::NestingTooDeep { max_depth: d2 }) => {
+                d1 == d2
+            }
+            (Self::TranslationError { message: m1 }, Self::TranslationError { message: m2 }) => {
+                m1 == m2
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Eq for VclError {}
+
+impl From<std::io::Error> for VclError {
+    fn from(err: std::io::Error) -> Self {
+        VclError::Foundation(FoundationError::Io(err))
+    }
+}
+
+impl From<serde_json::Error> for VclError {
+    fn from(err: serde_json::Error) -> Self {
+        VclError::Foundation(FoundationError::Serialization(err))
+    }
 }
 
 impl VclError {

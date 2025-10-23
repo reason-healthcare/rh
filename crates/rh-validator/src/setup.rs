@@ -2,46 +2,12 @@
 //!
 //! This module handles downloading FHIR packages and generating Rust types.
 
-use anyhow::Result;
 use rh_loader::{LoaderConfig, PackageLoader};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use thiserror::Error;
 
-/// Errors specific to FHIR validation and setup
-#[derive(Error, Debug)]
-pub enum FhirValidationError {
-    #[error("Invalid FHIR version: {version}")]
-    InvalidVersion { version: String },
-
-    #[error("Package not found: {package}")]
-    PackageNotFound { package: String },
-
-    #[error("Failed to download package: {message}")]
-    PackageDownload { message: String },
-
-    #[error("Failed to generate Rust types: {message}")]
-    CodegenFailed { message: String },
-
-    #[error("FHIR resource validation failed: {message}")]
-    ResourceValidation { message: String },
-
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
-
-    #[error("Codegen error: {0}")]
-    Codegen(#[from] rh_codegen::CodegenError),
-
-    #[error("Anyhow error: {0}")]
-    Anyhow(#[from] anyhow::Error),
-
-    #[error("Loader error: {0}")]
-    Loader(#[from] rh_loader::LoaderError),
-}
+use crate::error::{Result as ValidatorResult, ValidatorError};
 
 /// Mapping from FHIR version to core package information
 #[derive(Debug, Clone)]
@@ -78,12 +44,12 @@ pub struct FhirSetup {
 
 impl FhirSetup {
     /// Create a new FHIR setup manager with default settings
-    pub fn new() -> Result<Self> {
+    pub fn new() -> ValidatorResult<Self> {
         let home_dir = dirs::home_dir().ok_or_else(|| {
-            FhirValidationError::Io(std::io::Error::new(
+            ValidatorError::Foundation(rh_foundation::FoundationError::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 "Could not determine home directory",
-            ))
+            )))
         })?;
 
         let base_dir = home_dir.join(".fhir");
@@ -91,17 +57,13 @@ impl FhirSetup {
     }
 
     /// Create a new FHIR setup manager with custom base directory
-    pub fn with_base_dir(base_dir: PathBuf) -> Result<Self> {
-        // Ensure directories exist
+    pub fn with_base_dir(base_dir: PathBuf) -> ValidatorResult<Self> {
         let packages_dir = base_dir.join("packages");
         let rust_dir = base_dir.join("rust");
         fs::create_dir_all(&packages_dir)?;
         fs::create_dir_all(&rust_dir)?;
 
-        // Initialize version mappings
         let mut version_mappings = HashMap::new();
-
-        // FHIR R4
         version_mappings.insert(
             "4.0.1".to_string(),
             FhirPackageMapping {
@@ -129,13 +91,10 @@ impl FhirSetup {
     }
 
     /// Get the package mapping for a FHIR version
-    pub fn get_package_mapping(
-        &self,
-        version: &str,
-    ) -> Result<&FhirPackageMapping, FhirValidationError> {
+    pub fn get_package_mapping(&self, version: &str) -> ValidatorResult<&FhirPackageMapping> {
         self.version_mappings
             .get(version)
-            .ok_or_else(|| FhirValidationError::InvalidVersion {
+            .ok_or_else(|| ValidatorError::InvalidVersion {
                 version: version.to_string(),
             })
     }
@@ -151,10 +110,7 @@ impl FhirSetup {
     }
 
     /// Download a FHIR package if not already present
-    pub async fn download_package(
-        &self,
-        mapping: &FhirPackageMapping,
-    ) -> Result<(), FhirValidationError> {
+    pub async fn download_package(&self, mapping: &FhirPackageMapping) -> ValidatorResult<()> {
         if self.is_package_downloaded(mapping) {
             return Ok(());
         }
@@ -168,14 +124,13 @@ impl FhirSetup {
             overwrite_existing: false,
         };
 
-        let downloader =
-            PackageLoader::new(download_config).map_err(FhirValidationError::Loader)?;
+        let downloader = PackageLoader::new(download_config)?;
         let packages_dir = self.base_dir.join("packages");
 
         downloader
             .download_package(&mapping.package, &mapping.package_version, &packages_dir)
             .await
-            .map_err(|e| FhirValidationError::PackageDownload {
+            .map_err(|e| ValidatorError::PackageDownload {
                 message: e.to_string(),
             })?;
 

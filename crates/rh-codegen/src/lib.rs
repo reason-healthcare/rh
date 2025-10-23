@@ -57,29 +57,44 @@ pub use rust_types::{RustEnum, RustStruct, RustTrait, RustTraitMethod, RustType}
 pub use type_mapper::TypeMapper;
 pub use value_sets::{ValueSetConcept, ValueSetManager};
 
-/// Errors specific to code generation
+/// Errors specific to code generation.
+///
+/// This error type extends FoundationError with domain-specific
+/// error variants for FHIR code generation.
 #[derive(thiserror::Error, Debug)]
 pub enum CodegenError {
+    /// Invalid FHIR type encountered
     #[error("Invalid FHIR type: {fhir_type}")]
     InvalidFhirType { fhir_type: String },
 
+    /// Missing required field in structure definition
     #[error("Missing required field: {field}")]
     MissingField { field: String },
 
+    /// General code generation failure
     #[error("Code generation failed: {message}")]
     Generation { message: String },
 
-    #[error("Loader error: {0}")]
+    /// Package loader error
+    #[error(transparent)]
     Loader(#[from] rh_loader::LoaderError),
 
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("JSON parsing error: {0}")]
-    Json(#[from] serde_json::Error),
-
-    #[error("Foundation error: {0}")]
+    /// Foundation error (covers IO, JSON, etc.)
+    #[error(transparent)]
     Foundation(#[from] FoundationError),
+}
+
+// Implement From for common types that should go through FoundationError
+impl From<std::io::Error> for CodegenError {
+    fn from(err: std::io::Error) -> Self {
+        CodegenError::Foundation(FoundationError::Io(err))
+    }
+}
+
+impl From<serde_json::Error> for CodegenError {
+    fn from(err: serde_json::Error) -> Self {
+        CodegenError::Foundation(FoundationError::Serialization(err))
+    }
 }
 
 /// Result type for codegen operations

@@ -15,6 +15,8 @@ crate-type = ["cdylib", "rlib"]
 wasm-opt = ["-O4"]
 
 [dependencies]
+rh-foundation = { path = "../rh-foundation" }
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

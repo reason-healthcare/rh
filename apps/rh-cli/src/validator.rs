@@ -360,7 +360,7 @@ fn print_multiple_results_json(results: &[(usize, ValidationResult)]) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rh_validator::ValidationError;
+    use rh_validator::ValidatorError;
 
     #[test]
     fn test_output_format_parsing() {
@@ -385,20 +385,17 @@ mod tests {
 
     #[test]
     fn test_single_result_formatting() {
-        // Test valid result
         let valid_result = ValidationResult::Valid;
         print_single_result_text(&valid_result, false);
         print_single_result_text(&valid_result, true);
 
-        // Test invalid result
-        let invalid_result = ValidationResult::Invalid(vec![ValidationError::JsonSyntax {
+        let invalid_result = ValidationResult::Invalid(vec![ValidatorError::JsonSyntax {
             message: "Test error".to_string(),
             line: 1,
             column: 5,
         }]);
         print_single_result_text(&invalid_result, false);
 
-        // JSON formatting should not panic
         assert!(print_single_result_json(&valid_result).is_ok());
         assert!(print_single_result_json(&invalid_result).is_ok());
     }
@@ -409,7 +406,7 @@ mod tests {
             (1, ValidationResult::Valid),
             (
                 2,
-                ValidationResult::Invalid(vec![ValidationError::JsonSyntax {
+                ValidationResult::Invalid(vec![ValidatorError::JsonSyntax {
                     message: "Test error".to_string(),
                     line: 2,
                     column: 1,

@@ -20,4 +20,4 @@ pub mod http;
 
 // Re-export commonly used types
 pub use config::Config;
-pub use error::{FoundationError, Result};
+pub use error::{ErrorContext, ErrorWithMetadata, FoundationError, Result};
