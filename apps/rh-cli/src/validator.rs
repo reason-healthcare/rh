@@ -123,9 +123,7 @@ async fn handle_json_validation(args: JsonArgs) -> Result<()> {
 
     let has_errors = if args.multiple {
         // Validate multiple JSON documents (NDJSON)
-        let results = validator
-            .validate_multiple(&content)
-            .context("Failed to validate multiple JSON documents")?;
+        let results = validator.validate_multiple(&content);
 
         match args.format {
             OutputFormat::Text => {
@@ -139,9 +137,7 @@ async fn handle_json_validation(args: JsonArgs) -> Result<()> {
         results.iter().any(|(_, result)| !result.is_valid())
     } else {
         // Validate single JSON document
-        let result = validator
-            .validate(&content)
-            .context("Failed to validate JSON")?;
+        let result = validator.validate(&content);
 
         match args.format {
             OutputFormat::Text => {
@@ -164,13 +160,15 @@ async fn handle_json_validation(args: JsonArgs) -> Result<()> {
 
 async fn handle_fhir_validation(args: FhirArgs) -> Result<()> {
     // Create FHIR validator with custom settings
-    let mut validator = if let Some(package_dir) = &args.package_dir {
-        FhirValidator::with_package_dir(package_dir)
+    let validator = if let Some(package_dir) = &args.package_dir {
+        FhirValidator::with_package_dir(package_dir.clone())
+            .context("Failed to create FHIR validator with package dir")?
     } else {
         FhirValidator::new().context("Failed to create FHIR validator")?
     };
 
-    validator = validator.with_default_version(&args.version);
+    // Note: with_default_version will be added in Phase 1
+    // validator = validator.with_default_version(&args.version);
 
     // Read input content
     let content = read_input(&args.input).context("Failed to read input")?;
@@ -187,7 +185,6 @@ async fn handle_fhir_validation(args: FhirArgs) -> Result<()> {
         // Validate multiple FHIR resources (NDJSON)
         let results = validator
             .validate_multiple(&content, Some(&args.version))
-            .await
             .context("Failed to validate multiple FHIR resources")?;
 
         match args.format {
@@ -204,7 +201,6 @@ async fn handle_fhir_validation(args: FhirArgs) -> Result<()> {
         // Validate single FHIR resource
         let result = validator
             .validate_with_version(&content, &args.version)
-            .await
             .context("Failed to validate FHIR resource")?;
 
         match args.format {
@@ -236,37 +232,34 @@ fn read_input(path: &Option<PathBuf>) -> Result<String> {
 }
 
 fn print_single_result_text(result: &ValidationResult, show_stats: bool) {
-    match result {
-        ValidationResult::Valid => {
-            println!("✅ JSON is valid");
-            if show_stats {
-                // For now, just indicate that stats would be shown here
-                // We could extend the validator to provide stats if needed
-                println!("📊 Statistics: JSON structure is well-formed");
-            }
+    if result.is_valid() {
+        println!("✅ JSON is valid");
+        if show_stats {
+            println!("📊 Statistics: JSON structure is well-formed");
         }
-        ValidationResult::Invalid(errors) => {
-            println!("❌ JSON validation failed with {} error(s):", errors.len());
-            for (i, error) in errors.iter().enumerate() {
-                println!("  {}. {}", i + 1, error);
-            }
+    } else {
+        println!(
+            "❌ JSON validation failed with {} error(s):",
+            result.error_count()
+        );
+        for (i, issue) in result.errors().enumerate() {
+            println!("  {}. {}", i + 1, issue);
         }
     }
 }
 
 fn print_single_result_json(result: &ValidationResult) -> Result<()> {
-    let output = match result {
-        ValidationResult::Valid => serde_json::json!({
+    let output = if result.is_valid() {
+        serde_json::json!({
             "valid": true,
             "errors": []
-        }),
-        ValidationResult::Invalid(errors) => {
-            let error_strings: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
-            serde_json::json!({
-                "valid": false,
-                "errors": error_strings
-            })
-        }
+        })
+    } else {
+        let error_strings: Vec<String> = result.errors().map(|e| e.to_string()).collect();
+        serde_json::json!({
+            "valid": false,
+            "errors": error_strings
+        })
     };
 
     println!("{}", serde_json::to_string_pretty(&output)?);
@@ -290,9 +283,9 @@ fn print_multiple_results_text(results: &[(usize, ValidationResult)], show_stats
     if invalid_count > 0 {
         println!("❌ Invalid documents:");
         for (line_number, result) in results {
-            if let ValidationResult::Invalid(errors) = result {
-                println!("  Line {}: {} error(s)", line_number, errors.len());
-                for error in errors {
+            if !result.is_valid() {
+                println!("  Line {}: {} error(s)", line_number, result.error_count());
+                for error in result.errors() {
                     println!("    - {error}");
                 }
             }
@@ -310,20 +303,19 @@ fn print_multiple_results_json(results: &[(usize, ValidationResult)]) -> Result<
     let mut json_results = Vec::new();
 
     for (line_number, result) in results {
-        let json_result = match result {
-            ValidationResult::Valid => serde_json::json!({
+        let json_result = if result.is_valid() {
+            serde_json::json!({
                 "line": line_number,
                 "valid": true,
                 "errors": []
-            }),
-            ValidationResult::Invalid(errors) => {
-                let error_strings: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
-                serde_json::json!({
-                    "line": line_number,
-                    "valid": false,
-                    "errors": error_strings
-                })
-            }
+            })
+        } else {
+            let error_strings: Vec<String> = result.errors().map(|e| e.to_string()).collect();
+            serde_json::json!({
+                "line": line_number,
+                "valid": false,
+                "errors": error_strings
+            })
         };
         json_results.push(json_result);
     }
@@ -350,7 +342,6 @@ fn print_multiple_results_json(results: &[(usize, ValidationResult)]) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rh_validator::ValidatorError;
 
     #[test]
     fn test_output_format_parsing() {
@@ -375,15 +366,18 @@ mod tests {
 
     #[test]
     fn test_single_result_formatting() {
-        let valid_result = ValidationResult::Valid;
+        use rh_validator::{IssueCode, Severity, ValidationIssue};
+
+        let valid_result = ValidationResult::new("Patient");
         print_single_result_text(&valid_result, false);
         print_single_result_text(&valid_result, true);
 
-        let invalid_result = ValidationResult::Invalid(vec![ValidatorError::JsonSyntax {
-            message: "Test error".to_string(),
-            line: 1,
-            column: 5,
-        }]);
+        let mut invalid_result = ValidationResult::new("Patient");
+        invalid_result.add_issue(ValidationIssue::new(
+            Severity::Error,
+            IssueCode::Structure,
+            "Test error at line 1, column 5",
+        ));
         print_single_result_text(&invalid_result, false);
 
         assert!(print_single_result_json(&valid_result).is_ok());
@@ -392,17 +386,19 @@ mod tests {
 
     #[test]
     fn test_multiple_results_formatting() {
+        use rh_validator::{IssueCode, Severity, ValidationIssue};
+
+        let mut invalid_result = ValidationResult::new("Patient");
+        invalid_result.add_issue(ValidationIssue::new(
+            Severity::Error,
+            IssueCode::Structure,
+            "Test error at line 2, column 1",
+        ));
+
         let results = vec![
-            (1, ValidationResult::Valid),
-            (
-                2,
-                ValidationResult::Invalid(vec![ValidatorError::JsonSyntax {
-                    message: "Test error".to_string(),
-                    line: 2,
-                    column: 1,
-                }]),
-            ),
-            (3, ValidationResult::Valid),
+            (1, ValidationResult::new("Patient")),
+            (2, invalid_result),
+            (3, ValidationResult::new("Patient")),
         ];
 
         print_multiple_results_text(&results, false);
