@@ -182,6 +182,16 @@ fn eval_expression(
     // Evaluate the expression
     match evaluator.evaluate(&ast, &context) {
         Ok(result) => {
+            // Display trace logs if any
+            let trace_logs = context.get_trace_logs();
+            if !trace_logs.is_empty() {
+                eprintln!("\n📋 Trace logs:");
+                for log in trace_logs {
+                    eprintln!("  [TRACE:{}] {}", log.name, log.value);
+                }
+                eprintln!();
+            }
+
             match format {
                 "json" => {
                     // Convert FhirPathValue to JSON-compatible format
@@ -295,6 +305,15 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
                         let context = EvaluationContext::new(data.clone());
                         match evaluator.evaluate(&ast, &context) {
                             Ok(result) => {
+                                // Display trace logs if any
+                                let trace_logs = context.get_trace_logs();
+                                if !trace_logs.is_empty() {
+                                    println!("\n📋 Trace logs:");
+                                    for log in trace_logs {
+                                        println!("  [TRACE:{}] {}", log.name, log.value);
+                                    }
+                                    println!();
+                                }
                                 println!("=> {result:?}");
                             }
                             Err(e) => {

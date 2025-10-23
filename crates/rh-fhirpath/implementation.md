@@ -270,7 +270,7 @@ This document provides a comprehensive overview of all supported operations and 
 ### Utility
 | Status | Function | Signature | Description |
 |--------|----------|-----------|-------------|
-| ❌ | `trace(name, projection?)` | trace(name : String [, projection: Expression]) : collection | Adds a String representation of the input collection to the diagnostic log, using the name argument as the name in the log. |
+| ✅ | `trace(name, projection?)` | trace(name : String [, projection: Expression]) : collection | Adds a String representation of the input collection to the diagnostic log, using the name argument as the name in the log. |
 | ❌ | `defineVariable(name, expression)` | defineVariable(name: String [, expr: expression]) | Defines a variable named name that is accessible in subsequent expressions. |
 | ❌ | `lowBoundary(precision)` | lowBoundary([precision: Integer]): Decimal \| Date \| DateTime \| Time | The least possible value of the input to the specified precision. |
 | ❌ | `highBoundary(precision)` | highBoundary([precision: Integer]): Decimal \| Date \| DateTime \| Time | The greatest possible value of the input to the specified precision. |
@@ -367,7 +367,6 @@ The following table shows operator precedence from highest to lowest:
 | ✅ | `extension(url)` | Extract extensions by URL from FHIR resources |
 | ✅ | `hasValue()` | Check if extension or element has a value |
 | ✅ | `getValue()` | Not implemented |
-| ❌ | `trace()` | Not implemented |
 | ❌ | `resolve()` | Not implemented |
 | ❌ | `elementDefinition()` | Not implemented |
 | ❌ | `slice(structure, name)` | Not implemented |
@@ -380,7 +379,7 @@ The following table shows operator precedence from highest to lowest:
 | **Paths and polymorphic items** | | |
 | ✅ | Polymorphic field access (value[x]) | `Observation.value` for `valueString`, `valueQuantity` etc. |
 | ✅ | Type-specific polymorphic access | `Observation.valueString`, `Observation.valueQuantity` |
-| ❌ | Resource type navigation | Navigation based on resource type context |
+| ✅ | Resource type navigation | Navigation based on resource type context |
 | ❌ | Profile-aware navigation | Navigation based on profile constraints |
 
 ### Extension: SQL-on-FHIR

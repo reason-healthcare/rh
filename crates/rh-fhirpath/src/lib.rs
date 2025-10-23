@@ -35,7 +35,7 @@ pub use ast::{
     TypeSpecifier,
 };
 pub use error::{FhirPathError, FhirPathResult};
-pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue};
+pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue, TraceLog};
 pub use extensions::ExtensionRegistry;
 pub use parser::FhirPathParser;
 pub use serde_json;

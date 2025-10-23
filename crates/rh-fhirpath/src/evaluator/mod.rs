@@ -14,7 +14,7 @@ pub mod operations;
 pub mod types;
 
 // Re-export the main types for public API
-pub use core::{EvaluationContext, FhirPathEvaluator};
+pub use core::{EvaluationContext, FhirPathEvaluator, TraceLog};
 pub use functions::FunctionRegistry;
 pub use types::FhirPathValue;
 

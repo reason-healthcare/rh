@@ -171,34 +171,50 @@ pub fn evaluate_fhirpath_expression(
         Err(e) => return WasmResult::err(format!("Failed to evaluate FHIRPath expression: {e}")),
     };
 
+    // Get trace logs if any
+    let trace_logs = context.get_trace_logs();
+    let trace_output: Vec<serde_json::Value> = trace_logs
+        .iter()
+        .map(|log| {
+            serde_json::json!({
+                "name": log.name,
+                "value": log.value
+            })
+        })
+        .collect();
+
     // Convert result to a more user-friendly format
     let result_json = match result {
         crate::FhirPathValue::Collection(ref items) if items.is_empty() => {
             serde_json::json!({
                 "result": [],
                 "count": 0,
-                "type": "empty_collection"
+                "type": "empty_collection",
+                "trace": trace_output
             })
         }
         crate::FhirPathValue::Collection(ref items) => {
             serde_json::json!({
                 "result": items,
                 "count": items.len(),
-                "type": "collection"
+                "type": "collection",
+                "trace": trace_output
             })
         }
         crate::FhirPathValue::Empty => {
             serde_json::json!({
                 "result": null,
                 "count": 0,
-                "type": "empty"
+                "type": "empty",
+                "trace": trace_output
             })
         }
         ref single_value => {
             serde_json::json!({
                 "result": single_value,
                 "count": 1,
-                "type": "single_value"
+                "type": "single_value",
+                "trace": trace_output
             })
         }
     };

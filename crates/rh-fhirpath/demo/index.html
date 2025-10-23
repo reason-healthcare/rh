@@ -164,6 +164,42 @@
             overflow-y: auto;
         }
         
+        .trace-logs {
+            background: #fff9e6;
+            border: 1px solid #ffe066;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .trace-logs h4 {
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            color: #856404;
+            font-weight: 600;
+        }
+        
+        .trace-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid #ffe9a3;
+        }
+        
+        .trace-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .trace-name {
+            color: #d97706;
+            font-weight: 600;
+        }
+        
+        .trace-value {
+            color: #666;
+            margin-left: 8px;
+        }
+        
         .examples {
             background: #e8f4fd;
             border-left: 4px solid #3498db;
@@ -259,6 +295,7 @@
             <button class="example-button" onclick="loadExample('where')">where() Filtering</button>
             <button class="example-button" onclick="loadExample('first')">first() Function</button>
             <button class="example-button" onclick="loadExample('exists')">exists() Check</button>
+            <button class="example-button" onclick="loadExample('trace')">trace() Debugging</button>
         </div>
         
         <div style="margin-bottom: 10px;">
@@ -325,6 +362,7 @@
 
     <div class="container" id="resultContainer" style="display: none;">
         <h3 id="resultTitle">Result</h3>
+        <div id="traceLogs" class="trace-logs" style="display: none;"></div>
         <div id="resultOutput" class="json-output"></div>
     </div>
 
@@ -359,6 +397,13 @@
 
         let wasmInitialized = false;
         let validateTimeout = null;
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Initialize WASM
         async function initWasm() {
@@ -460,14 +505,51 @@
                 const resultContainer = document.getElementById('resultContainer');
                 const resultTitle = document.getElementById('resultTitle');
                 const resultOutput = document.getElementById('resultOutput');
+                const traceLogsDiv = document.getElementById('traceLogs');
                 
                 if (result.success) {
-                    resultOutput.textContent = result.data;
+                    // Parse the result data to check for trace logs
+                    let displayText = result.data;
+                    let hasTraceLogs = false;
+                    
+                    try {
+                        const parsedResult = JSON.parse(result.data);
+                        
+                        // Handle trace logs separately
+                        if (parsedResult.trace && parsedResult.trace.length > 0) {
+                            hasTraceLogs = true;
+                            
+                            // Build trace logs HTML
+                            let traceHtml = '<h4>📋 Trace Logs</h4>';
+                            parsedResult.trace.forEach(log => {
+                                traceHtml += '<div class="trace-entry">';
+                                traceHtml += `<span class="trace-name">[TRACE:${escapeHtml(log.name)}]</span>`;
+                                traceHtml += `<span class="trace-value">${escapeHtml(log.value)}</span>`;
+                                traceHtml += '</div>';
+                            });
+                            
+                            traceLogsDiv.innerHTML = traceHtml;
+                            traceLogsDiv.style.display = 'block';
+                            
+                            // Display result without trace logs
+                            const resultWithoutTrace = { ...parsedResult };
+                            delete resultWithoutTrace.trace;
+                            displayText = JSON.stringify(resultWithoutTrace, null, 2);
+                        } else {
+                            traceLogsDiv.style.display = 'none';
+                        }
+                    } catch (e) {
+                        // If parsing fails, just display as-is
+                        traceLogsDiv.style.display = 'none';
+                    }
+                    
+                    resultOutput.textContent = displayText;
                     resultContainer.className = 'container success';
                     resultTitle.textContent = 'Evaluation Result';
                     resultContainer.style.display = 'block';
                     showStatus('Evaluation successful', 'success');
                 } else {
+                    traceLogsDiv.style.display = 'none';
                     resultOutput.textContent = result.error || 'Unknown error';
                     resultContainer.className = 'container error';
                     resultTitle.textContent = 'Evaluation Error';
@@ -541,6 +623,10 @@
                 },
                 'exists': {
                     expression: 'Patient.name.exists()',
+                    resource: getExamplePatient()
+                },
+                'trace': {
+                    expression: "Patient.name.trace('all-names').where(use='official').trace('official-names').family",
                     resource: getExamplePatient()
                 },
                 'and': {

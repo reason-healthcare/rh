@@ -8,5 +8,5 @@ pub mod context;
 pub mod evaluator;
 
 // Re-export the main types
-pub use context::EvaluationContext;
+pub use context::{EvaluationContext, TraceLog};
 pub use evaluator::FhirPathEvaluator;

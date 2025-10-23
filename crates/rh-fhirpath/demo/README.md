@@ -41,6 +41,7 @@ Then open http://localhost:8000 in your browser.
 - **Real-time Validation**: Instant syntax checking
 - **Example Resources**: Pre-loaded FHIR Patient examples
 - **JSON Visualization**: Pretty-printed output
+- **Trace Logs Display**: See debug output from `trace()` function calls with visual highlighting
 
 ## Usage
 
@@ -48,6 +49,7 @@ Then open http://localhost:8000 in your browser.
 2. Provide a FHIR resource as JSON (or use examples)
 3. Click "Parse" to validate syntax
 4. Click "Evaluate" to run the expression against the resource
+5. If using `trace()` in your expression, logs will appear in a highlighted section above the result
 5. View results in formatted JSON
 
 ## Examples

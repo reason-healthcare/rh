@@ -210,6 +210,7 @@ impl FhirPathEvaluator {
                     "ofType" => self.evaluate_of_type_function(target, parameters, context),
                     "is" => self.evaluate_is_function(target, parameters, context),
                     "as" => self.evaluate_as_function(target, parameters, context),
+                    "trace" => self.evaluate_trace_function(target, parameters, context),
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -454,6 +455,85 @@ impl FhirPathEvaluator {
                 self.evaluate_expression(projection_expr, &item_context)
             }
         }
+    }
+
+    /// Evaluate trace function that logs a collection with a name and returns input unchanged
+    /// Signature: trace(name : String [, projection: Expression]) : collection
+    fn evaluate_trace_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.is_empty() || parameters.len() > 2 {
+            return Err(FhirPathError::FunctionError {
+                message: "trace() function requires 1 or 2 parameters (name, [projection])"
+                    .to_string(),
+            });
+        }
+
+        // Evaluate the name parameter
+        let name_result = self.evaluate_expression(&parameters[0], context)?;
+        let name = match name_result {
+            FhirPathValue::String(s) => s,
+            _ => {
+                return Err(FhirPathError::FunctionError {
+                    message: "trace() name parameter must evaluate to a string".to_string(),
+                })
+            }
+        };
+
+        // If projection parameter is provided, evaluate it on the target
+        // Otherwise, log the target itself
+        let value_to_log = if parameters.len() == 2 {
+            let projection_expr = &parameters[1];
+
+            match target {
+                FhirPathValue::Collection(items) => {
+                    let mut projected_items = Vec::new();
+
+                    for item in items {
+                        let item_context = context.with_this_value(item.clone());
+                        let projection_result =
+                            self.evaluate_expression(projection_expr, &item_context)?;
+
+                        match projection_result {
+                            FhirPathValue::Collection(mut items) => {
+                                projected_items.append(&mut items);
+                            }
+                            FhirPathValue::Empty => {}
+                            value => {
+                                projected_items.push(value);
+                            }
+                        }
+                    }
+
+                    if projected_items.is_empty() {
+                        FhirPathValue::Empty
+                    } else if projected_items.len() == 1 {
+                        projected_items.into_iter().next().unwrap()
+                    } else {
+                        FhirPathValue::Collection(projected_items)
+                    }
+                }
+                FhirPathValue::Empty => FhirPathValue::Empty,
+                _ => {
+                    let item_context = context.with_this_value(target.clone());
+                    self.evaluate_expression(projection_expr, &item_context)?
+                }
+            }
+        } else {
+            target.clone()
+        };
+
+        // Log the value to stderr for diagnostic purposes (backward compatibility)
+        eprintln!("[TRACE:{name}] {value_to_log:?}");
+
+        // Also add to context trace logs for programmatic access
+        context.add_trace_log(name, format!("{value_to_log:?}"));
+
+        // Return the original input unchanged
+        Ok(target.clone())
     }
 
     /// Evaluate repeat function that recursively applies a projection expression
