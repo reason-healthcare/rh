@@ -8,55 +8,13 @@ use wasm_bindgen::prelude::*;
 
 use crate::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
+// Re-export WasmResult from foundation
+pub use rh_foundation::wasm::WasmResult;
+
 // Initialize panic hook for better error messages in WASM
 #[wasm_bindgen(start)]
 pub fn init() {
-    console_error_panic_hook::set_once();
-}
-
-/// Result type for WASM operations
-#[wasm_bindgen]
-#[derive(Serialize, Deserialize)]
-pub struct WasmResult {
-    success: bool,
-    data: Option<String>,
-    error: Option<String>,
-}
-
-#[wasm_bindgen]
-impl WasmResult {
-    #[wasm_bindgen(getter)]
-    pub fn success(&self) -> bool {
-        self.success
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn data(&self) -> Option<String> {
-        self.data.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn error(&self) -> Option<String> {
-        self.error.clone()
-    }
-}
-
-impl WasmResult {
-    fn ok(data: String) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            error: None,
-        }
-    }
-
-    fn err(error: String) -> Self {
-        Self {
-            success: false,
-            data: None,
-            error: Some(error),
-        }
-    }
+    rh_foundation::wasm::init_panic_hook();
 }
 
 /// Parse options for FHIRPath parsing

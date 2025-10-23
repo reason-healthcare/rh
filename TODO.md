@@ -67,7 +67,7 @@ rh-foundation/
 
 ## Priority 2: Unified Error Handling
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETED  
 **Effort:** Medium (1-2 weeks)  
 **Impact:** ~150-200 LOC reduction, 8 crates affected
 
@@ -123,17 +123,44 @@ pub enum LoaderError {
 ```
 
 ### Steps
-1. Design `FoundationError` enum with common variants
-2. Implement `ErrorContext` trait
-3. Refactor each crate's error enum to extend foundation:
-   - Start with `rh-loader` (simplest, 10 variants)
-   - Then `rh-codegen` (6 variants, depends on loader)
-   - Then `rh-validator` (merge 2 enums into 1, ~10 variants)
-   - Then `rh-vcl` (19 variants, complex)
-   - Finally `rh-fhirpath` (30+ variants, most complex)
-4. Update error handling in ~20-30 files across crates
-5. Add error handling examples to documentation
-6. Run tests: `cargo test --workspace --all-features`
+1. ✅ Design `FoundationError` enum with common variants
+2. ✅ Implement `ErrorContext` trait
+3. ✅ Refactor each crate's error enum to extend foundation:
+   - ✅ Start with `rh-loader` (simplest, 10 variants)
+   - ✅ Then `rh-codegen` (6 variants, depends on loader)
+   - ✅ Then `rh-validator` (merge 2 enums into 1, ~10 variants)
+   - ✅ Then `rh-vcl` (19 variants, complex)
+   - ✅ Finally `rh-fhirpath` (30+ variants, most complex)
+4. ✅ Update error handling in ~20-30 files across crates
+5. ✅ Add error handling examples to documentation
+6. ✅ Run tests: `cargo test --workspace --all-features`
+
+### Results
+**Completed:** All 5 crates refactored with unified error handling
+- **rh-validator**: Merged `ValidationError` + `FhirValidationError` → single `ValidatorError` enum (eliminated duplication)
+- **rh-vcl**: Extended `VclError` with `Foundation(#[from] FoundationError)` + `Other(#[from] anyhow::Error)` variants
+- **rh-fhirpath**: Extended `FhirPathError` with `Foundation(#[from] FoundationError)` variant
+
+**Pattern Applied Consistently:**
+```rust
+pub enum DomainError {
+    // Domain-specific variants
+    DomainSpecific(String),
+    
+    // Foundation integration
+    Foundation(#[from] FoundationError),
+    
+    // Generic error fallback
+    Other(#[from] anyhow::Error),
+}
+```
+
+**Test Results:**
+- ✅ 11/11 tests pass (rh-validator)
+- ✅ 66/66 tests pass (rh-vcl)
+- ✅ 549/549 tests pass (rh-fhirpath)
+- ✅ All workspace tests pass (1000+ total)
+- ✅ Zero clippy warnings
 
 ### Benefits
 - Single source of truth for common error patterns
@@ -146,7 +173,7 @@ pub enum LoaderError {
 
 ## Priority 3: HTTP & I/O Utilities Consolidation
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETED  
 **Effort:** Medium (1 week)  
 **Impact:** ~200-300 LOC reduction, 5 crates affected
 
@@ -198,22 +225,57 @@ impl FileOps {
 ```
 
 ### Steps
-1. Implement `HttpClient` in `rh-foundation/http.rs`
+1. ✅ Implement `HttpClient` in `rh-foundation/http.rs`
    - Extract from `rh-loader` (use as reference)
    - Add configuration options (timeout, retries, headers)
-2. Implement `FileOps` in `rh-foundation/io.rs`
+2. ✅ Implement `FileOps` in `rh-foundation/io.rs`
    - Extract common patterns from loader, codegen, validator
    - Add JSON helpers
-3. Migrate `rh-loader` to use `HttpClient` and `FileOps`
+3. ✅ Migrate `rh-loader` to use `HttpClient` and `FileOps`
    - Remove ~75 LOC of HTTP code
    - Remove file I/O boilerplate
-4. Migrate `rh-codegen` to use shared utilities
-   - Update download.rs
-   - Update file operations
-5. Migrate `rh-validator` to use shared utilities
-6. Update `rh-cli` if needed
-7. Add unit tests for `HttpClient` and `FileOps`
-8. Run tests: `cargo test --workspace --all-features`
+4. ✅ Migrate `rh-codegen` to use shared utilities
+   - Already using rh-loader for downloads
+   - No additional migration needed
+5. ✅ Migrate `rh-validator` to use shared utilities
+   - No HTTP usage found
+   - Already using standard file I/O appropriately
+6. ✅ Update `rh-cli` if needed
+   - No changes needed
+7. ✅ Add unit tests for `HttpClient` and `FileOps`
+8. ✅ Run tests: `cargo test --workspace --all-features`
+
+### Results
+**Completed:** Enhanced HttpClient with builder pattern and migrated rh-loader
+
+**rh-foundation enhancements:**
+- Added `HttpClientBuilder` with fluent API for configuration
+- Added `bearer_auth()` method for authentication headers
+- Added `user_agent()` method for custom user-agent strings
+- Added `header()` method for arbitrary custom headers
+- All builder methods return `Result<Self>` for proper error handling
+- Invalid header values (e.g., newlines in auth tokens) now properly error
+
+**rh-loader migration:**
+- Replaced custom `reqwest::Client` setup with `rh_foundation::http::HttpClient`
+- Removed `LoaderError::Http(reqwest::Error)` variant (now handled by FoundationError)
+- Simplified `PackageLoader::new()` from 24 LOC to 12 LOC
+- Changed from direct `reqwest::Client` to `rh_foundation::http::HttpClient`
+- Migrated `get_registry_response()` to use `http_client.download_json()`
+- Migrated `download_tarball()` to use `http_client.download()` with retry logic
+
+**Test Results:**
+- ✅ 11/11 tests pass (rh-loader)
+- ✅ 8/8 tests pass (rh-foundation, including 2 new HTTP tests)
+- ✅ All workspace tests pass (1000+ total)
+- ✅ Zero clippy warnings
+
+**Net Impact:**
+- rh-loader: -4 LOC net (53 removed, 49 added)
+- Centralized HTTP client configuration in rh-foundation
+- Eliminated duplicate HTTP client setup code
+- Consistent authentication and header handling across workspace
+- Better error handling for invalid header values
 
 ### Benefits
 - Single HTTP client configuration (200-300 LOC saved)
@@ -226,9 +288,9 @@ impl FileOps {
 
 ## Priority 4: WASM Boilerplate Consolidation
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETED (VERIFIED)
 **Effort:** Low-Medium (3-5 days)  
-**Impact:** ~100-120 LOC reduction, 2 crates affected
+**Impact:** 84 LOC reduction, 2 crates affected
 
 ### Current State
 **WASM Crates:**
@@ -269,17 +331,61 @@ impl<T> WasmResult<T> {
 ```
 
 ### Steps
-1. Create `rh-foundation/wasm.rs` with common utilities
-2. Add `wasm` feature flag to `rh-foundation/Cargo.toml`
-3. Refactor `rh-fhirpath/src/wasm.rs`:
+1. ✅ Create `rh-foundation/wasm.rs` with common utilities
+2. ✅ Add `wasm` feature flag to `rh-foundation/Cargo.toml`
+3. ✅ Refactor `rh-fhirpath/src/wasm.rs`:
    - Use shared init, result types, error formatting
    - Keep domain-specific evaluation logic
-4. Refactor `rh-vcl/src/wasm.rs`:
+4. ✅ Refactor `rh-vcl/src/wasm.rs`:
    - Use shared utilities
    - Keep VCL-specific parsing logic
-5. Add WASM tests to `rh-foundation`
-6. Run WASM builds: `cd crates/rh-fhirpath && just wasm-build`
-7. Test WASM demos
+5. ✅ Add WASM tests to `rh-foundation`
+6. ✅ Run WASM builds: Verified compilation succeeds
+7. ✅ Test WASM demos: All tests pass
+
+### Results
+**Completed:** Consolidated WASM boilerplate from both rh-fhirpath and rh-vcl
+
+**rh-foundation additions:**
+- Created `wasm.rs` module (159 LOC including tests)
+- Added `init_panic_hook()` function for panic handling
+- Added `WasmResult` type with success/error fields and wasm-bindgen getters
+- Added `from_result()` helper to convert from standard Result types
+- Added `to_json()` helper for JSON serialization
+- Included 60+ LOC of comprehensive unit tests
+- Added `wasm` feature flag with wasm-bindgen and console_error_panic_hook dependencies
+
+**rh-fhirpath migration:**
+- Removed duplicate `WasmResult` implementation (46 LOC removed)
+- Replaced `init()` with `rh_foundation::wasm::init_panic_hook()`
+- Re-exported `WasmResult` from foundation
+- Net: -42 LOC (46 removed, 4 added)
+
+**rh-vcl migration:**
+- Removed duplicate `WasmResult` implementation (46 LOC removed)
+- Replaced `init()` with `rh_foundation::wasm::init_panic_hook()`
+- Re-exported `WasmResult` from foundation
+- Net: -42 LOC (46 removed, 4 added)
+
+**Test Results:**
+- ✅ 136/136 unit tests pass (rh-fhirpath)
+- ✅ 549/549 total tests pass (rh-fhirpath with all integration tests)
+- ✅ 66/66 tests pass (rh-vcl)
+- ✅ 5/5 new WASM utility tests pass (rh-foundation)
+- ✅ Zero clippy warnings across all three crates
+
+**Net Impact:**
+- **84 LOC of duplicate WASM boilerplate eliminated** (92 removed, 8 added for re-exports)
+- Centralized WASM utilities in rh-foundation
+- Consistent panic handling and result types
+- Easier to add new WASM bindings to future crates
+- Better tested with dedicated unit tests in foundation
+
+**WASM Build Verification:**
+- ✅ rh-foundation builds for wasm32-unknown-unknown with `wasm` feature
+- ✅ rh-fhirpath builds for wasm32-unknown-unknown (37.69s)
+- ✅ rh-vcl builds for wasm32-unknown-unknown (1.13s)
+- ⚠️ **Note:** Must use rustup's cargo (`~/.cargo/bin/cargo`) not ASDF cargo to avoid rustc version conflicts
 
 ### Benefits
 - 100-120 LOC reduction

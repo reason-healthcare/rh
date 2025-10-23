@@ -15,7 +15,10 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 reqwest = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 
 [features]
 default = []
 http = ["reqwest", "tokio"]
+wasm = ["wasm-bindgen", "console_error_panic_hook"]
