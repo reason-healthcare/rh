@@ -1,17 +1,21 @@
 [package]
-name = "rh-common"
+name = "rh-foundation"
 version = "0.1.0"
 edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-description = "Common utilities and types shared across the workspace"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Foundation crate providing common utilities, error handling, and shared functionality"
 
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
+[features]
+default = []
+http = ["reqwest", "tokio"]

@@ -32,7 +32,7 @@ flate2 = { workspace = true }
 tracing = { workspace = true }
 
 # Local workspace crates
-rh-common = { path = "../rh-common" }
+rh-foundation = { path = "../rh-foundation", features = ["http"] }
 
 [dev-dependencies]
 tempfile = "3.0"

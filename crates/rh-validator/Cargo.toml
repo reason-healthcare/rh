@@ -32,7 +32,7 @@ dirs = "5.0"
 glob = "0.3"
 
 # Local workspace crates
-rh-common = { path = "../rh-common" }
+rh-foundation = { path = "../rh-foundation" }
 rh-loader = { path = "../rh-loader" }
 rh-codegen = { path = "../rh-codegen" }
 

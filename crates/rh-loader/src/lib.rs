@@ -47,7 +47,7 @@ use thiserror::Error;
 
 use url::Url;
 
-use rh_common::CommonError;
+use rh_foundation::FoundationError;
 
 /// Errors that can occur during package loading operations
 #[derive(Error, Debug)]
@@ -85,8 +85,8 @@ pub enum LoaderError {
     #[error("JSON parsing error: {0}")]
     Json(#[from] serde_json::Error),
 
-    #[error("Common error: {0}")]
-    Common(#[from] CommonError),
+    #[error("Foundation error: {0}")]
+    Foundation(#[from] FoundationError),
 }
 
 /// Result type for loader operations

@@ -2,7 +2,7 @@
 //!
 //! This module contains configuration structures and related functionality.
 
-use rh_common::Config;
+use rh_foundation::Config;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

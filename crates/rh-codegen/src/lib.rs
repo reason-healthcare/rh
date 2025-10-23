@@ -18,11 +18,10 @@
 //! config.use_macro_calls = true;
 //! ```
 //!
-//! When enabled, primitive fields like `boolean`, `string`, `integer`, etc. will be generated as
-//! macro calls such as `primitive_boolean!("active", true)` instead of regular struct fields.
-//! These macros automatically generate both the primitive field and its companion extension field.
-
-pub use rh_common::{CommonError, Config};
+/// When enabled, primitive fields like `boolean`, `string`, `integer`, etc. will be generated as
+/// macro calls such as `primitive_boolean!("active", true)` instead of regular struct fields.
+/// These macros automatically generate both the primitive field and its companion extension field.
+pub use rh_foundation::{Config, FoundationError};
 
 mod config;
 pub mod fhir_types;
@@ -79,8 +78,8 @@ pub enum CodegenError {
     #[error("JSON parsing error: {0}")]
     Json(#[from] serde_json::Error),
 
-    #[error("Common error: {0}")]
-    Common(#[from] CommonError),
+    #[error("Foundation error: {0}")]
+    Foundation(#[from] FoundationError),
 }
 
 /// Result type for codegen operations

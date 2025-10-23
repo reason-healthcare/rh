@@ -23,7 +23,7 @@ tokio = { workspace = true }
 rustyline = { workspace = true }
 
 # Local workspace crates
-rh-common = { path = "../../crates/rh-common" }
+rh-foundation = { path = "../../crates/rh-foundation" }
 rh-codegen = { path = "../../crates/rh-codegen" }
 rh-fhirpath = { path = "../../crates/rh-fhirpath" }
 rh-validator = { path = "../../crates/rh-validator" }

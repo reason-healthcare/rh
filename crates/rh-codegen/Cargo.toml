@@ -26,7 +26,7 @@ chrono = { workspace = true }
 once_cell = "1.19"
 
 # Local workspace crates
-rh-common = { path = "../rh-common" }
+rh-foundation = { path = "../rh-foundation" }
 rh-loader = { path = "../rh-loader" }
 
 [dev-dependencies]
