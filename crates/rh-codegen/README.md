@@ -7,7 +7,8 @@ A Rust library for generating type-safe Rust code from FHIR StructureDefinition 
 The `rh-codegen` crate provides comprehensive functionality for:
 
 - **FHIR Type Generation**: Parse FHIR StructureDefinition JSON files and generate corresponding Rust struct definitions
-- **Type Safety**: Generate type-safe enums for required value set bindings  
+- **Type Safety**: Generate type-safe enums for required value set bindings
+- **Metadata Generation**: Generate compile-time metadata for type resolution and FHIRPath evaluation
 - **Package Management**: Download FHIR packages from npm-style registries
 - **Batch Processing**: Process entire directories of FHIR definitions
 - **Automatic Extraction**: Extract and process StructureDefinitions from package tarballs
@@ -17,10 +18,12 @@ The `rh-codegen` crate provides comprehensive functionality for:
 
 When generating a crate, the following idiomatic Rust layout will be created:
 ```
-fhir-model/
+hl7_fhir_r4_core/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs
+│   ├── macros.rs
+│   ├── metadata.rs
 │   ├── bindings/
 │   │   ├── mod.rs
 │   │   ├── observation_status.rs
@@ -32,28 +35,33 @@ fhir-model/
 │   │   ├── narrative.rs
 │   │   ├── extension.rs
 │   │   ├── coding.rs
-│   │   └── codeable_concept.rs
+│   │   ├── codeable_concept.rs
+│   │   └── ...
+│   ├── extensions/
+│   │   ├── mod.rs
 │   │   └── ...
 │   ├── primitives/
 │   │   ├── mod.rs
 │   │   ├── string.rs
 │   │   ├── boolean.rs
-│   │   └── date_time.rs
+│   │   ├── date_time.rs
 │   │   └── ...
-│   ├── resource/
+│   ├── profiles/
+│   │   ├── mod.rs
+│   │   └── ...
+│   ├── resources/
 │   │   ├── mod.rs
 │   │   ├── observation.rs
 │   │   ├── patient.rs
-│   │   └── bundle.rs
+│   │   ├── bundle.rs
 │   │   └── ...
-│   ├── traits/
-│   │   ├── mod.rs
-│   │   ├── resource.rs
-│   │   ├── domain_resource.rs
-│   │   ├── has_extensions.rs
-│   │   └── has_coding.rs
-│   │   └── ...
-│   └── value.rs
+│   └── traits/
+│       ├── mod.rs
+│       ├── resource.rs
+│       ├── domain_resource.rs
+│       ├── has_extensions.rs
+│       ├── has_coding.rs
+│       └── ...
 ```
 
 ## Quick Start
@@ -89,6 +97,43 @@ fn main() -> CodegenResult<()> {
     Ok(())
 }
 ```
+
+## Metadata Generation
+
+The code generator produces compile-time metadata for FHIR types, enabling runtime type resolution and validation. This metadata is used by the FHIRPath evaluator to return correctly typed values.
+
+### Metadata Module
+
+The generated `metadata.rs` module contains:
+
+- **FhirPrimitiveType enum**: Defines all FHIR primitive types (Boolean, Integer, String, Date, DateTime, etc.)
+- **FhirFieldType enum**: Categorizes fields as Primitive, Complex, Reference, or BackboneElement
+- **FieldInfo struct**: Contains field metadata including type, cardinality (min/max), and choice type flag
+- **Type maps**: Compile-time maps (using `phf`) for efficient field lookup
+
+### Example Metadata Usage
+
+```rust
+use hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType};
+
+// Look up field metadata at runtime
+if let Some(field_info) = get_field_info("Patient", "birthDate") {
+    match &field_info.field_type {
+        FhirFieldType::Primitive(FhirPrimitiveType::Date) => {
+            println!("birthDate is a Date type");
+        }
+        _ => {}
+    }
+}
+
+// Check cardinality
+if let Some(field_info) = get_field_info("Patient", "name") {
+    println!("min: {}, max: {:?}", field_info.min, field_info.max);
+    // Output: min: 0, max: None (unbounded)
+}
+```
+
+This metadata enables FHIRPath expressions to return properly typed values instead of generic strings. For example, `Patient.birthDate` returns a `Date` type rather than a `String`.
 
 ### Configuration Options
 
@@ -253,6 +298,26 @@ match patient.gender {
 }
 ```
 
+## Generated Code Features
+
+### Primitive Field Extensions
+
+For FHIR primitive fields that can have extensions, the generator creates companion extension fields:
+
+```rust
+pub struct Patient {
+    // Primitive field
+    #[serde(rename = "birthDate")]
+    pub birth_date: Option<String>,
+    
+    // Extension field for metadata and extensions on the primitive
+    #[serde(rename = "_birthDate")]
+    pub birth_date_ext: Option<Element>,
+}
+```
+
+The `Element` type allows attaching extensions to primitive values while maintaining FHIR compliance.
+
 ## FHIR Package Management
 
 ### Registry Support
@@ -377,7 +442,7 @@ fn my_function() -> CodegenResult<()> {
 
 ## Features
 
-### ✅ Implemented
+### Implemented
 
 - Parse FHIR StructureDefinition JSON
 - Generate Rust structs with proper field types
@@ -392,15 +457,17 @@ fn my_function() -> CodegenResult<()> {
 - Authentication support for private registries
 - Type caching to avoid duplicate generation
 - Modular generator architecture for maintainability
+- Compile-time metadata generation for type resolution
+- Primitive field extension support
 
-### 🔄 In Progress
+### In Progress
 
 - Complex type references and inheritance
 - Dynamic ValueSet fetching from FHIR servers
 - Extension handling and extension definitions
 - Profile validation and constraint checking
 
-### 🔮 Planned
+### Planned
 
 - Custom type generators for dates, URIs, etc.
 - Integration with FHIR validation libraries
