@@ -37,6 +37,10 @@ pub enum FoundationError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
+    /// JSON serialization/deserialization error (alias)
+    #[error("JSON error: {0}")]
+    Serde(serde_json::Error),
+
     /// Generic error with context
     #[error("Error: {0}")]
     Other(#[from] anyhow::Error),
@@ -60,6 +64,13 @@ pub enum FoundationError {
     /// Authentication error
     #[error("Authentication error: {0}")]
     Authentication(String),
+}
+
+impl FoundationError {
+    /// Add context to this error
+    pub fn with_context(self, context: &str) -> Self {
+        FoundationError::Other(anyhow::Error::new(self).context(context.to_string()))
+    }
 }
 
 /// Result type alias using FoundationError

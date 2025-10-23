@@ -1,10 +1,9 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use rh_ffq::{parse_start, translate_to_fhir};
+use rh_foundation::cli;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use std::fs;
-use std::io::{self, Read};
 
 /// FFQ (FHIR Filter Query) - Parse and translate FHIR terminology filter expressions
 #[derive(Parser)]
@@ -302,16 +301,5 @@ fn print_repl_help() {
 }
 
 async fn get_input(expression: Option<String>, file: Option<String>) -> Result<String> {
-    if let Some(filename) = file {
-        // Read from file
-        Ok(fs::read_to_string(filename)?)
-    } else if let Some(expr) = expression {
-        // Use provided expression
-        Ok(expr)
-    } else {
-        // Read from stdin
-        let mut input = String::new();
-        io::stdin().read_to_string(&mut input)?;
-        Ok(input)
-    }
+    cli::read_input(file.as_deref(), expression).await.map_err(Into::into)
 }

@@ -43,7 +43,7 @@ pub fn init_panic_hook() {
 ///
 /// let result = WasmResult::ok("Success!".to_string());
 /// assert!(result.success);
-/// assert_eq!(result.data, Some("Success!".to_string()));
+/// assert_eq!(result.data(), Some("Success!".to_string()));
 /// ```
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize, Clone, Debug)]

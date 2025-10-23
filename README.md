@@ -23,7 +23,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | 🔜 | rh-cql  | CQL tools |
-| 🚀 | [rh-fhir-r4](crates/rh-fhir-r4/README.md)  | **Generated** R4 FHIR for Rust |
+| 🚀 | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
 
 ## Quick Start
 
@@ -42,8 +42,7 @@ cargo build
 ├── Cargo.toml              # Workspace root configuration
 ├── crates/                 # Library crates
 │   ├── rh-codegen/            # FHIR code generation library
-│   ├── rh-common/             # Shared utilities and error handling
-│   ├── rh-core/               # Core functionality
+│   ├── rh-foundation/         # Foundation utilities (errors, HTTP, I/O, CLI helpers)
 │   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
 │   ├── rh-loader/             # FHIR package loader from npm-style registries
 │   ├── rh-validator/          # FHIR resource validation library

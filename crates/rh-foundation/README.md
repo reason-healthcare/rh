@@ -6,16 +6,19 @@ Foundation crate providing common utilities, error handling, and shared function
 
 `rh-foundation` serves as the foundational layer for all other crates in the RH workspace, providing:
 
-- **Error Handling**: Common error types and utilities
+- **Error Handling**: Common error types with context support
 - **Configuration**: Traits and utilities for configuration management
 - **I/O Operations**: File reading/writing with JSON support
-- **HTTP Client**: Optional HTTP utilities with async support
+- **HTTP Client**: Optional HTTP utilities with async support (feature: `http`)
 - **JSON Utilities**: Convenient JSON parsing and serialization
+- **CLI Utilities**: Common CLI patterns for input/output and formatting (new!)
+- **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
 
 ## Features
 
-- **Default**: Core functionality (error handling, config, I/O, JSON)
+- **Default**: Core functionality (error handling, config, I/O, JSON, CLI)
 - **http**: Enables HTTP client utilities (requires `reqwest` and `tokio`)
+- **wasm**: Enables WebAssembly utilities (requires `wasm-bindgen`)
 
 ## Usage
 
@@ -123,6 +126,41 @@ let data: MyType = json::from_bytes(&bytes)?;
 let bytes = json::to_bytes(&data, false)?; // false = compact
 ```
 
+### CLI Utilities (NEW!)
+
+```rust
+use rh_foundation::cli;
+use std::path::PathBuf;
+
+// Read input from file, inline string, or stdin
+let content = cli::read_input(Some("input.txt"), None).await?;
+let content = cli::read_input(None, Some("inline data".to_string())).await?;
+let content = cli::read_input(None, None).await?; // from stdin
+
+// Read from PathBuf or stdin (common in clap CLIs)
+let path: Option<PathBuf> = Some(PathBuf::from("data.json"));
+let content = cli::read_input_from_path(&path)?;
+
+// Read and parse JSON
+let data: MyType = cli::read_json("config.json")?;
+
+// Write output to file or stdout
+cli::write_output(Some(Path::new("output.txt")), "content")?;
+cli::write_output(None, "content")?; // to stdout
+
+// Format output with different styles
+use rh_foundation::cli::OutputFormat;
+cli::print_with_format(&data, OutputFormat::Json)?;
+cli::print_with_format(&data, OutputFormat::JsonCompact)?;
+cli::print_with_format(&data, OutputFormat::DebugPretty)?;
+
+// Print results with error handling
+let success = cli::print_result(some_result);
+
+// Conditional exit (useful for --strict flags)
+cli::exit_if(has_errors && strict, 1);
+```
+
 ## Module Structure
 
 ```
@@ -131,7 +169,9 @@ rh-foundation/
 ├── config.rs      - Configuration traits
 ├── io.rs          - File I/O operations
 ├── json.rs        - JSON utilities
-└── http.rs        - HTTP client (feature: http)
+├── cli.rs         - CLI utilities (NEW!)
+├── http.rs        - HTTP client (feature: http)
+└── wasm.rs        - WASM utilities (feature: wasm)
 ```
 
 ## Migration from rh-common

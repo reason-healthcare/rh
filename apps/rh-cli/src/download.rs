@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::Subcommand;
-use std::path::PathBuf;
-use tracing::info;
-
 use rh_loader::{LoaderConfig, PackageLoader};
+use std::path::{Path, PathBuf};
+use tracing::info;
 
 /// Download FHIR packages from npm-style registries
 ///
@@ -91,7 +90,7 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
 async fn download_package(
     package: &str,
     version: &str,
-    output: &std::path::Path,
+    output: &Path,
     registry: &str,
     token: Option<&str>,
     overwrite: bool,

@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Result};
 use clap::Subcommand;
+use rh_foundation::cli;
+use rh_vcl::{parse_vcl, VclExplainer, VclExpression, VclTranslator};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use std::fs;
 use std::path::PathBuf;
 use tracing::error;
-
-use rh_vcl::{parse_vcl, VclExplainer, VclExpression, VclTranslator};
 
 #[derive(Subcommand)]
 pub enum VclCommands {
@@ -166,7 +165,7 @@ fn translate_expression(
     };
 
     if let Some(output_path) = output {
-        fs::write(output_path, &output_content)?;
+        cli::write_output(Some(output_path), &output_content)?;
         println!("✅ Translation written to: {}", output_path.display());
     } else {
         println!("{output_content}");
@@ -224,7 +223,7 @@ fn explain_expression(
     };
 
     if let Some(output_path) = output {
-        fs::write(output_path, &output_content)?;
+        cli::write_output(Some(output_path), &output_content)?;
         println!("✅ Explanation written to: {}", output_path.display());
     } else {
         println!("{output_content}");

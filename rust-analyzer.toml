@@ -8,7 +8,13 @@ features = "all"
 [procMacro]
 # Enable procedural macro expansion
 enable = true
+# Ignore wasm-bindgen proc macro errors when not targeting wasm
+ignored = { "wasm-bindgen" = ["getter", "readonly"] }
 
 [procMacro.attributes]
 # Enable attribute macro expansion
 enable = true
+
+[diagnostics]
+# Disable proc-macro diagnostics for wasm-bindgen
+disabled = ["macro-error"]

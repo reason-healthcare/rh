@@ -12,6 +12,7 @@
 //! - `http`: Enables HTTP client utilities (requires `reqwest` and `tokio`)
 //! - `wasm`: Enables WebAssembly utilities (requires `wasm-bindgen`)
 
+pub mod cli;
 pub mod config;
 pub mod error;
 pub mod io;

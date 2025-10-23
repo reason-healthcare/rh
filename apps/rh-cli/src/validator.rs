@@ -4,9 +4,8 @@
 
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
+use rh_foundation::cli;
 use rh_validator::{FhirValidator, JsonValidator, ValidationResult};
-use std::fs;
-use std::io::{self, Read};
 use std::path::PathBuf;
 use tracing::{info, warn};
 
@@ -228,21 +227,12 @@ async fn handle_fhir_validation(args: FhirArgs) -> Result<()> {
 }
 
 fn read_input(path: &Option<PathBuf>) -> Result<String> {
-    match path {
-        Some(file_path) => {
-            info!("Reading from file: {}", file_path.display());
-            fs::read_to_string(file_path)
-                .with_context(|| format!("Failed to read file: {}", file_path.display()))
-        }
-        None => {
-            info!("Reading from stdin");
-            let mut buffer = String::new();
-            io::stdin()
-                .read_to_string(&mut buffer)
-                .context("Failed to read from stdin")?;
-            Ok(buffer)
-        }
+    if path.is_some() {
+        info!("Reading from file: {}", path.as_ref().unwrap().display());
+    } else {
+        info!("Reading from stdin");
     }
+    cli::read_input_from_path(path).map_err(Into::into)
 }
 
 fn print_single_result_text(result: &ValidationResult, show_stats: bool) {
