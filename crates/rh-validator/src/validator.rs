@@ -1,232 +1,92 @@
-//! FHIR validation module
+//! FHIR validation implementation
 //!
-//! This module handles the actual FHIR resource validation logic.
+//! This module will contain the main validator logic in Phase 1.
+//! Currently provides stub implementations for backward compatibility.
 
-use crate::error::{Result as ValidatorResult, ValidatorError};
-use crate::setup::FhirSetup;
-use crate::ValidationResult;
-use serde_json::Value;
-use std::path::{Path, PathBuf};
+use crate::types::{ValidationResult, ValidatorError};
+use std::path::PathBuf;
 
-/// FHIR validator that performs resource validation
-pub struct FhirValidator {
-    /// Setup manager for handling packages and Rust type generation
-    setup: FhirSetup,
-}
+/// FHIR resource validator (Phase 1 implementation pending)
+#[derive(Debug, Clone)]
+pub struct FhirValidator;
 
 impl FhirValidator {
-    /// Create a new FHIR validator with default settings
-    pub fn new() -> ValidatorResult<Self> {
-        Ok(Self {
-            setup: FhirSetup::new()?,
-        })
+    /// Create a new FHIR validator with default configuration
+    pub fn new() -> Result<Self, ValidatorError> {
+        Ok(Self)
     }
 
-    /// Create a new FHIR validator with custom base directory
-    pub fn with_base_dir(base_dir: PathBuf) -> ValidatorResult<Self> {
-        Ok(Self {
-            setup: FhirSetup::with_base_dir(base_dir)?,
-        })
+    /// Create a validator with a custom package directory
+    pub fn with_package_dir(_package_dir: PathBuf) -> Result<Self, ValidatorError> {
+        Ok(Self)
     }
 
-    /// Create a new FHIR validator with a specific package directory
-    pub fn with_package_dir(package_dir: &Path) -> Self {
-        // For now, fall back to default if we can't create with the specific directory
-        Self::with_base_dir(package_dir.to_path_buf()).unwrap_or_else(|_| {
-            Self::new().unwrap_or_else(|_| {
-                // Panic is probably not the best, but for now this maintains API compatibility
-                panic!("Failed to create FHIR validator")
-            })
-        })
-    }
-
-    /// Set the default FHIR version for validation (builder pattern)
-    pub fn with_default_version(self, _version: &str) -> Self {
-        // TODO: Store the version in the validator for default use
-        self
-    }
-
-    /// Get access to the setup manager
-    pub fn setup(&self) -> &FhirSetup {
-        &self.setup
-    }
-
-    /// Validate multiple FHIR resources with an optional version
-    pub async fn validate_multiple(
+    /// Validate a FHIR resource from JSON string (stub)
+    pub fn validate_resource(
         &self,
-        content: &str,
-        version: Option<&str>,
-    ) -> ValidatorResult<Vec<(usize, ValidationResult)>> {
-        let mut results = Vec::new();
-        let default_version = "4.0.1";
-        let version_to_use = version.unwrap_or(default_version);
-
-        for (line_number, line) in content.lines().enumerate() {
-            let line = line.trim();
-
-            if line.is_empty() {
-                continue;
-            }
-
-            match self.validate_with_version(line, version_to_use).await {
-                Ok(validation_result) => {
-                    results.push((line_number + 1, validation_result));
-                }
-                Err(e) => {
-                    let error = ValidatorError::Schema {
-                        message: format!("Line {}: {}", line_number + 1, e),
-                    };
-                    results.push((line_number + 1, ValidationResult::Invalid(vec![error])));
-                }
-            }
-        }
-
-        Ok(results)
+        _resource_type: &str,
+        _json: &str,
+    ) -> Result<ValidationResult, ValidatorError> {
+        // Phase 1: Will implement actual validation
+        Ok(ValidationResult::new("Unknown"))
     }
 
-    /// Validate a FHIR resource with a specific version
-    pub async fn validate_with_version(
+    /// Validate with version (stub)
+    pub fn validate_with_version(
         &self,
-        content: &str,
-        version: &str,
-    ) -> ValidatorResult<ValidationResult> {
-        let resource: Value = serde_json::from_str(content)?;
-
-        self.validate_basic_structure(&resource, version)
-    }
-
-    /// Perform basic FHIR resource structure validation
-    fn validate_basic_structure(
-        &self,
-        resource: &Value,
+        _json: &str,
         _version: &str,
-    ) -> ValidatorResult<ValidationResult> {
-        let mut errors = Vec::new();
+    ) -> Result<ValidationResult, ValidatorError> {
+        // Phase 1: Will implement actual validation
+        Ok(ValidationResult::new("Unknown"))
+    }
 
-        if !resource.is_object() {
-            errors.push(ValidatorError::Schema {
-                message: "FHIR resource must be a JSON object".to_string(),
-            });
-            return Ok(ValidationResult::Invalid(errors));
-        }
-
-        let obj = resource.as_object().unwrap();
-
-        match obj.get("resourceType") {
-            Some(Value::String(resource_type)) => {
-                if resource_type.is_empty() {
-                    errors.push(ValidatorError::Schema {
-                        message: "resourceType cannot be empty".to_string(),
-                    });
-                }
-            }
-            Some(_) => {
-                errors.push(ValidatorError::Schema {
-                    message: "resourceType must be a string".to_string(),
-                });
-            }
-            None => {
-                errors.push(ValidatorError::Schema {
-                    message: "Missing required field: resourceType".to_string(),
-                });
-            }
-        }
-
-        if errors.is_empty() {
-            Ok(ValidationResult::Valid)
-        } else {
-            Ok(ValidationResult::Invalid(errors))
-        }
+    /// Validate multiple resources (stub)
+    pub fn validate_multiple(
+        &self,
+        _json: &str,
+        _version: Option<&str>,
+    ) -> Result<Vec<(usize, ValidationResult)>, ValidatorError> {
+        // Phase 1: Will implement actual validation
+        Ok(vec![(1, ValidationResult::new("Unknown"))])
     }
 }
 
 impl Default for FhirValidator {
     fn default() -> Self {
-        Self::new().expect("Failed to create default FHIR validator")
+        Self
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// JSON syntax validator (Phase 1 implementation pending)
+#[derive(Debug, Clone)]
+pub struct JsonValidator {
+    max_depth: usize,
+}
 
-    #[tokio::test]
-    async fn test_validate_valid_fhir_resource() {
-        let validator = FhirValidator::new().unwrap();
-        let valid_json = r#"{"resourceType": "Patient", "id": "example"}"#;
-
-        let result = validator
-            .validate_with_version(valid_json, "4.0.1")
-            .await
-            .unwrap();
-        assert!(matches!(result, ValidationResult::Valid));
+impl JsonValidator {
+    /// Create a validator with custom max depth
+    pub fn with_max_depth(max_depth: usize) -> Self {
+        Self { max_depth }
     }
 
-    #[tokio::test]
-    async fn test_validate_invalid_json() {
-        let validator = FhirValidator::new().unwrap();
-        let invalid_json = r#"{"resourceType": "Patient", "id": "example""#; // Missing closing brace
-
-        let result = validator.validate_with_version(invalid_json, "4.0.1").await;
-        assert!(result.is_err());
+    /// Validate JSON syntax (stub)
+    pub fn validate(&self, _json: &str) -> ValidationResult {
+        // Phase 1: Will implement actual validation using self.max_depth
+        let _ = self.max_depth;
+        ValidationResult::new("JSON")
     }
 
-    #[tokio::test]
-    async fn test_validate_missing_resource_type() {
-        let validator = FhirValidator::new().unwrap();
-        let no_resource_type = r#"{"id": "example"}"#;
-
-        let result = validator
-            .validate_with_version(no_resource_type, "4.0.1")
-            .await
-            .unwrap();
-        if let ValidationResult::Invalid(errors) = result {
-            assert_eq!(errors.len(), 1);
-            assert!(errors[0]
-                .to_string()
-                .contains("Missing required field: resourceType"));
-        } else {
-            panic!("Expected Invalid result");
-        }
+    /// Validate multiple JSON documents (stub)
+    pub fn validate_multiple(&self, _json: &str) -> Vec<(usize, ValidationResult)> {
+        // Phase 1: Will implement actual validation using self.max_depth
+        let _ = self.max_depth;
+        vec![(1, ValidationResult::new("JSON"))]
     }
+}
 
-    #[tokio::test]
-    async fn test_validate_empty_resource_type() {
-        let validator = FhirValidator::new().unwrap();
-        let empty_resource_type = r#"{"resourceType": "", "id": "example"}"#;
-
-        let result = validator
-            .validate_with_version(empty_resource_type, "4.0.1")
-            .await
-            .unwrap();
-        if let ValidationResult::Invalid(errors) = result {
-            assert_eq!(errors.len(), 1);
-            assert!(errors[0]
-                .to_string()
-                .contains("resourceType cannot be empty"));
-        } else {
-            panic!("Expected Invalid result");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_validate_multiple_resources() {
-        let validator = FhirValidator::new().unwrap();
-        let multiple_resources = r#"{"resourceType": "Patient", "id": "1"}
-{"resourceType": "Observation", "id": "2"}
-{"id": "3"}"#; // This one is missing resourceType
-
-        let results = validator
-            .validate_multiple(multiple_resources, Some("4.0.1"))
-            .await
-            .unwrap();
-        assert_eq!(results.len(), 3);
-
-        // First two should be valid
-        assert!(matches!(results[0].1, ValidationResult::Valid));
-        assert!(matches!(results[1].1, ValidationResult::Valid));
-
-        // Third should be invalid
-        assert!(matches!(results[2].1, ValidationResult::Invalid(_)));
+impl Default for JsonValidator {
+    fn default() -> Self {
+        Self { max_depth: 100 }
     }
 }

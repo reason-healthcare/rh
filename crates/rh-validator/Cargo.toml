@@ -20,22 +20,23 @@ categories = ["parsing", "data-structures", "healthcare", "validation"]
 
 [dependencies]
 # Workspace dependencies
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }
-tokio = { workspace = true }
-
-# Additional dependencies
-dirs = "5.0"
-glob = "0.3"
 
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation" }
-rh-loader = { path = "../rh-loader" }
-rh-codegen = { path = "../rh-codegen" }
+# rh-fhirpath = { path = "../rh-fhirpath" }  # Will be added in Phase 3
+# rh-hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }  # Will be added in Phase 2
+
+# Additional dependencies for future phases
+# rayon = "1.10"  # Phase 4: Parallel validation
 
 [dev-dependencies]
 tempfile = "3.0"
-tokio-test = "0.4"
+criterion = "0.5"  # For benchmarking
+
+[[bench]]
+name = "validation"
+harness = false
