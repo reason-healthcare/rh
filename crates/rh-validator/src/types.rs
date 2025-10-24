@@ -4,49 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
-/// Severity level of a validation issue
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Severity {
-    /// Fatal error - validation failed
-    Error,
-    /// Warning - best practice violation
-    Warning,
-    /// Informational message
-    Information,
-}
-
-impl Severity {
-    fn rank(&self) -> u8 {
-        match self {
-            Severity::Error => 2,
-            Severity::Warning => 1,
-            Severity::Information => 0,
-        }
-    }
-}
-
-impl PartialOrd for Severity {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Severity {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.rank().cmp(&other.rank())
-    }
-}
-
-impl fmt::Display for Severity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Information => write!(f, "information"),
-        }
-    }
-}
+// Re-export shared types from rh-foundation
+pub use rh_foundation::{Invariant, Severity};
 
 /// Type of validation issue
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -261,25 +220,6 @@ impl fmt::Display for ValidationResult {
         }
         Ok(())
     }
-}
-
-/// Invariant constraint from FHIR specification
-///
-/// This structure will be shared between the validator and code generator.
-/// Generated resources will embed these as static constants.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Invariant {
-    /// Invariant key (e.g., "pat-1", "obs-3")
-    pub key: String,
-    /// Severity level
-    pub severity: Severity,
-    /// Human-readable description
-    pub human: String,
-    /// FHIRPath expression to evaluate
-    pub expression: String,
-    /// XPath expression (legacy, optional)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xpath: Option<String>,
 }
 
 /// Validator-specific errors

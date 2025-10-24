@@ -72,6 +72,55 @@ pub struct InsurancePlan {
     /// Plan details
     pub plan: Option<Vec<InsurancePlanPlan>>,
 }
+/// InsurancePlan nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of contact
+    ///
+    /// Binding: extensible (The purpose for which you would contact a contact party.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
+    pub purpose: Option<CodeableConcept>,
+    /// A name associated with the contact
+    pub name: Option<HumanName>,
+    /// Contact details (telephone, email, etc.)  for a contact
+    pub telecom: Option<Vec<ContactPoint>>,
+    /// Visiting or postal addresses for the contact
+    pub address: Option<Address>,
+}
+/// InsurancePlanCoverage nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanCoverageBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of benefit
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Referral requirements
+    pub requirement: Option<StringType>,
+    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
+    pub _requirement: Option<Element>,
+}
+/// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcostBenefitCost {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of cost
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// in-network | out-of-network | other
+    pub applicability: Option<CodeableConcept>,
+    /// Additional information about the cost
+    pub qualifiers: Option<Vec<CodeableConcept>>,
+    /// The actual cost value
+    pub value: Option<Quantity>,
+}
 /// InsurancePlan nested structure for the 'plan' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePlanPlan {
@@ -95,63 +144,19 @@ pub struct InsurancePlanPlan {
     /// What networks provide coverage
     pub network: Option<Vec<Reference>>,
 }
-/// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
+/// InsurancePlan nested structure for the 'coverage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcostBenefitCost {
+pub struct InsurancePlanCoverage {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of cost
+    /// List of benefits
+    pub benefit: Vec<InsurancePlanCoverageBenefit>,
+    /// Type of coverage
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// in-network | out-of-network | other
-    pub applicability: Option<CodeableConcept>,
-    /// Additional information about the cost
-    pub qualifiers: Option<Vec<CodeableConcept>>,
-    /// The actual cost value
-    pub value: Option<Quantity>,
-}
-/// InsurancePlanPlan nested structure for the 'specificCost' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcost {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// General category of benefit
-    pub category: CodeableConcept,
-}
-/// InsurancePlanCoverage nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverageBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of benefit
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Referral requirements
-    pub requirement: Option<StringType>,
-    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
-    pub _requirement: Option<Element>,
-}
-/// InsurancePlan nested structure for the 'contact' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanContact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of contact
-    ///
-    /// Binding: extensible (The purpose for which you would contact a contact party.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
-    pub purpose: Option<CodeableConcept>,
-    /// A name associated with the contact
-    pub name: Option<HumanName>,
-    /// Contact details (telephone, email, etc.)  for a contact
-    pub telecom: Option<Vec<ContactPoint>>,
-    /// Visiting or postal addresses for the contact
-    pub address: Option<Address>,
+    /// What networks provide coverage
+    pub network: Option<Vec<Reference>>,
 }
 /// InsurancePlanPlan nested structure for the 'generalCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,6 +190,15 @@ pub struct InsurancePlanPlanSpecificcostBenefit {
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
 }
+/// InsurancePlanPlan nested structure for the 'specificCost' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcost {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// General category of benefit
+    pub category: CodeableConcept,
+}
 /// InsurancePlanCoverageBenefit nested structure for the 'limit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePlanCoverageBenefitLimit {
@@ -195,20 +209,6 @@ pub struct InsurancePlanCoverageBenefitLimit {
     pub value: Option<Quantity>,
     /// Benefit limit details
     pub code: Option<CodeableConcept>,
-}
-/// InsurancePlan nested structure for the 'coverage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// List of benefits
-    pub benefit: Vec<InsurancePlanCoverageBenefit>,
-    /// Type of coverage
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// What networks provide coverage
-    pub network: Option<Vec<Reference>>,
 }
 
 impl Default for InsurancePlan {
@@ -236,16 +236,25 @@ impl Default for InsurancePlan {
     }
 }
 
-impl Default for InsurancePlanPlan {
+impl Default for InsurancePlanContact {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            general_cost: Default::default(),
-            specific_cost: Default::default(),
-            identifier: Default::default(),
+            purpose: Default::default(),
+            name: Default::default(),
+            telecom: Default::default(),
+            address: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanCoverageBenefit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             type_: Default::default(),
-            coverage_area: Default::default(),
-            network: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
         }
     }
 }
@@ -262,34 +271,27 @@ impl Default for InsurancePlanPlanSpecificcostBenefitCost {
     }
 }
 
-impl Default for InsurancePlanPlanSpecificcost {
+impl Default for InsurancePlanPlan {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanCoverageBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
+            general_cost: Default::default(),
+            specific_cost: Default::default(),
+            identifier: Default::default(),
             type_: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
+            coverage_area: Default::default(),
+            network: Default::default(),
         }
     }
 }
 
-impl Default for InsurancePlanContact {
+impl Default for InsurancePlanCoverage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            purpose: Default::default(),
-            name: Default::default(),
-            telecom: Default::default(),
-            address: Default::default(),
+            benefit: Vec::new(),
+            type_: Default::default(),
+            network: Default::default(),
         }
     }
 }
@@ -317,6 +319,15 @@ impl Default for InsurancePlanPlanSpecificcostBenefit {
     }
 }
 
+impl Default for InsurancePlanPlanSpecificcost {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+        }
+    }
+}
+
 impl Default for InsurancePlanCoverageBenefitLimit {
     fn default() -> Self {
         Self {
@@ -327,16 +338,23 @@ impl Default for InsurancePlanCoverageBenefitLimit {
     }
 }
 
-impl Default for InsurancePlanCoverage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            benefit: Vec::new(),
-            type_: Default::default(),
-            network: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("ipn-1", rh_foundation::Severity::Error, "The organization SHALL at least have a name or an idendtifier, and possibly more than one", "(identifier.count() + name.count()) > 0").with_xpath("count(f:identifier | f:name) > 0"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for InsurancePlan {
@@ -731,5 +749,19 @@ impl crate::traits::insurance_plan::InsurancePlanExistence for InsurancePlan {
     }
     fn has_plan(&self) -> bool {
         self.plan.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for InsurancePlan {
+    fn resource_type(&self) -> &'static str {
+        "InsurancePlan"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/InsurancePlan")
     }
 }

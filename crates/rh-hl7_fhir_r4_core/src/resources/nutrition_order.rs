@@ -94,66 +94,6 @@ pub struct NutritionOrder {
     /// Comments
     pub note: Option<Vec<Annotation>>,
 }
-/// NutritionOrderOraldiet nested structure for the 'texture' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldietTexture {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code to indicate how to alter the texture of the foods, e.g. pureed
-    ///
-    /// Binding: example (Codes for food consistency types or texture modifications to apply to foods.)
-    ///
-    /// Available values:
-    /// - `228053002`: Cut-up food
-    /// - `439091000124107`: Easy to chew food
-    /// - `228049004`: Chopped food
-    /// - `441881000124103`: Ground food
-    /// - `441761000124103`: Minced food
-    /// - `441751000124100`: Mashed food
-    /// - `228059003`: Soft food
-    /// - `441791000124106`: Strained food
-    /// - `228055009`: Liquidized food
-    /// - `228056005`: Lumpy food
-    /// - ... and 4 more values
-    pub modifier: Option<CodeableConcept>,
-    /// Concepts that are used to identify an entity that is ingested for nutritional purposes
-    ///
-    /// Binding: example (Codes for types of foods that are texture-modified.)
-    ///
-    /// Available values:
-    /// - `255620007`: Foods
-    /// - `28647000`: Meat
-    /// - `22836000`: Vegetables
-    /// - `72511004`: Fruit
-    /// - `226760005`: Dairy foods
-    /// - `226887002`: Dietary Fats and Oils
-    /// - `102263004`: Eggs
-    /// - `74242007`: Food Starch
-    /// - `227415002`: Fruit Nuts and Seeds
-    /// - `264331002`: Grain
-    /// - ... and 4 more values
-    #[serde(rename = "foodType")]
-    pub food_type: Option<CodeableConcept>,
-}
-/// NutritionOrderOraldiet nested structure for the 'nutrient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldietNutrient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of nutrient that is being modified
-    ///
-    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
-    ///
-    /// Available values:
-    /// - `33463005`: Fluid
-    /// - `39972003`: Sodium
-    /// - `88480006`: Potassium
-    pub modifier: Option<CodeableConcept>,
-    /// Quantity of the specified nutrient
-    pub amount: Option<Quantity>,
-}
 /// NutritionOrder nested structure for the 'enteralFormula' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionOrderEnteralformula {
@@ -228,6 +168,59 @@ pub struct NutritionOrderEnteralformula {
     #[serde(rename = "_administrationInstruction")]
     pub _administration_instruction: Option<Element>,
 }
+/// NutritionOrderOraldiet nested structure for the 'nutrient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldietNutrient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of nutrient that is being modified
+    ///
+    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
+    ///
+    /// Available values:
+    /// - `33463005`: Fluid
+    /// - `39972003`: Sodium
+    /// - `88480006`: Potassium
+    pub modifier: Option<CodeableConcept>,
+    /// Quantity of the specified nutrient
+    pub amount: Option<Quantity>,
+}
+/// NutritionOrder nested structure for the 'oralDiet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldiet {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Required  texture modifications
+    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
+    /// Required  nutrient modifications
+    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
+    /// Type of oral diet or diet restrictions that describe what can be consumed orally
+    ///
+    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Scheduled frequency of diet
+    pub schedule: Option<Vec<Timing>>,
+    /// The required consistency of fluids and liquids provided to the patient
+    ///
+    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
+    ///
+    /// Available values:
+    /// - `439031000124108`: honey thick liquid
+    /// - `439021000124105`: nectar thick liquid
+    /// - `439041000124103`: spoon thick liquid
+    /// - `439081000124109`: thin liquid
+    #[serde(rename = "fluidConsistencyType")]
+    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
+    /// Instructions or additional information about the oral diet
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 /// NutritionOrder nested structure for the 'supplement' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionOrderSupplement {
@@ -284,40 +277,47 @@ pub struct NutritionOrderEnteralformulaAdministration {
     #[serde(rename = "rateRatio")]
     pub rate_ratio: Option<Ratio>,
 }
-/// NutritionOrder nested structure for the 'oralDiet' field
+/// NutritionOrderOraldiet nested structure for the 'texture' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldiet {
+pub struct NutritionOrderOraldietTexture {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Required  texture modifications
-    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
-    /// Required  nutrient modifications
-    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
-    /// Type of oral diet or diet restrictions that describe what can be consumed orally
+    /// Code to indicate how to alter the texture of the foods, e.g. pureed
     ///
-    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Scheduled frequency of diet
-    pub schedule: Option<Vec<Timing>>,
-    /// The required consistency of fluids and liquids provided to the patient
-    ///
-    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
+    /// Binding: example (Codes for food consistency types or texture modifications to apply to foods.)
     ///
     /// Available values:
-    /// - `439031000124108`: honey thick liquid
-    /// - `439021000124105`: nectar thick liquid
-    /// - `439041000124103`: spoon thick liquid
-    /// - `439081000124109`: thin liquid
-    #[serde(rename = "fluidConsistencyType")]
-    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
-    /// Instructions or additional information about the oral diet
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
+    /// - `228053002`: Cut-up food
+    /// - `439091000124107`: Easy to chew food
+    /// - `228049004`: Chopped food
+    /// - `441881000124103`: Ground food
+    /// - `441761000124103`: Minced food
+    /// - `441751000124100`: Mashed food
+    /// - `228059003`: Soft food
+    /// - `441791000124106`: Strained food
+    /// - `228055009`: Liquidized food
+    /// - `228056005`: Lumpy food
+    /// - ... and 4 more values
+    pub modifier: Option<CodeableConcept>,
+    /// Concepts that are used to identify an entity that is ingested for nutritional purposes
+    ///
+    /// Binding: example (Codes for types of foods that are texture-modified.)
+    ///
+    /// Available values:
+    /// - `255620007`: Foods
+    /// - `28647000`: Meat
+    /// - `22836000`: Vegetables
+    /// - `72511004`: Fruit
+    /// - `226760005`: Dairy foods
+    /// - `226887002`: Dietary Fats and Oils
+    /// - `102263004`: Eggs
+    /// - `74242007`: Food Starch
+    /// - `227415002`: Fruit Nuts and Seeds
+    /// - `264331002`: Grain
+    /// - ... and 4 more values
+    #[serde(rename = "foodType")]
+    pub food_type: Option<CodeableConcept>,
 }
 
 impl Default for NutritionOrder {
@@ -351,26 +351,6 @@ impl Default for NutritionOrder {
     }
 }
 
-impl Default for NutritionOrderOraldietTexture {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            modifier: Default::default(),
-            food_type: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionOrderOraldietNutrient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            modifier: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
 impl Default for NutritionOrderEnteralformula {
     fn default() -> Self {
         Self {
@@ -387,6 +367,31 @@ impl Default for NutritionOrderEnteralformula {
             max_volume_to_deliver: Default::default(),
             administration_instruction: Default::default(),
             _administration_instruction: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionOrderOraldietNutrient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            modifier: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionOrderOraldiet {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            texture: Default::default(),
+            nutrient: Default::default(),
+            type_: Default::default(),
+            schedule: Default::default(),
+            fluid_consistency_type: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
         }
     }
 }
@@ -418,20 +423,33 @@ impl Default for NutritionOrderEnteralformulaAdministration {
     }
 }
 
-impl Default for NutritionOrderOraldiet {
+impl Default for NutritionOrderOraldietTexture {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            texture: Default::default(),
-            nutrient: Default::default(),
-            type_: Default::default(),
-            schedule: Default::default(),
-            fluid_consistency_type: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
+            modifier: Default::default(),
+            food_type: Default::default(),
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("nor-1", rh_foundation::Severity::Warning, "Nutrition Order SHALL contain either Oral Diet , Supplement, or Enteral Formula class", "oralDiet.exists() or supplement.exists() or enteralFormula.exists()").with_xpath("exists(f:oralDiet) or exists(f:supplement) or exists(f:enteralFormula)"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for NutritionOrder {
@@ -884,5 +902,19 @@ impl crate::traits::nutrition_order::NutritionOrderExistence for NutritionOrder 
     }
     fn has_note(&self) -> bool {
         self.note.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for NutritionOrder {
+    fn resource_type(&self) -> &'static str {
+        "NutritionOrder"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/NutritionOrder")
     }
 }

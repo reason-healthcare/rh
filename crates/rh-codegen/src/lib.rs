@@ -27,6 +27,7 @@ mod config;
 pub mod fhir_types;
 mod generator;
 pub mod generators;
+pub mod invariants;
 pub mod macros;
 pub mod metadata;
 pub mod naming;

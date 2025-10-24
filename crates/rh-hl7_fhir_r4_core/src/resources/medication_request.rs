@@ -161,6 +161,17 @@ pub struct MedicationRequest {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestDispenserequestInitialfill {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// First fill quantity
+    pub quantity: Option<Quantity>,
+    /// First fill duration
+    pub duration: Option<Duration>,
+}
 /// MedicationRequest nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationRequestSubstitution {
@@ -179,17 +190,6 @@ pub struct MedicationRequestSubstitution {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
     pub reason: Option<CodeableConcept>,
-}
-/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestDispenserequestInitialfill {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// First fill quantity
-    pub quantity: Option<Quantity>,
-    /// First fill duration
-    pub duration: Option<Duration>,
 }
 /// MedicationRequest nested structure for the 'dispenseRequest' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,6 +270,16 @@ impl Default for MedicationRequest {
     }
 }
 
+impl Default for MedicationRequestDispenserequestInitialfill {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            duration: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationRequestSubstitution {
     fn default() -> Self {
         Self {
@@ -277,16 +287,6 @@ impl Default for MedicationRequestSubstitution {
             allowed_boolean: Default::default(),
             allowed_codeable_concept: Default::default(),
             reason: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationRequestDispenserequestInitialfill {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            duration: Default::default(),
         }
     }
 }
@@ -306,6 +306,23 @@ impl Default for MedicationRequestDispenserequest {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicationRequest {
@@ -825,11 +842,11 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_reported(&self) -> bool {
-        self.reported_boolean.is_some() || self.reported_reference.is_some()
-    }
     fn has_medication(&self) -> bool {
         true
+    }
+    fn has_reported(&self) -> bool {
+        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -930,5 +947,19 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
     }
     fn has_event_history(&self) -> bool {
         self.event_history.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for MedicationRequest {
+    fn resource_type(&self) -> &'static str {
+        "MedicationRequest"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/MedicationRequest")
     }
 }

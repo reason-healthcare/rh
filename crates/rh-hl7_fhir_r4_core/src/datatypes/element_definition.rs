@@ -697,39 +697,6 @@ pub struct ElementDefinition {
     /// Map element to another set of definitions
     pub mapping: Option<Vec<Element>>,
 }
-/// ElementDefinition nested structure for the 'type' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionType {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Data type or Resource (reference to definition)
-    ///
-    /// Binding: extensible (Either a resource or a data type, including logical model types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/defined-types
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Profiles (StructureDefinition or IG) - one must apply
-    pub profile: Option<Vec<StringType>>,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-    /// Profile (StructureDefinition or IG) on the Reference/canonical target - one must apply
-    #[serde(rename = "targetProfile")]
-    pub target_profile: Option<Vec<StringType>>,
-    /// Extension element for the 'targetProfile' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetProfile")]
-    pub _target_profile: Option<Element>,
-    /// contained | referenced | bundled - how aggregated
-    pub aggregation: Option<Vec<ResourceAggregationMode>>,
-    /// Extension element for the 'aggregation' primitive field. Contains metadata and extensions.
-    pub _aggregation: Option<Element>,
-    /// either | independent | specific
-    pub versioning: Option<ReferenceVersionRules>,
-    /// Extension element for the 'versioning' primitive field. Contains metadata and extensions.
-    pub _versioning: Option<Element>,
-}
 /// ElementDefinition nested structure for the 'slicing' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementDefinitionSlicing {
@@ -751,47 +718,40 @@ pub struct ElementDefinitionSlicing {
     /// Extension element for the 'rules' primitive field. Contains metadata and extensions.
     pub _rules: Option<Element>,
 }
-/// ElementDefinition nested structure for the 'base' field
+/// ElementDefinition nested structure for the 'constraint' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionBase {
+pub struct ElementDefinitionConstraint {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Path that identifies the base element
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Min cardinality of the base element
-    pub min: UnsignedIntType,
-    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
-    pub _min: Option<Element>,
-    /// Max cardinality of the base element
-    pub max: StringType,
-    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
-    pub _max: Option<Element>,
-}
-/// ElementDefinition nested structure for the 'mapping' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionMapping {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to mapping declaration
-    pub identity: StringType,
-    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
-    pub _identity: Option<Element>,
-    /// Computable language of mapping
-    pub language: Option<Mimetypes>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Details of the mapping
-    pub map: StringType,
-    /// Extension element for the 'map' primitive field. Contains metadata and extensions.
-    pub _map: Option<Element>,
-    /// Comments about the mapping or its use
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
+    /// Target of 'condition' reference above
+    pub key: StringType,
+    /// Extension element for the 'key' primitive field. Contains metadata and extensions.
+    pub _key: Option<Element>,
+    /// Why this constraint is necessary or appropriate
+    pub requirements: Option<StringType>,
+    /// Extension element for the 'requirements' primitive field. Contains metadata and extensions.
+    pub _requirements: Option<Element>,
+    /// error | warning
+    pub severity: ConstraintSeverity,
+    /// Extension element for the 'severity' primitive field. Contains metadata and extensions.
+    pub _severity: Option<Element>,
+    /// Human description of constraint
+    pub human: StringType,
+    /// Extension element for the 'human' primitive field. Contains metadata and extensions.
+    pub _human: Option<Element>,
+    /// FHIRPath expression of constraint
+    pub expression: Option<StringType>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+    /// XPath expression of constraint
+    pub xpath: Option<StringType>,
+    /// Extension element for the 'xpath' primitive field. Contains metadata and extensions.
+    pub _xpath: Option<Element>,
+    /// Reference to original source of constraint
+    pub source: Option<StringType>,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
 }
 /// ElementDefinitionSlicing nested structure for the 'discriminator' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -970,40 +930,24 @@ pub struct ElementDefinitionExample {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// ElementDefinition nested structure for the 'constraint' field
+/// ElementDefinition nested structure for the 'base' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionConstraint {
+pub struct ElementDefinitionBase {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Target of 'condition' reference above
-    pub key: StringType,
-    /// Extension element for the 'key' primitive field. Contains metadata and extensions.
-    pub _key: Option<Element>,
-    /// Why this constraint is necessary or appropriate
-    pub requirements: Option<StringType>,
-    /// Extension element for the 'requirements' primitive field. Contains metadata and extensions.
-    pub _requirements: Option<Element>,
-    /// error | warning
-    pub severity: ConstraintSeverity,
-    /// Extension element for the 'severity' primitive field. Contains metadata and extensions.
-    pub _severity: Option<Element>,
-    /// Human description of constraint
-    pub human: StringType,
-    /// Extension element for the 'human' primitive field. Contains metadata and extensions.
-    pub _human: Option<Element>,
-    /// FHIRPath expression of constraint
-    pub expression: Option<StringType>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-    /// XPath expression of constraint
-    pub xpath: Option<StringType>,
-    /// Extension element for the 'xpath' primitive field. Contains metadata and extensions.
-    pub _xpath: Option<Element>,
-    /// Reference to original source of constraint
-    pub source: Option<StringType>,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
+    /// Path that identifies the base element
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Min cardinality of the base element
+    pub min: UnsignedIntType,
+    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
+    pub _min: Option<Element>,
+    /// Max cardinality of the base element
+    pub max: StringType,
+    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
+    pub _max: Option<Element>,
 }
 /// ElementDefinition nested structure for the 'binding' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1025,6 +969,62 @@ pub struct ElementDefinitionBinding {
     /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
     #[serde(rename = "_valueSet")]
     pub _value_set: Option<Element>,
+}
+/// ElementDefinition nested structure for the 'type' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionType {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Data type or Resource (reference to definition)
+    ///
+    /// Binding: extensible (Either a resource or a data type, including logical model types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/defined-types
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Profiles (StructureDefinition or IG) - one must apply
+    pub profile: Option<Vec<StringType>>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+    /// Profile (StructureDefinition or IG) on the Reference/canonical target - one must apply
+    #[serde(rename = "targetProfile")]
+    pub target_profile: Option<Vec<StringType>>,
+    /// Extension element for the 'targetProfile' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetProfile")]
+    pub _target_profile: Option<Element>,
+    /// contained | referenced | bundled - how aggregated
+    pub aggregation: Option<Vec<ResourceAggregationMode>>,
+    /// Extension element for the 'aggregation' primitive field. Contains metadata and extensions.
+    pub _aggregation: Option<Element>,
+    /// either | independent | specific
+    pub versioning: Option<ReferenceVersionRules>,
+    /// Extension element for the 'versioning' primitive field. Contains metadata and extensions.
+    pub _versioning: Option<Element>,
+}
+/// ElementDefinition nested structure for the 'mapping' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionMapping {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to mapping declaration
+    pub identity: StringType,
+    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
+    pub _identity: Option<Element>,
+    /// Computable language of mapping
+    pub language: Option<Mimetypes>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Details of the mapping
+    pub map: StringType,
+    /// Extension element for the 'map' primitive field. Contains metadata and extensions.
+    pub _map: Option<Element>,
+    /// Comments about the mapping or its use
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
 }
 
 impl Default for ElementDefinition {
@@ -1253,24 +1253,6 @@ impl Default for ElementDefinition {
     }
 }
 
-impl Default for ElementDefinitionType {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            profile: Default::default(),
-            _profile: Default::default(),
-            target_profile: Default::default(),
-            _target_profile: Default::default(),
-            aggregation: Default::default(),
-            _aggregation: Default::default(),
-            versioning: Default::default(),
-            _versioning: Default::default(),
-        }
-    }
-}
-
 impl Default for ElementDefinitionSlicing {
     fn default() -> Self {
         Self {
@@ -1286,32 +1268,24 @@ impl Default for ElementDefinitionSlicing {
     }
 }
 
-impl Default for ElementDefinitionBase {
+impl Default for ElementDefinitionConstraint {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            path: StringType::default(),
-            _path: Default::default(),
-            min: UnsignedIntType::default(),
-            _min: Default::default(),
-            max: StringType::default(),
-            _max: Default::default(),
-        }
-    }
-}
-
-impl Default for ElementDefinitionMapping {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identity: StringType::default(),
-            _identity: Default::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            map: StringType::default(),
-            _map: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
+            key: StringType::default(),
+            _key: Default::default(),
+            requirements: Default::default(),
+            _requirements: Default::default(),
+            severity: ConstraintSeverity::default(),
+            _severity: Default::default(),
+            human: StringType::default(),
+            _human: Default::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+            xpath: Default::default(),
+            _xpath: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
         }
     }
 }
@@ -1388,24 +1362,16 @@ impl Default for ElementDefinitionExample {
     }
 }
 
-impl Default for ElementDefinitionConstraint {
+impl Default for ElementDefinitionBase {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            key: StringType::default(),
-            _key: Default::default(),
-            requirements: Default::default(),
-            _requirements: Default::default(),
-            severity: ConstraintSeverity::default(),
-            _severity: Default::default(),
-            human: StringType::default(),
-            _human: Default::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
-            xpath: Default::default(),
-            _xpath: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
+            path: StringType::default(),
+            _path: Default::default(),
+            min: UnsignedIntType::default(),
+            _min: Default::default(),
+            max: StringType::default(),
+            _max: Default::default(),
         }
     }
 }
@@ -1421,5 +1387,85 @@ impl Default for ElementDefinitionBinding {
             value_set: Default::default(),
             _value_set: Default::default(),
         }
+    }
+}
+
+impl Default for ElementDefinitionType {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: StringType::default(),
+            _code: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            target_profile: Default::default(),
+            _target_profile: Default::default(),
+            aggregation: Default::default(),
+            _aggregation: Default::default(),
+            versioning: Default::default(),
+            _versioning: Default::default(),
+        }
+    }
+}
+
+impl Default for ElementDefinitionMapping {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identity: StringType::default(),
+            _identity: Default::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            map: StringType::default(),
+            _map: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("eld-1", rh_foundation::Severity::Error, "If there are no discriminators, there must be a definition", "discriminator.exists() or description.exists()").with_xpath("(f:discriminator) or (f:description)"),
+    rh_foundation::Invariant::new("eld-11", rh_foundation::Severity::Error, "Binding can only be present for coded elements, string, and uri", "binding.empty() or type.code.empty() or type.select((code = 'code') or (code = 'Coding') or (code='CodeableConcept') or (code = 'Quantity') or (code = 'string') or (code = 'uri')).exists()").with_xpath("not(exists(f:binding)) or (count(f:type/f:code) = 0) or  f:type/f:code/@value=('code','Coding','CodeableConcept','Quantity','string', 'uri')"),
+    rh_foundation::Invariant::new("eld-12", rh_foundation::Severity::Error, "ValueSet SHALL start with http:// or https:// or urn:", "valueSet.exists() implies (valueSet.startsWith('http:') or valueSet.startsWith('https') or valueSet.startsWith('urn:'))").with_xpath("(starts-with(string(f:valueSet/@value), 'http:') or starts-with(string(f:valueSet/@value), 'https:') or starts-with(string(f:valueSet/@value), 'urn:'))"),
+    rh_foundation::Invariant::new("eld-13", rh_foundation::Severity::Error, "Types must be unique by code", "type.select(code).isDistinct()").with_xpath("not(exists(for $type in f:type return $type/preceding-sibling::f:type[f:code/@value=$type/f:code/@value]))"),
+    rh_foundation::Invariant::new("eld-14", rh_foundation::Severity::Error, "Constraints must be unique by key", "constraint.select(key).isDistinct()").with_xpath("count(f:constraint) = count(distinct-values(f:constraint/f:key/@value))"),
+    rh_foundation::Invariant::new("eld-15", rh_foundation::Severity::Error, "default value and meaningWhenMissing are mutually exclusive", "defaultValue.empty() or meaningWhenMissing.empty()").with_xpath("not(exists(f:*[starts-with(local-name(.), 'fixed')])) or not(exists(f:meaningWhenMissing))"),
+    rh_foundation::Invariant::new("eld-16", rh_foundation::Severity::Error, "sliceName must be composed of proper tokens separated by \"/\"", "sliceName.empty() or sliceName.matches('^[a-zA-Z0-9\\\\/\\\\-_\\\\[\\\\]\\\\@]+$')").with_xpath("not(exists(f:sliceName/@value)) or matches(f:sliceName/@value, '^[a-zA-Z0-9\\/\\-_\\[\\]\\@]+$')"),
+    rh_foundation::Invariant::new("eld-17", rh_foundation::Severity::Error, "targetProfile is only allowed if the type is Reference or canonical", "(code='Reference' or code = 'canonical') or targetProfile.empty()").with_xpath("not(exists(f:targetProfile)) or (f:code/@value = 'Reference')"),
+    rh_foundation::Invariant::new("eld-18", rh_foundation::Severity::Error, "Must have a modifier reason if isModifier = true", "(isModifier.exists() and isModifier) implies isModifierReason.exists()").with_xpath("not(f:isModifier/@value = 'true') or exists(f:isModifierReason)"),
+    rh_foundation::Invariant::new("eld-19", rh_foundation::Severity::Error, "Element names cannot include some special characters", "path.matches('[^\\\\s\\\\.,:;\\\\\\'\"\\\\/|?!@#$%&*()\\\\[\\\\]{}]{1,64}(\\\\.[^\\\\s\\\\.,:;\\\\\\'\"\\\\/|?!@#$%&*()\\\\[\\\\]{}]{1,64}(\\\\[x\\\\])?(\\\\:[^\\\\s\\\\.]+)?)*')").with_xpath("matches(path/@value, '[^\\s\\.,:;\\'&quot;\\/|?!@#$%&amp;*()\\[\\]{}]{1,64}(\\.[^\\s\\.,:;\\'&quot;\\/|?!@#$%&amp;*()\\[\\]{}]{1,64}(\\[x\\])?(\\:[^\\s\\.]+)?)*')"),
+    rh_foundation::Invariant::new("eld-2", rh_foundation::Severity::Error, "Min <= Max", "min.empty() or max.empty() or (max = '*') or iif(max != '*', min <= max.toInteger())").with_xpath("not(exists(f:min)) or not(exists(f:max)) or (not(f:max/@value) and not(f:min/@value)) or (f:max/@value = '*') or (number(f:max/@value) >= f:min/@value)"),
+    rh_foundation::Invariant::new("eld-20", rh_foundation::Severity::Warning, "Element names should be simple alphanumerics with a max of 64 characters, or code generation tools may be broken", "path.matches('[A-Za-z][A-Za-z0-9]*(\\\\.[a-z][A-Za-z0-9]*(\\\\[x])?)*')").with_xpath("matches(path/@value, '[A-Za-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*(\\[x])?)*')"),
+    rh_foundation::Invariant::new("eld-21", rh_foundation::Severity::Warning, "Constraints should have an expression or else validators will not be able to enforce them", "expression.exists()").with_xpath("exists(f:expression/@value)"),
+    rh_foundation::Invariant::new("eld-22", rh_foundation::Severity::Error, "sliceIsConstraining can only appear if slicename is present", "sliceIsConstraining.exists() implies sliceName.exists()").with_xpath("exists(f:sliceName) or not(exists(f:sliceIsConstraining))"),
+    rh_foundation::Invariant::new("eld-3", rh_foundation::Severity::Error, "Max SHALL be a number or \"*\"", "empty() or ($this = '*') or (toInteger() >= 0)").with_xpath("@value='*' or (normalize-space(@value)!='' and normalize-space(translate(@value, '0123456789',''))='')"),
+    rh_foundation::Invariant::new("eld-4", rh_foundation::Severity::Error, "Aggregation may only be specified if one of the allowed types for the element is a reference", "aggregation.empty() or (code = 'Reference') or (code = 'canonical')").with_xpath("not(exists(f:aggregation)) or exists(f:code[@value = 'Reference']) or exists(f:code[@value = 'canonical'])"),
+    rh_foundation::Invariant::new("eld-5", rh_foundation::Severity::Error, "if the element definition has a contentReference, it cannot have type, defaultValue, fixed, pattern, example, minValue, maxValue, maxLength, or binding", "contentReference.empty() or (type.empty() and defaultValue.empty() and fixed.empty() and pattern.empty() and example.empty() and minValue.empty() and maxValue.empty() and maxLength.empty() and binding.empty())").with_xpath("not(exists(f:contentReference) and (exists(f:type) or exists(f:*[starts-with(local-name(.), 'value')]) or exists(f:*[starts-with(local-name(.), 'defaultValue')])  or exists(f:*[starts-with(local-name(.), 'fixed')]) or exists(f:*[starts-with(local-name(.), 'pattern')]) or exists(f:*[starts-with(local-name(.), 'example')]) or exists(f:*[starts-with(local-name(.), 'f:minValue')]) or exists(f:*[starts-with(local-name(.), 'f:maxValue')]) or exists(f:maxLength) or exists(f:binding)))"),
+    rh_foundation::Invariant::new("eld-6", rh_foundation::Severity::Error, "Fixed value may only be specified if there is one type", "fixed.empty() or (type.count()  <= 1)").with_xpath("not(exists(f:*[starts-with(local-name(.), 'fixed')])) or (count(f:type)<=1)"),
+    rh_foundation::Invariant::new("eld-7", rh_foundation::Severity::Error, "Pattern may only be specified if there is one type", "pattern.empty() or (type.count() <= 1)").with_xpath("not(exists(f:*[starts-with(local-name(.), 'pattern')])) or (count(f:type)<=1)"),
+    rh_foundation::Invariant::new("eld-8", rh_foundation::Severity::Error, "Pattern and fixed are mutually exclusive", "pattern.empty() or fixed.empty()").with_xpath("not(exists(f:*[starts-with(local-name(.), 'pattern')])) or not(exists(f:*[starts-with(local-name(.), 'fixed')]))"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
+
+impl crate::validation::ValidatableResource for ElementDefinition {
+    fn resource_type(&self) -> &'static str {
+        "ElementDefinition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/ElementDefinition")
     }
 }

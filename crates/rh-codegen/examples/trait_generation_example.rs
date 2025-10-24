@@ -47,6 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
                 ElementDefinition {
                     id: Some("Patient.name".to_string()),
@@ -62,6 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
                 ElementDefinition {
                     id: Some("Patient.identifier".to_string()),
@@ -77,6 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
             ],
         }),

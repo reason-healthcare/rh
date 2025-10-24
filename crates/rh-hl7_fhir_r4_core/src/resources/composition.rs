@@ -89,40 +89,6 @@ pub struct Composition {
     /// Composition is broken into sections
     pub section: Option<Vec<CompositionSection>>,
 }
-/// Composition nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code(s) that apply to the event being documented
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub code: Option<Vec<CodeableConcept>>,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented
-    pub detail: Option<Vec<Reference>>,
-}
-/// Composition nested structure for the 'attester' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionAttester {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// personal | professional | legal | official
-    pub mode: CompositionAttestationMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// When the composition was attested
-    pub time: Option<DateTimeType>,
-    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
-    pub _time: Option<Element>,
-    /// Who attested the composition
-    pub party: Option<Reference>,
-}
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionSection {
@@ -179,6 +145,40 @@ pub struct CompositionSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code(s) that apply to the event being documented
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    pub code: Option<Vec<CodeableConcept>>,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented
+    pub detail: Option<Vec<Reference>>,
+}
+/// Composition nested structure for the 'attester' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionAttester {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// personal | professional | legal | official
+    pub mode: CompositionAttestationMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// When the composition was attested
+    pub time: Option<DateTimeType>,
+    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
+    pub _time: Option<Element>,
+    /// Who attested the composition
+    pub party: Option<Reference>,
+}
 /// Composition nested structure for the 'relatesTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionRelatesto {
@@ -224,6 +224,26 @@ impl Default for Composition {
     }
 }
 
+impl Default for CompositionSection {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            code: Default::default(),
+            author: Default::default(),
+            focus: Default::default(),
+            text: Default::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
+            ordered_by: Default::default(),
+            entry: Default::default(),
+            empty_reason: Default::default(),
+            section: Default::default(),
+        }
+    }
+}
+
 impl Default for CompositionEvent {
     fn default() -> Self {
         Self {
@@ -248,26 +268,6 @@ impl Default for CompositionAttester {
     }
 }
 
-impl Default for CompositionSection {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            code: Default::default(),
-            author: Default::default(),
-            focus: Default::default(),
-            text: Default::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            ordered_by: Default::default(),
-            entry: Default::default(),
-            empty_reason: Default::default(),
-            section: Default::default(),
-        }
-    }
-}
-
 impl Default for CompositionRelatesto {
     fn default() -> Self {
         Self {
@@ -279,6 +279,25 @@ impl Default for CompositionRelatesto {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("cmp-1", rh_foundation::Severity::Error, "A section must contain at least one of text, entries, or sub-sections", "text.exists() or entry.exists() or section.exists()").with_xpath("exists(f:text) or exists(f:entry) or exists(f:section)"),
+    rh_foundation::Invariant::new("cmp-2", rh_foundation::Severity::Error, "A section can only have an emptyReason if it is empty", "emptyReason.empty() or entry.empty()").with_xpath("not(exists(f:emptyReason) and exists(f:entry))"),
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Composition {
@@ -666,5 +685,19 @@ impl crate::traits::composition::CompositionExistence for Composition {
     }
     fn has_section(&self) -> bool {
         self.section.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Composition {
+    fn resource_type(&self) -> &'static str {
+        "Composition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Composition")
     }
 }

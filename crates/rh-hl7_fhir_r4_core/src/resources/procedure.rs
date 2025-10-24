@@ -176,38 +176,6 @@ pub struct Procedure {
     #[serde(rename = "usedCode")]
     pub used_code: Option<Vec<CodeableConcept>>,
 }
-/// method
-///
-/// The method used to perform this procedure.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-method
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureMethod {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// directedBy
-///
-/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureDirectedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// targetBodyStructure
 ///
 /// The target body site used for this procedure.  Multiple locations are allowed.
@@ -224,50 +192,18 @@ pub struct ProcedureTargetBodyStructure {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// schedule
+/// approachBodyStructure
 ///
-/// The schedule that was followed.
+/// The approach body site used for this procedure.  Multiple locations are allowed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-approachBodyStructure
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureSchedule {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// causedBy
-///
-/// This procedure is because of the related item.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureCausedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// incisionDateTime
-///
-/// The time of the first incision.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureIncisionDateTime {
+pub struct ProcedureApproachBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -287,34 +223,34 @@ pub struct ProcedureFocaldevice {
     /// Device that was changed
     pub manipulated: Reference,
 }
-/// approachBodyStructure
+/// causedBy
 ///
-/// The approach body site used for this procedure.  Multiple locations are allowed.
+/// This procedure is because of the related item.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-approachBodyStructure
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureApproachBodyStructure {
+pub struct ProcedureCausedBy {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// progressStatus
+/// schedule
 ///
-/// A code to track a detailed progress of  a procedure (e.g. In Recovery, Prepared for Surgery).
+/// The schedule that was followed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-progressStatus
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureProgressStatus {
+pub struct ProcedureSchedule {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -336,6 +272,70 @@ pub struct ProcedurePerformer {
     /// Organization the device or practitioner was acting for
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
+}
+/// incisionDateTime
+///
+/// The time of the first incision.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureIncisionDateTime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// progressStatus
+///
+/// A code to track a detailed progress of  a procedure (e.g. In Recovery, Prepared for Surgery).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-progressStatus
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureProgressStatus {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// directedBy
+///
+/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureDirectedBy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// method
+///
+/// The method used to perform this procedure.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-method
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureMethod {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for Procedure {
@@ -381,22 +381,6 @@ impl Default for Procedure {
     }
 }
 
-impl Default for ProcedureMethod {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureDirectedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for ProcedureTargetBodyStructure {
     fn default() -> Self {
         Self {
@@ -405,23 +389,7 @@ impl Default for ProcedureTargetBodyStructure {
     }
 }
 
-impl Default for ProcedureSchedule {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureCausedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureIncisionDateTime {
+impl Default for ProcedureApproachBodyStructure {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -439,7 +407,7 @@ impl Default for ProcedureFocaldevice {
     }
 }
 
-impl Default for ProcedureApproachBodyStructure {
+impl Default for ProcedureCausedBy {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -447,7 +415,7 @@ impl Default for ProcedureApproachBodyStructure {
     }
 }
 
-impl Default for ProcedureProgressStatus {
+impl Default for ProcedureSchedule {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -465,6 +433,55 @@ impl Default for ProcedurePerformer {
         }
     }
 }
+
+impl Default for ProcedureIncisionDateTime {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureProgressStatus {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureDirectedBy {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureMethod {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Procedure {
@@ -1075,5 +1092,19 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
     }
     fn has_used_code(&self) -> bool {
         self.used_code.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Procedure {
+    fn resource_type(&self) -> &'static str {
+        "Procedure"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Procedure")
     }
 }

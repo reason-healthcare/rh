@@ -549,6 +549,7 @@ mod tests {
                         fixed: None,
                         pattern: None,
                         binding: None,
+                        constraint: None,
                     },
                     ElementDefinition {
                         id: Some("Bundle.entry.resource".to_string()),
@@ -564,6 +565,7 @@ mod tests {
                         fixed: None,
                         pattern: None,
                         binding: None,
+                        constraint: None,
                     },
                 ],
             }),
@@ -840,6 +842,7 @@ mod tests {
                         fixed: None,
                         pattern: None,
                         binding: None,
+                        constraint: None,
                     },
                     ElementDefinition {
                         id: Some("Patient.name".to_string()),
@@ -855,6 +858,7 @@ mod tests {
                         fixed: None,
                         pattern: None,
                         binding: None,
+                        constraint: None,
                     },
                 ],
             }),

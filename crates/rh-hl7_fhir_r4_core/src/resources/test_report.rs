@@ -64,99 +64,12 @@ pub struct TestReport {
     /// The results of running the series of required clean up steps
     pub teardown: Option<TestReportTeardown>,
 }
-/// TestReport nested structure for the 'participant' field
+/// TestReportSetup nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportParticipant {
+pub struct TestReportSetupAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// test-engine | client | server
-    #[serde(rename = "type")]
-    pub type_: ReportParticipantType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The uri of the participant. An absolute URL is preferred
-    pub uri: StringType,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// The display name of the participant
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
-/// TestReportTest nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTestAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The operation performed
-    pub operation: Option<StringType>,
-    /// The assertion performed
-    pub assert: Option<StringType>,
-}
-/// TestReport nested structure for the 'teardown' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTeardown {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// One or more teardown operations performed
-    pub action: Vec<TestReportTeardownAction>,
-}
-/// TestReportSetupAction nested structure for the 'operation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetupActionOperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// pass | skip | fail | warning | error
-    pub result: ReportActionResultCodes,
-    /// Extension element for the 'result' primitive field. Contains metadata and extensions.
-    pub _result: Option<Element>,
-    /// A message associated with the result
-    pub message: Option<StringType>,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// A link to further details on the result
-    pub detail: Option<StringType>,
-    /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
-    pub _detail: Option<Element>,
-}
-/// TestReportTeardown nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTeardownAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The teardown operation performed
-    pub operation: StringType,
-}
-/// TestReport nested structure for the 'test' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A test operation or assert that was performed
-    pub action: Vec<TestReportTestAction>,
-    /// Tracking/logging name of this test
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Tracking/reporting short description of the test
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// TestReport nested structure for the 'setup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A setup operation or assert that was executed
-    pub action: Vec<TestReportSetupAction>,
 }
 /// TestReportSetupAction nested structure for the 'assert' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,12 +90,99 @@ pub struct TestReportSetupActionAssert {
     /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
     pub _detail: Option<Element>,
 }
-/// TestReportSetup nested structure for the 'action' field
+/// TestReport nested structure for the 'setup' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetupAction {
+pub struct TestReportSetup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// A setup operation or assert that was executed
+    pub action: Vec<TestReportSetupAction>,
+}
+/// TestReportTeardown nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTeardownAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The teardown operation performed
+    pub operation: StringType,
+}
+/// TestReportSetupAction nested structure for the 'operation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportSetupActionOperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// pass | skip | fail | warning | error
+    pub result: ReportActionResultCodes,
+    /// Extension element for the 'result' primitive field. Contains metadata and extensions.
+    pub _result: Option<Element>,
+    /// A message associated with the result
+    pub message: Option<StringType>,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// A link to further details on the result
+    pub detail: Option<StringType>,
+    /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
+    pub _detail: Option<Element>,
+}
+/// TestReport nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// test-engine | client | server
+    #[serde(rename = "type")]
+    pub type_: ReportParticipantType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The uri of the participant. An absolute URL is preferred
+    pub uri: StringType,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// The display name of the participant
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
+/// TestReport nested structure for the 'teardown' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTeardown {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// One or more teardown operations performed
+    pub action: Vec<TestReportTeardownAction>,
+}
+/// TestReportTest nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTestAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The operation performed
+    pub operation: Option<StringType>,
+    /// The assertion performed
+    pub assert: Option<StringType>,
+}
+/// TestReport nested structure for the 'test' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A test operation or assert that was performed
+    pub action: Vec<TestReportTestAction>,
+    /// Tracking/logging name of this test
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Tracking/reporting short description of the test
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
 }
 
 impl Default for TestReport {
@@ -211,80 +211,10 @@ impl Default for TestReport {
     }
 }
 
-impl Default for TestReportParticipant {
+impl Default for TestReportSetupAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            uri: StringType::default(),
-            _uri: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTestAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
-            assert: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTeardown {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestReportSetupActionOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            result: Default::default(),
-            _result: Default::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            detail: Default::default(),
-            _detail: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTeardownAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportSetup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
         }
     }
 }
@@ -303,13 +233,102 @@ impl Default for TestReportSetupActionAssert {
     }
 }
 
-impl Default for TestReportSetupAction {
+impl Default for TestReportSetup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            action: Vec::new(),
         }
     }
 }
+
+impl Default for TestReportTeardownAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportSetupActionOperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            result: Default::default(),
+            _result: Default::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            detail: Default::default(),
+            _detail: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            uri: StringType::default(),
+            _uri: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportTeardown {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
+        }
+    }
+}
+
+impl Default for TestReportTestAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+            assert: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportTest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("inv-1", rh_foundation::Severity::Error, "Setup action SHALL contain either an operation or assert but not both.", "operation.exists() xor assert.exists()").with_xpath("(f:operation or f:assert) and not(f:operation and f:assert)"),
+    rh_foundation::Invariant::new("inv-2", rh_foundation::Severity::Error, "Test action SHALL contain either an operation or assert but not both.", "operation.exists() xor assert.exists()").with_xpath("(f:operation or f:assert) and not(f:operation and f:assert)"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for TestReport {
@@ -644,5 +663,19 @@ impl crate::traits::test_report::TestReportExistence for TestReport {
     }
     fn has_teardown(&self) -> bool {
         self.teardown.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for TestReport {
+    fn resource_type(&self) -> &'static str {
+        "TestReport"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/TestReport")
     }
 }

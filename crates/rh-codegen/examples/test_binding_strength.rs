@@ -27,6 +27,7 @@ fn main() -> Result<()> {
             description: Some("Codes representing test status".to_string()),
             value_set: Some("http://hl7.org/fhir/ValueSet/test-status".to_string()),
         }),
+        constraint: None,
     };
 
     // Create a test element with required binding
@@ -48,6 +49,7 @@ fn main() -> Result<()> {
             description: Some("Required codes".to_string()),
             value_set: Some("http://hl7.org/fhir/ValueSet/required-status".to_string()),
         }),
+        constraint: None,
     };
 
     // Test extensible binding documentation

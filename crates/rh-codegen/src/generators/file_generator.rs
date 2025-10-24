@@ -357,6 +357,9 @@ impl<'a> FileGenerator<'a> {
             imports.insert("serde::{Deserialize, Serialize}".to_string());
         }
 
+        // Note: We use fully qualified `rh_foundation::Invariant` in INVARIANTS declarations
+        // and ValidatableResource trait implementations, so no import is needed here.
+
         // Check if any struct contains macro calls and add necessary imports
         let has_macro_calls = rust_struct
             .fields
@@ -447,10 +450,30 @@ impl<'a> FileGenerator<'a> {
             }
         }
 
+        // Add invariants constant for resources and complex types
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            let invariants_const =
+                crate::generators::InvariantGenerator::generate_invariants_constant(structure_def);
+            if !invariants_const.is_empty() {
+                formatted_code.push_str("\n\n");
+                formatted_code.push_str(&invariants_const);
+            }
+        }
+
         // Add trait implementations for FHIR resources
         if structure_def.kind == "resource" {
             formatted_code.push_str("\n\n");
             formatted_code.push_str(&self.generate_trait_implementations(structure_def));
+        }
+
+        // Add ValidatableResource trait implementation
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            let validation_impl =
+                crate::generators::ValidationTraitGenerator::generate_trait_impl(structure_def);
+            if !validation_impl.is_empty() {
+                formatted_code.push_str("\n\n");
+                formatted_code.push_str(&validation_impl);
+            }
         }
 
         // Add Resource trait impl if this is the Resource struct (legacy)

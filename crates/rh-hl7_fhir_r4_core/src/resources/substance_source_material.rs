@@ -68,6 +68,51 @@ pub struct SubstanceSourceMaterial {
     #[serde(rename = "partDescription")]
     pub part_description: Option<Vec<SubstanceSourceMaterialPartdescription>>,
 }
+/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialOrganismAuthor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
+    #[serde(rename = "authorType")]
+    pub author_type: Option<CodeableConcept>,
+    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
+    #[serde(rename = "authorDescription")]
+    pub author_description: Option<StringType>,
+    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_authorDescription")]
+    pub _author_description: Option<Element>,
+}
+/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialFractiondescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
+    pub fraction: Option<StringType>,
+    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
+    pub _fraction: Option<Element>,
+    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
+    #[serde(rename = "materialType")]
+    pub material_type: Option<CodeableConcept>,
+}
+/// SubstanceSourceMaterialOrganism nested structure for the 'organismGeneral' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialOrganismOrganismgeneral {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kingdom of an organism shall be specified
+    pub kingdom: Option<CodeableConcept>,
+    /// The phylum of an organism shall be specified
+    pub phylum: Option<CodeableConcept>,
+    /// The class of an organism shall be specified
+    pub class: Option<CodeableConcept>,
+    /// The order of an organism shall be specified,
+    pub order: Option<CodeableConcept>,
+}
 /// SubstanceSourceMaterialOrganism nested structure for the 'hybrid' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceSourceMaterialOrganismHybrid {
@@ -102,35 +147,17 @@ pub struct SubstanceSourceMaterialOrganismHybrid {
     #[serde(rename = "hybridType")]
     pub hybrid_type: Option<CodeableConcept>,
 }
-/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
+/// SubstanceSourceMaterial nested structure for the 'partDescription' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialOrganismAuthor {
+pub struct SubstanceSourceMaterialPartdescription {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
-    #[serde(rename = "authorType")]
-    pub author_type: Option<CodeableConcept>,
-    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
-    #[serde(rename = "authorDescription")]
-    pub author_description: Option<StringType>,
-    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_authorDescription")]
-    pub _author_description: Option<Element>,
-}
-/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialFractiondescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
-    pub fraction: Option<StringType>,
-    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
-    pub _fraction: Option<Element>,
-    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
-    #[serde(rename = "materialType")]
-    pub material_type: Option<CodeableConcept>,
+    /// Entity of anatomical origin of source material within an organism
+    pub part: Option<CodeableConcept>,
+    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
+    #[serde(rename = "partLocation")]
+    pub part_location: Option<CodeableConcept>,
 }
 /// SubstanceSourceMaterial nested structure for the 'organism' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,10 +165,10 @@ pub struct SubstanceSourceMaterialOrganism {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// 4.9.13.6.1 Author type (Conditional)
-    pub author: Option<Vec<SubstanceSourceMaterialOrganismAuthor>>,
     /// 4.9.13.8.1 Hybrid species maternal organism ID (Optional)
     pub hybrid: Option<SubstanceSourceMaterialOrganismHybrid>,
+    /// 4.9.13.6.1 Author type (Conditional)
+    pub author: Option<Vec<SubstanceSourceMaterialOrganismAuthor>>,
     /// 4.9.13.7.1 Kingdom (Conditional)
     #[serde(rename = "organismGeneral")]
     pub organism_general: Option<SubstanceSourceMaterialOrganismOrganismgeneral>,
@@ -160,33 +187,6 @@ pub struct SubstanceSourceMaterialOrganism {
     /// Extension element for the 'intraspecificDescription' primitive field. Contains metadata and extensions.
     #[serde(rename = "_intraspecificDescription")]
     pub _intraspecific_description: Option<Element>,
-}
-/// SubstanceSourceMaterialOrganism nested structure for the 'organismGeneral' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialOrganismOrganismgeneral {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The kingdom of an organism shall be specified
-    pub kingdom: Option<CodeableConcept>,
-    /// The phylum of an organism shall be specified
-    pub phylum: Option<CodeableConcept>,
-    /// The class of an organism shall be specified
-    pub class: Option<CodeableConcept>,
-    /// The order of an organism shall be specified,
-    pub order: Option<CodeableConcept>,
-}
-/// SubstanceSourceMaterial nested structure for the 'partDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialPartdescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Entity of anatomical origin of source material within an organism
-    pub part: Option<CodeableConcept>,
-    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
-    #[serde(rename = "partLocation")]
-    pub part_location: Option<CodeableConcept>,
 }
 
 impl Default for SubstanceSourceMaterial {
@@ -213,23 +213,6 @@ impl Default for SubstanceSourceMaterial {
     }
 }
 
-impl Default for SubstanceSourceMaterialOrganismHybrid {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            maternal_organism_id: Default::default(),
-            _maternal_organism_id: Default::default(),
-            maternal_organism_name: Default::default(),
-            _maternal_organism_name: Default::default(),
-            paternal_organism_id: Default::default(),
-            _paternal_organism_id: Default::default(),
-            paternal_organism_name: Default::default(),
-            _paternal_organism_name: Default::default(),
-            hybrid_type: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSourceMaterialOrganismAuthor {
     fn default() -> Self {
         Self {
@@ -252,23 +235,6 @@ impl Default for SubstanceSourceMaterialFractiondescription {
     }
 }
 
-impl Default for SubstanceSourceMaterialOrganism {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            author: Default::default(),
-            hybrid: Default::default(),
-            organism_general: Default::default(),
-            family: Default::default(),
-            genus: Default::default(),
-            species: Default::default(),
-            intraspecific_type: Default::default(),
-            intraspecific_description: Default::default(),
-            _intraspecific_description: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSourceMaterialOrganismOrganismgeneral {
     fn default() -> Self {
         Self {
@@ -277,6 +243,23 @@ impl Default for SubstanceSourceMaterialOrganismOrganismgeneral {
             phylum: Default::default(),
             class: Default::default(),
             order: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSourceMaterialOrganismHybrid {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            maternal_organism_id: Default::default(),
+            _maternal_organism_id: Default::default(),
+            maternal_organism_name: Default::default(),
+            _maternal_organism_name: Default::default(),
+            paternal_organism_id: Default::default(),
+            _paternal_organism_id: Default::default(),
+            paternal_organism_name: Default::default(),
+            _paternal_organism_name: Default::default(),
+            hybrid_type: Default::default(),
         }
     }
 }
@@ -290,6 +273,40 @@ impl Default for SubstanceSourceMaterialPartdescription {
         }
     }
 }
+
+impl Default for SubstanceSourceMaterialOrganism {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            hybrid: Default::default(),
+            author: Default::default(),
+            organism_general: Default::default(),
+            family: Default::default(),
+            genus: Default::default(),
+            species: Default::default(),
+            intraspecific_type: Default::default(),
+            intraspecific_description: Default::default(),
+            _intraspecific_description: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for SubstanceSourceMaterial {
@@ -694,5 +711,19 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialExistence
         self.part_description
             .as_ref()
             .is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for SubstanceSourceMaterial {
+    fn resource_type(&self) -> &'static str {
+        "SubstanceSourceMaterial"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/SubstanceSourceMaterial")
     }
 }

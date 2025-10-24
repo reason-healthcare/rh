@@ -68,6 +68,48 @@ pub struct SpecimenDefinition {
     #[serde(rename = "typeTested")]
     pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
 }
+/// SpecimenDefinition nested structure for the 'typeTested' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetested {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specimen's container
+    pub container: Option<SpecimenDefinitionTypetestedContainer>,
+    /// Specimen handling before testing
+    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
+    /// Primary or secondary specimen
+    #[serde(rename = "isDerived")]
+    pub is_derived: Option<BooleanType>,
+    /// Extension element for the 'isDerived' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDerived")]
+    pub _is_derived: Option<Element>,
+    /// Type of intended specimen
+    ///
+    /// Binding: example (The type of specimen conditioned in a container for lab testing.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0487
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// preferred | alternate
+    pub preference: SpecimenContainedPreference,
+    /// Extension element for the 'preference' primitive field. Contains metadata and extensions.
+    pub _preference: Option<Element>,
+    /// Specimen requirements
+    pub requirement: Option<StringType>,
+    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
+    pub _requirement: Option<Element>,
+    /// Specimen retention time
+    #[serde(rename = "retentionTime")]
+    pub retention_time: Option<Duration>,
+    /// Rejection criterion
+    ///
+    /// Binding: example (Criterion for rejection of the specimen by laboratory.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
+    #[serde(rename = "rejectionCriterion")]
+    pub rejection_criterion: Option<Vec<CodeableConcept>>,
+}
 /// SpecimenDefinitionTypetested nested structure for the 'handling' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedHandling {
@@ -104,48 +146,6 @@ pub struct SpecimenDefinitionTypetestedContainerAdditive {
     /// Additive associated with container (Reference)
     #[serde(rename = "additiveReference")]
     pub additive_reference: Reference,
-}
-/// SpecimenDefinition nested structure for the 'typeTested' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetested {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specimen handling before testing
-    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
-    /// The specimen's container
-    pub container: Option<SpecimenDefinitionTypetestedContainer>,
-    /// Primary or secondary specimen
-    #[serde(rename = "isDerived")]
-    pub is_derived: Option<BooleanType>,
-    /// Extension element for the 'isDerived' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDerived")]
-    pub _is_derived: Option<Element>,
-    /// Type of intended specimen
-    ///
-    /// Binding: example (The type of specimen conditioned in a container for lab testing.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0487
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// preferred | alternate
-    pub preference: SpecimenContainedPreference,
-    /// Extension element for the 'preference' primitive field. Contains metadata and extensions.
-    pub _preference: Option<Element>,
-    /// Specimen requirements
-    pub requirement: Option<StringType>,
-    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
-    pub _requirement: Option<Element>,
-    /// Specimen retention time
-    #[serde(rename = "retentionTime")]
-    pub retention_time: Option<Duration>,
-    /// Rejection criterion
-    ///
-    /// Binding: example (Criterion for rejection of the specimen by laboratory.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
-    #[serde(rename = "rejectionCriterion")]
-    pub rejection_criterion: Option<Vec<CodeableConcept>>,
 }
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,6 +208,25 @@ impl Default for SpecimenDefinition {
     }
 }
 
+impl Default for SpecimenDefinitionTypetested {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            container: Default::default(),
+            handling: Default::default(),
+            is_derived: Default::default(),
+            _is_derived: Default::default(),
+            type_: Default::default(),
+            preference: Default::default(),
+            _preference: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
+            retention_time: Default::default(),
+            rejection_criterion: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenDefinitionTypetestedHandling {
     fn default() -> Self {
         Self {
@@ -231,25 +250,6 @@ impl Default for SpecimenDefinitionTypetestedContainerAdditive {
     }
 }
 
-impl Default for SpecimenDefinitionTypetested {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            handling: Default::default(),
-            container: Default::default(),
-            is_derived: Default::default(),
-            _is_derived: Default::default(),
-            type_: Default::default(),
-            preference: Default::default(),
-            _preference: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
-            retention_time: Default::default(),
-            rejection_criterion: Default::default(),
-        }
-    }
-}
-
 impl Default for SpecimenDefinitionTypetestedContainer {
     fn default() -> Self {
         Self {
@@ -267,6 +267,23 @@ impl Default for SpecimenDefinitionTypetestedContainer {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for SpecimenDefinition {
@@ -545,5 +562,19 @@ impl crate::traits::specimen_definition::SpecimenDefinitionExistence for Specime
     }
     fn has_type_tested(&self) -> bool {
         self.type_tested.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for SpecimenDefinition {
+    fn resource_type(&self) -> &'static str {
+        "SpecimenDefinition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/SpecimenDefinition")
     }
 }

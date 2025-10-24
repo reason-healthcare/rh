@@ -131,22 +131,6 @@ pub struct FamilyMemberHistory {
     /// Condition that the related person had
     pub condition: Option<Vec<FamilyMemberHistoryCondition>>,
 }
-/// parent
-///
-/// Identifies a parent of the relative.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-parent
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FamilyMemberHistoryGeneticsParent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// FamilyMemberHistory nested structure for the 'condition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FamilyMemberHistoryCondition {
@@ -186,6 +170,22 @@ pub struct FamilyMemberHistoryCondition {
     pub onset_string: Option<StringType>,
     /// Extra information about condition
     pub note: Option<Vec<Annotation>>,
+}
+/// parent
+///
+/// Identifies a parent of the relative.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-parent
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilyMemberHistoryGeneticsParent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for FamilyMemberHistory {
@@ -228,14 +228,6 @@ impl Default for FamilyMemberHistory {
     }
 }
 
-impl Default for FamilyMemberHistoryGeneticsParent {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for FamilyMemberHistoryCondition {
     fn default() -> Self {
         Self {
@@ -252,6 +244,33 @@ impl Default for FamilyMemberHistoryCondition {
         }
     }
 }
+
+impl Default for FamilyMemberHistoryGeneticsParent {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("fhs-1", rh_foundation::Severity::Error, "Can have age[x] or born[x], but not both", "age.empty() or born.empty()").with_xpath("not (*[starts-with(local-name(.), 'age')] and *[starts-with(local-name(.), 'birth')])"),
+    rh_foundation::Invariant::new("fhs-2", rh_foundation::Severity::Error, "Can only have estimatedAge if age[x] is present", "age.exists() or estimatedAge.empty()").with_xpath("exists(*[starts-with(local-name(.), 'age')]) or not(exists(f:estimatedAge))"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for FamilyMemberHistory {
@@ -609,18 +628,18 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_age(&self) -> bool {
-        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
-    }
-    fn has_born(&self) -> bool {
-        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
-    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some()
             || self.deceased_age.is_some()
             || self.deceased_range.is_some()
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
+    }
+    fn has_born(&self) -> bool {
+        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
+    }
+    fn has_age(&self) -> bool {
+        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -672,5 +691,19 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
     }
     fn has_condition(&self) -> bool {
         self.condition.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for FamilyMemberHistory {
+    fn resource_type(&self) -> &'static str {
+        "FamilyMemberHistory"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory")
     }
 }

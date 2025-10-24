@@ -17,6 +17,7 @@ pub mod config;
 pub mod error;
 pub mod io;
 pub mod json;
+pub mod validation;
 
 #[cfg(feature = "http")]
 pub mod http;
@@ -27,3 +28,4 @@ pub mod wasm;
 // Re-export commonly used types
 pub use config::Config;
 pub use error::{ErrorContext, ErrorWithMetadata, FoundationError, Result};
+pub use validation::{Invariant, Severity};

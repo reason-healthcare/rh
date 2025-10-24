@@ -175,21 +175,20 @@ pub struct Task {
     /// Information produced as part of task
     pub output: Option<Vec<TaskOutput>>,
 }
-/// Candidate List
-///
-/// Identifies the individuals who are candidates for being the owner of the task.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+/// Task nested structure for the 'restriction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskCandidateList {
+pub struct TaskRestriction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: Extension,
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
 }
 /// Task nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,20 +368,21 @@ pub struct TaskReplaces {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Task nested structure for the 'restriction' field
+/// Candidate List
+///
+/// Identifies the individuals who are candidates for being the owner of the task.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskRestriction {
+pub struct TaskCandidateList {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
+    pub base: Extension,
 }
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -594,10 +594,14 @@ impl Default for Task {
     }
 }
 
-impl Default for TaskCandidateList {
+impl Default for TaskRestriction {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }
@@ -669,14 +673,10 @@ impl Default for TaskReplaces {
     }
 }
 
-impl Default for TaskRestriction {
+impl Default for TaskCandidateList {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -739,6 +739,24 @@ impl Default for TaskInput {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("inv-1", rh_foundation::Severity::Error, "Last modified date must be greater than or equal to authored-on date.", "lastModified.exists().not() or authoredOn.exists().not() or lastModified >= authoredOn").with_xpath("not(exists(f:lastModified/@value)) or not(exists(f:authoredOn/@value)) or f:lastModified/@value >= f:authoredOn/@value"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Task {
@@ -1325,5 +1343,19 @@ impl crate::traits::task::TaskExistence for Task {
     }
     fn has_output(&self) -> bool {
         self.output.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Task {
+    fn resource_type(&self) -> &'static str {
+        "Task"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Task")
     }
 }

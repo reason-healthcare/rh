@@ -75,6 +75,110 @@ pub struct SubstanceSpecification {
     #[serde(rename = "sourceMaterial")]
     pub source_material: Option<Reference>,
 }
+/// SubstanceSpecification nested structure for the 'structure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationStructure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Applicable for single substances that contain a radionuclide or a non-natural isotopic ratio
+    pub isotope: Option<Vec<SubstanceSpecificationStructureIsotope>>,
+    /// Molecular structural representation
+    pub representation: Option<Vec<SubstanceSpecificationStructureRepresentation>>,
+    /// Stereochemistry type
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Specified per moiety according to the Hill system, i.e. first C, then H, then alphabetical, each moiety separated by a dot
+    #[serde(rename = "molecularFormulaByMoiety")]
+    pub molecular_formula_by_moiety: Option<StringType>,
+    /// Extension element for the 'molecularFormulaByMoiety' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormulaByMoiety")]
+    pub _molecular_formula_by_moiety: Option<Element>,
+    /// The molecular weight or weight range (for proteins, polymers or nucleic acids)
+    #[serde(rename = "molecularWeight")]
+    pub molecular_weight: Option<StringType>,
+    /// Supporting literature
+    pub source: Option<Vec<Reference>>,
+}
+/// SubstanceSpecification nested structure for the 'moiety' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationMoiety {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role that the moiety is playing
+    pub role: Option<CodeableConcept>,
+    /// Identifier by which this moiety substance is known
+    pub identifier: Option<Identifier>,
+    /// Textual name for this moiety substance
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Stereochemistry type
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Quantitative value for this moiety (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this moiety (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+}
+/// SubstanceSpecification nested structure for the 'code' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationCode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific code
+    pub code: Option<CodeableConcept>,
+    /// Status of the code assignment
+    pub status: Option<CodeableConcept>,
+    /// The date at which the code status is changed as part of the terminology maintenance
+    #[serde(rename = "statusDate")]
+    pub status_date: Option<DateTimeType>,
+    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_statusDate")]
+    pub _status_date: Option<Element>,
+    /// Any comment can be provided in this field, if necessary
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Supporting literature
+    pub source: Option<Vec<Reference>>,
+}
+/// SubstanceSpecificationStructure nested structure for the 'representation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationStructureRepresentation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of structure (e.g. Full, Partial, Representative)
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The structural representation as text string in a format e.g. InChI, SMILES, MOLFILE, CDX
+    pub representation: Option<StringType>,
+    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
+    pub _representation: Option<Element>,
+    /// An attached file with the structural representation
+    pub attachment: Option<Attachment>,
+}
 /// SubstanceSpecification nested structure for the 'relationship' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceSpecificationRelationship {
@@ -116,43 +220,35 @@ pub struct SubstanceSpecificationRelationship {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceSpecification nested structure for the 'code' field
+/// SubstanceSpecificationStructure nested structure for the 'isotope' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationCode {
+pub struct SubstanceSpecificationStructureIsotope {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The specific code
-    pub code: Option<CodeableConcept>,
-    /// Status of the code assignment
-    pub status: Option<CodeableConcept>,
-    /// The date at which the code status is changed as part of the terminology maintenance
-    #[serde(rename = "statusDate")]
-    pub status_date: Option<DateTimeType>,
-    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_statusDate")]
-    pub _status_date: Option<Element>,
-    /// Any comment can be provided in this field, if necessary
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Supporting literature
-    pub source: Option<Vec<Reference>>,
+    /// Substance identifier for each non-natural or radioisotope
+    pub identifier: Option<Identifier>,
+    /// Substance name for each non-natural or radioisotope
+    pub name: Option<CodeableConcept>,
+    /// The type of isotopic substitution present in a single substance
+    pub substitution: Option<CodeableConcept>,
+    /// Half life - for a non-natural nuclide
+    #[serde(rename = "halfLife")]
+    pub half_life: Option<Quantity>,
 }
-/// SubstanceSpecificationName nested structure for the 'official' field
+/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationNameOfficial {
+pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Which authority uses this official name
-    pub authority: Option<CodeableConcept>,
-    /// The status of the official name
-    pub status: Option<CodeableConcept>,
-    /// Date of official name change
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
+    /// The method by which the molecular weight was determined
+    pub method: Option<CodeableConcept>,
+    /// Type of molecular weight such as exact, average (also known as. number average), weight average
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
+    pub amount: Option<Quantity>,
 }
 /// SubstanceSpecification nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,6 +276,21 @@ pub struct SubstanceSpecificationProperty {
     /// Quantitative value for this property (string)
     #[serde(rename = "amountString")]
     pub amount_string: Option<StringType>,
+}
+/// SubstanceSpecificationName nested structure for the 'official' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationNameOfficial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Which authority uses this official name
+    pub authority: Option<CodeableConcept>,
+    /// The status of the official name
+    pub status: Option<CodeableConcept>,
+    /// Date of official name change
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
 }
 /// SubstanceSpecification nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -215,117 +326,6 @@ pub struct SubstanceSpecificationName {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceSpecificationStructure nested structure for the 'isotope' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotope {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Substance identifier for each non-natural or radioisotope
-    pub identifier: Option<Identifier>,
-    /// Substance name for each non-natural or radioisotope
-    pub name: Option<CodeableConcept>,
-    /// The type of isotopic substitution present in a single substance
-    pub substitution: Option<CodeableConcept>,
-    /// Half life - for a non-natural nuclide
-    #[serde(rename = "halfLife")]
-    pub half_life: Option<Quantity>,
-}
-/// SubstanceSpecification nested structure for the 'moiety' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationMoiety {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role that the moiety is playing
-    pub role: Option<CodeableConcept>,
-    /// Identifier by which this moiety substance is known
-    pub identifier: Option<Identifier>,
-    /// Textual name for this moiety substance
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Stereochemistry type
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Quantitative value for this moiety (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this moiety (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
-}
-/// SubstanceSpecificationStructure nested structure for the 'representation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureRepresentation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of structure (e.g. Full, Partial, Representative)
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The structural representation as text string in a format e.g. InChI, SMILES, MOLFILE, CDX
-    pub representation: Option<StringType>,
-    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
-    pub _representation: Option<Element>,
-    /// An attached file with the structural representation
-    pub attachment: Option<Attachment>,
-}
-/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The method by which the molecular weight was determined
-    pub method: Option<CodeableConcept>,
-    /// Type of molecular weight such as exact, average (also known as. number average), weight average
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
-    pub amount: Option<Quantity>,
-}
-/// SubstanceSpecification nested structure for the 'structure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Molecular structural representation
-    pub representation: Option<Vec<SubstanceSpecificationStructureRepresentation>>,
-    /// Applicable for single substances that contain a radionuclide or a non-natural isotopic ratio
-    pub isotope: Option<Vec<SubstanceSpecificationStructureIsotope>>,
-    /// Stereochemistry type
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Specified per moiety according to the Hill system, i.e. first C, then H, then alphabetical, each moiety separated by a dot
-    #[serde(rename = "molecularFormulaByMoiety")]
-    pub molecular_formula_by_moiety: Option<StringType>,
-    /// Extension element for the 'molecularFormulaByMoiety' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormulaByMoiety")]
-    pub _molecular_formula_by_moiety: Option<Element>,
-    /// The molecular weight or weight range (for proteins, polymers or nucleic acids)
-    #[serde(rename = "molecularWeight")]
-    pub molecular_weight: Option<StringType>,
-    /// Supporting literature
-    pub source: Option<Vec<Reference>>,
-}
 
 impl Default for SubstanceSpecification {
     fn default() -> Self {
@@ -356,6 +356,69 @@ impl Default for SubstanceSpecification {
     }
 }
 
+impl Default for SubstanceSpecificationStructure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            isotope: Default::default(),
+            representation: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            molecular_formula_by_moiety: Default::default(),
+            _molecular_formula_by_moiety: Default::default(),
+            molecular_weight: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationMoiety {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            amount_quantity: Default::default(),
+            amount_string: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationCode {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            status: Default::default(),
+            status_date: Default::default(),
+            _status_date: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationStructureRepresentation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            representation: Default::default(),
+            _representation: Default::default(),
+            attachment: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceSpecificationRelationship {
     fn default() -> Self {
         Self {
@@ -376,29 +439,25 @@ impl Default for SubstanceSpecificationRelationship {
     }
 }
 
-impl Default for SubstanceSpecificationCode {
+impl Default for SubstanceSpecificationStructureIsotope {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            status: Default::default(),
-            status_date: Default::default(),
-            _status_date: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-            source: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            substitution: Default::default(),
+            half_life: Default::default(),
         }
     }
 }
 
-impl Default for SubstanceSpecificationNameOfficial {
+impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            authority: Default::default(),
-            status: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
+            method: Default::default(),
+            type_: Default::default(),
+            amount: Default::default(),
         }
     }
 }
@@ -415,6 +474,18 @@ impl Default for SubstanceSpecificationProperty {
             defining_substance_codeable_concept: Default::default(),
             amount_quantity: Default::default(),
             amount_string: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationNameOfficial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            authority: Default::default(),
+            status: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
         }
     }
 }
@@ -440,76 +511,22 @@ impl Default for SubstanceSpecificationName {
     }
 }
 
-impl Default for SubstanceSpecificationStructureIsotope {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            substitution: Default::default(),
-            half_life: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationMoiety {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationStructureRepresentation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            representation: Default::default(),
-            _representation: Default::default(),
-            attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            method: Default::default(),
-            type_: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationStructure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            representation: Default::default(),
-            isotope: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            molecular_formula_by_moiety: Default::default(),
-            _molecular_formula_by_moiety: Default::default(),
-            molecular_weight: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for SubstanceSpecification {
@@ -957,5 +974,19 @@ impl crate::traits::substance_specification::SubstanceSpecificationExistence
     }
     fn has_source_material(&self) -> bool {
         self.source_material.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for SubstanceSpecification {
+    fn resource_type(&self) -> &'static str {
+        "SubstanceSpecification"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/SubstanceSpecification")
     }
 }

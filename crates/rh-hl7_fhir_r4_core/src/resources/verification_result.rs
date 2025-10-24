@@ -92,47 +92,6 @@ pub struct VerificationResult {
     /// Information about the entity validating information
     pub validator: Option<Vec<VerificationResultValidator>>,
 }
-/// VerificationResult nested structure for the 'attestation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerificationResultAttestation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The individual or organization attesting to information
-    pub who: Option<Reference>,
-    /// When the who is asserting on behalf of another (organization or individual)
-    #[serde(rename = "onBehalfOf")]
-    pub on_behalf_of: Option<Reference>,
-    /// The method by which attested information was submitted/retrieved
-    ///
-    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
-    #[serde(rename = "communicationMethod")]
-    pub communication_method: Option<CodeableConcept>,
-    /// The date the information was attested to
-    pub date: Option<DateType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// A digital identity certificate associated with the attestation source
-    #[serde(rename = "sourceIdentityCertificate")]
-    pub source_identity_certificate: Option<StringType>,
-    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceIdentityCertificate")]
-    pub _source_identity_certificate: Option<Element>,
-    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
-    #[serde(rename = "proxyIdentityCertificate")]
-    pub proxy_identity_certificate: Option<StringType>,
-    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_proxyIdentityCertificate")]
-    pub _proxy_identity_certificate: Option<Element>,
-    /// Proxy signature
-    #[serde(rename = "proxySignature")]
-    pub proxy_signature: Option<Signature>,
-    /// Attester signature
-    #[serde(rename = "sourceSignature")]
-    pub source_signature: Option<Signature>,
-}
 /// VerificationResult nested structure for the 'primarySource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResultPrimarysource {
@@ -183,6 +142,47 @@ pub struct VerificationResultPrimarysource {
     #[serde(rename = "pushTypeAvailable")]
     pub push_type_available: Option<Vec<CodeableConcept>>,
 }
+/// VerificationResult nested structure for the 'attestation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResultAttestation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The individual or organization attesting to information
+    pub who: Option<Reference>,
+    /// When the who is asserting on behalf of another (organization or individual)
+    #[serde(rename = "onBehalfOf")]
+    pub on_behalf_of: Option<Reference>,
+    /// The method by which attested information was submitted/retrieved
+    ///
+    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
+    #[serde(rename = "communicationMethod")]
+    pub communication_method: Option<CodeableConcept>,
+    /// The date the information was attested to
+    pub date: Option<DateType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// A digital identity certificate associated with the attestation source
+    #[serde(rename = "sourceIdentityCertificate")]
+    pub source_identity_certificate: Option<StringType>,
+    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceIdentityCertificate")]
+    pub _source_identity_certificate: Option<Element>,
+    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
+    #[serde(rename = "proxyIdentityCertificate")]
+    pub proxy_identity_certificate: Option<StringType>,
+    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_proxyIdentityCertificate")]
+    pub _proxy_identity_certificate: Option<Element>,
+    /// Proxy signature
+    #[serde(rename = "proxySignature")]
+    pub proxy_signature: Option<Signature>,
+    /// Attester signature
+    #[serde(rename = "sourceSignature")]
+    pub source_signature: Option<Signature>,
+}
 /// VerificationResult nested structure for the 'validator' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResultValidator {
@@ -229,6 +229,22 @@ impl Default for VerificationResult {
     }
 }
 
+impl Default for VerificationResultPrimarysource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            who: Default::default(),
+            type_: Default::default(),
+            communication_method: Default::default(),
+            validation_status: Default::default(),
+            validation_date: Default::default(),
+            _validation_date: Default::default(),
+            can_push_updates: Default::default(),
+            push_type_available: Default::default(),
+        }
+    }
+}
+
 impl Default for VerificationResultAttestation {
     fn default() -> Self {
         Self {
@@ -248,22 +264,6 @@ impl Default for VerificationResultAttestation {
     }
 }
 
-impl Default for VerificationResultPrimarysource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            who: Default::default(),
-            type_: Default::default(),
-            communication_method: Default::default(),
-            validation_status: Default::default(),
-            validation_date: Default::default(),
-            _validation_date: Default::default(),
-            can_push_updates: Default::default(),
-            push_type_available: Default::default(),
-        }
-    }
-}
-
 impl Default for VerificationResultValidator {
     fn default() -> Self {
         Self {
@@ -275,6 +275,23 @@ impl Default for VerificationResultValidator {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for VerificationResult {
@@ -657,5 +674,19 @@ impl crate::traits::verification_result::VerificationResultExistence for Verific
     }
     fn has_validator(&self) -> bool {
         self.validator.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for VerificationResult {
+    fn resource_type(&self) -> &'static str {
+        "VerificationResult"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/VerificationResult")
     }
 }

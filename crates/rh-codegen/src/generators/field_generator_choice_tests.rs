@@ -46,6 +46,7 @@ fn test_choice_type_field_generation() {
         fixed: None,
         pattern: None,
         binding: None,
+                        constraint: None,
     };
     
     // Generate fields
@@ -98,6 +99,7 @@ fn test_non_choice_type_field_generation() {
         fixed: None,
         pattern: None,
         binding: None,
+                        constraint: None,
     };
     
     // Generate fields
@@ -142,6 +144,7 @@ fn test_choice_type_documentation() {
         fixed: None,
         pattern: None,
         binding: None,
+                        constraint: None,
     };
     
     // Generate fields

@@ -83,6 +83,37 @@ pub struct CoverageEligibilityResponse {
     /// Processing errors
     pub error: Option<Vec<CoverageEligibilityResponseError>>,
 }
+/// CoverageEligibilityResponse nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefits and authorization details
+    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Coverage inforce indicator
+    pub inforce: Option<BooleanType>,
+    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
+    pub _inforce: Option<Element>,
+    /// When the benefits are applicable
+    #[serde(rename = "benefitPeriod")]
+    pub benefit_period: Option<Period>,
+}
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+}
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItem {
@@ -160,24 +191,6 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
-/// CoverageEligibilityResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefits and authorization details
-    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Coverage inforce indicator
-    pub inforce: Option<BooleanType>,
-    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
-    pub _inforce: Option<Element>,
-    /// When the benefits are applicable
-    #[serde(rename = "benefitPeriod")]
-    pub benefit_period: Option<Period>,
-}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -210,19 +223,6 @@ pub struct CoverageEligibilityResponseInsuranceItemBenefit {
     #[serde(rename = "usedMoney")]
     pub used_money: Option<Money>,
 }
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
 
 impl Default for CoverageEligibilityResponse {
     fn default() -> Self {
@@ -254,6 +254,28 @@ impl Default for CoverageEligibilityResponse {
     }
 }
 
+impl Default for CoverageEligibilityResponseInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            coverage: Reference::default(),
+            inforce: Default::default(),
+            _inforce: Default::default(),
+            benefit_period: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityResponseInsuranceItem {
     fn default() -> Self {
         Self {
@@ -280,19 +302,6 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
     }
 }
 
-impl Default for CoverageEligibilityResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            coverage: Reference::default(),
-            inforce: Default::default(),
-            _inforce: Default::default(),
-            benefit_period: Default::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
@@ -308,14 +317,23 @@ impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     }
 }
 
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("ces-1", rh_foundation::Severity::Error, "SHALL contain a category or a billcode but not both.", "category.exists() xor productOrService.exists()").with_xpath("exists(f:category) or exists(f:productOrService)"),
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for CoverageEligibilityResponse {
@@ -691,5 +709,19 @@ impl crate::traits::coverage_eligibility_response::CoverageEligibilityResponseEx
     }
     fn has_error(&self) -> bool {
         self.error.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for CoverageEligibilityResponse {
+    fn resource_type(&self) -> &'static str {
+        "CoverageEligibilityResponse"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/CoverageEligibilityResponse")
     }
 }

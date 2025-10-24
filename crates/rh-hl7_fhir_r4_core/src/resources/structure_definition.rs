@@ -143,6 +143,40 @@ pub struct StructureDefinition {
     /// Differential view of the structure
     pub differential: Option<StructureDefinitionDifferential>,
 }
+/// StructureDefinition nested structure for the 'differential' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionDifferential {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
+}
+/// StructureDefinition nested structure for the 'snapshot' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionSnapshot {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
+}
+/// StructureDefinition nested structure for the 'context' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionContext {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// fhirpath | element | extension
+    #[serde(rename = "type")]
+    pub type_: ExtensionContextType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Where the extension can be used in instances
+    pub expression: StringType,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+}
 /// StructureDefinition nested structure for the 'mapping' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinitionMapping {
@@ -165,40 +199,6 @@ pub struct StructureDefinitionMapping {
     pub comment: Option<StringType>,
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
-}
-/// StructureDefinition nested structure for the 'context' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionContext {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// fhirpath | element | extension
-    #[serde(rename = "type")]
-    pub type_: ExtensionContextType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Where the extension can be used in instances
-    pub expression: StringType,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-}
-/// StructureDefinition nested structure for the 'snapshot' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionSnapshot {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
-}
-/// StructureDefinition nested structure for the 'differential' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionDifferential {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
 }
 
 impl Default for StructureDefinition {
@@ -254,18 +254,20 @@ impl Default for StructureDefinition {
     }
 }
 
-impl Default for StructureDefinitionMapping {
+impl Default for StructureDefinitionDifferential {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            identity: StringType::default(),
-            _identity: Default::default(),
-            uri: Default::default(),
-            _uri: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
+            element: Vec::new(),
+        }
+    }
+}
+
+impl Default for StructureDefinitionSnapshot {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            element: Vec::new(),
         }
     }
 }
@@ -282,23 +284,62 @@ impl Default for StructureDefinitionContext {
     }
 }
 
-impl Default for StructureDefinitionSnapshot {
+impl Default for StructureDefinitionMapping {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            element: Vec::new(),
+            identity: StringType::default(),
+            _identity: Default::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
         }
     }
 }
 
-impl Default for StructureDefinitionDifferential {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            element: Vec::new(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("sdf-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+    rh_foundation::Invariant::new("sdf-1", rh_foundation::Severity::Error, "Element paths must be unique unless the structure is a constraint", "derivation = 'constraint' or snapshot.element.select(path).isDistinct()").with_xpath("(f:derivation/@value = 'constraint') or (count(f:snapshot/f:element) = count(distinct-values(f:snapshot/f:element/f:path/@value)))"),
+    rh_foundation::Invariant::new("sdf-10", rh_foundation::Severity::Error, "provide either a binding reference or a description (or both)", "binding.empty() or binding.valueSet.exists() or binding.description.exists()").with_xpath("not(exists(f:binding)) or exists(f:binding/f:valueSet) or exists(f:binding/f:description)"),
+    rh_foundation::Invariant::new("sdf-11", rh_foundation::Severity::Error, "If there's a type, its content must match the path name in the first element of a snapshot", "kind != 'logical' implies snapshot.empty() or snapshot.element.first().path = type").with_xpath("(f:kind/@value = 'logical') or not(exists(f:snapshot)) or (f:type/@value = f:snapshot/f:element[1]/f:path/@value)"),
+    rh_foundation::Invariant::new("sdf-14", rh_foundation::Severity::Error, "All element definitions must have an id", "snapshot.element.all(id.exists()) and differential.element.all(id.exists())").with_xpath("count(*/f:element)=count(*/f:element/@id)"),
+    rh_foundation::Invariant::new("sdf-15", rh_foundation::Severity::Error, "The first element in a snapshot has no type unless model is a logical model.", "kind!='logical' implies snapshot.element.first().type.empty()").with_xpath("f:kind/@value='logical' or not(f:snapshot/f:element[1]/f:type)"),
+    rh_foundation::Invariant::new("sdf-15a", rh_foundation::Severity::Error, "If the first element in a differential has no \".\" in the path and it's not a logical model, it has no type", "(kind!='logical'  and differential.element.first().path.contains('.').not()) implies differential.element.first().type.empty()").with_xpath("f:kind/@value='logical' or not(f:differential/f:element[1][not(contains(f:path/@value, '.'))]/f:type)"),
+    rh_foundation::Invariant::new("sdf-16", rh_foundation::Severity::Error, "All element definitions must have unique ids (snapshot)", "snapshot.element.all(id.exists()) and snapshot.element.id.trace('ids').isDistinct()").with_xpath("count(f:snapshot/f:element)=count(f:snapshot/f:element/@id) and (count(f:snapshot/f:element)=count(distinct-values(f:snapshot/f:element/@id)))"),
+    rh_foundation::Invariant::new("sdf-17", rh_foundation::Severity::Error, "All element definitions must have unique ids (diff)", "differential.element.all(id.exists()) and differential.element.id.trace('ids').isDistinct()").with_xpath("count(f:differential/f:element)=count(f:differential/f:element/@id) and (count(f:differential/f:element)=count(distinct-values(f:differential/f:element/@id)))"),
+    rh_foundation::Invariant::new("sdf-18", rh_foundation::Severity::Error, "Context Invariants can only be used for extensions", "contextInvariant.exists() implies type = 'Extension'").with_xpath("not(exists(f:contextInvariant)) or (f:type/@value = 'Extension')"),
+    rh_foundation::Invariant::new("sdf-19", rh_foundation::Severity::Error, "FHIR Specification models only use FHIR defined types", "url.startsWith('http://hl7.org/fhir/StructureDefinition') implies (differential.element.type.code.all(matches('^[a-zA-Z0-9]+$') or matches('^http:\\\\/\\\\/hl7\\\\.org\\\\/fhirpath\\\\/System\\\\.[A-Z][A-Za-z]+$')) and snapshot.element.type.code.all(matches('^[a-zA-Z0-9\\\\.]+$') or matches('^http:\\\\/\\\\/hl7\\\\.org\\\\/fhirpath\\\\/System\\\\.[A-Z][A-Za-z]+$')))").with_xpath("not(starts-with(f:url/@value, 'http://hl7.org/fhir/StructureDefinition')) or count(f:differential/f:element/f:type/f:code[@value and not(matches(string(@value), '^[a-zA-Z0-9\\.]+$'))]|f:snapshot/f:element/f:type/f:code[@value and not(matches(string(@value), '^[a-zA-Z0-9]+$\\.'))]) =0"),
+    rh_foundation::Invariant::new("sdf-2", rh_foundation::Severity::Error, "Must have at least a name or a uri (or both)", "name.exists() or uri.exists()").with_xpath("exists(f:uri) or exists(f:name)"),
+    rh_foundation::Invariant::new("sdf-20", rh_foundation::Severity::Error, "No slicing on the root element", "element.where(path.contains('.').not()).slicing.empty()").with_xpath("not(f:element[1]/f:slicing)"),
+    rh_foundation::Invariant::new("sdf-21", rh_foundation::Severity::Error, "Default values can only be specified on specializations", "differential.element.defaultValue.exists() implies (derivation = 'specialization')").with_xpath("not(exists(f:differential/f:element/*[starts-with(local-name(), 'defaultValue')])) or (f:derivation/@value = 'specialization')"),
+    rh_foundation::Invariant::new("sdf-22", rh_foundation::Severity::Error, "FHIR Specification models never have default values", "url.startsWith('http://hl7.org/fhir/StructureDefinition') implies (snapshot.element.defaultValue.empty() and differential.element.defaultValue.empty())").with_xpath("not(starts-with(f:url/@value, 'http://hl7.org/fhir/StructureDefinition')) or (not(exists(f:snapshot/f:element/*[starts-with(local-name(), 'defaultValue')])) and not(exists(f:differential/f:element/*[starts-with(local-name(), 'defaultValue')])))"),
+    rh_foundation::Invariant::new("sdf-23", rh_foundation::Severity::Error, "No slice name on root", "(snapshot | differential).element.all(path.contains('.').not() implies sliceName.empty())").with_xpath("count(*[self::snapshot or self::differential]/f:element[not(contains(f:path/@value, '.')) and f:sliceName])=0"),
+    rh_foundation::Invariant::new("sdf-3", rh_foundation::Severity::Error, "Each element definition in a snapshot must have a formal definition and cardinalities", "element.all(definition.exists() and min.exists() and max.exists())").with_xpath("count(f:element) = count(f:element[exists(f:definition) and exists(f:min) and exists(f:max)])"),
+    rh_foundation::Invariant::new("sdf-4", rh_foundation::Severity::Error, "If the structure is not abstract, then there SHALL be a baseDefinition", "abstract = true or baseDefinition.exists()").with_xpath("(f:abstract/@value=true()) or exists(f:baseDefinition)"),
+    rh_foundation::Invariant::new("sdf-5", rh_foundation::Severity::Error, "If the structure defines an extension then the structure must have context information", "type != 'Extension' or derivation = 'specialization' or (context.exists())").with_xpath("not(f:type/@value = 'extension') or (f:derivation/@value = 'specialization') or (exists(f:context))"),
+    rh_foundation::Invariant::new("sdf-6", rh_foundation::Severity::Error, "A structure must have either a differential, or a snapshot (or both)", "snapshot.exists() or differential.exists()").with_xpath("exists(f:snapshot) or exists(f:differential)"),
+    rh_foundation::Invariant::new("sdf-8", rh_foundation::Severity::Error, "All snapshot elements must start with the StructureDefinition's specified type for non-logical models, or with the same type name for logical models", "(%resource.kind = 'logical' or element.first().path = %resource.type) and element.tail().all(path.startsWith(%resource.snapshot.element.first().path&'.'))").with_xpath("f:element[1]/f:path/@value=parent::f:StructureDefinition/f:type/@value and count(f:element[position()!=1])=count(f:element[position()!=1][starts-with(f:path/@value, concat(ancestor::f:StructureDefinition/f:type/@value, '.'))])"),
+    rh_foundation::Invariant::new("sdf-8a", rh_foundation::Severity::Error, "In any differential, all the elements must start with the StructureDefinition's specified type for non-logical models, or with the same type name for logical models", "(%resource.kind = 'logical' or element.first().path.startsWith(%resource.type)) and (element.tail().empty() or element.tail().all(path.startsWith(%resource.differential.element.first().path.replaceMatches('\\\\..*','')&'.')))").with_xpath("count(f:element)=count(f:element[f:path/@value=ancestor::f:StructureDefinition/f:type/@value or starts-with(f:path/@value, concat(ancestor::f:StructureDefinition/f:type/@value, '.'))])"),
+    rh_foundation::Invariant::new("sdf-8b", rh_foundation::Severity::Error, "All snapshot elements must have a base definition", "element.all(base.exists())").with_xpath("count(f:element) = count(f:element/f:base)"),
+    rh_foundation::Invariant::new("sdf-9", rh_foundation::Severity::Error, "In any snapshot or differential, no label, code or requirements on an element without a \".\" in the path (e.g. the first element)", "children().element.where(path.contains('.').not()).label.empty() and children().element.where(path.contains('.').not()).code.empty() and children().element.where(path.contains('.').not()).requirements.empty()").with_xpath("not(exists(f:snapshot/f:element[not(contains(f:path/@value, '.')) and (f:label or f:code or f:requirements)])) and not(exists(f:differential/f:element[not(contains(f:path/@value, '.')) and (f:label or f:code or f:requirements)]))"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for StructureDefinition {
@@ -836,5 +877,19 @@ impl crate::traits::structure_definition::StructureDefinitionExistence for Struc
     }
     fn has_differential(&self) -> bool {
         self.differential.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for StructureDefinition {
+    fn resource_type(&self) -> &'static str {
+        "StructureDefinition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/StructureDefinition")
     }
 }

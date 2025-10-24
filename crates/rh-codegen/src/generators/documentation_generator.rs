@@ -425,6 +425,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let doc = DocumentationGenerator::generate_field_documentation(&element);

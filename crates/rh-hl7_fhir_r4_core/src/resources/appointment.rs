@@ -224,6 +224,27 @@ impl Default for AppointmentParticipant {
     }
 }
 
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("app-1", rh_foundation::Severity::Error, "Either the type or actor on the participant SHALL be specified", "type.exists() or actor.exists()").with_xpath("(exists(f:type) or exists(f:actor))"),
+    rh_foundation::Invariant::new("app-2", rh_foundation::Severity::Error, "Either start and end are specified, or neither", "start.exists() = end.exists()").with_xpath("((exists(f:start) and exists(f:end)) or (not(exists(f:start)) and not(exists(f:end))))"),
+    rh_foundation::Invariant::new("app-3", rh_foundation::Severity::Error, "Only proposed or cancelled appointments can be missing start/end dates", "(start.exists() and end.exists()) or (status in ('proposed' | 'cancelled' | 'waitlist'))").with_xpath("((exists(f:start) and exists(f:end)) or (f:status/@value='proposed') or (f:status/@value='cancelled') or (f:status/@value='waitlist'))"),
+    rh_foundation::Invariant::new("app-4", rh_foundation::Severity::Error, "Cancelation reason is only used for appointments that have been cancelled, or no-show", "Appointment.cancelationReason.exists() implies (Appointment.status='no-show' or Appointment.status='cancelled')").with_xpath("not(exists(f:cancellationReason)) or f:status/@value=('no-show', 'cancelled')"),
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Appointment {
     fn id(&self) -> Option<String> {
@@ -735,5 +756,19 @@ impl crate::traits::appointment::AppointmentExistence for Appointment {
         self.requested_period
             .as_ref()
             .is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Appointment {
+    fn resource_type(&self) -> &'static str {
+        "Appointment"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Appointment")
     }
 }
