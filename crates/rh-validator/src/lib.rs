@@ -14,7 +14,7 @@ pub mod validator;
 pub use types::{
     Invariant, IssueCode, Severity, ValidationIssue, ValidationResult, ValidatorError,
 };
-pub use validator::{FhirValidator, JsonValidator};
+pub use validator::{FhirValidator, JsonValidator, ValidatorConfig};
 
 /// Result type for validator operations
 pub type Result<T> = std::result::Result<T, crate::types::ValidatorError>;

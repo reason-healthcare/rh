@@ -27,8 +27,8 @@ thiserror = { workspace = true }
 
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation" }
-# rh-fhirpath = { path = "../rh-fhirpath" }  # Will be added in Phase 3
-# rh-hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }  # Will be added in Phase 2
+rh-fhirpath = { path = "../rh-fhirpath" }  # Phase 3: FHIRPath invariant validation
+hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }  # Phase 3: Generated FHIR types
 
 # Additional dependencies for future phases
 # rayon = "1.10"  # Phase 4: Parallel validation
