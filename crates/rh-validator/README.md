@@ -51,20 +51,34 @@ rh-validator = { path = "../path/to/rh-validator" }
 ### Basic Usage
 
 ```rust
-use rh_validator::{JsonValidator, ValidationResult};
+use hl7_fhir_r4_core::resources::patient::Patient;
+use rh_validator::FhirValidator;
 
 // Create a validator
-let validator = JsonValidator::new();
+let validator = FhirValidator::new()?;
 
-// Validate JSON syntax
-let json_content = r#"{"resourceType": "Patient", "id": "123"}"#;
-match validator.validate(json_content)? {
-    ValidationResult::Valid => println!("✅ JSON is valid"),
-    ValidationResult::Invalid(errors) => {
-        println!("❌ Validation failed:");
-        for error in errors {
-            println!("  - {}", error);
-        }
+// Validate a FHIR Patient resource
+let patient_json = r#"{
+    "resourceType": "Patient",
+    "id": "example",
+    "extension": [{
+        "url": "http://example.org/test",
+        "valueString": "test"
+    }],
+    "name": [{
+        "family": "Doe",
+        "given": ["John"]
+    }],
+    "gender": "male"
+}"#;
+
+let result = validator.validate_full::<Patient>(patient_json)?;
+if result.is_valid() {
+    println!("✅ Patient is valid");
+} else {
+    println!("❌ Validation failed with {} errors", result.error_count());
+    for issue in &result.issues {
+        println!("  - {}: {}", issue.code, issue.details);
     }
 }
 ```
@@ -72,22 +86,38 @@ match validator.validate(json_content)? {
 ### Advanced Configuration
 
 ```rust
-use rh_validator::JsonValidator;
+use rh_validator::{FhirValidator, ValidatorConfig};
 
-// Custom validator with specific depth limit
-let validator = JsonValidator::with_max_depth(50);
+// Custom validator configuration
+let config = ValidatorConfig::new()
+    .with_max_depth(128)
+    .with_skip_invariants(false);
 
-// Validate multiple documents (NDJSON)
-let ndjson_content = r#"
-{"resourceType": "Patient", "id": "1"}
-{"resourceType": "Observation", "id": "2"}
-"#;
+let validator = FhirValidator::with_config(config)?;
 
-let results = validator.validate_multiple(ndjson_content)?;
-for (line_number, result) in results {
-    println!("Line {}: {}", line_number,
-        if result.is_valid() { "✅ Valid" } else { "❌ Invalid" });
-}
+// Validate with full structural + invariant checks
+let result = validator.validate_full::<Patient>(patient_json)?;
+```
+
+## Examples
+
+The crate includes comprehensive examples in the [`examples/`](examples/) directory:
+
+- **`basic_validation.rs`** - Simple resource validation from JSON strings
+- **`structural_validation.rs`** - Demonstrates structural validation catching type errors  
+- **`invariant_validation.rs`** - Shows FHIRPath invariant evaluation
+- **`custom_config.rs`** - Configure validator with custom settings
+- **`error_handling.rs`** - Handle validation errors and warnings
+- **`patient_validation.rs`** - Complete Patient resource validation examples
+
+Run any example with:
+```bash
+cargo run -p rh-validator --example basic_validation
+```
+
+Test all examples:
+```bash
+just test-examples
 ```
 
 ## Command Line Interface

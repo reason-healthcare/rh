@@ -18,6 +18,20 @@ test-fast:
         cargo test --workspace --all-features
     fi
 
+# Test that all examples compile and run
+test-examples:
+    @echo "Building all examples..."
+    cargo build --examples --workspace
+    @echo "Running validator examples..."
+    cargo run -p rh-validator --example basic_validation > /dev/null
+    cargo run -p rh-validator --example structural_validation > /dev/null
+    cargo run -p rh-validator --example invariant_validation > /dev/null
+    cargo run -p rh-validator --example custom_config > /dev/null
+    cargo run -p rh-validator --example error_handling > /dev/null
+    cargo run -p rh-validator --example patient_validation > /dev/null
+    cargo run -p rh-validator --example resource_builder > /dev/null
+    @echo "✅ All examples compiled and ran successfully!"
+
 # Build all packages
 build:
     cargo build --workspace --all-targets --all-features
@@ -42,8 +56,8 @@ audit:
 clean:
     cargo clean
 
-# Check everything (format, lint, test, audit)
-check: fmt-check lint test audit
+# Check everything (format, lint, test, audit, examples)
+check: fmt-check lint test test-examples audit
 
 # Watch for changes and run tests
 watch:

@@ -1,9 +1,12 @@
 //! FHIR validation implementation
 //!
-//! Provides structural validation via Rust's type system and serde deserialization.
+//! Provides structural validation via Rust's type system and serde deserialization,
+//! plus FHIRPath-based invariant validation.
 
 use crate::types::{IssueCode, Severity, ValidationIssue, ValidationResult, ValidatorError};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::path::PathBuf;
 
 /// Configuration for FHIR validator
@@ -13,6 +16,8 @@ pub struct ValidatorConfig {
     pub max_depth: usize,
     /// Whether to report unknown fields as warnings
     pub warn_on_unknown_fields: bool,
+    /// Whether to skip invariant validation (structural only)
+    pub skip_invariants: bool,
     /// Custom package directory for profiles (future use)
     pub package_dir: Option<PathBuf>,
     /// FHIR version to validate against
@@ -24,6 +29,7 @@ impl Default for ValidatorConfig {
         Self {
             max_depth: 100,
             warn_on_unknown_fields: true,
+            skip_invariants: false,
             package_dir: None,
             fhir_version: "4.0.1".to_string(),
         }
@@ -48,6 +54,12 @@ impl ValidatorConfig {
         self
     }
 
+    /// Set whether to skip invariant validation
+    pub fn with_skip_invariants(mut self, skip: bool) -> Self {
+        self.skip_invariants = skip;
+        self
+    }
+
     /// Set custom package directory
     pub fn with_package_dir(mut self, package_dir: PathBuf) -> Self {
         self.package_dir = Some(package_dir);
@@ -63,11 +75,12 @@ impl ValidatorConfig {
 
 /// FHIR resource validator
 ///
-/// Performs structural validation via Rust's type system and serde deserialization.
-/// Future phases will add FHIRPath invariant validation and profile support.
-#[derive(Debug, Clone, Default)]
+/// Performs structural validation via Rust's type system and serde deserialization,
+/// plus FHIRPath-based invariant validation using the embedded FHIRPath engine.
 pub struct FhirValidator {
     config: ValidatorConfig,
+    fhirpath_parser: FhirPathParser,
+    fhirpath_evaluator: FhirPathEvaluator,
 }
 
 impl FhirValidator {
@@ -75,18 +88,26 @@ impl FhirValidator {
     pub fn new() -> Result<Self, ValidatorError> {
         Ok(Self {
             config: ValidatorConfig::default(),
+            fhirpath_parser: FhirPathParser::new(),
+            fhirpath_evaluator: FhirPathEvaluator::new(),
         })
     }
 
     /// Create a validator with custom configuration
     pub fn with_config(config: ValidatorConfig) -> Result<Self, ValidatorError> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            fhirpath_parser: FhirPathParser::new(),
+            fhirpath_evaluator: FhirPathEvaluator::new(),
+        })
     }
 
     /// Create a validator with a custom package directory
     pub fn with_package_dir(package_dir: PathBuf) -> Result<Self, ValidatorError> {
         Ok(Self {
             config: ValidatorConfig::default().with_package_dir(package_dir),
+            fhirpath_parser: FhirPathParser::new(),
+            fhirpath_evaluator: FhirPathEvaluator::new(),
         })
     }
 
@@ -144,6 +165,180 @@ impl FhirValidator {
         self.validate_json::<T>(&json)
     }
 
+    /// Validate invariants for a resource that implements ValidatableResource
+    ///
+    /// This evaluates all FHIRPath invariants defined for the resource type.
+    /// Returns validation issues for any invariants that fail.
+    pub fn validate_invariants<T>(
+        &self,
+        resource: &T,
+    ) -> Result<Vec<ValidationIssue>, ValidatorError>
+    where
+        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
+    {
+        let mut issues = Vec::new();
+
+        // Get all invariants for this resource type
+        let invariants = T::invariants();
+
+        // Serialize resource to JSON for FHIRPath evaluation
+        let json_value = serde_json::to_value(resource)
+            .map_err(|e| ValidatorError::Other(format!("Failed to serialize resource: {e}")))?;
+
+        // Create evaluation context from the resource
+        let context = EvaluationContext::new(json_value);
+
+        // Evaluate each invariant
+        for invariant in invariants {
+            // Parse the FHIRPath expression
+            let expression = match self.fhirpath_parser.parse(&invariant.expression) {
+                Ok(expr) => expr,
+                Err(e) => {
+                    // FHIRPath parsing error
+                    issues.push(ValidationIssue {
+                        severity: Severity::Warning,
+                        code: IssueCode::InvariantEvaluation,
+                        details: format!(
+                            "Failed to parse invariant {} expression: {}",
+                            invariant.key, e
+                        ),
+                        location: Some(format!("Invariant: {}", invariant.key)),
+                        expression: Some(invariant.expression.clone()),
+                        invariant_key: Some(invariant.key.clone()),
+                    });
+                    continue;
+                }
+            };
+
+            // Evaluate the expression
+            match self.fhirpath_evaluator.evaluate(&expression, &context) {
+                Ok(result) => {
+                    // Check if invariant passed (result should be true)
+                    let passed = match result {
+                        FhirPathValue::Boolean(b) => b,
+                        FhirPathValue::Collection(coll) => {
+                            // Empty collection means false, non-empty means true
+                            !coll.is_empty()
+                        }
+                        _ => {
+                            // Other values are treated as true if they exist
+                            true
+                        }
+                    };
+
+                    if !passed {
+                        // Invariant failed
+                        issues.push(ValidationIssue {
+                            severity: invariant.severity,
+                            code: IssueCode::Invariant,
+                            details: format!(
+                                "Invariant {} failed: {}",
+                                invariant.key, invariant.human
+                            ),
+                            location: Some(format!("Invariant: {}", invariant.key)),
+                            expression: Some(invariant.expression.clone()),
+                            invariant_key: Some(invariant.key.clone()),
+                        });
+                    }
+                }
+                Err(e) => {
+                    // FHIRPath evaluation error
+                    issues.push(ValidationIssue {
+                        severity: Severity::Warning,
+                        code: IssueCode::InvariantEvaluation,
+                        details: format!("Failed to evaluate invariant {}: {}", invariant.key, e),
+                        location: Some(format!("Invariant: {}", invariant.key)),
+                        expression: Some(invariant.expression.clone()),
+                        invariant_key: Some(invariant.key.clone()),
+                    });
+                }
+            }
+        }
+
+        Ok(issues)
+    }
+
+    /// Validate both structure and invariants for a resource
+    ///
+    /// This performs comprehensive validation including:
+    /// 1. Structural validation via deserialization
+    /// 2. Invariant validation via FHIRPath expressions
+    ///
+    /// Returns a ValidationResult with all issues found.
+    pub fn validate_full<T>(&self, json: &str) -> Result<ValidationResult, ValidatorError>
+    where
+        T: DeserializeOwned + Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
+    {
+        // First perform structural validation
+        let mut result = self.validate_json::<T>(json)?;
+
+        // If structural validation failed with errors and we should skip invariants, return early
+        if !result.is_valid() && self.config.skip_invariants {
+            return Ok(result);
+        }
+
+        // If structural validation passed or we want to continue, validate invariants
+        if !self.config.skip_invariants {
+            // Parse the resource for invariant validation
+            match serde_json::from_str::<T>(json) {
+                Ok(resource) => {
+                    // Validate invariants
+                    let invariant_issues = self.validate_invariants(&resource)?;
+                    result.add_issues(invariant_issues);
+                }
+                Err(_) => {
+                    // If we can't parse, structural validation already caught this
+                    // No need to add more issues
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Validate a resource instance directly without JSON round-trip
+    ///
+    /// This validates invariants on an already-instantiated resource struct.
+    /// More efficient than `validate_full()` for programmatically-built resources
+    /// since it avoids the serialize → deserialize → serialize round-trip.
+    ///
+    /// Note: This assumes the resource is structurally valid (via Rust's type system).
+    /// It only validates invariants. For JSON validation, use `validate_full()`.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use rh_validator::FhirValidator;
+    /// use hl7_fhir_r4_core::resources::patient::Patient;
+    ///
+    /// let validator = FhirValidator::new()?;
+    /// let mut patient = Patient::default();
+    /// patient.base.base.id = Some("example".to_string());
+    ///
+    /// let result = validator.validate_resource(&patient)?;
+    /// assert!(result.is_valid());
+    /// # Ok::<(), rh_validator::ValidatorError>(())
+    /// ```
+    pub fn validate_resource<T>(&self, resource: &T) -> Result<ValidationResult, ValidatorError>
+    where
+        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
+    {
+        // Create a ValidationResult with the correct resource type
+        let resource_type = resource.resource_type();
+        let mut result = ValidationResult::new(resource_type);
+
+        // Skip invariants if configured to do so
+        if self.config.skip_invariants {
+            return Ok(result);
+        }
+
+        // Validate invariants (this will serialize once for FHIRPath)
+        let invariant_issues = self.validate_invariants(resource)?;
+        result.add_issues(invariant_issues);
+
+        Ok(result)
+    }
+
     /// Validate with specific FHIR version (compatibility method)
     pub fn validate_with_version(
         &self,
@@ -155,7 +350,7 @@ impl FhirValidator {
     }
 
     /// Validate a FHIR resource from JSON with explicit resource type
-    pub fn validate_resource(
+    pub fn validate_resource_json(
         &self,
         _resource_type: &str,
         json: &str,
@@ -394,5 +589,53 @@ mod tests {
 
         // This test just ensures the function doesn't panic
         let _issue = convert_serde_error(&error, "Patient");
+    }
+
+    #[test]
+    fn test_validate_resource_direct() {
+        use hl7_fhir_r4_core::resources::patient::Patient;
+
+        let validator = FhirValidator::new().unwrap();
+        let mut patient = Patient::default();
+        patient.base.base.id = Some("test-direct".to_string());
+
+        // Should validate successfully (minimal valid patient)
+        let result = validator.validate_resource(&patient).unwrap();
+        // Just verify the method works and returns a result
+        let _ = result.error_count();
+    }
+
+    #[test]
+    fn test_validate_resource_vs_full_equivalent() {
+        use hl7_fhir_r4_core::resources::patient::Patient;
+
+        let validator = FhirValidator::new().unwrap();
+        let mut patient = Patient::default();
+        patient.base.base.id = Some("test-equiv".to_string());
+
+        // Validate directly
+        let direct_result = validator.validate_resource(&patient).unwrap();
+
+        // Validate via JSON
+        let json = serde_json::to_string(&patient).unwrap();
+        let json_result = validator.validate_full::<Patient>(&json).unwrap();
+
+        // Should have same validation outcome
+        assert_eq!(direct_result.is_valid(), json_result.is_valid());
+        assert_eq!(direct_result.error_count(), json_result.error_count());
+    }
+
+    #[test]
+    fn test_validate_resource_skip_invariants() {
+        use hl7_fhir_r4_core::resources::patient::Patient;
+
+        let config = ValidatorConfig::new().with_skip_invariants(true);
+        let validator = FhirValidator::with_config(config).unwrap();
+        let patient = Patient::default();
+
+        // Should skip invariants and return empty result
+        let result = validator.validate_resource(&patient).unwrap();
+        assert_eq!(result.error_count(), 0);
+        assert_eq!(result.warning_count(), 0);
     }
 }
