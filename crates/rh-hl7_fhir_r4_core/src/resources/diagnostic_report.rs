@@ -91,6 +91,51 @@ pub struct DiagnosticReport {
     #[serde(rename = "presentedForm")]
     pub presented_form: Option<Vec<Attachment>>,
 }
+/// References
+///
+/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsReferences {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// FamilyMemberHistory
+///
+/// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsFamilyMemberHistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// DiagnosticReport nested structure for the 'media' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportMedia {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Comment about the image (e.g. explanation)
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Reference to the image source
+    pub link: Reference,
+}
 /// Addendum Of
 ///
 /// The supplements or provides additional information for the target report.
@@ -119,51 +164,6 @@ pub struct DiagnosticReportAddendumOf {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnosticReportSummaryOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// DiagnosticReport nested structure for the 'media' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportMedia {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Comment about the image (e.g. explanation)
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Reference to the image source
-    pub link: Reference,
-}
-/// FamilyMemberHistory
-///
-/// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsFamilyMemberHistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// References
-///
-/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsReferences {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -199,7 +199,7 @@ impl Default for DiagnosticReport {
     }
 }
 
-impl Default for DiagnosticReportAddendumOf {
+impl Default for DiagnosticReportGeneticsReferences {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -207,7 +207,7 @@ impl Default for DiagnosticReportAddendumOf {
     }
 }
 
-impl Default for DiagnosticReportSummaryOf {
+impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -226,7 +226,7 @@ impl Default for DiagnosticReportMedia {
     }
 }
 
-impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+impl Default for DiagnosticReportAddendumOf {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -234,13 +234,30 @@ impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
     }
 }
 
-impl Default for DiagnosticReportGeneticsReferences {
+impl Default for DiagnosticReportSummaryOf {
     fn default() -> Self {
         Self {
             base: Extension::default(),
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DiagnosticReport {
@@ -692,5 +709,19 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
     }
     fn has_presented_form(&self) -> bool {
         self.presented_form.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for DiagnosticReport {
+    fn resource_type(&self) -> &'static str {
+        "DiagnosticReport"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/DiagnosticReport")
     }
 }

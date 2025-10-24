@@ -41,5 +41,6 @@ pub mod primitives;
 pub mod profiles;
 pub mod resources;
 pub mod traits;
+pub mod validation;
 
 pub use serde::{Deserialize, Serialize};

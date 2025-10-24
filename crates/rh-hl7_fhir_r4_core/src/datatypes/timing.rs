@@ -191,3 +191,38 @@ impl Default for TimingRepeat {
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("tim-1", rh_foundation::Severity::Error, "if there's a duration, there needs to be duration units", "duration.empty() or durationUnit.exists()").with_xpath("not(exists(f:duration)) or exists(f:durationUnit)"),
+    rh_foundation::Invariant::new("tim-10", rh_foundation::Severity::Error, "If there's a timeOfDay, there cannot be a when, or vice versa", "timeOfDay.empty() or when.empty()").with_xpath("not(exists(f:timeOfDay)) or not(exists(f:when))"),
+    rh_foundation::Invariant::new("tim-2", rh_foundation::Severity::Error, "if there's a period, there needs to be period units", "period.empty() or periodUnit.exists()").with_xpath("not(exists(f:period)) or exists(f:periodUnit)"),
+    rh_foundation::Invariant::new("tim-4", rh_foundation::Severity::Error, "duration SHALL be a non-negative value", "duration.exists() implies duration >= 0").with_xpath("f:duration/@value >= 0 or not(f:duration/@value)"),
+    rh_foundation::Invariant::new("tim-5", rh_foundation::Severity::Error, "period SHALL be a non-negative value", "period.exists() implies period >= 0").with_xpath("f:period/@value >= 0 or not(f:period/@value)"),
+    rh_foundation::Invariant::new("tim-6", rh_foundation::Severity::Error, "If there's a periodMax, there must be a period", "periodMax.empty() or period.exists()").with_xpath("not(exists(f:periodMax)) or exists(f:period)"),
+    rh_foundation::Invariant::new("tim-7", rh_foundation::Severity::Error, "If there's a durationMax, there must be a duration", "durationMax.empty() or duration.exists()").with_xpath("not(exists(f:durationMax)) or exists(f:duration)"),
+    rh_foundation::Invariant::new("tim-8", rh_foundation::Severity::Error, "If there's a countMax, there must be a count", "countMax.empty() or count.exists()").with_xpath("not(exists(f:countMax)) or exists(f:count)"),
+    rh_foundation::Invariant::new("tim-9", rh_foundation::Severity::Error, "If there's an offset, there must be a when (and not C, CM, CD, CV)", "offset.empty() or (when.exists() and ((when in ('C' | 'CM' | 'CD' | 'CV')).not()))").with_xpath("not(exists(f:offset)) or exists(f:when)"),
+]
+    });
+
+impl crate::validation::ValidatableResource for Timing {
+    fn resource_type(&self) -> &'static str {
+        "Timing"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Timing")
+    }
+}

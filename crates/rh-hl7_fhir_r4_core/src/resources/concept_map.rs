@@ -122,6 +122,52 @@ pub struct ConceptMapGroupElementTargetDependson {
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
 }
+/// ConceptMap nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What to do when there is no mapping for the source concept
+    pub unmapped: Option<ConceptMapGroupUnmapped>,
+    /// Mappings for a concept from the source set
+    pub element: Vec<ConceptMapGroupElement>,
+    /// Source system where concepts to be mapped are defined
+    pub source: Option<StringType>,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// Specific version of the  code system
+    #[serde(rename = "sourceVersion")]
+    pub source_version: Option<StringType>,
+    /// Extension element for the 'sourceVersion' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceVersion")]
+    pub _source_version: Option<Element>,
+    /// Target system that the concepts are to be mapped to
+    pub target: Option<StringType>,
+    /// Extension element for the 'target' primitive field. Contains metadata and extensions.
+    pub _target: Option<Element>,
+    /// Specific version of the  code system
+    #[serde(rename = "targetVersion")]
+    pub target_version: Option<StringType>,
+    /// Extension element for the 'targetVersion' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetVersion")]
+    pub _target_version: Option<Element>,
+}
+/// ConceptMapGroup nested structure for the 'element' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies element being mapped
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
 /// ConceptMapGroupElement nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapGroupElementTarget {
@@ -147,21 +193,6 @@ pub struct ConceptMapGroupElementTarget {
     /// Other concepts that this mapping also produces
     pub product: Option<Vec<StringType>>,
 }
-/// ConceptMapGroup nested structure for the 'element' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies element being mapped
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
 /// ConceptMapGroup nested structure for the 'unmapped' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapGroupUnmapped {
@@ -184,37 +215,6 @@ pub struct ConceptMapGroupUnmapped {
     pub url: Option<StringType>,
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
-}
-/// ConceptMap nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Mappings for a concept from the source set
-    pub element: Vec<ConceptMapGroupElement>,
-    /// What to do when there is no mapping for the source concept
-    pub unmapped: Option<ConceptMapGroupUnmapped>,
-    /// Source system where concepts to be mapped are defined
-    pub source: Option<StringType>,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// Specific version of the  code system
-    #[serde(rename = "sourceVersion")]
-    pub source_version: Option<StringType>,
-    /// Extension element for the 'sourceVersion' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceVersion")]
-    pub _source_version: Option<Element>,
-    /// Target system that the concepts are to be mapped to
-    pub target: Option<StringType>,
-    /// Extension element for the 'target' primitive field. Contains metadata and extensions.
-    pub _target: Option<Element>,
-    /// Specific version of the  code system
-    #[serde(rename = "targetVersion")]
-    pub target_version: Option<StringType>,
-    /// Extension element for the 'targetVersion' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetVersion")]
-    pub _target_version: Option<Element>,
 }
 
 impl Default for ConceptMap {
@@ -272,6 +272,36 @@ impl Default for ConceptMapGroupElementTargetDependson {
     }
 }
 
+impl Default for ConceptMapGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            unmapped: Default::default(),
+            element: Vec::new(),
+            source: Default::default(),
+            _source: Default::default(),
+            source_version: Default::default(),
+            _source_version: Default::default(),
+            target: Default::default(),
+            _target: Default::default(),
+            target_version: Default::default(),
+            _target_version: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
 impl Default for ConceptMapGroupElementTarget {
     fn default() -> Self {
         Self {
@@ -285,18 +315,6 @@ impl Default for ConceptMapGroupElementTarget {
             comment: Default::default(),
             _comment: Default::default(),
             product: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
         }
     }
 }
@@ -317,23 +335,26 @@ impl Default for ConceptMapGroupUnmapped {
     }
 }
 
-impl Default for ConceptMapGroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            element: Vec::new(),
-            unmapped: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            source_version: Default::default(),
-            _source_version: Default::default(),
-            target: Default::default(),
-            _target: Default::default(),
-            target_version: Default::default(),
-            _target_version: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("cmd-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+    rh_foundation::Invariant::new("cmd-1", rh_foundation::Severity::Error, "If the map is narrower or inexact, there SHALL be some comments", "comment.exists() or equivalence.empty() or ((equivalence != 'narrower') and (equivalence != 'inexact'))").with_xpath("exists(f:comment) or not(exists(f:equivalence)) or ((f:equivalence/@value != 'narrower') and (f:equivalence/@value != 'inexact'))"),
+    rh_foundation::Invariant::new("cmd-2", rh_foundation::Severity::Error, "If the mode is 'fixed', a code must be provided", "(mode = 'fixed') implies code.exists()").with_xpath("(f:mode/@value != 'fixed') or exists(f:code)"),
+    rh_foundation::Invariant::new("cmd-3", rh_foundation::Severity::Error, "If the mode is 'other-map', a url must be provided", "(mode = 'other-map') implies url.exists()").with_xpath("(f:mode/@value != 'other-map') or exists(f:url)"),
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ConceptMap {
@@ -678,11 +699,11 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_target(&self) -> bool {
-        self.target_uri.is_some() || self.target_canonical.is_some()
-    }
     fn has_source(&self) -> bool {
         self.source_uri.is_some() || self.source_canonical.is_some()
+    }
+    fn has_target(&self) -> bool {
+        self.target_uri.is_some() || self.target_canonical.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()
@@ -731,5 +752,19 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
     }
     fn has_group(&self) -> bool {
         self.group.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for ConceptMap {
+    fn resource_type(&self) -> &'static str {
+        "ConceptMap"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/ConceptMap")
     }
 }

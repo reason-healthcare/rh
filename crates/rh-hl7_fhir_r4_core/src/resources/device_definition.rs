@@ -110,6 +110,70 @@ pub struct DeviceDefinition {
     /// A substance used to create the material(s) of which the device is made
     pub material: Option<Vec<DeviceDefinitionMaterial>>,
 }
+/// DeviceDefinition nested structure for the 'material' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionMaterial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The substance
+    pub substance: CodeableConcept,
+    /// Indicates an alternative material of the device
+    pub alternate: Option<BooleanType>,
+    /// Extension element for the 'alternate' primitive field. Contains metadata and extensions.
+    pub _alternate: Option<Element>,
+    /// Whether the substance is a known or suspected allergen
+    #[serde(rename = "allergenicIndicator")]
+    pub allergenic_indicator: Option<BooleanType>,
+    /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_allergenicIndicator")]
+    pub _allergenic_indicator: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of capability
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Description of capability
+    pub description: Option<Vec<CodeableConcept>>,
+}
+/// DeviceDefinition nested structure for the 'deviceName' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionDevicename {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'specialization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionSpecialization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The standard that is used to operate and communicate
+    #[serde(rename = "systemType")]
+    pub system_type: StringType,
+    /// Extension element for the 'systemType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_systemType")]
+    pub _system_type: Option<Element>,
+    /// The version of the standard that is used to operate and communicate
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+}
 /// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionUdideviceidentifier {
@@ -131,58 +195,6 @@ pub struct DeviceDefinitionUdideviceidentifier {
     /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
     pub _jurisdiction: Option<Element>,
 }
-/// DeviceDefinition nested structure for the 'deviceName' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionDevicename {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'material' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionMaterial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The substance
-    pub substance: CodeableConcept,
-    /// Indicates an alternative material of the device
-    pub alternate: Option<BooleanType>,
-    /// Extension element for the 'alternate' primitive field. Contains metadata and extensions.
-    pub _alternate: Option<Element>,
-    /// Whether the substance is a known or suspected allergen
-    #[serde(rename = "allergenicIndicator")]
-    pub allergenic_indicator: Option<BooleanType>,
-    /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_allergenicIndicator")]
-    pub _allergenic_indicator: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'specialization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionSpecialization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The standard that is used to operate and communicate
-    #[serde(rename = "systemType")]
-    pub system_type: StringType,
-    /// Extension element for the 'systemType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_systemType")]
-    pub _system_type: Option<Element>,
-    /// The version of the standard that is used to operate and communicate
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-}
 /// DeviceDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionProperty {
@@ -198,18 +210,6 @@ pub struct DeviceDefinitionProperty {
     /// Property value as a code, e.g., NTP4 (synced to NTP)
     #[serde(rename = "valueCode")]
     pub value_code: Option<Vec<CodeableConcept>>,
-}
-/// DeviceDefinition nested structure for the 'capability' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionCapability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of capability
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Description of capability
-    pub description: Option<Vec<CodeableConcept>>,
 }
 
 impl Default for DeviceDefinition {
@@ -247,16 +247,25 @@ impl Default for DeviceDefinition {
     }
 }
 
-impl Default for DeviceDefinitionUdideviceidentifier {
+impl Default for DeviceDefinitionMaterial {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            device_identifier: Default::default(),
-            _device_identifier: Default::default(),
-            issuer: Default::default(),
-            _issuer: Default::default(),
-            jurisdiction: Default::default(),
-            _jurisdiction: Default::default(),
+            substance: CodeableConcept::default(),
+            alternate: Default::default(),
+            _alternate: Default::default(),
+            allergenic_indicator: Default::default(),
+            _allergenic_indicator: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionCapability {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            description: Default::default(),
         }
     }
 }
@@ -273,19 +282,6 @@ impl Default for DeviceDefinitionDevicename {
     }
 }
 
-impl Default for DeviceDefinitionMaterial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance: CodeableConcept::default(),
-            alternate: Default::default(),
-            _alternate: Default::default(),
-            allergenic_indicator: Default::default(),
-            _allergenic_indicator: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceDefinitionSpecialization {
     fn default() -> Self {
         Self {
@@ -294,6 +290,20 @@ impl Default for DeviceDefinitionSpecialization {
             _system_type: Default::default(),
             version: Default::default(),
             _version: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionUdideviceidentifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device_identifier: Default::default(),
+            _device_identifier: Default::default(),
+            issuer: Default::default(),
+            _issuer: Default::default(),
+            jurisdiction: Default::default(),
+            _jurisdiction: Default::default(),
         }
     }
 }
@@ -309,15 +319,22 @@ impl Default for DeviceDefinitionProperty {
     }
 }
 
-impl Default for DeviceDefinitionCapability {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            description: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DeviceDefinition {
@@ -825,5 +842,19 @@ impl crate::traits::device_definition::DeviceDefinitionExistence for DeviceDefin
     }
     fn has_material(&self) -> bool {
         self.material.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for DeviceDefinition {
+    fn resource_type(&self) -> &'static str {
+        "DeviceDefinition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/DeviceDefinition")
     }
 }

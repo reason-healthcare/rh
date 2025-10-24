@@ -96,6 +96,93 @@ pub struct ValueSet {
     /// Used when the value set is "expanded"
     pub expansion: Option<ValueSetExpansion>,
 }
+/// ValueSetComposeInclude nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetComposeIncludeFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A property/filter defined by the code system
+    pub property: StringType,
+    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
+    pub _property: Option<Element>,
+    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
+    pub op: FilterOperator,
+    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
+    pub _op: Option<Element>,
+    /// Code from the system, or regex criteria, or boolean value for exists
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ValueSetExpansion nested structure for the 'parameter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetExpansionParameter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name as assigned by the client or server
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Value of the named parameter (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Value of the named parameter (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Value of the named parameter (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: Option<IntegerType>,
+    /// Value of the named parameter (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: Option<DecimalType>,
+    /// Value of the named parameter (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: Option<StringType>,
+    /// Value of the named parameter (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<StringType>,
+    /// Value of the named parameter (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: Option<DateTimeType>,
+}
+/// ValueSetExpansion nested structure for the 'contains' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetExpansionContains {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// System value for the code
+    pub system: Option<StringType>,
+    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
+    pub _system: Option<Element>,
+    /// If user cannot select this entry
+    #[serde(rename = "abstract")]
+    pub abstract_: Option<BooleanType>,
+    /// Extension element for the 'abstract' primitive field. Contains metadata and extensions.
+    pub _abstract: Option<Element>,
+    /// If concept is inactive in the code system
+    pub inactive: Option<BooleanType>,
+    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
+    pub _inactive: Option<Element>,
+    /// Version in which this code/display is defined
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// Code - if blank, this is not a selectable code
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// User display for the concept
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Additional representations for this item
+    pub designation: Option<Vec<StringType>>,
+    /// Codes contained under this entry
+    pub contains: Option<Vec<StringType>>,
+}
 /// ValueSetCompose nested structure for the 'include' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueSetComposeInclude {
@@ -156,32 +243,20 @@ pub struct ValueSetComposeIncludeConceptDesignation {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
 }
-/// ValueSet nested structure for the 'expansion' field
+/// ValueSetComposeInclude nested structure for the 'concept' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansion {
+pub struct ValueSetComposeIncludeConcept {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Parameter that controlled the expansion process
-    pub parameter: Option<Vec<ValueSetExpansionParameter>>,
-    /// Codes in the value set
-    pub contains: Option<Vec<ValueSetExpansionContains>>,
-    /// Identifies the value set expansion (business identifier)
-    pub identifier: Option<StringType>,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// Time ValueSet expansion happened
-    pub timestamp: DateTimeType,
-    /// Extension element for the 'timestamp' primitive field. Contains metadata and extensions.
-    pub _timestamp: Option<Element>,
-    /// Total number of codes in the expansion
-    pub total: Option<IntegerType>,
-    /// Extension element for the 'total' primitive field. Contains metadata and extensions.
-    pub _total: Option<Element>,
-    /// Offset at which this resource starts
-    pub offset: Option<IntegerType>,
-    /// Extension element for the 'offset' primitive field. Contains metadata and extensions.
-    pub _offset: Option<Element>,
+    /// Code or expression from system
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Text to display for this code for this value set in this valueset
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
 }
 /// ValueSet nested structure for the 'compose' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -204,107 +279,32 @@ pub struct ValueSetCompose {
     /// Explicitly exclude codes from a code system or other value sets
     pub exclude: Option<Vec<StringType>>,
 }
-/// ValueSetComposeInclude nested structure for the 'filter' field
+/// ValueSet nested structure for the 'expansion' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeIncludeFilter {
+pub struct ValueSetExpansion {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A property/filter defined by the code system
-    pub property: StringType,
-    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
-    pub _property: Option<Element>,
-    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
-    pub op: FilterOperator,
-    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
-    pub _op: Option<Element>,
-    /// Code from the system, or regex criteria, or boolean value for exists
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// ValueSetComposeInclude nested structure for the 'concept' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeIncludeConcept {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code or expression from system
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Text to display for this code for this value set in this valueset
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
-/// ValueSetExpansion nested structure for the 'contains' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansionContains {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// System value for the code
-    pub system: Option<StringType>,
-    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
-    pub _system: Option<Element>,
-    /// If user cannot select this entry
-    #[serde(rename = "abstract")]
-    pub abstract_: Option<BooleanType>,
-    /// Extension element for the 'abstract' primitive field. Contains metadata and extensions.
-    pub _abstract: Option<Element>,
-    /// If concept is inactive in the code system
-    pub inactive: Option<BooleanType>,
-    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
-    pub _inactive: Option<Element>,
-    /// Version in which this code/display is defined
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-    /// Code - if blank, this is not a selectable code
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// User display for the concept
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Additional representations for this item
-    pub designation: Option<Vec<StringType>>,
-    /// Codes contained under this entry
-    pub contains: Option<Vec<StringType>>,
-}
-/// ValueSetExpansion nested structure for the 'parameter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansionParameter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name as assigned by the client or server
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Value of the named parameter (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Value of the named parameter (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Value of the named parameter (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: Option<IntegerType>,
-    /// Value of the named parameter (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: Option<DecimalType>,
-    /// Value of the named parameter (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: Option<StringType>,
-    /// Value of the named parameter (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<StringType>,
-    /// Value of the named parameter (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: Option<DateTimeType>,
+    /// Codes in the value set
+    pub contains: Option<Vec<ValueSetExpansionContains>>,
+    /// Parameter that controlled the expansion process
+    pub parameter: Option<Vec<ValueSetExpansionParameter>>,
+    /// Identifies the value set expansion (business identifier)
+    pub identifier: Option<StringType>,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// Time ValueSet expansion happened
+    pub timestamp: DateTimeType,
+    /// Extension element for the 'timestamp' primitive field. Contains metadata and extensions.
+    pub _timestamp: Option<Element>,
+    /// Total number of codes in the expansion
+    pub total: Option<IntegerType>,
+    /// Extension element for the 'total' primitive field. Contains metadata and extensions.
+    pub _total: Option<Element>,
+    /// Offset at which this resource starts
+    pub offset: Option<IntegerType>,
+    /// Extension element for the 'offset' primitive field. Contains metadata and extensions.
+    pub _offset: Option<Element>,
 }
 
 impl Default for ValueSet {
@@ -345,6 +345,59 @@ impl Default for ValueSet {
     }
 }
 
+impl Default for ValueSetComposeIncludeFilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            property: Default::default(),
+            _property: Default::default(),
+            op: Default::default(),
+            _op: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetExpansionParameter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_integer: Default::default(),
+            value_decimal: Default::default(),
+            value_uri: Default::default(),
+            value_code: Default::default(),
+            value_date_time: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetExpansionContains {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            system: Default::default(),
+            _system: Default::default(),
+            abstract_: Default::default(),
+            _abstract: Default::default(),
+            inactive: Default::default(),
+            _inactive: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            designation: Default::default(),
+            contains: Default::default(),
+        }
+    }
+}
+
 impl Default for ValueSetComposeInclude {
     fn default() -> Self {
         Self {
@@ -372,20 +425,14 @@ impl Default for ValueSetComposeIncludeConceptDesignation {
     }
 }
 
-impl Default for ValueSetExpansion {
+impl Default for ValueSetComposeIncludeConcept {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            parameter: Default::default(),
-            contains: Default::default(),
-            identifier: Default::default(),
-            _identifier: Default::default(),
-            timestamp: DateTimeType::default(),
-            _timestamp: Default::default(),
-            total: Default::default(),
-            _total: Default::default(),
-            offset: Default::default(),
-            _offset: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
         }
     }
 }
@@ -404,70 +451,47 @@ impl Default for ValueSetCompose {
     }
 }
 
-impl Default for ValueSetComposeIncludeFilter {
+impl Default for ValueSetExpansion {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            property: Default::default(),
-            _property: Default::default(),
-            op: Default::default(),
-            _op: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetComposeIncludeConcept {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetExpansionContains {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            system: Default::default(),
-            _system: Default::default(),
-            abstract_: Default::default(),
-            _abstract: Default::default(),
-            inactive: Default::default(),
-            _inactive: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            designation: Default::default(),
             contains: Default::default(),
+            parameter: Default::default(),
+            identifier: Default::default(),
+            _identifier: Default::default(),
+            timestamp: DateTimeType::default(),
+            _timestamp: Default::default(),
+            total: Default::default(),
+            _total: Default::default(),
+            offset: Default::default(),
+            _offset: Default::default(),
         }
     }
 }
 
-impl Default for ValueSetExpansionParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_integer: Default::default(),
-            value_decimal: Default::default(),
-            value_uri: Default::default(),
-            value_code: Default::default(),
-            value_date_time: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("vsd-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+    rh_foundation::Invariant::new("vsd-1", rh_foundation::Severity::Error, "A value set include/exclude SHALL have a value set or a system", "valueSet.exists() or system.exists()").with_xpath("exists(f:valueSet) or exists(f:system)"),
+    rh_foundation::Invariant::new("vsd-10", rh_foundation::Severity::Error, "Must have a system if a code is present", "code.empty() or system.exists()").with_xpath("exists(f:system) or not(exists(f:code))"),
+    rh_foundation::Invariant::new("vsd-2", rh_foundation::Severity::Error, "A value set with concepts or filters SHALL include a system", "(concept.exists() or filter.exists()) implies system.exists()").with_xpath("not(exists(f:concept) or exists(f:filter)) or exists(f:system)"),
+    rh_foundation::Invariant::new("vsd-3", rh_foundation::Severity::Error, "Cannot have both concept and filter", "concept.empty() or filter.empty()").with_xpath("not(exists(f:concept)) or not(exists(f:filter))"),
+    rh_foundation::Invariant::new("vsd-6", rh_foundation::Severity::Error, "SHALL have a code or a display", "code.exists() or display.exists()").with_xpath("exists(f:code) or exists(f:display)"),
+    rh_foundation::Invariant::new("vsd-9", rh_foundation::Severity::Error, "Must have a code if not abstract", "code.exists() or abstract = true").with_xpath("exists(f:code) or (f:abstract/@value = true())"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ValueSet {
@@ -881,5 +905,19 @@ impl crate::traits::value_set::ValueSetExistence for ValueSet {
     }
     fn has_expansion(&self) -> bool {
         self.expansion.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for ValueSet {
+    fn resource_type(&self) -> &'static str {
+        "ValueSet"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/ValueSet")
     }
 }

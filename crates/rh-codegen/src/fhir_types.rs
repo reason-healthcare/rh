@@ -109,6 +109,18 @@ pub struct ElementDefinition {
     pub fixed: Option<serde_json::Value>,
     pub pattern: Option<serde_json::Value>,
     pub binding: Option<ElementBinding>,
+    pub constraint: Option<Vec<ElementConstraint>>,
+}
+
+/// Represents a FHIR constraint (invariant) on an element
+#[derive(Debug, Deserialize, Clone)]
+pub struct ElementConstraint {
+    pub key: String,
+    pub severity: String,
+    pub human: String,
+    pub expression: Option<String>,
+    pub xpath: Option<String>,
+    pub source: Option<String>,
 }
 
 /// Represents a FHIR element binding to a value set

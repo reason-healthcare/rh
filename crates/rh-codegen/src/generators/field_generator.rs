@@ -675,6 +675,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let (is_optional, is_array) =
@@ -697,6 +698,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let (is_optional, is_array) = FieldGenerator::determine_field_cardinality(&array_element);
@@ -718,6 +720,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let (is_optional, is_array) =
@@ -751,6 +754,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let result = field_generator.create_field_from_element(&boolean_element);
@@ -797,6 +801,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let result = field_generator.create_fields_from_element(&boolean_element);
@@ -850,6 +855,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let result = field_generator.create_fields_from_element(&required_boolean_element);
@@ -884,6 +890,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         let result = field_generator.create_fields_from_element(&required_string_element);
@@ -946,6 +953,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         // Generate fields
@@ -1021,6 +1029,7 @@ mod tests {
             fixed: None,
             pattern: None,
             binding: None,
+            constraint: None,
         };
 
         // Generate fields

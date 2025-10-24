@@ -143,6 +143,72 @@ pub struct RiskEvidenceSynthesis {
     /// How certain is the risk
     pub certainty: Option<Vec<RiskEvidenceSynthesisCertainty>>,
 }
+/// RiskEvidenceSynthesis nested structure for the 'riskEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisRiskestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How precise the estimate is
+    #[serde(rename = "precisionEstimate")]
+    pub precision_estimate: Option<Vec<RiskEvidenceSynthesisRiskestimatePrecisionestimate>>,
+    /// Description of risk estimate
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Type of risk estimate
+    ///
+    /// Binding: extensible (Whether the risk estimate is dichotomous, continuous or qualitative and the specific type of risk estimate (eg proportion or median).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/risk-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Point estimate
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// What unit is the outcome described in?
+    #[serde(rename = "unitOfMeasure")]
+    pub unit_of_measure: Option<CodeableConcept>,
+    /// Sample size for group measured
+    #[serde(rename = "denominatorCount")]
+    pub denominator_count: Option<IntegerType>,
+    /// Extension element for the 'denominatorCount' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_denominatorCount")]
+    pub _denominator_count: Option<Element>,
+    /// Number with the outcome
+    #[serde(rename = "numeratorCount")]
+    pub numerator_count: Option<IntegerType>,
+    /// Extension element for the 'numeratorCount' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numeratorCount")]
+    pub _numerator_count: Option<Element>,
+}
+/// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of precision estimate
+    ///
+    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Level of confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower bound
+    pub from: Option<DecimalType>,
+    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
+    pub _from: Option<Element>,
+    /// Upper bound
+    pub to: Option<DecimalType>,
+    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
+    pub _to: Option<Element>,
+}
 /// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisSamplesize {
@@ -188,32 +254,6 @@ pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     /// Used for footnotes or explanatory notes
     pub note: Option<Vec<Annotation>>,
 }
-/// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of precision estimate
-    ///
-    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Level of confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower bound
-    pub from: Option<DecimalType>,
-    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
-    pub _from: Option<Element>,
-    /// Upper bound
-    pub to: Option<DecimalType>,
-    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
-    pub _to: Option<Element>,
-}
 /// RiskEvidenceSynthesis nested structure for the 'certainty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisCertainty {
@@ -231,46 +271,6 @@ pub struct RiskEvidenceSynthesisCertainty {
     pub rating: Option<Vec<CodeableConcept>>,
     /// Used for footnotes or explanatory notes
     pub note: Option<Vec<Annotation>>,
-}
-/// RiskEvidenceSynthesis nested structure for the 'riskEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisRiskestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How precise the estimate is
-    #[serde(rename = "precisionEstimate")]
-    pub precision_estimate: Option<Vec<RiskEvidenceSynthesisRiskestimatePrecisionestimate>>,
-    /// Description of risk estimate
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Type of risk estimate
-    ///
-    /// Binding: extensible (Whether the risk estimate is dichotomous, continuous or qualitative and the specific type of risk estimate (eg proportion or median).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/risk-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Point estimate
-    pub value: Option<DecimalType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// What unit is the outcome described in?
-    #[serde(rename = "unitOfMeasure")]
-    pub unit_of_measure: Option<CodeableConcept>,
-    /// Sample size for group measured
-    #[serde(rename = "denominatorCount")]
-    pub denominator_count: Option<IntegerType>,
-    /// Extension element for the 'denominatorCount' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_denominatorCount")]
-    pub _denominator_count: Option<Element>,
-    /// Number with the outcome
-    #[serde(rename = "numeratorCount")]
-    pub numerator_count: Option<IntegerType>,
-    /// Extension element for the 'numeratorCount' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numeratorCount")]
-    pub _numerator_count: Option<Element>,
 }
 
 impl Default for RiskEvidenceSynthesis {
@@ -323,6 +323,40 @@ impl Default for RiskEvidenceSynthesis {
     }
 }
 
+impl Default for RiskEvidenceSynthesisRiskestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            precision_estimate: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            unit_of_measure: Default::default(),
+            denominator_count: Default::default(),
+            _denominator_count: Default::default(),
+            numerator_count: Default::default(),
+            _numerator_count: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            level: Default::default(),
+            _level: Default::default(),
+            from: Default::default(),
+            _from: Default::default(),
+            to: Default::default(),
+            _to: Default::default(),
+        }
+    }
+}
+
 impl Default for RiskEvidenceSynthesisSamplesize {
     fn default() -> Self {
         Self {
@@ -348,21 +382,6 @@ impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     }
 }
 
-impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            level: Default::default(),
-            _level: Default::default(),
-            from: Default::default(),
-            _from: Default::default(),
-            to: Default::default(),
-            _to: Default::default(),
-        }
-    }
-}
-
 impl Default for RiskEvidenceSynthesisCertainty {
     fn default() -> Self {
         Self {
@@ -374,24 +393,23 @@ impl Default for RiskEvidenceSynthesisCertainty {
     }
 }
 
-impl Default for RiskEvidenceSynthesisRiskestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            precision_estimate: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            unit_of_measure: Default::default(),
-            denominator_count: Default::default(),
-            _denominator_count: Default::default(),
-            numerator_count: Default::default(),
-            _numerator_count: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("rvs-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for RiskEvidenceSynthesis {
@@ -999,5 +1017,19 @@ impl crate::traits::risk_evidence_synthesis::RiskEvidenceSynthesisExistence
     }
     fn has_certainty(&self) -> bool {
         self.certainty.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for RiskEvidenceSynthesis {
+    fn resource_type(&self) -> &'static str {
+        "RiskEvidenceSynthesis"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/RiskEvidenceSynthesis")
     }
 }

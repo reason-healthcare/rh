@@ -48,29 +48,6 @@ pub struct Bundle {
     /// Digital Signature
     pub signature: Option<Signature>,
 }
-/// Bundle nested structure for the 'entry' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleEntry {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Search related information
-    pub search: Option<BundleEntrySearch>,
-    /// Additional execution information (transaction/batch/history)
-    pub request: Option<BundleEntryRequest>,
-    /// Results of execution (transaction/batch/history)
-    pub response: Option<BundleEntryResponse>,
-    /// Links related to this entry
-    pub link: Option<Vec<StringType>>,
-    /// URI for resource (Absolute URL server address or URI for UUID/OID)
-    #[serde(rename = "fullUrl")]
-    pub full_url: Option<StringType>,
-    /// Extension element for the 'fullUrl' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_fullUrl")]
-    pub _full_url: Option<Element>,
-    /// A resource in the bundle
-    pub resource: Option<Resource>,
-}
 /// BundleEntry nested structure for the 'search' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BundleEntrySearch {
@@ -85,6 +62,71 @@ pub struct BundleEntrySearch {
     pub score: Option<DecimalType>,
     /// Extension element for the 'score' primitive field. Contains metadata and extensions.
     pub _score: Option<Element>,
+}
+/// Bundle nested structure for the 'entry' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleEntry {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Results of execution (transaction/batch/history)
+    pub response: Option<BundleEntryResponse>,
+    /// Search related information
+    pub search: Option<BundleEntrySearch>,
+    /// Additional execution information (transaction/batch/history)
+    pub request: Option<BundleEntryRequest>,
+    /// Links related to this entry
+    pub link: Option<Vec<StringType>>,
+    /// URI for resource (Absolute URL server address or URI for UUID/OID)
+    #[serde(rename = "fullUrl")]
+    pub full_url: Option<StringType>,
+    /// Extension element for the 'fullUrl' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_fullUrl")]
+    pub _full_url: Option<Element>,
+    /// A resource in the bundle
+    pub resource: Option<Resource>,
+}
+/// BundleEntry nested structure for the 'response' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleEntryResponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Status response code (text optional)
+    pub status: StringType,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The location (if the operation returns a location)
+    pub location: Option<StringType>,
+    /// Extension element for the 'location' primitive field. Contains metadata and extensions.
+    pub _location: Option<Element>,
+    /// The Etag for the resource (if relevant)
+    pub etag: Option<StringType>,
+    /// Extension element for the 'etag' primitive field. Contains metadata and extensions.
+    pub _etag: Option<Element>,
+    /// Server's date time modified
+    #[serde(rename = "lastModified")]
+    pub last_modified: Option<InstantType>,
+    /// Extension element for the 'lastModified' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lastModified")]
+    pub _last_modified: Option<Element>,
+    /// OperationOutcome with hints and warnings (for batch/transaction)
+    pub outcome: Option<Resource>,
+}
+/// Bundle nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// See http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1
+    pub relation: StringType,
+    /// Extension element for the 'relation' primitive field. Contains metadata and extensions.
+    pub _relation: Option<Element>,
+    /// Reference details for the link
+    pub url: StringType,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
 }
 /// BundleEntry nested structure for the 'request' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,48 +167,6 @@ pub struct BundleEntryRequest {
     #[serde(rename = "_ifNoneExist")]
     pub _if_none_exist: Option<Element>,
 }
-/// Bundle nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// See http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1
-    pub relation: StringType,
-    /// Extension element for the 'relation' primitive field. Contains metadata and extensions.
-    pub _relation: Option<Element>,
-    /// Reference details for the link
-    pub url: StringType,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
-/// BundleEntry nested structure for the 'response' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleEntryResponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Status response code (text optional)
-    pub status: StringType,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The location (if the operation returns a location)
-    pub location: Option<StringType>,
-    /// Extension element for the 'location' primitive field. Contains metadata and extensions.
-    pub _location: Option<Element>,
-    /// The Etag for the resource (if relevant)
-    pub etag: Option<StringType>,
-    /// Extension element for the 'etag' primitive field. Contains metadata and extensions.
-    pub _etag: Option<Element>,
-    /// Server's date time modified
-    #[serde(rename = "lastModified")]
-    pub last_modified: Option<InstantType>,
-    /// Extension element for the 'lastModified' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lastModified")]
-    pub _last_modified: Option<Element>,
-    /// OperationOutcome with hints and warnings (for batch/transaction)
-    pub outcome: Option<Resource>,
-}
 
 impl Default for Bundle {
     fn default() -> Self {
@@ -186,21 +186,6 @@ impl Default for Bundle {
     }
 }
 
-impl Default for BundleEntry {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            search: Default::default(),
-            request: Default::default(),
-            response: Default::default(),
-            link: Default::default(),
-            full_url: Default::default(),
-            _full_url: Default::default(),
-            resource: Default::default(),
-        }
-    }
-}
-
 impl Default for BundleEntrySearch {
     fn default() -> Self {
         Self {
@@ -209,6 +194,50 @@ impl Default for BundleEntrySearch {
             _mode: Default::default(),
             score: Default::default(),
             _score: Default::default(),
+        }
+    }
+}
+
+impl Default for BundleEntry {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            response: Default::default(),
+            search: Default::default(),
+            request: Default::default(),
+            link: Default::default(),
+            full_url: Default::default(),
+            _full_url: Default::default(),
+            resource: Default::default(),
+        }
+    }
+}
+
+impl Default for BundleEntryResponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            location: Default::default(),
+            _location: Default::default(),
+            etag: Default::default(),
+            _etag: Default::default(),
+            last_modified: Default::default(),
+            _last_modified: Default::default(),
+            outcome: Default::default(),
+        }
+    }
+}
+
+impl Default for BundleLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            relation: StringType::default(),
+            _relation: Default::default(),
+            url: StringType::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -233,34 +262,28 @@ impl Default for BundleEntryRequest {
     }
 }
 
-impl Default for BundleLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            relation: StringType::default(),
-            _relation: Default::default(),
-            url: StringType::default(),
-            _url: Default::default(),
-        }
-    }
-}
-
-impl Default for BundleEntryResponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            location: Default::default(),
-            _location: Default::default(),
-            etag: Default::default(),
-            _etag: Default::default(),
-            last_modified: Default::default(),
-            _last_modified: Default::default(),
-            outcome: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("bdl-1", rh_foundation::Severity::Error, "total only when a search or history", "total.empty() or (type = 'searchset') or (type = 'history')").with_xpath("not(f:total) or (f:type/@value = 'searchset') or (f:type/@value = 'history')"),
+    rh_foundation::Invariant::new("bdl-10", rh_foundation::Severity::Error, "A document must have a date", "type = 'document' implies (timestamp.hasValue())").with_xpath("not(f:type/@value = 'document') or exists(f:timestamp/@value)"),
+    rh_foundation::Invariant::new("bdl-11", rh_foundation::Severity::Error, "A document must have a Composition as the first resource", "type = 'document' implies entry.first().resource.is(Composition)").with_xpath("not(f:type/@value='document') or f:entry[1]/f:resource/f:Composition"),
+    rh_foundation::Invariant::new("bdl-12", rh_foundation::Severity::Error, "A message must have a MessageHeader as the first resource", "type = 'message' implies entry.first().resource.is(MessageHeader)").with_xpath("not(f:type/@value='message') or f:entry[1]/f:resource/f:MessageHeader"),
+    rh_foundation::Invariant::new("bdl-2", rh_foundation::Severity::Error, "entry.search only when a search", "entry.search.empty() or (type = 'searchset')").with_xpath("not(f:entry/f:search) or (f:type/@value = 'searchset')"),
+    rh_foundation::Invariant::new("bdl-3", rh_foundation::Severity::Error, "entry.request mandatory for batch/transaction/history, otherwise prohibited", "entry.all(request.exists() = (%resource.type = 'batch' or %resource.type = 'transaction' or %resource.type = 'history'))").with_xpath("not(f:entry/f:request) or (f:type/@value = 'batch') or (f:type/@value = 'transaction') or (f:type/@value = 'history')"),
+    rh_foundation::Invariant::new("bdl-4", rh_foundation::Severity::Error, "entry.response mandatory for batch-response/transaction-response/history, otherwise prohibited", "entry.all(response.exists() = (%resource.type = 'batch-response' or %resource.type = 'transaction-response' or %resource.type = 'history'))").with_xpath("not(f:entry/f:response) or (f:type/@value = 'batch-response') or (f:type/@value = 'transaction-response') or (f:type/@value = 'history')"),
+    rh_foundation::Invariant::new("bdl-5", rh_foundation::Severity::Error, "must be a resource unless there's a request or response", "resource.exists() or request.exists() or response.exists()").with_xpath("exists(f:resource) or exists(f:request) or exists(f:response)"),
+    rh_foundation::Invariant::new("bdl-7", rh_foundation::Severity::Error, "FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)", "(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&resource.meta.versionId).isDistinct()").with_xpath("(f:type/@value = 'history') or (count(for $entry in f:entry[f:resource] return $entry[count(parent::f:Bundle/f:entry[f:fullUrl/@value=$entry/f:fullUrl/@value and ((not(f:resource/*/f:meta/f:versionId/@value) and not($entry/f:resource/*/f:meta/f:versionId/@value)) or f:resource/*/f:meta/f:versionId/@value=$entry/f:resource/*/f:meta/f:versionId/@value)])!=1])=0)"),
+    rh_foundation::Invariant::new("bdl-8", rh_foundation::Severity::Error, "fullUrl cannot be a version specific reference", "fullUrl.contains('/_history/').not()").with_xpath("not(exists(f:fullUrl[contains(string(@value), '/_history/')]))"),
+    rh_foundation::Invariant::new("bdl-9", rh_foundation::Severity::Error, "A document must have an identifier with a system and a value", "type = 'document' implies (identifier.system.exists() and identifier.value.exists())").with_xpath("not(f:type/@value = 'document') or exists(f:identifier/f:system) or exists(f:identifier/f:value)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Bundle {
@@ -427,5 +450,19 @@ impl crate::traits::bundle::BundleExistence for Bundle {
     }
     fn has_signature(&self) -> bool {
         self.signature.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for Bundle {
+    fn resource_type(&self) -> &'static str {
+        "Bundle"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Bundle")
     }
 }

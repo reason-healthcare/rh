@@ -200,22 +200,20 @@ pub struct Measure {
     #[serde(rename = "supplementalData")]
     pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
 }
-/// Measure nested structure for the 'group' field
+/// MeasureGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroup {
+pub struct MeasureGroupStratifier {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Stratifier criteria for the measure
-    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
-    /// Meaning of the group
+    /// Meaning of the stratifier
     pub code: Option<CodeableConcept>,
-    /// Summary description
+    /// The human readable description of this stratifier
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+    /// How the measure should be stratified
+    pub criteria: Option<Expression>,
 }
 /// Measure nested structure for the 'supplementalData' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,21 +235,6 @@ pub struct MeasureSupplementaldata {
     pub _description: Option<Element>,
     /// Expression describing additional data to be reported
     pub criteria: Expression,
-}
-/// MeasureGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Meaning of the stratifier
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How the measure should be stratified
-    pub criteria: Option<Expression>,
 }
 /// MeasureGroup nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,6 +269,23 @@ pub struct MeasureGroupStratifierComponent {
     pub _description: Option<Element>,
     /// Component of how the measure should be stratified
     pub criteria: Expression,
+}
+/// Measure nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
+    /// Stratifier criteria for the measure
+    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Meaning of the group
+    pub code: Option<CodeableConcept>,
+    /// Summary description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
 }
 
 impl Default for Measure {
@@ -361,15 +361,14 @@ impl Default for Measure {
     }
 }
 
-impl Default for MeasureGroup {
+impl Default for MeasureGroupStratifier {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            stratifier: Default::default(),
-            population: Default::default(),
             code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+            criteria: Default::default(),
         }
     }
 }
@@ -380,18 +379,6 @@ impl Default for MeasureSupplementaldata {
             base: BackboneElement::default(),
             code: Default::default(),
             usage: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
             criteria: Default::default(),
@@ -422,6 +409,38 @@ impl Default for MeasureGroupStratifierComponent {
         }
     }
 }
+
+impl Default for MeasureGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            population: Default::default(),
+            stratifier: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("mea-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+    rh_foundation::Invariant::new("mea-1", rh_foundation::Severity::Error, "Stratifier SHALL be either a single criteria or a set of criteria components", "group.stratifier.all((code | description | criteria).exists() xor component.exists())").with_xpath("exists(f:group/stratifier/code) or exists(f:group/stratifier/component)"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Measure {
@@ -1145,5 +1164,19 @@ impl crate::traits::measure::MeasureExistence for Measure {
         self.supplemental_data
             .as_ref()
             .is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Measure {
+    fn resource_type(&self) -> &'static str {
+        "Measure"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Measure")
     }
 }

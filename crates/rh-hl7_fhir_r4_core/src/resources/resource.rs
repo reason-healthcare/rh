@@ -44,18 +44,18 @@ pub struct Resource {
     /// Extension element for the 'language' primitive field. Contains metadata and extensions.
     pub _language: Option<Element>,
 }
-/// Approval Date
+/// Last Review Date
 ///
-/// The date on which the asset content was approved by the publisher. Approval happens once when the content is officially approved for usage.
+/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-approvalDate
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceApprovalDate {
+pub struct ResourceLastReviewDate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -76,18 +76,18 @@ pub struct ResourcePertainsToGoal {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Last Review Date
+/// Approval Date
 ///
-/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
+/// The date on which the asset content was approved by the publisher. Approval happens once when the content is officially approved for usage.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-approvalDate
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceLastReviewDate {
+pub struct ResourceApprovalDate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -106,7 +106,7 @@ impl Default for Resource {
     }
 }
 
-impl Default for ResourceApprovalDate {
+impl Default for ResourceLastReviewDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -122,13 +122,28 @@ impl Default for ResourcePertainsToGoal {
     }
 }
 
-impl Default for ResourceLastReviewDate {
+impl Default for ResourceApprovalDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::Invariant::new(
+            "ele-1",
+            rh_foundation::Severity::Error,
+            "All FHIR elements must have a @value or children",
+            "hasValue() or (children().count() > id.count())",
+        )
+        .with_xpath("@value|f:*|h:div")]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Resource {
@@ -184,5 +199,15 @@ impl crate::traits::resource::ResourceExistence for Resource {
     }
     fn has_language(&self) -> bool {
         self.language.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for Resource {
+    fn resource_type(&self) -> &'static str {
+        "Resource"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
     }
 }

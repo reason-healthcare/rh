@@ -22,6 +22,7 @@ pub mod field_generator;
 pub mod file_generator;
 pub mod file_io_manager;
 pub mod import_manager;
+pub mod invariant_generator;
 // #[cfg(test)]
 // pub mod import_manager_integration_test;
 pub mod metadata_generator;
@@ -36,6 +37,7 @@ pub mod trait_impl_generator;
 pub mod type_registry;
 pub mod type_utilities;
 pub mod utils;
+pub mod validation_trait_generator;
 
 // Re-export key functionality
 pub use crate_generator::{
@@ -48,6 +50,7 @@ pub use field_generator::FieldGenerator;
 pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
 pub use import_manager::ImportManager;
+pub use invariant_generator::InvariantGenerator;
 pub use metadata_generator::{build_metadata_registry, generate_metadata_code};
 pub use mutator_trait_generator::MutatorTraitGenerator;
 pub use naming_manager::NamingManager;
@@ -60,3 +63,4 @@ pub use trait_impl_generator::TraitImplGenerator;
 pub use type_registry::TypeRegistry;
 pub use type_utilities::TypeUtilities;
 pub use utils::GeneratorUtils;
+pub use validation_trait_generator::ValidationTraitGenerator;

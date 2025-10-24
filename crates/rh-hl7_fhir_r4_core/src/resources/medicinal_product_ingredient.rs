@@ -41,28 +41,6 @@ pub struct MedicinalProductIngredient {
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
 }
-/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Relevant reference substance
-    pub substance: Option<CodeableConcept>,
-    /// Strength expressed in terms of a reference substance
-    pub strength: Ratio,
-    /// Strength expressed in terms of a reference substance
-    #[serde(rename = "strengthLowLimit")]
-    pub strength_low_limit: Option<Ratio>,
-    /// For when strength is measured at a particular point or distance
-    #[serde(rename = "measurementPoint")]
-    pub measurement_point: Option<StringType>,
-    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_measurementPoint")]
-    pub _measurement_point: Option<Element>,
-    /// The country or countries for which the strength range applies
-    pub country: Option<Vec<CodeableConcept>>,
-}
 /// MedicinalProductIngredient nested structure for the 'substance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductIngredientSubstance {
@@ -73,21 +51,6 @@ pub struct MedicinalProductIngredientSubstance {
     pub code: CodeableConcept,
     /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
     pub strength: Option<Vec<StringType>>,
-}
-/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
-    /// The specified substance
-    pub code: CodeableConcept,
-    /// The group of specified substance, e.g. group 1 to 4
-    pub group: CodeableConcept,
-    /// Confidentiality level of the specified substance as the ingredient
-    pub confidentiality: Option<CodeableConcept>,
 }
 /// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +77,43 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     /// The country or countries for which the strength range applies
     pub country: Option<Vec<CodeableConcept>>,
 }
+/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Relevant reference substance
+    pub substance: Option<CodeableConcept>,
+    /// Strength expressed in terms of a reference substance
+    pub strength: Ratio,
+    /// Strength expressed in terms of a reference substance
+    #[serde(rename = "strengthLowLimit")]
+    pub strength_low_limit: Option<Ratio>,
+    /// For when strength is measured at a particular point or distance
+    #[serde(rename = "measurementPoint")]
+    pub measurement_point: Option<StringType>,
+    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_measurementPoint")]
+    pub _measurement_point: Option<Element>,
+    /// The country or countries for which the strength range applies
+    pub country: Option<Vec<CodeableConcept>>,
+}
+/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
+    /// The specified substance
+    pub code: CodeableConcept,
+    /// The group of specified substance, e.g. group 1 to 4
+    pub group: CodeableConcept,
+    /// Confidentiality level of the specified substance as the ingredient
+    pub confidentiality: Option<CodeableConcept>,
+}
 
 impl Default for MedicinalProductIngredient {
     fn default() -> Self {
@@ -130,38 +130,12 @@ impl Default for MedicinalProductIngredient {
     }
 }
 
-impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance: Default::default(),
-            strength: Default::default(),
-            strength_low_limit: Default::default(),
-            measurement_point: Default::default(),
-            _measurement_point: Default::default(),
-            country: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductIngredientSubstance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             code: CodeableConcept::default(),
             strength: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSpecifiedsubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: Default::default(),
-            group: Default::default(),
-            confidentiality: Default::default(),
         }
     }
 }
@@ -180,6 +154,49 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
         }
     }
 }
+
+impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substance: Default::default(),
+            strength: Default::default(),
+            strength_low_limit: Default::default(),
+            measurement_point: Default::default(),
+            _measurement_point: Default::default(),
+            country: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductIngredientSpecifiedsubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: Default::default(),
+            group: Default::default(),
+            confidentiality: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicinalProductIngredient {
@@ -465,5 +482,19 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientExis
     }
     fn has_substance(&self) -> bool {
         self.substance.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for MedicinalProductIngredient {
+    fn resource_type(&self) -> &'static str {
+        "MedicinalProductIngredient"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductIngredient")
     }
 }

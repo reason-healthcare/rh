@@ -75,7 +75,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     )?;
 
     // Generate Cargo.toml
-    let cargo_toml_content = generate_cargo_toml(params.package, params.version);
+    let cargo_toml_content = generate_cargo_toml(params.package, params.version, params.output);
     let cargo_toml_path = params.output.join("Cargo.toml");
     fs::write(&cargo_toml_path, cargo_toml_content)?;
 
@@ -88,6 +88,12 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     let macros_content = include_str!("../macros.rs");
     let macros_path = src_dir.join("macros.rs");
     fs::write(&macros_path, macros_content)?;
+
+    // Generate validation.rs module with ValidatableResource trait
+    let validation_content =
+        crate::generators::ValidationTraitGenerator::generate_validation_module();
+    let validation_path = src_dir.join("validation.rs");
+    fs::write(&validation_path, validation_content)?;
 
     // Generate mod.rs files for each module
     generate_module_files(
@@ -122,9 +128,29 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
 }
 
 /// Generate Cargo.toml content for the FHIR crate
-fn generate_cargo_toml(package: &str, version: &str) -> String {
+fn generate_cargo_toml(package: &str, version: &str, _output_dir: &Path) -> String {
     // Convert FHIR package name to a valid Rust crate name
     let crate_name = package.replace(['.', '-'], "_");
+
+    // Try to find rh-foundation crate path relative to output directory
+    let rh_foundation_path = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        // We're in the rh-codegen crate, so rh-foundation is at ../rh-foundation
+        let workspace_root = Path::new(&manifest_dir).parent().and_then(|p| p.parent());
+        if let Some(root) = workspace_root {
+            let foundation_path = root.join("crates/rh-foundation");
+            if foundation_path.exists() {
+                // Use absolute path for reliability
+                foundation_path.display().to_string()
+            } else {
+                // Fallback to relative path assumption
+                "../../rh/crates/rh-foundation".to_string()
+            }
+        } else {
+            "../../rh/crates/rh-foundation".to_string()
+        }
+    } else {
+        "../../rh/crates/rh-foundation".to_string()
+    };
 
     format!(
         r#"[package]
@@ -139,6 +165,8 @@ license = "MIT OR Apache-2.0"
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
 phf = {{ version = "0.11", features = ["macros"] }}
+once_cell = "1.19"
+rh-foundation = {{ path = "{rh_foundation_path}" }}
 
 [lib]
 name = "{crate_name}"
@@ -192,6 +220,7 @@ pub mod resources;
 pub mod profiles;
 pub mod traits;
 pub mod bindings;
+pub mod validation;
 
 pub use serde::{Deserialize, Serialize};
 "#;

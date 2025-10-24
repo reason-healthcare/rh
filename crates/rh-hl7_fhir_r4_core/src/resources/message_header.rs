@@ -56,24 +56,22 @@ pub struct MessageHeader {
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
 }
-/// MessageHeader nested structure for the 'destination' field
+/// MessageHeader nested structure for the 'response' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderDestination {
+pub struct MessageHeaderResponse {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name of system
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Particular delivery destination within the destination
-    pub target: Option<Reference>,
-    /// Actual destination address or id
-    pub endpoint: StringType,
-    /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
-    pub _endpoint: Option<Element>,
-    /// Intended "real-world" recipient for the data
-    pub receiver: Option<Reference>,
+    /// Id of original message
+    pub identifier: StringType,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// ok | transient-error | fatal-error
+    pub code: ResponseCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Specific list of hints/warnings/errors
+    pub details: Option<Reference>,
 }
 /// MessageHeader nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,22 +98,24 @@ pub struct MessageHeaderSource {
     /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
     pub _endpoint: Option<Element>,
 }
-/// MessageHeader nested structure for the 'response' field
+/// MessageHeader nested structure for the 'destination' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderResponse {
+pub struct MessageHeaderDestination {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Id of original message
-    pub identifier: StringType,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// ok | transient-error | fatal-error
-    pub code: ResponseCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Specific list of hints/warnings/errors
-    pub details: Option<Reference>,
+    /// Name of system
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Particular delivery destination within the destination
+    pub target: Option<Reference>,
+    /// Actual destination address or id
+    pub endpoint: StringType,
+    /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
+    pub _endpoint: Option<Element>,
+    /// Intended "real-world" recipient for the data
+    pub receiver: Option<Reference>,
 }
 
 impl Default for MessageHeader {
@@ -139,16 +139,15 @@ impl Default for MessageHeader {
     }
 }
 
-impl Default for MessageHeaderDestination {
+impl Default for MessageHeaderResponse {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            target: Default::default(),
-            endpoint: StringType::default(),
-            _endpoint: Default::default(),
-            receiver: Default::default(),
+            identifier: StringType::default(),
+            _identifier: Default::default(),
+            code: ResponseCode::default(),
+            _code: Default::default(),
+            details: Default::default(),
         }
     }
 }
@@ -170,18 +169,36 @@ impl Default for MessageHeaderSource {
     }
 }
 
-impl Default for MessageHeaderResponse {
+impl Default for MessageHeaderDestination {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            identifier: StringType::default(),
-            _identifier: Default::default(),
-            code: ResponseCode::default(),
-            _code: Default::default(),
-            details: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            target: Default::default(),
+            endpoint: StringType::default(),
+            _endpoint: Default::default(),
+            receiver: Default::default(),
         }
     }
 }
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MessageHeader {
@@ -497,5 +514,19 @@ impl crate::traits::message_header::MessageHeaderExistence for MessageHeader {
     }
     fn has_definition(&self) -> bool {
         self.definition.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for MessageHeader {
+    fn resource_type(&self) -> &'static str {
+        "MessageHeader"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/MessageHeader")
     }
 }

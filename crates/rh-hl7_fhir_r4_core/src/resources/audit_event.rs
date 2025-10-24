@@ -97,21 +97,92 @@ pub struct AuditEvent {
     /// Data or objects used
     pub entity: Option<Vec<AuditEventEntity>>,
 }
-/// AuditEventAgent nested structure for the 'network' field
+/// AuditEvent nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventAgentNetwork {
+pub struct AuditEventSource {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Identifier for the network access point of the user device
-    pub address: Option<StringType>,
-    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
-    pub _address: Option<Element>,
-    /// The type of network access point
+    /// Logical source location within the enterprise
+    pub site: Option<StringType>,
+    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
+    pub _site: Option<Element>,
+    /// The identity of source detecting the event
+    pub observer: Reference,
+    /// The type of source where event originated
+    ///
+    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
     #[serde(rename = "type")]
-    pub type_: Option<NetworkType>,
+    pub type_: Option<Vec<Coding>>,
+}
+/// AuditEvent nested structure for the 'entity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additional Information about the entity
+    pub detail: Option<Vec<AuditEventEntityDetail>>,
+    /// Specific instance of resource
+    pub what: Option<Reference>,
+    /// Type of entity involved
+    ///
+    /// Binding: extensible (Code for the entity type involved in the audit event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-entity-type
+    #[serde(rename = "type")]
+    pub type_: Option<Coding>,
+    /// What role the entity played
+    ///
+    /// Binding: extensible (Code representing the role the entity played in the audit event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/object-role
+    pub role: Option<Coding>,
+    /// Life-cycle stage for the entity
+    ///
+    /// Binding: extensible (Identifier for the data life-cycle stage for the entity.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/object-lifecycle-events
+    pub lifecycle: Option<Coding>,
+    /// Security labels on the entity
+    ///
+    /// Binding: extensible (Security Labels from the Healthcare Privacy and Security Classification System.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
+    #[serde(rename = "securityLabel")]
+    pub security_label: Option<Vec<Coding>>,
+    /// Descriptor for entity
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Descriptive text
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Query parameters
+    pub query: Option<Base64BinaryType>,
+    /// Extension element for the 'query' primitive field. Contains metadata and extensions.
+    pub _query: Option<Element>,
+}
+/// AuditEventEntity nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntityDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the property
+    #[serde(rename = "type")]
+    pub type_: StringType,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
+    /// Property value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Property value (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
 }
 /// AuditEvent nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,92 +273,21 @@ pub struct AuditEventAgent {
     #[serde(rename = "purposeOfUse")]
     pub purpose_of_use: Option<Vec<CodeableConcept>>,
 }
-/// AuditEvent nested structure for the 'entity' field
+/// AuditEventAgent nested structure for the 'network' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntity {
+pub struct AuditEventAgentNetwork {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Additional Information about the entity
-    pub detail: Option<Vec<AuditEventEntityDetail>>,
-    /// Specific instance of resource
-    pub what: Option<Reference>,
-    /// Type of entity involved
-    ///
-    /// Binding: extensible (Code for the entity type involved in the audit event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-entity-type
+    /// Identifier for the network access point of the user device
+    pub address: Option<StringType>,
+    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
+    pub _address: Option<Element>,
+    /// The type of network access point
     #[serde(rename = "type")]
-    pub type_: Option<Coding>,
-    /// What role the entity played
-    ///
-    /// Binding: extensible (Code representing the role the entity played in the audit event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/object-role
-    pub role: Option<Coding>,
-    /// Life-cycle stage for the entity
-    ///
-    /// Binding: extensible (Identifier for the data life-cycle stage for the entity.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/object-lifecycle-events
-    pub lifecycle: Option<Coding>,
-    /// Security labels on the entity
-    ///
-    /// Binding: extensible (Security Labels from the Healthcare Privacy and Security Classification System.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
-    #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<Coding>>,
-    /// Descriptor for entity
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Descriptive text
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Query parameters
-    pub query: Option<Base64BinaryType>,
-    /// Extension element for the 'query' primitive field. Contains metadata and extensions.
-    pub _query: Option<Element>,
-}
-/// AuditEventEntity nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntityDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of the property
-    #[serde(rename = "type")]
-    pub type_: StringType,
+    pub type_: Option<NetworkType>,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
-    /// Property value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Property value (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-}
-/// AuditEvent nested structure for the 'source' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventSource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Logical source location within the enterprise
-    pub site: Option<StringType>,
-    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
-    pub _site: Option<Element>,
-    /// The identity of source detecting the event
-    pub observer: Reference,
-    /// The type of source where event originated
-    ///
-    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<Coding>>,
 }
 
 impl Default for AuditEvent {
@@ -313,37 +313,14 @@ impl Default for AuditEvent {
     }
 }
 
-impl Default for AuditEventAgentNetwork {
+impl Default for AuditEventSource {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            address: Default::default(),
-            _address: Default::default(),
+            site: Default::default(),
+            _site: Default::default(),
+            observer: Reference::default(),
             type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventAgent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            network: Default::default(),
-            type_: Default::default(),
-            role: Default::default(),
-            who: Default::default(),
-            alt_id: Default::default(),
-            _alt_id: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            requestor: BooleanType::default(),
-            _requestor: Default::default(),
-            location: Default::default(),
-            policy: Default::default(),
-            _policy: Default::default(),
-            media: Default::default(),
-            purpose_of_use: Default::default(),
         }
     }
 }
@@ -380,17 +357,58 @@ impl Default for AuditEventEntityDetail {
     }
 }
 
-impl Default for AuditEventSource {
+impl Default for AuditEventAgent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            site: Default::default(),
-            _site: Default::default(),
-            observer: Reference::default(),
+            network: Default::default(),
             type_: Default::default(),
+            role: Default::default(),
+            who: Default::default(),
+            alt_id: Default::default(),
+            _alt_id: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            requestor: BooleanType::default(),
+            _requestor: Default::default(),
+            location: Default::default(),
+            policy: Default::default(),
+            _policy: Default::default(),
+            media: Default::default(),
+            purpose_of_use: Default::default(),
         }
     }
 }
+
+impl Default for AuditEventAgentNetwork {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            address: Default::default(),
+            _address: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("sev-1", rh_foundation::Severity::Error, "Either a name or a query (NOT both)", "name.empty() or query.empty()").with_xpath("not(exists(f:name)) or not(exists(f:query))"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for AuditEvent {
@@ -729,5 +747,19 @@ impl crate::traits::audit_event::AuditEventExistence for AuditEvent {
     }
     fn has_entity(&self) -> bool {
         self.entity.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for AuditEvent {
+    fn resource_type(&self) -> &'static str {
+        "AuditEvent"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/AuditEvent")
     }
 }

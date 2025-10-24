@@ -324,6 +324,19 @@ impl Default for ParametersParameter {
     }
 }
 
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("inv-1", rh_foundation::Severity::Error, "A parameter must have one and only one of (value, resource, part)", "(part.exists() and value.empty() and resource.empty()) or (part.empty() and (value.exists() xor resource.exists()))").with_xpath("(exists(f:resource) or exists(f:part) or exists(f:*[starts-with(local-name(.), 'value')])) and not(exists(f:*[starts-with(local-name(.), 'value')])) and exists(f:resource))) and not(exists(f:*[starts-with(local-name(.), 'value')])) and exists(f:part))) and not(exists(f:part) and exists(f:resource))"),
+]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Parameters {
     fn id(&self) -> Option<String> {
@@ -418,5 +431,19 @@ impl crate::traits::parameters::ParametersExistence for Parameters {
     }
     fn has_parameter(&self) -> bool {
         self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Parameters {
+    fn resource_type(&self) -> &'static str {
+        "Parameters"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Parameters")
     }
 }

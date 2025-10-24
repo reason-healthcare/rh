@@ -47,6 +47,21 @@ impl Default for Binary {
     }
 }
 
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::Invariant::new(
+            "ele-1",
+            rh_foundation::Severity::Error,
+            "All FHIR elements must have a @value or children",
+            "hasValue() or (children().count() > id.count())",
+        )
+        .with_xpath("@value|f:*|h:div")]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Binary {
     fn id(&self) -> Option<String> {
@@ -158,5 +173,19 @@ impl crate::traits::binary::BinaryExistence for Binary {
     }
     fn has_data(&self) -> bool {
         self.data.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for Binary {
+    fn resource_type(&self) -> &'static str {
+        "Binary"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Binary")
     }
 }

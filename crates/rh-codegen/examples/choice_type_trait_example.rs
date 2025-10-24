@@ -61,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
                 // Observation.effective[x] - can be dateTime, Period, or Timing
                 ElementDefinition {
@@ -90,6 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
             ],
         }),

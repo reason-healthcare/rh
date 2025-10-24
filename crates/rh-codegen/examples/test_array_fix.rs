@@ -33,6 +33,7 @@ fn create_test_structure_with_arrays() -> StructureDefinition {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
                 ElementDefinition {
                     id: Some("TestArrayResource.stringArray".to_string()),
@@ -48,6 +49,7 @@ fn create_test_structure_with_arrays() -> StructureDefinition {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
                 ElementDefinition {
                     id: Some("TestArrayResource.requiredArray".to_string()),
@@ -63,6 +65,7 @@ fn create_test_structure_with_arrays() -> StructureDefinition {
                     fixed: None,
                     pattern: None,
                     binding: None,
+                    constraint: None,
                 },
             ],
         }),

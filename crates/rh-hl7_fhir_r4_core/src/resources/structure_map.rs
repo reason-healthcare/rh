@@ -133,21 +133,6 @@ pub struct StructureMap {
     /// Named sections for reader convenience
     pub group: Vec<StructureMapGroup>,
 }
-/// StructureMapGroupRule nested structure for the 'dependent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroupRuleDependent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of a rule or group to apply
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Variable to pass to the rule or group
-    pub variable: Vec<StringType>,
-    /// Extension element for the 'variable' primitive field. Contains metadata and extensions.
-    pub _variable: Option<Element>,
-}
 /// StructureMap nested structure for the 'structure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureMapStructure {
@@ -171,75 +156,42 @@ pub struct StructureMapStructure {
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
 }
-/// StructureMapGroup nested structure for the 'input' field
+/// StructureMapGroupRule nested structure for the 'dependent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroupInput {
+pub struct StructureMapGroupRuleDependent {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name for this instance of data
+    /// Name of a rule or group to apply
     pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Type for this instance of data
-    #[serde(rename = "type")]
-    pub type_: Option<StringType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// source | target
-    pub mode: MapInputMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Documentation for this instance of data
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
+    /// Variable to pass to the rule or group
+    pub variable: Vec<StringType>,
+    /// Extension element for the 'variable' primitive field. Contains metadata and extensions.
+    pub _variable: Option<Element>,
 }
-/// StructureMap nested structure for the 'group' field
+/// StructureMapGroupRuleTarget nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroup {
+pub struct StructureMapGroupRuleTargetParameter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Named instance provided when invoking the map
-    pub input: Vec<StructureMapGroupInput>,
-    /// Transform Rule from source to target
-    pub rule: Vec<StructureMapGroupRule>,
-    /// Human-readable label
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Another group that this group adds rules to
-    pub extends: Option<StringType>,
-    /// Extension element for the 'extends' primitive field. Contains metadata and extensions.
-    pub _extends: Option<Element>,
-    /// none | types | type-and-types
-    #[serde(rename = "typeMode")]
-    pub type_mode: MapGroupTypeMode,
-    /// Extension element for the 'typeMode' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_typeMode")]
-    pub _type_mode: Option<Element>,
-    /// Additional description/explanation for group
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// StructureMapGroup nested structure for the 'rule' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroupRule {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of the rule for internal references
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Rules contained in this rule
-    pub rule: Option<Vec<StringType>>,
-    /// Documentation for this instance of data
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
+    /// Parameter value - variable or literal (id)
+    #[serde(rename = "valueId")]
+    pub value_id: StringType,
+    /// Parameter value - variable or literal (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Parameter value - variable or literal (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Parameter value - variable or literal (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Parameter value - variable or literal (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
 }
 /// StructureMapGroupRule nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -443,6 +395,76 @@ pub struct StructureMapGroupRuleSource {
     #[serde(rename = "_logMessage")]
     pub _log_message: Option<Element>,
 }
+/// StructureMap nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureMapGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Named instance provided when invoking the map
+    pub input: Vec<StructureMapGroupInput>,
+    /// Transform Rule from source to target
+    pub rule: Vec<StructureMapGroupRule>,
+    /// Human-readable label
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Another group that this group adds rules to
+    pub extends: Option<StringType>,
+    /// Extension element for the 'extends' primitive field. Contains metadata and extensions.
+    pub _extends: Option<Element>,
+    /// none | types | type-and-types
+    #[serde(rename = "typeMode")]
+    pub type_mode: MapGroupTypeMode,
+    /// Extension element for the 'typeMode' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_typeMode")]
+    pub _type_mode: Option<Element>,
+    /// Additional description/explanation for group
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// StructureMapGroup nested structure for the 'rule' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureMapGroupRule {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the rule for internal references
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Rules contained in this rule
+    pub rule: Option<Vec<StringType>>,
+    /// Documentation for this instance of data
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// StructureMapGroup nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureMapGroupInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name for this instance of data
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Type for this instance of data
+    #[serde(rename = "type")]
+    pub type_: Option<StringType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// source | target
+    pub mode: MapInputMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Documentation for this instance of data
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
 /// StructureMapGroupRule nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureMapGroupRuleTarget {
@@ -484,28 +506,6 @@ pub struct StructureMapGroupRuleTarget {
     /// Extension element for the 'transform' primitive field. Contains metadata and extensions.
     pub _transform: Option<Element>,
 }
-/// StructureMapGroupRuleTarget nested structure for the 'parameter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroupRuleTargetParameter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Parameter value - variable or literal (id)
-    #[serde(rename = "valueId")]
-    pub value_id: StringType,
-    /// Parameter value - variable or literal (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Parameter value - variable or literal (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Parameter value - variable or literal (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Parameter value - variable or literal (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-}
 
 impl Default for StructureMap {
     fn default() -> Self {
@@ -545,18 +545,6 @@ impl Default for StructureMap {
     }
 }
 
-impl Default for StructureMapGroupRuleDependent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            variable: Default::default(),
-            _variable: Default::default(),
-        }
-    }
-}
-
 impl Default for StructureMapStructure {
     fn default() -> Self {
         Self {
@@ -573,49 +561,27 @@ impl Default for StructureMapStructure {
     }
 }
 
-impl Default for StructureMapGroupInput {
+impl Default for StructureMapGroupRuleDependent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             name: Default::default(),
             _name: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
+            variable: Default::default(),
+            _variable: Default::default(),
         }
     }
 }
 
-impl Default for StructureMapGroup {
+impl Default for StructureMapGroupRuleTargetParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            input: Vec::new(),
-            rule: Vec::new(),
-            name: StringType::default(),
-            _name: Default::default(),
-            extends: Default::default(),
-            _extends: Default::default(),
-            type_mode: MapGroupTypeMode::default(),
-            _type_mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for StructureMapGroupRule {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            rule: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
+            value_id: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_integer: Default::default(),
+            value_decimal: Default::default(),
         }
     }
 }
@@ -698,6 +664,53 @@ impl Default for StructureMapGroupRuleSource {
     }
 }
 
+impl Default for StructureMapGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            input: Vec::new(),
+            rule: Vec::new(),
+            name: StringType::default(),
+            _name: Default::default(),
+            extends: Default::default(),
+            _extends: Default::default(),
+            type_mode: MapGroupTypeMode::default(),
+            _type_mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for StructureMapGroupRule {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            rule: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for StructureMapGroupInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
 impl Default for StructureMapGroupRuleTarget {
     fn default() -> Self {
         Self {
@@ -720,18 +733,25 @@ impl Default for StructureMapGroupRuleTarget {
     }
 }
 
-impl Default for StructureMapGroupRuleTargetParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_id: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_integer: Default::default(),
-            value_decimal: Default::default(),
-        }
-    }
-}
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()").with_xpath("not(parent::f:contained and f:contained)"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()").with_xpath("not(exists(for $id in f:contained/*/f:id/@value return $contained[not(parent::*/descendant::f:reference/@value=concat('#', $contained/*/id/@value) or descendant::f:reference[@value='#'])]))"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:versionId)) and not(exists(f:contained/*/f:meta/f:lastUpdated))"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()").with_xpath("not(exists(f:contained/*/f:meta/f:security))"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+    rh_foundation::Invariant::new("smp-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
+    rh_foundation::Invariant::new("smp-1", rh_foundation::Severity::Error, "Can only have an element if you have a context", "element.exists() implies context.exists()").with_xpath("not(f:element) or (f:context)"),
+    rh_foundation::Invariant::new("smp-2", rh_foundation::Severity::Error, "Must have a contextType if you have a context", "context.exists() implies contextType.exists()").with_xpath("not(f:context) or (f:contextType)"),
+]
+    });
 
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for StructureMap {
@@ -1160,5 +1180,19 @@ impl crate::traits::structure_map::StructureMapExistence for StructureMap {
     }
     fn has_group(&self) -> bool {
         !self.group.is_empty()
+    }
+}
+
+impl crate::validation::ValidatableResource for StructureMap {
+    fn resource_type(&self) -> &'static str {
+        "StructureMap"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/StructureMap")
     }
 }
