@@ -87,28 +87,6 @@ pub struct Coverage {
     /// Contract details
     pub contract: Option<Vec<Reference>>,
 }
-/// Coverage nested structure for the 'class' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageClass {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of class such as 'group' or 'plan'
-    ///
-    /// Binding: extensible (The policy classifications, eg. Group, Plan, Class, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-class
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Value associated with the type
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// Human readable description of the type and value
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-}
 /// Coverage nested structure for the 'costToBeneficiary' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageCosttobeneficiary {
@@ -130,6 +108,28 @@ pub struct CoverageCosttobeneficiary {
     /// The amount or percentage due from the beneficiary (Money)
     #[serde(rename = "valueMoney")]
     pub value_money: Money,
+}
+/// Coverage nested structure for the 'class' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageClass {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of class such as 'group' or 'plan'
+    ///
+    /// Binding: extensible (The policy classifications, eg. Group, Plan, Class, etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-class
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Value associated with the type
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// Human readable description of the type and value
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
 }
 /// CoverageCosttobeneficiary nested structure for the 'exception' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,6 +179,18 @@ impl Default for Coverage {
     }
 }
 
+impl Default for CoverageCosttobeneficiary {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            exception: Default::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_money: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageClass {
     fn default() -> Self {
         Self {
@@ -188,18 +200,6 @@ impl Default for CoverageClass {
             _value: Default::default(),
             name: Default::default(),
             _name: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageCosttobeneficiary {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            exception: Default::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_money: Default::default(),
         }
     }
 }
@@ -229,6 +229,99 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Coverage.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+        )
+        .with_description("A code specifying the state of the resource instance.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Coverage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.policyHolder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.subscriber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.subscriberId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.beneficiary", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.dependent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.relationship", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.payor", 1, None),
+            rh_foundation::ElementCardinality::new("Coverage.class", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.class.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.class.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.class.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.class.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.class.value", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.class.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.order", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.network", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.costToBeneficiary", 0, None),
+            rh_foundation::ElementCardinality::new("Coverage.costToBeneficiary.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.costToBeneficiary.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Coverage.costToBeneficiary.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Coverage.costToBeneficiary.exception", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.exception.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.exception.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.exception.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.exception.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Coverage.costToBeneficiary.exception.period",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Coverage.subrogation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Coverage.contract", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -651,7 +744,19 @@ impl crate::validation::ValidatableResource for Coverage {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Coverage")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::coverage::{CoverageAccessors, CoverageExistence, CoverageMutators};

@@ -213,6 +213,71 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Timing.repeat.dayOfWeek",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/days-of-week|4.0.1",
+            ),
+            rh_foundation::ElementBinding::new(
+                "Timing.repeat.durationUnit",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/units-of-time|4.0.1",
+            )
+            .with_description("A unit of time (units from UCUM)."),
+            rh_foundation::ElementBinding::new(
+                "Timing.repeat.periodUnit",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/units-of-time|4.0.1",
+            )
+            .with_description("A unit of time (units from UCUM)."),
+            rh_foundation::ElementBinding::new(
+                "Timing.repeat.when",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/event-timing|4.0.1",
+            )
+            .with_description("Real world event relating to the schedule."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Timing.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.event", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.repeat", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.repeat.bounds[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.count", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.countMax", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.duration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.durationMax", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.durationUnit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.frequency", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.frequencyMax", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.periodMax", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.periodUnit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.repeat.dayOfWeek", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.repeat.timeOfDay", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.repeat.when", 0, None),
+            rh_foundation::ElementCardinality::new("Timing.repeat.offset", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Timing.code", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Timing {
     fn resource_type(&self) -> &'static str {
         "Timing"
@@ -220,6 +285,14 @@ impl crate::validation::ValidatableResource for Timing {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

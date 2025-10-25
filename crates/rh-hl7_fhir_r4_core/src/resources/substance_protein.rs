@@ -133,6 +133,62 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceProtein.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.extension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.sequenceType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.numberOfSubunits", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.disulfideLinkage", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit.subunit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit.sequence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceProtein.subunit.length", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.sequenceAttachment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.nTerminalModificationId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.nTerminalModification",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.cTerminalModificationId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceProtein.subunit.cTerminalModification",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for SubstanceProtein {
     fn id(&self) -> Option<String> {
@@ -395,7 +451,17 @@ impl crate::validation::ValidatableResource for SubstanceProtein {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstanceProtein")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_protein::{
+    SubstanceProteinAccessors, SubstanceProteinExistence, SubstanceProteinMutators,
+};

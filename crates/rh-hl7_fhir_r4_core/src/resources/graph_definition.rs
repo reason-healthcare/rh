@@ -87,6 +87,28 @@ pub struct GraphDefinition {
     /// Links this graph makes rules about
     pub link: Option<Vec<GraphDefinitionLink>>,
 }
+/// GraphDefinitionLink nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLinkTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of resource this link refers to
+    #[serde(rename = "type")]
+    pub type_: ResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Criteria for reverse lookup
+    pub params: Option<StringType>,
+    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
+    pub _params: Option<Element>,
+    /// Profile for the target resource
+    pub profile: Option<StringType>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+    /// Additional links from target resource
+    pub link: Option<Vec<StringType>>,
+}
 /// GraphDefinitionLinkTarget nested structure for the 'compartment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLinkTargetCompartment {
@@ -146,28 +168,6 @@ pub struct GraphDefinitionLink {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// GraphDefinitionLink nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLinkTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of resource this link refers to
-    #[serde(rename = "type")]
-    pub type_: ResourceTypes,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Criteria for reverse lookup
-    pub params: Option<StringType>,
-    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
-    pub _params: Option<Element>,
-    /// Profile for the target resource
-    pub profile: Option<StringType>,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-    /// Additional links from target resource
-    pub link: Option<Vec<StringType>>,
-}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -196,6 +196,21 @@ impl Default for GraphDefinition {
             _purpose: Default::default(),
             start: ResourceTypes::default(),
             _start: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            link: Default::default(),
+        }
+    }
+}
+
+impl Default for GraphDefinitionLinkTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            params: Default::default(),
+            _params: Default::default(),
             profile: Default::default(),
             _profile: Default::default(),
             link: Default::default(),
@@ -240,21 +255,6 @@ impl Default for GraphDefinitionLink {
     }
 }
 
-impl Default for GraphDefinitionLinkTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            params: Default::default(),
-            _params: Default::default(),
-            profile: Default::default(),
-            _profile: Default::default(),
-            link: Default::default(),
-        }
-    }
-}
-
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -271,6 +271,165 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("gdf-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.link.target.compartment.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/compartment-type|4.0.1",
+            )
+            .with_description("Identifies a compartment."),
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.link.target.compartment.rule",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/graph-compartment-rule|4.0.1",
+            )
+            .with_description("How a compartment must be linked."),
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.link.target.compartment.use",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/graph-compartment-use|4.0.1",
+            )
+            .with_description("Defines how a compartment rule is used."),
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.link.target.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/resource-types|4.0.1",
+            )
+            .with_description("One of the resource types defined as part of this version of FHIR."),
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.start",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/resource-types|4.0.1",
+            )
+            .with_description("One of the resource types defined as part of this version of FHIR."),
+            rh_foundation::ElementBinding::new(
+                "GraphDefinition.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("GraphDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.start", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.profile", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.path", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.sliceName", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.min", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.max", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.target", 0, None),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.target.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.target.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.params",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.profile",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.use",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.rule",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "GraphDefinition.link.target.compartment.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GraphDefinition.link.target.link", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -664,7 +823,21 @@ impl crate::validation::ValidatableResource for GraphDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/GraphDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::graph_definition::{
+    GraphDefinitionAccessors, GraphDefinitionExistence, GraphDefinitionMutators,
+};

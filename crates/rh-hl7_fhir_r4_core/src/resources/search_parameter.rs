@@ -245,6 +245,83 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("SearchParameter.base", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("SearchParameter.comparator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/search-comparator|4.0.1").with_description("What Search Comparator Codes are supported in search."),
+    rh_foundation::ElementBinding::new("SearchParameter.modifier", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/search-modifier-code|4.0.1").with_description("A supported modifier for a search parameter."),
+    rh_foundation::ElementBinding::new("SearchParameter.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+    rh_foundation::ElementBinding::new("SearchParameter.target", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("SearchParameter.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/search-param-type|4.0.1").with_description("Data types allowed to be used for search parameters."),
+    rh_foundation::ElementBinding::new("SearchParameter.xpathUsage", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/search-xpath-usage|4.0.1").with_description("How a search parameter relates to the set of elements returned by evaluating its xpath query."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SearchParameter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.extension", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.derivedFrom", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.contact", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.base", 1, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.expression", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.xpath", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.xpathUsage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.target", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.multipleOr", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.multipleAnd", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.comparator", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.modifier", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.chain", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.component", 0, None),
+            rh_foundation::ElementCardinality::new("SearchParameter.component.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SearchParameter.component.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SearchParameter.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SearchParameter.component.definition",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SearchParameter.component.expression",
+                1,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for SearchParameter {
     fn id(&self) -> Option<String> {
@@ -782,7 +859,21 @@ impl crate::validation::ValidatableResource for SearchParameter {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SearchParameter")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::search_parameter::{
+    SearchParameterAccessors, SearchParameterExistence, SearchParameterMutators,
+};

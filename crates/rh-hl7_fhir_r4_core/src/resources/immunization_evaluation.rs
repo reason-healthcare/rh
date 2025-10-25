@@ -136,6 +136,82 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ImmunizationEvaluation.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/immunization-evaluation-status|4.0.1",
+        )
+        .with_description("The status of the evaluation being done.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.authority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.targetDisease",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.immunizationEvent",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.doseStatus", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.doseStatusReason",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationEvaluation.series", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.doseNumber[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationEvaluation.seriesDoses[x]",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ImmunizationEvaluation {
     fn id(&self) -> Option<String> {
@@ -435,11 +511,11 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationExistence
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_dose_number(&self) -> bool {
-        self.dose_number_positive_int.is_some() || self.dose_number_string.is_some()
-    }
     fn has_series_doses(&self) -> bool {
         self.series_doses_positive_int.is_some() || self.series_doses_string.is_some()
+    }
+    fn has_dose_number(&self) -> bool {
+        self.dose_number_positive_int.is_some() || self.dose_number_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -487,7 +563,22 @@ impl crate::validation::ValidatableResource for ImmunizationEvaluation {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ImmunizationEvaluation")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::immunization_evaluation::{
+    ImmunizationEvaluationAccessors, ImmunizationEvaluationExistence,
+    ImmunizationEvaluationMutators,
+};

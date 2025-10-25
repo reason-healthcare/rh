@@ -16,6 +16,21 @@ pub trait ValidatableResource {
     /// for the resource to be considered valid.
     fn invariants() -> &'static [rh_foundation::Invariant];
 
+    /// Returns the required bindings for this resource/datatype
+    ///
+    /// These are the ValueSet bindings with "required" strength that
+    /// must be validated at runtime.
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &[]
+    }
+
+    /// Returns the cardinality constraints for this resource/datatype
+    ///
+    /// These define the minimum and maximum occurrences allowed for each element.
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &[]
+    }
+
     /// Returns the profile URL if this is a profile, None otherwise
     fn profile_url() -> Option<&'static str> {
         None

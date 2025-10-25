@@ -141,27 +141,6 @@ pub struct CapabilityStatement {
     /// Document definition
     pub document: Option<Vec<CapabilityStatementDocument>>,
 }
-/// CapabilityStatement nested structure for the 'software' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementSoftware {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name the software is known by
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Version covered by this statement
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-    /// Date this version was released
-    #[serde(rename = "releaseDate")]
-    pub release_date: Option<DateTimeType>,
-    /// Extension element for the 'releaseDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_releaseDate")]
-    pub _release_date: Option<Element>,
-}
 /// CapabilityStatementMessaging nested structure for the 'endpoint' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityStatementMessagingEndpoint {
@@ -179,36 +158,41 @@ pub struct CapabilityStatementMessagingEndpoint {
     /// Extension element for the 'address' primitive field. Contains metadata and extensions.
     pub _address: Option<Element>,
 }
-/// CapabilityStatementRestResource nested structure for the 'operation' field
+/// CapabilityStatement nested structure for the 'implementation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceOperation {
+pub struct CapabilityStatementImplementation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name by which the operation/query is invoked
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The defined operation/query
-    pub definition: StringType,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Specific details about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
+    /// Describes this specific instance
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Base URL for the installation
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Organization that manages the data
+    pub custodian: Option<Reference>,
 }
-/// CapabilityStatementRestResource nested structure for the 'interaction' field
+/// CapabilityStatement nested structure for the 'messaging' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceInteraction {
+pub struct CapabilityStatementMessaging {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
-    pub code: TypeRestfulInteraction,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Anything special about operation behavior
+    /// Where messages should be sent
+    pub endpoint: Option<Vec<CapabilityStatementMessagingEndpoint>>,
+    /// Messages supported by this system
+    #[serde(rename = "supportedMessage")]
+    pub supported_message: Option<Vec<CapabilityStatementMessagingSupportedmessage>>,
+    /// Reliable Message Cache Length (min)
+    #[serde(rename = "reliableCache")]
+    pub reliable_cache: Option<UnsignedIntType>,
+    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_reliableCache")]
+    pub _reliable_cache: Option<Element>,
+    /// Messaging interface behavior details
     pub documentation: Option<StringType>,
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
@@ -233,77 +217,6 @@ pub struct CapabilityStatementRestSecurity {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'implementation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementImplementation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes this specific instance
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Base URL for the installation
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Organization that manages the data
-    pub custodian: Option<Reference>,
-}
-/// CapabilityStatementMessaging nested structure for the 'supportedMessage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessagingSupportedmessage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// sender | receiver
-    pub mode: EventCapabilityMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Message supported by this system
-    pub definition: StringType,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-}
-/// CapabilityStatementRest nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// transaction | batch | search-system | history-system
-    pub code: SystemRestfulInteraction,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Anything special about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'searchParam' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceSearchparam {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of search parameter
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Source of definition for parameter
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// number | date | string | token | reference | composite | quantity | uri | special
-    #[serde(rename = "type")]
-    pub type_: SearchParamType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Server-specific usage
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
 }
 /// CapabilityStatementRest nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -389,58 +302,6 @@ pub struct CapabilityStatementRestResource {
     #[serde(rename = "_searchRevInclude")]
     pub _search_rev_include: Option<Element>,
 }
-/// CapabilityStatement nested structure for the 'rest' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What operations are supported?
-    pub interaction: Option<Vec<CapabilityStatementRestInteraction>>,
-    /// Resource served on the REST interface
-    pub resource: Option<Vec<CapabilityStatementRestResource>>,
-    /// Information about security of implementation
-    pub security: Option<CapabilityStatementRestSecurity>,
-    /// client | server
-    pub mode: RestfulCapabilityMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// General description of implementation
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-    /// Search parameters for searching all resources
-    #[serde(rename = "searchParam")]
-    pub search_param: Option<Vec<StringType>>,
-    /// Definition of a system level operation
-    pub operation: Option<Vec<StringType>>,
-    /// Compartments served/used by system
-    pub compartment: Option<Vec<StringType>>,
-    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
-    pub _compartment: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'messaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Messages supported by this system
-    #[serde(rename = "supportedMessage")]
-    pub supported_message: Option<Vec<CapabilityStatementMessagingSupportedmessage>>,
-    /// Where messages should be sent
-    pub endpoint: Option<Vec<CapabilityStatementMessagingEndpoint>>,
-    /// Reliable Message Cache Length (min)
-    #[serde(rename = "reliableCache")]
-    pub reliable_cache: Option<UnsignedIntType>,
-    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_reliableCache")]
-    pub _reliable_cache: Option<Element>,
-    /// Messaging interface behavior details
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
 /// CapabilityStatement nested structure for the 'document' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityStatementDocument {
@@ -459,6 +320,145 @@ pub struct CapabilityStatementDocument {
     pub profile: StringType,
     /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
     pub _profile: Option<Element>,
+}
+/// CapabilityStatementRest nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// transaction | batch | search-system | history-system
+    pub code: SystemRestfulInteraction,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Anything special about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'software' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementSoftware {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name the software is known by
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Version covered by this statement
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// Date this version was released
+    #[serde(rename = "releaseDate")]
+    pub release_date: Option<DateTimeType>,
+    /// Extension element for the 'releaseDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_releaseDate")]
+    pub _release_date: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'operation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceOperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name by which the operation/query is invoked
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The defined operation/query
+    pub definition: StringType,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Specific details about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
+    pub code: TypeRestfulInteraction,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Anything special about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'searchParam' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceSearchparam {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of search parameter
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Source of definition for parameter
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// number | date | string | token | reference | composite | quantity | uri | special
+    #[serde(rename = "type")]
+    pub type_: SearchParamType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Server-specific usage
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'rest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What operations are supported?
+    pub interaction: Option<Vec<CapabilityStatementRestInteraction>>,
+    /// Information about security of implementation
+    pub security: Option<CapabilityStatementRestSecurity>,
+    /// Resource served on the REST interface
+    pub resource: Option<Vec<CapabilityStatementRestResource>>,
+    /// client | server
+    pub mode: RestfulCapabilityMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// General description of implementation
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+    /// Search parameters for searching all resources
+    #[serde(rename = "searchParam")]
+    pub search_param: Option<Vec<StringType>>,
+    /// Definition of a system level operation
+    pub operation: Option<Vec<StringType>>,
+    /// Compartments served/used by system
+    pub compartment: Option<Vec<StringType>>,
+    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
+    pub _compartment: Option<Element>,
+}
+/// CapabilityStatementMessaging nested structure for the 'supportedMessage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementMessagingSupportedmessage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// sender | receiver
+    pub mode: EventCapabilityMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Message supported by this system
+    pub definition: StringType,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
 }
 
 impl Default for CapabilityStatement {
@@ -513,20 +513,6 @@ impl Default for CapabilityStatement {
     }
 }
 
-impl Default for CapabilityStatementSoftware {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: StringType::default(),
-            _name: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            release_date: Default::default(),
-            _release_date: Default::default(),
-        }
-    }
-}
-
 impl Default for CapabilityStatementMessagingEndpoint {
     fn default() -> Self {
         Self {
@@ -534,45 +520,6 @@ impl Default for CapabilityStatementMessagingEndpoint {
             protocol: Default::default(),
             address: Default::default(),
             _address: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestSecurity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            cors: Default::default(),
-            _cors: Default::default(),
-            service: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
         }
     }
 }
@@ -590,42 +537,29 @@ impl Default for CapabilityStatementImplementation {
     }
 }
 
-impl Default for CapabilityStatementMessagingSupportedmessage {
+impl Default for CapabilityStatementMessaging {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
+            endpoint: Default::default(),
+            supported_message: Default::default(),
+            reliable_cache: Default::default(),
+            _reliable_cache: Default::default(),
             documentation: Default::default(),
             _documentation: Default::default(),
         }
     }
 }
 
-impl Default for CapabilityStatementRestResourceSearchparam {
+impl Default for CapabilityStatementRestSecurity {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
+            cors: Default::default(),
+            _cors: Default::default(),
+            service: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
         }
     }
 }
@@ -666,13 +600,95 @@ impl Default for CapabilityStatementRestResource {
     }
 }
 
+impl Default for CapabilityStatementDocument {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: DocumentMode::default(),
+            _mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+            profile: StringType::default(),
+            _profile: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementSoftware {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            release_date: Default::default(),
+            _release_date: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceOperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceSearchparam {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
 impl Default for CapabilityStatementRest {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             interaction: Default::default(),
-            resource: Default::default(),
             security: Default::default(),
+            resource: Default::default(),
             mode: RestfulCapabilityMode::default(),
             _mode: Default::default(),
             documentation: Default::default(),
@@ -685,30 +701,14 @@ impl Default for CapabilityStatementRest {
     }
 }
 
-impl Default for CapabilityStatementMessaging {
+impl Default for CapabilityStatementMessagingSupportedmessage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            supported_message: Default::default(),
-            endpoint: Default::default(),
-            reliable_cache: Default::default(),
-            _reliable_cache: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementDocument {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: DocumentMode::default(),
+            mode: Default::default(),
             _mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-            profile: StringType::default(),
-            _profile: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
         }
     }
 }
@@ -738,6 +738,586 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.document.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/document-mode|4.0.1",
+            )
+            .with_description("Whether the application produces or consumes documents."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.fhirVersion",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/FHIR-version|4.0.1",
+            )
+            .with_description("All published FHIR Versions."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.format",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1",
+            )
+            .with_description("The mime type of an attachment. Any valid mime type is allowed."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.kind",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/capability-statement-kind|4.0.1",
+            )
+            .with_description("How a capability statement is intended to be used."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.messaging.supportedMessage.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/event-capability-mode|4.0.1",
+            )
+            .with_description("The mode of a message capability statement."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.patchFormat",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1",
+            )
+            .with_description("The mime type of an attachment. Any valid mime type is allowed."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.interaction.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/system-restful-interaction|4.0.1",
+            )
+            .with_description("Operations supported by REST at the system level."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/restful-capability-mode|4.0.1",
+            )
+            .with_description("The mode of a RESTful capability statement."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.conditionalDelete",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/conditional-delete-status|4.0.1",
+            )
+            .with_description("A code that indicates how the server supports conditional delete."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.conditionalRead",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/conditional-read-status|4.0.1",
+            )
+            .with_description("A code that indicates how the server supports conditional read."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.interaction.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/type-restful-interaction|4.0.1",
+            )
+            .with_description("Operations supported by REST at the type or instance level."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.referencePolicy",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/reference-handling-policy|4.0.1",
+            )
+            .with_description("A set of flags that defines how references are supported."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.searchParam.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/search-param-type|4.0.1",
+            )
+            .with_description("Data types allowed to be used for search parameters."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/resource-types|4.0.1",
+            )
+            .with_description("One of the resource types defined as part of this version of FHIR."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.rest.resource.versioning",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/versioning-policy|4.0.1",
+            )
+            .with_description("How the system supports versioning for a resource."),
+            rh_foundation::ElementBinding::new(
+                "CapabilityStatement.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CapabilityStatement.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.contact", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.kind", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.instantiates", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.imports", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.software", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.software.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.software.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.software.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.software.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.software.version",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.software.releaseDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.description",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.url",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementation.custodian",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.fhirVersion", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.format", 1, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.patchFormat", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.implementationGuide",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.mode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.security", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.cors",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.service",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.security.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.resource", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.profile",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.supportedProfile",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.interaction.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.versioning",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.readHistory",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.updateCreate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.conditionalCreate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.conditionalRead",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.conditionalUpdate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.conditionalDelete",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.referencePolicy",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchInclude",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchRevInclude",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.definition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.searchParam.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.definition",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.resource.operation.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.interaction", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.interaction.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.interaction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.interaction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.interaction.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.rest.interaction.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.searchParam", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.operation", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.rest.compartment", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.messaging", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.messaging.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint.protocol",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.endpoint.address",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.reliableCache",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage.mode",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.messaging.supportedMessage.definition",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.document", 0, None),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.document.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.document.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.document.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CapabilityStatement.document.mode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.document.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CapabilityStatement.document.profile",
+                1,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -1298,7 +1878,21 @@ impl crate::validation::ValidatableResource for CapabilityStatement {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CapabilityStatement")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::capability_statement::{
+    CapabilityStatementAccessors, CapabilityStatementExistence, CapabilityStatementMutators,
+};

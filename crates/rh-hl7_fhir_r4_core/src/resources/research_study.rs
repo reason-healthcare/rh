@@ -113,24 +113,6 @@ pub struct ResearchStudy {
     /// A goal for the study
     pub objective: Option<Vec<ResearchStudyObjective>>,
 }
-/// ResearchStudy nested structure for the 'objective' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyObjective {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for the objective
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// primary | secondary | exploratory
-    ///
-    /// Binding: preferred (Codes for the kind of study objective.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-}
 /// ResearchStudy nested structure for the 'arm' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchStudyArm {
@@ -148,6 +130,24 @@ pub struct ResearchStudyArm {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+}
+/// ResearchStudy nested structure for the 'objective' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyObjective {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for the objective
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// primary | secondary | exploratory
+    ///
+    /// Binding: preferred (Codes for the kind of study objective.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
 }
 
 impl Default for ResearchStudy {
@@ -185,17 +185,6 @@ impl Default for ResearchStudy {
     }
 }
 
-impl Default for ResearchStudyObjective {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
 impl Default for ResearchStudyArm {
     fn default() -> Self {
         Self {
@@ -205,6 +194,17 @@ impl Default for ResearchStudyArm {
             type_: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyObjective {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
         }
     }
 }
@@ -224,6 +224,80 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ResearchStudy.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/research-study-status|4.0.1",
+        )
+        .with_description("Codes that convey the current status of the research study.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ResearchStudy.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.protocol", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.primaryPurposeType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.phase", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.category", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.focus", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.condition", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.keyword", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.location", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.enrollment", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.sponsor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchStudy.principalInvestigator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchStudy.site", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.reasonStopped", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.note", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.arm.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.objective", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchStudy.objective.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.objective.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ResearchStudy.objective.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ResearchStudy.objective.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchStudy.objective.type", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -773,7 +847,21 @@ impl crate::validation::ValidatableResource for ResearchStudy {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ResearchStudy")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::research_study::{
+    ResearchStudyAccessors, ResearchStudyExistence, ResearchStudyMutators,
+};

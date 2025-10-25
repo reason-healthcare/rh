@@ -73,6 +73,22 @@ pub struct Practitioner {
     /// - ... and 46 more values
     pub communication: Option<Vec<CodeableConcept>>,
 }
+/// animalSpecies
+///
+/// This extension should be used to specifiy that a practioner or RelatedPerson resource is a service animal.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/practitioner-animalSpecies
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerAnimalSpecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Practitioner nested structure for the 'qualification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerQualification {
@@ -91,22 +107,6 @@ pub struct PractitionerQualification {
     pub period: Option<Period>,
     /// Organization that regulates and issues the qualification
     pub issuer: Option<Reference>,
-}
-/// animalSpecies
-///
-/// This extension should be used to specifiy that a practioner or RelatedPerson resource is a service animal.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/practitioner-animalSpecies
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerAnimalSpecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
 }
 
 impl Default for Practitioner {
@@ -130,6 +130,14 @@ impl Default for Practitioner {
     }
 }
 
+impl Default for PractitionerAnimalSpecies {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for PractitionerQualification {
     fn default() -> Self {
         Self {
@@ -138,14 +146,6 @@ impl Default for PractitionerQualification {
             code: CodeableConcept::default(),
             period: Default::default(),
             issuer: Default::default(),
-        }
-    }
-}
-
-impl Default for PractitionerAnimalSpecies {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -165,6 +165,62 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Practitioner.gender",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1",
+        )
+        .with_description("The gender of a person used for administrative purposes.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Practitioner.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.name", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.address", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.gender", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.birthDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.photo", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification", 0, None),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Practitioner.qualification.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Practitioner.qualification.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.qualification.issuer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Practitioner.communication", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -521,7 +577,21 @@ impl crate::validation::ValidatableResource for Practitioner {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Practitioner")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::practitioner::{
+    PractitionerAccessors, PractitionerExistence, PractitionerMutators,
+};

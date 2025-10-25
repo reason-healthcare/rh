@@ -234,6 +234,198 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ObservationDefinition.permittedDataType",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/permitted-data-type|4.0.1",
+            )
+            .with_description("Permitted data type for observation value."),
+            rh_foundation::ElementBinding::new(
+                "ObservationDefinition.qualifiedInterval.category",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/observation-range-category|4.0.1",
+            )
+            .with_description("Codes identifying the category of observation range."),
+            rh_foundation::ElementBinding::new(
+                "ObservationDefinition.qualifiedInterval.gender",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1",
+            )
+            .with_description("The gender of a person used for administrative purposes."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ObservationDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.category", 0, None),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.permittedDataType",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.multipleResultsAllowed",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ObservationDefinition.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.preferredReportName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.customaryUnit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.unit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.conversionFactor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.quantitativeDetails.decimalPrecision",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.category",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.range",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.context",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.appliesTo",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.gender",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.age",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.gestationalAge",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.qualifiedInterval.condition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.validCodedValueSet",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.normalCodedValueSet",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.abnormalCodedValueSet",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ObservationDefinition.criticalCodedValueSet",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ObservationDefinition {
     fn id(&self) -> Option<String> {
@@ -616,7 +808,21 @@ impl crate::validation::ValidatableResource for ObservationDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ObservationDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::observation_definition::{
+    ObservationDefinitionAccessors, ObservationDefinitionExistence, ObservationDefinitionMutators,
+};

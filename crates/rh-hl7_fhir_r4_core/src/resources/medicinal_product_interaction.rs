@@ -95,6 +95,90 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProductInteraction.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductInteraction.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductInteraction.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.contained",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductInteraction.subject", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.interactant",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.interactant.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.interactant.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.interactant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.interactant.item[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductInteraction.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.effect",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.incidence",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductInteraction.management",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicinalProductInteraction {
     fn id(&self) -> Option<String> {
@@ -391,7 +475,18 @@ impl crate::validation::ValidatableResource for MedicinalProductInteraction {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductInteraction")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_interaction::{
+    MedicinalProductInteractionAccessors, MedicinalProductInteractionExistence,
+    MedicinalProductInteractionMutators,
+};

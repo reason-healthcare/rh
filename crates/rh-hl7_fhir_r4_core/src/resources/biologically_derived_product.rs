@@ -235,6 +235,227 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "BiologicallyDerivedProduct.productCategory",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/product-category|4.0.1",
+            )
+            .with_description("Biologically Derived Product Category."),
+            rh_foundation::ElementBinding::new(
+                "BiologicallyDerivedProduct.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/product-status|4.0.1",
+            )
+            .with_description("Biologically Derived Product Status."),
+            rh_foundation::ElementBinding::new(
+                "BiologicallyDerivedProduct.storage.scale",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/product-storage-scale|4.0.1",
+            )
+            .with_description("BiologicallyDerived Product Storage Scale."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.contained", 0, None),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.productCategory",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.productCode",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.request", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.parent", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.collector",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.source",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.collection.collected[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.procedure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.additive",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.processing.time[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.manipulation.time[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("BiologicallyDerivedProduct.storage", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.temperature",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.scale",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "BiologicallyDerivedProduct.storage.duration",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for BiologicallyDerivedProduct {
     fn id(&self) -> Option<String> {
@@ -590,7 +811,22 @@ impl crate::validation::ValidatableResource for BiologicallyDerivedProduct {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/BiologicallyDerivedProduct")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::biologically_derived_product::{
+    BiologicallyDerivedProductAccessors, BiologicallyDerivedProductExistence,
+    BiologicallyDerivedProductMutators,
+};

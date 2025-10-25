@@ -109,6 +109,55 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OrganizationAffiliation.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "OrganizationAffiliation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OrganizationAffiliation.organization",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OrganizationAffiliation.participatingOrganization",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.network", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.code", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.location", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "OrganizationAffiliation.healthcareService",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("OrganizationAffiliation.endpoint", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for OrganizationAffiliation {
     fn id(&self) -> Option<String> {
@@ -495,7 +544,18 @@ impl crate::validation::ValidatableResource for OrganizationAffiliation {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/OrganizationAffiliation")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::organization_affiliation::{
+    OrganizationAffiliationAccessors, OrganizationAffiliationExistence,
+    OrganizationAffiliationMutators,
+};

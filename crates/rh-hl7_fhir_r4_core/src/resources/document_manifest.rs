@@ -126,6 +126,62 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "DocumentManifest.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/document-reference-status|4.0.1",
+        )
+        .with_description("The status of the document reference.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DocumentManifest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.masterIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.author", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.recipient", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.content", 1, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.related", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentManifest.related.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentManifest.related.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DocumentManifest.related.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "DocumentManifest.related.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("DocumentManifest.related.ref", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DocumentManifest {
     fn id(&self) -> Option<String> {
@@ -486,7 +542,21 @@ impl crate::validation::ValidatableResource for DocumentManifest {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DocumentManifest")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::document_manifest::{
+    DocumentManifestAccessors, DocumentManifestExistence, DocumentManifestMutators,
+};

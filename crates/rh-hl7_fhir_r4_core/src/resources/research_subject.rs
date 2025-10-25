@@ -85,6 +85,45 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ResearchSubject.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/research-subject-status|4.0.1",
+        )
+        .with_description("Indicates the progression of a study subject through a study.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ResearchSubject.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchSubject.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchSubject.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchSubject.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchSubject.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.study", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.individual", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.assignedArm", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.actualArm", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchSubject.consent", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ResearchSubject {
     fn id(&self) -> Option<String> {
@@ -381,7 +420,21 @@ impl crate::validation::ValidatableResource for ResearchSubject {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ResearchSubject")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::research_subject::{
+    ResearchSubjectAccessors, ResearchSubjectExistence, ResearchSubjectMutators,
+};

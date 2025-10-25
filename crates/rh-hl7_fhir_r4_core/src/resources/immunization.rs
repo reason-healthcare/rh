@@ -174,35 +174,6 @@ pub struct Immunization {
     #[serde(rename = "protocolApplied")]
     pub protocol_applied: Option<Vec<ImmunizationProtocolapplied>>,
 }
-/// Immunization nested structure for the 'education' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationEducation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Educational material document identifier
-    #[serde(rename = "documentType")]
-    pub document_type: Option<StringType>,
-    /// Extension element for the 'documentType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_documentType")]
-    pub _document_type: Option<Element>,
-    /// Educational material reference pointer
-    pub reference: Option<StringType>,
-    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
-    pub _reference: Option<Element>,
-    /// Educational material publication date
-    #[serde(rename = "publicationDate")]
-    pub publication_date: Option<DateTimeType>,
-    /// Extension element for the 'publicationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_publicationDate")]
-    pub _publication_date: Option<Element>,
-    /// Educational material presentation date
-    #[serde(rename = "presentationDate")]
-    pub presentation_date: Option<DateTimeType>,
-    /// Extension element for the 'presentationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_presentationDate")]
-    pub _presentation_date: Option<Element>,
-}
 /// Immunization nested structure for the 'protocolApplied' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationProtocolapplied {
@@ -244,23 +215,6 @@ pub struct ImmunizationProtocolapplied {
     #[serde(rename = "seriesDosesString")]
     pub series_doses_string: Option<StringType>,
 }
-/// Immunization nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What type of performance was done
-    ///
-    /// Binding: extensible (The role a practitioner or organization plays in the immunization event.)
-    ///
-    /// Available values:
-    /// - `OP`
-    /// - `AP`
-    pub function: Option<CodeableConcept>,
-    /// Individual or organization who was performing
-    pub actor: Reference,
-}
 /// Immunization nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationReaction {
@@ -277,6 +231,52 @@ pub struct ImmunizationReaction {
     pub reported: Option<BooleanType>,
     /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
     pub _reported: Option<Element>,
+}
+/// Immunization nested structure for the 'education' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationEducation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Educational material document identifier
+    #[serde(rename = "documentType")]
+    pub document_type: Option<StringType>,
+    /// Extension element for the 'documentType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_documentType")]
+    pub _document_type: Option<Element>,
+    /// Educational material reference pointer
+    pub reference: Option<StringType>,
+    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
+    pub _reference: Option<Element>,
+    /// Educational material publication date
+    #[serde(rename = "publicationDate")]
+    pub publication_date: Option<DateTimeType>,
+    /// Extension element for the 'publicationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_publicationDate")]
+    pub _publication_date: Option<Element>,
+    /// Educational material presentation date
+    #[serde(rename = "presentationDate")]
+    pub presentation_date: Option<DateTimeType>,
+    /// Extension element for the 'presentationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_presentationDate")]
+    pub _presentation_date: Option<Element>,
+}
+/// Immunization nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What type of performance was done
+    ///
+    /// Binding: extensible (The role a practitioner or organization plays in the immunization event.)
+    ///
+    /// Available values:
+    /// - `OP`
+    /// - `AP`
+    pub function: Option<CodeableConcept>,
+    /// Individual or organization who was performing
+    pub actor: Reference,
 }
 
 impl Default for Immunization {
@@ -322,22 +322,6 @@ impl Default for Immunization {
     }
 }
 
-impl Default for ImmunizationEducation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            document_type: Default::default(),
-            _document_type: Default::default(),
-            reference: Default::default(),
-            _reference: Default::default(),
-            publication_date: Default::default(),
-            _publication_date: Default::default(),
-            presentation_date: Default::default(),
-            _presentation_date: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationProtocolapplied {
     fn default() -> Self {
         Self {
@@ -354,16 +338,6 @@ impl Default for ImmunizationProtocolapplied {
     }
 }
 
-impl Default for ImmunizationPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationReaction {
     fn default() -> Self {
         Self {
@@ -373,6 +347,32 @@ impl Default for ImmunizationReaction {
             detail: Default::default(),
             reported: Default::default(),
             _reported: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationEducation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            document_type: Default::default(),
+            _document_type: Default::default(),
+            reference: Default::default(),
+            _reference: Default::default(),
+            publication_date: Default::default(),
+            _publication_date: Default::default(),
+            presentation_date: Default::default(),
+            _presentation_date: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -393,6 +393,143 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("imm-1", rh_foundation::Severity::Error, "One of documentType or reference SHALL be present", "documentType.exists() or reference.exists()").with_xpath("exists(f:documentType) or exists(f:reference)"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Immunization.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/immunization-status|4.0.1",
+        )
+        .with_description("A set of codes indicating the current status of an Immunization.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Immunization.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.vaccineCode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.occurrence[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.recorded", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.primarySource", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.reportOrigin", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.manufacturer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.lotNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.expirationDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.site", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.route", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.doseQuantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.performer", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.performer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.performer.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Immunization.performer.function", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.performer.actor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.note", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.isSubpotent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.subpotentReason", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.education", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.education.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.education.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.education.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.education.documentType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Immunization.education.reference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.education.publicationDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.education.presentationDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Immunization.programEligibility", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.fundingSource", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.reaction", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.reaction.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.reaction.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.reaction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Immunization.reaction.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.reaction.detail", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.reaction.reported", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Immunization.protocolApplied", 0, None),
+            rh_foundation::ElementCardinality::new("Immunization.protocolApplied.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.series",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.authority",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.targetDisease",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.doseNumber[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Immunization.protocolApplied.seriesDoses[x]",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -968,7 +1105,21 @@ impl crate::validation::ValidatableResource for Immunization {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Immunization")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::immunization::{
+    ImmunizationAccessors, ImmunizationExistence, ImmunizationMutators,
+};

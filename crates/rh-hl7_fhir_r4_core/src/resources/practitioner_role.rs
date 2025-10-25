@@ -83,6 +83,19 @@ pub struct PractitionerRole {
     /// Technical endpoints providing access to services operated for the practitioner with this role
     pub endpoint: Option<Vec<Reference>>,
 }
+/// PractitionerRole nested structure for the 'notAvailable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerRoleNotavailable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reason presented to the user explaining why time not available
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Service not available from this date
+    pub during: Option<Period>,
+}
 /// PractitionerRole nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerRoleAvailabletime {
@@ -114,19 +127,6 @@ pub struct PractitionerRoleAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
-/// PractitionerRole nested structure for the 'notAvailable' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerRoleNotavailable {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reason presented to the user explaining why time not available
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Service not available from this date
-    pub during: Option<Period>,
-}
 
 impl Default for PractitionerRole {
     fn default() -> Self {
@@ -152,6 +152,17 @@ impl Default for PractitionerRole {
     }
 }
 
+impl Default for PractitionerRoleNotavailable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            during: Default::default(),
+        }
+    }
+}
+
 impl Default for PractitionerRoleAvailabletime {
     fn default() -> Self {
         Self {
@@ -164,17 +175,6 @@ impl Default for PractitionerRoleAvailabletime {
             _available_start_time: Default::default(),
             available_end_time: Default::default(),
             _available_end_time: Default::default(),
-        }
-    }
-}
-
-impl Default for PractitionerRoleNotavailable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            during: Default::default(),
         }
     }
 }
@@ -194,6 +194,107 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "PractitionerRole.availableTime.daysOfWeek",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/days-of-week|4.0.1",
+        )
+        .with_description("The days of the week.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("PractitionerRole.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.contained", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.extension", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.practitioner", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.organization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.code", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.location", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.healthcareService", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.availableTime", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.availableTime.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.daysOfWeek",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.allDay",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.availableStartTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availableTime.availableEndTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PractitionerRole.notAvailable", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.notAvailable.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.notAvailable.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.notAvailable.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.notAvailable.description",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.notAvailable.during",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PractitionerRole.availabilityExceptions",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PractitionerRole.endpoint", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -609,7 +710,21 @@ impl crate::validation::ValidatableResource for PractitionerRole {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/PractitionerRole")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::practitioner_role::{
+    PractitionerRoleAccessors, PractitionerRoleExistence, PractitionerRoleMutators,
+};

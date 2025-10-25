@@ -174,6 +174,59 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Media.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/event-status|4.0.1",
+        )
+        .with_description("Codes identifying the lifecycle stage of an event.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Media.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Media.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Media.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Media.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Media.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Media.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("Media.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.modality", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.view", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.created[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.issued", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.operator", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("Media.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.deviceName", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.device", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.height", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.width", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.frames", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.duration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.content", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Media.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Media {
     fn id(&self) -> Option<String> {
@@ -636,7 +689,19 @@ impl crate::validation::ValidatableResource for Media {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Media")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::media::{MediaAccessors, MediaExistence, MediaMutators};

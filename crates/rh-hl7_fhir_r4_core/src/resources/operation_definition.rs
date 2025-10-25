@@ -382,6 +382,191 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("OperationDefinition.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/operation-kind|4.0.1").with_description("Whether an operation is a normal operation or a query."),
+    rh_foundation::ElementBinding::new("OperationDefinition.parameter.binding.strength", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/binding-strength|4.0.1").with_description("Indication of the degree of conformance expectations associated with a binding."),
+    rh_foundation::ElementBinding::new("OperationDefinition.parameter.searchType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/search-param-type|4.0.1").with_description("Data types allowed to be used for search parameters."),
+    rh_foundation::ElementBinding::new("OperationDefinition.parameter.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/all-types|4.0.1").with_description("A list of all the concrete types defined in this version of the FHIR specification - Abstract Types, Data Types and Resource Types."),
+    rh_foundation::ElementBinding::new("OperationDefinition.parameter.use", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/operation-parameter-use|4.0.1").with_description("Whether an operation parameter is an input or an output parameter."),
+    rh_foundation::ElementBinding::new("OperationDefinition.resource", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("OperationDefinition.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("OperationDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("OperationDefinition.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.kind", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.affectsState", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.base", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.resource", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.system", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.instance", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.inputProfile", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.outputProfile", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter.use", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter.min", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter.max", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.targetProfile",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.searchType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding.strength",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.binding.valueSet",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom.source",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.parameter.referencedFrom.sourceId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("OperationDefinition.parameter.part", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.overload", 0, None),
+            rh_foundation::ElementCardinality::new("OperationDefinition.overload.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.overload.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.overload.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.overload.parameterName",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "OperationDefinition.overload.comment",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for OperationDefinition {
     fn id(&self) -> Option<String> {
@@ -904,7 +1089,21 @@ impl crate::validation::ValidatableResource for OperationDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/OperationDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::operation_definition::{
+    OperationDefinitionAccessors, OperationDefinitionExistence, OperationDefinitionMutators,
+};

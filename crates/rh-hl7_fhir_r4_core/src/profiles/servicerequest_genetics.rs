@@ -52,6 +52,88 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ServiceRequest.intent",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-intent|4.0.1",
+            )
+            .with_description("The kind of service request."),
+            rh_foundation::ElementBinding::new(
+                "ServiceRequest.priority",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-priority|4.0.1",
+            )
+            .with_description(
+                "Identifies the level of importance to be assigned to actioning the request.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "ServiceRequest.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-status|4.0.1",
+            )
+            .with_description("The status of a service order."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ServiceRequest", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.requisition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.category", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.doNotPerform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.orderDetail", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.quantity[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.occurrence[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.asNeeded[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.performerType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.performer", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.locationCode", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.locationReference", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.specimen", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.bodySite", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.note", 0, None),
+            rh_foundation::ElementCardinality::new("ServiceRequest.patientInstruction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ServiceRequest.relevantHistory", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ServicerequestGenetics {
     fn id(&self) -> Option<String> {
@@ -126,7 +208,22 @@ impl crate::validation::ValidatableResource for ServicerequestGenetics {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/servicerequest-genetics")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::servicerequest_genetics::{
+    ServicerequestGeneticsAccessors, ServicerequestGeneticsExistence,
+    ServicerequestGeneticsMutators,
+};

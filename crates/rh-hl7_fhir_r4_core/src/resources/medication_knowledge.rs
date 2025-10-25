@@ -102,33 +102,87 @@ pub struct MedicationKnowledge {
     /// The time course of drug absorption, distribution, metabolism and excretion of a medication from the body
     pub kinetics: Option<Vec<MedicationKnowledgeKinetics>>,
 }
-/// MedicationKnowledge nested structure for the 'monograph' field
+/// MedicationKnowledge nested structure for the 'kinetics' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonograph {
+pub struct MedicationKnowledgeKinetics {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The category of medication document
+    /// The drug concentration measured at certain discrete points in time
+    #[serde(rename = "areaUnderCurve")]
+    pub area_under_curve: Option<Vec<Quantity>>,
+    /// The median lethal dose of a drug
+    #[serde(rename = "lethalDose50")]
+    pub lethal_dose50: Option<Vec<Quantity>>,
+    /// Time required for concentration in the body to decrease by half
+    #[serde(rename = "halfLifePeriod")]
+    pub half_life_period: Option<Duration>,
+}
+/// MedicationKnowledgeAdministrationguidelines nested structure for the 'patientCharacteristics' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specific characteristic that is relevant to the administration guideline (CodeableConcept)
+    #[serde(rename = "characteristicCodeableConcept")]
+    pub characteristic_codeable_concept: CodeableConcept,
+    /// Specific characteristic that is relevant to the administration guideline (Quantity)
+    #[serde(rename = "characteristicQuantity")]
+    pub characteristic_quantity: Quantity,
+    /// The specific characteristic
+    pub value: Option<Vec<StringType>>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'monitoringProgram' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonitoringprogram {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of program under which the medication is monitored
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-    /// Associated documentation about the medication
-    pub source: Option<Reference>,
+    /// Name of the reviewing program
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
 }
-/// MedicationKnowledge nested structure for the 'cost' field
+/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeCost {
+pub struct MedicationKnowledgeRegulatoryMaxdispense {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The category of the cost information
+    /// The maximum number of units of the medication that can be dispensed
+    pub quantity: Quantity,
+    /// The period that applies to the maximum number of units
+    pub period: Option<Duration>,
+}
+/// MedicationKnowledgeAdministrationguidelines nested structure for the 'dosage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeAdministrationguidelinesDosage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of dosage
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// The source or owner for the price information
-    pub source: Option<StringType>,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// The price of the medication
-    pub cost: Money,
+    /// Dosage for the medication for the specific guidelines
+    pub dosage: Vec<Dosage>,
+}
+/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRelatedmedicationknowledge {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category of medicationKnowledge
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Associated documentation about the associated medication knowledge
+    pub reference: Vec<Reference>,
 }
 /// MedicationKnowledge nested structure for the 'administrationGuidelines' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,17 +202,6 @@ pub struct MedicationKnowledgeAdministrationguidelines {
     /// Indication for use that apply to the specific administration guidelines (Reference)
     #[serde(rename = "indicationReference")]
     pub indication_reference: Option<Reference>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatoryMaxdispense {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The maximum number of units of the medication that can be dispensed
-    pub quantity: Quantity,
-    /// The period that applies to the maximum number of units
-    pub period: Option<Duration>,
 }
 /// MedicationKnowledgeRegulatory nested structure for the 'schedule' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,22 +233,80 @@ pub struct MedicationKnowledgeIngredient {
     /// Quantity of ingredient present
     pub strength: Option<Ratio>,
 }
-/// MedicationKnowledgeAdministrationguidelines nested structure for the 'patientCharacteristics' field
+/// MedicationKnowledge nested structure for the 'packaging' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
+pub struct MedicationKnowledgePackaging {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Specific characteristic that is relevant to the administration guideline (CodeableConcept)
-    #[serde(rename = "characteristicCodeableConcept")]
-    pub characteristic_codeable_concept: CodeableConcept,
-    /// Specific characteristic that is relevant to the administration guideline (Quantity)
-    #[serde(rename = "characteristicQuantity")]
-    pub characteristic_quantity: Quantity,
-    /// The specific characteristic
-    pub value: Option<Vec<StringType>>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
+    /// A code that defines the specific type of packaging that the medication can be found in
+    ///
+    /// Binding: example (A coded concept defining the type of packaging of a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationknowledge-package-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The number of product units the package would contain if fully loaded
+    pub quantity: Option<Quantity>,
+}
+/// MedicationKnowledge nested structure for the 'monograph' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonograph {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The category of medication document
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Associated documentation about the medication
+    pub source: Option<Reference>,
+}
+/// MedicationKnowledge nested structure for the 'cost' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeCost {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The category of the cost information
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The source or owner for the price information
+    pub source: Option<StringType>,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// The price of the medication
+    pub cost: Money,
+}
+/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatorySubstitution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specifies the type of substitution allowed
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Specifies if regulation allows for changes in the medication when dispensing
+    pub allowed: BooleanType,
+    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
+    pub _allowed: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'regulatory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
+    pub substitution: Option<Vec<MedicationKnowledgeRegulatorySubstitution>>,
+    /// Specifies the schedule of a medication in jurisdiction
+    pub schedule: Option<Vec<MedicationKnowledgeRegulatorySchedule>>,
+    /// The maximum number of units of the medication that can be dispensed in a period
+    #[serde(rename = "maxDispense")]
+    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
+    /// Specifies the authority of the regulation
+    #[serde(rename = "regulatoryAuthority")]
+    pub regulatory_authority: Reference,
 }
 /// MedicationKnowledge nested structure for the 'drugCharacteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,18 +334,6 @@ pub struct MedicationKnowledgeDrugcharacteristic {
     #[serde(rename = "valueBase64Binary")]
     pub value_base64_binary: Option<Base64BinaryType>,
 }
-/// MedicationKnowledgeAdministrationguidelines nested structure for the 'dosage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeAdministrationguidelinesDosage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of dosage
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Dosage for the medication for the specific guidelines
-    pub dosage: Vec<Dosage>,
-}
 /// MedicationKnowledge nested structure for the 'medicineClassification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeMedicineclassification {
@@ -256,95 +345,6 @@ pub struct MedicationKnowledgeMedicineclassification {
     pub type_: CodeableConcept,
     /// Specific category assigned to the medication
     pub classification: Option<Vec<CodeableConcept>>,
-}
-/// MedicationKnowledge nested structure for the 'monitoringProgram' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonitoringprogram {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of program under which the medication is monitored
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Name of the reviewing program
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRelatedmedicationknowledge {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of medicationKnowledge
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Associated documentation about the associated medication knowledge
-    pub reference: Vec<Reference>,
-}
-/// MedicationKnowledge nested structure for the 'regulatory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specifies the schedule of a medication in jurisdiction
-    pub schedule: Option<Vec<MedicationKnowledgeRegulatorySchedule>>,
-    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
-    pub substitution: Option<Vec<MedicationKnowledgeRegulatorySubstitution>>,
-    /// The maximum number of units of the medication that can be dispensed in a period
-    #[serde(rename = "maxDispense")]
-    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
-    /// Specifies the authority of the regulation
-    #[serde(rename = "regulatoryAuthority")]
-    pub regulatory_authority: Reference,
-}
-/// MedicationKnowledge nested structure for the 'packaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgePackaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A code that defines the specific type of packaging that the medication can be found in
-    ///
-    /// Binding: example (A coded concept defining the type of packaging of a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationknowledge-package-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The number of product units the package would contain if fully loaded
-    pub quantity: Option<Quantity>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatorySubstitution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specifies the type of substitution allowed
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Specifies if regulation allows for changes in the medication when dispensing
-    pub allowed: BooleanType,
-    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
-    pub _allowed: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'kinetics' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeKinetics {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The drug concentration measured at certain discrete points in time
-    #[serde(rename = "areaUnderCurve")]
-    pub area_under_curve: Option<Vec<Quantity>>,
-    /// The median lethal dose of a drug
-    #[serde(rename = "lethalDose50")]
-    pub lethal_dose50: Option<Vec<Quantity>>,
-    /// Time required for concentration in the body to decrease by half
-    #[serde(rename = "halfLifePeriod")]
-    pub half_life_period: Option<Duration>,
 }
 
 impl Default for MedicationKnowledge {
@@ -380,24 +380,66 @@ impl Default for MedicationKnowledge {
     }
 }
 
-impl Default for MedicationKnowledgeMonograph {
+impl Default for MedicationKnowledgeKinetics {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            source: Default::default(),
+            area_under_curve: Default::default(),
+            lethal_dose50: Default::default(),
+            half_life_period: Default::default(),
         }
     }
 }
 
-impl Default for MedicationKnowledgeCost {
+impl Default for MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            characteristic_codeable_concept: Default::default(),
+            characteristic_quantity: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMonitoringprogram {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            cost: Money::default(),
+            name: Default::default(),
+            _name: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatoryMaxdispense {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeAdministrationguidelinesDosage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            dosage: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRelatedmedicationknowledge {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            reference: Default::default(),
         }
     }
 }
@@ -410,16 +452,6 @@ impl Default for MedicationKnowledgeAdministrationguidelines {
             patient_characteristics: Default::default(),
             indication_codeable_concept: Default::default(),
             indication_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatoryMaxdispense {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -446,14 +478,57 @@ impl Default for MedicationKnowledgeIngredient {
     }
 }
 
-impl Default for MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
+impl Default for MedicationKnowledgePackaging {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            characteristic_codeable_concept: Default::default(),
-            characteristic_quantity: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
+            type_: Default::default(),
+            quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMonograph {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeCost {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            cost: Money::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatorySubstitution {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            allowed: Default::default(),
+            _allowed: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substitution: Default::default(),
+            schedule: Default::default(),
+            max_dispense: Default::default(),
+            regulatory_authority: Reference::default(),
         }
     }
 }
@@ -471,87 +546,12 @@ impl Default for MedicationKnowledgeDrugcharacteristic {
     }
 }
 
-impl Default for MedicationKnowledgeAdministrationguidelinesDosage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            dosage: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicationKnowledgeMedicineclassification {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
             classification: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeMonitoringprogram {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRelatedmedicationknowledge {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            schedule: Default::default(),
-            substitution: Default::default(),
-            max_dispense: Default::default(),
-            regulatory_authority: Reference::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgePackaging {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatorySubstitution {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            allowed: Default::default(),
-            _allowed: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeKinetics {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            area_under_curve: Default::default(),
-            lethal_dose50: Default::default(),
-            half_life_period: Default::default(),
         }
     }
 }
@@ -570,6 +570,144 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "MedicationKnowledge.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/medicationknowledge-status|4.0.1",
+        )
+        .with_description("A coded concept defining if the medication is in active use.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.meta", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.implicitRules", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.language", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.text", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.contained", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.code", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.status", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.manufacturer", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.doseForm", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.amount", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.synonym", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge.type", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.relatedMedicationKnowledge.reference", 1, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.associatedMedication", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.productType", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph.type", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monograph.source", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.item[x]", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.isActive", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.ingredient.strength", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.preparationInstruction", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.intendedRoute", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.type", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.source", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.cost.cost", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram.type", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.monitoringProgram.name", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage.type", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.dosage.dosage", 1, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.indication[x]", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics.characteristic[x]", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.administrationGuidelines.patientCharacteristics.value", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification.type", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.medicineClassification.classification", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging.type", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.packaging.quantity", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic.type", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.drugCharacteristic.value[x]", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.contraindication", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.regulatoryAuthority", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution.type", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.substitution.allowed", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.schedule", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.schedule.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.schedule.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.schedule.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.schedule.schedule", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense.quantity", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.regulatory.maxDispense.period", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.areaUnderCurve", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.lethalDose50", 0, None),
+    rh_foundation::ElementCardinality::new("MedicationKnowledge.kinetics.halfLifePeriod", 0, Some(1)),
 ]
     });
 
@@ -1149,7 +1287,21 @@ impl crate::validation::ValidatableResource for MedicationKnowledge {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicationKnowledge")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication_knowledge::{
+    MedicationKnowledgeAccessors, MedicationKnowledgeExistence, MedicationKnowledgeMutators,
+};

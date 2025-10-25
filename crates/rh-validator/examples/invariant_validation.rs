@@ -4,8 +4,8 @@
 //! Invariants are business rules defined in FHIR that go beyond
 //! structural validation.
 
+use hl7_fhir_r4_core::prelude::*;
 use hl7_fhir_r4_core::resources::patient::Patient;
-use hl7_fhir_r4_core::validation::ValidatableResource;
 use rh_validator::{FhirValidator, Severity};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -71,6 +71,78 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProductManufactured.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductManufactured.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductManufactured.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.contained",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.manufacturedDoseForm",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.unitOfPresentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.quantity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.manufacturer",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.ingredient",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.physicalCharacteristics",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductManufactured.otherCharacteristics",
+                0,
+                None,
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicinalProductManufactured {
     fn id(&self) -> Option<String> {
@@ -380,7 +452,18 @@ impl crate::validation::ValidatableResource for MedicinalProductManufactured {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductManufactured")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_manufactured::{
+    MedicinalProductManufacturedAccessors, MedicinalProductManufacturedExistence,
+    MedicinalProductManufacturedMutators,
+};

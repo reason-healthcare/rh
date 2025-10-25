@@ -96,6 +96,53 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "AppointmentResponse.participantStatus",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/participationstatus|4.0.1",
+        )
+        .with_description("The Participation status of an appointment.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("AppointmentResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AppointmentResponse.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.appointment", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.start", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.end", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.participantType", 0, None),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.actor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "AppointmentResponse.participantStatus",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AppointmentResponse.comment", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for AppointmentResponse {
     fn id(&self) -> Option<String> {
@@ -402,7 +449,21 @@ impl crate::validation::ValidatableResource for AppointmentResponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/AppointmentResponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::appointment_response::{
+    AppointmentResponseAccessors, AppointmentResponseExistence, AppointmentResponseMutators,
+};

@@ -57,6 +57,240 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ElementDefinition.binding.strength", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/binding-strength|4.0.1").with_description("Indication of the degree of conformance expectations associated with a binding."),
+    rh_foundation::ElementBinding::new("ElementDefinition.constraint.severity", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/constraint-severity|4.0.1").with_description("SHALL applications comply with this constraint?"),
+    rh_foundation::ElementBinding::new("ElementDefinition.extension.value[x]", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/ucum-units|4.0.1").with_description("Units of measure allowed for an element."),
+    rh_foundation::ElementBinding::new("ElementDefinition.mapping.language", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1").with_description("The mime type of an attachment. Any valid mime type is allowed."),
+    rh_foundation::ElementBinding::new("ElementDefinition.representation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/property-representation|4.0.1").with_description("How a property is represented when serialized."),
+    rh_foundation::ElementBinding::new("ElementDefinition.slicing.discriminator.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/discriminator-type|4.0.1").with_description("How an element value is interpreted when discrimination is evaluated."),
+    rh_foundation::ElementBinding::new("ElementDefinition.slicing.rules", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-slicing-rules|4.0.1").with_description("How slices are interpreted when evaluating an instance."),
+    rh_foundation::ElementBinding::new("ElementDefinition.type.aggregation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-aggregation-mode|4.0.1").with_description("How resource references can be aggregated."),
+    rh_foundation::ElementBinding::new("ElementDefinition.type.versioning", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/reference-version-rules|4.0.1").with_description("Whether a reference needs to be version specific or version independent, or whether either can be used."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ElementDefinition", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.extension.extension",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.extension.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.extension.extension",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.extension.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.path", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.representation", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.sliceName", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.sliceIsConstraining",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.label", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.code", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.path",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.ordered", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.rules", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.short", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.requirements", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.alias", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.min", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.max", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.path", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.min", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.max", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.contentReference",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.profile", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.targetProfile", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.type.aggregation",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.versioning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.defaultValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.meaningWhenMissing",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.orderMeaning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.fixed[x]", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.pattern[x]", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.label", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.example.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.minValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.maxValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.maxLength", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.condition", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint.key", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.requirements",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.severity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.human",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.xpath",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.source",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mustSupport", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.isModifier", 0, Some(0)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.isModifierReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.isSummary", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.strength",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.valueSet",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.mapping.identity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.mapping.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.map", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.comment", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for ElementdefinitionDe {
     fn resource_type(&self) -> &'static str {
         "ElementDefinition"
@@ -64,6 +298,14 @@ impl crate::validation::ValidatableResource for ElementdefinitionDe {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

@@ -161,36 +161,6 @@ pub struct MedicationRequest {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
-/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestDispenserequestInitialfill {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// First fill quantity
-    pub quantity: Option<Quantity>,
-    /// First fill duration
-    pub duration: Option<Duration>,
-}
-/// MedicationRequest nested structure for the 'substitution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestSubstitution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether substitution is allowed or not (boolean)
-    #[serde(rename = "allowedBoolean")]
-    pub allowed_boolean: BooleanType,
-    /// Whether substitution is allowed or not (CodeableConcept)
-    #[serde(rename = "allowedCodeableConcept")]
-    pub allowed_codeable_concept: CodeableConcept,
-    /// Why should (not) substitution be made
-    ///
-    /// Binding: example (A coded concept describing the reason that a different medication should (or should not) be substituted from what was prescribed.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
-    pub reason: Option<CodeableConcept>,
-}
 /// MedicationRequest nested structure for the 'dispenseRequest' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationRequestDispenserequest {
@@ -219,6 +189,36 @@ pub struct MedicationRequestDispenserequest {
     pub expected_supply_duration: Option<Duration>,
     /// Intended dispenser
     pub performer: Option<Reference>,
+}
+/// MedicationRequest nested structure for the 'substitution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestSubstitution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether substitution is allowed or not (boolean)
+    #[serde(rename = "allowedBoolean")]
+    pub allowed_boolean: BooleanType,
+    /// Whether substitution is allowed or not (CodeableConcept)
+    #[serde(rename = "allowedCodeableConcept")]
+    pub allowed_codeable_concept: CodeableConcept,
+    /// Why should (not) substitution be made
+    ///
+    /// Binding: example (A coded concept describing the reason that a different medication should (or should not) be substituted from what was prescribed.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
+    pub reason: Option<CodeableConcept>,
+}
+/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestDispenserequestInitialfill {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// First fill quantity
+    pub quantity: Option<Quantity>,
+    /// First fill duration
+    pub duration: Option<Duration>,
 }
 
 impl Default for MedicationRequest {
@@ -270,12 +270,18 @@ impl Default for MedicationRequest {
     }
 }
 
-impl Default for MedicationRequestDispenserequestInitialfill {
+impl Default for MedicationRequestDispenserequest {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            initial_fill: Default::default(),
+            dispense_interval: Default::default(),
+            validity_period: Default::default(),
+            number_of_repeats_allowed: Default::default(),
+            _number_of_repeats_allowed: Default::default(),
             quantity: Default::default(),
-            duration: Default::default(),
+            expected_supply_duration: Default::default(),
+            performer: Default::default(),
         }
     }
 }
@@ -291,18 +297,12 @@ impl Default for MedicationRequestSubstitution {
     }
 }
 
-impl Default for MedicationRequestDispenserequest {
+impl Default for MedicationRequestDispenserequestInitialfill {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            initial_fill: Default::default(),
-            dispense_interval: Default::default(),
-            validity_period: Default::default(),
-            number_of_repeats_allowed: Default::default(),
-            _number_of_repeats_allowed: Default::default(),
             quantity: Default::default(),
-            expected_supply_duration: Default::default(),
-            performer: Default::default(),
+            duration: Default::default(),
         }
     }
 }
@@ -322,6 +322,180 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("MedicationRequest.intent", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/medicationrequest-intent|4.0.1").with_description("The kind of medication order."),
+    rh_foundation::ElementBinding::new("MedicationRequest.priority", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-priority|4.0.1").with_description("Identifies the level of importance to be assigned to actioning the request."),
+    rh_foundation::ElementBinding::new("MedicationRequest.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/medicationrequest-status|4.0.1").with_description("A coded concept specifying the state of the prescribing event. Describes the lifecycle of the prescription."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicationRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.category", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.doNotPerform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.reported[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.medication[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.supportingInformation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationRequest.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.performerType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.recorder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.instantiatesCanonical",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationRequest.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.groupIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.courseOfTherapyType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationRequest.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.note", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.dosageInstruction", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.dispenseRequest", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.initialFill.duration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.dispenseInterval",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.validityPeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.numberOfRepeatsAllowed",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.expectedSupplyDuration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.dispenseRequest.performer",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationRequest.substitution", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationRequest.substitution.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.substitution.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.substitution.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.substitution.allowed[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.substitution.reason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationRequest.priorPrescription",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationRequest.detectedIssue", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationRequest.eventHistory", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -842,11 +1016,11 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_medication(&self) -> bool {
-        true
-    }
     fn has_reported(&self) -> bool {
         self.reported_boolean.is_some() || self.reported_reference.is_some()
+    }
+    fn has_medication(&self) -> bool {
+        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -959,7 +1133,21 @@ impl crate::validation::ValidatableResource for MedicationRequest {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicationRequest")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication_request::{
+    MedicationRequestAccessors, MedicationRequestExistence, MedicationRequestMutators,
+};

@@ -68,6 +68,34 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Contributor.type",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/contributor-type|4.0.1",
+        )
+        .with_description("The type of contributor.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Contributor.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Contributor.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Contributor.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Contributor.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Contributor.contact", 0, None),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Contributor {
     fn resource_type(&self) -> &'static str {
         "Contributor"
@@ -75,6 +103,14 @@ impl crate::validation::ValidatableResource for Contributor {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

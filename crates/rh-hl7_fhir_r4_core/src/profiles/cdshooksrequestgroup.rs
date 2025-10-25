@@ -35,6 +35,164 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("RequestGroup.action.cardinalityBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|4.0.1").with_description("Defines behavior for an action or a group for how many times that item may be repeated."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.condition.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-condition-kind|4.0.1").with_description("The kind of condition for the action."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.groupingBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-grouping-behavior|4.0.1").with_description("Defines organization behavior of a group."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.precheckBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-precheck-behavior|4.0.1").with_description("Defines selection frequency behavior for an action or group."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.priority", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-priority|4.0.1").with_description("Identifies the level of importance to be assigned to actioning the request."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.relatedAction.relationship", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-relationship-type|4.0.1").with_description("Defines the types of relationships between actions."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.requiredBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-required-behavior|4.0.1").with_description("Defines expectations around whether an action or action group is required."),
+    rh_foundation::ElementBinding::new("RequestGroup.action.selectionBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-selection-behavior|4.0.1").with_description("Defines selection behavior of a group."),
+    rh_foundation::ElementBinding::new("RequestGroup.intent", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-intent|4.0.1").with_description("Codes indicating the degree of authority/intentionality associated with a request."),
+    rh_foundation::ElementBinding::new("RequestGroup.priority", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-priority|4.0.1").with_description("Identifies the level of importance to be assigned to actioning the request."),
+    rh_foundation::ElementBinding::new("RequestGroup.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-status|4.0.1").with_description("Codes identifying the lifecycle stage of a request."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("RequestGroup", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.contained", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.extension", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.identifier", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.instantiatesUri", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.groupIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.note", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.prefix", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.textEquivalent",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.code", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.documentation", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.condition", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.condition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.condition.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.condition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.condition.kind",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.condition.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.relatedAction", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.actionId",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.relationship",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.relatedAction.offset[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.participant", 0, None),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.groupingBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.selectionBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.requiredBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.precheckBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RequestGroup.action.cardinalityBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.resource", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RequestGroup.action.action", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Cdshooksrequestgroup {
     fn id(&self) -> Option<String> {
@@ -107,7 +265,21 @@ impl crate::validation::ValidatableResource for Cdshooksrequestgroup {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/cdshooksrequestgroup")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::cdshooksrequestgroup::{
+    CdshooksrequestgroupAccessors, CdshooksrequestgroupExistence, CdshooksrequestgroupMutators,
+};

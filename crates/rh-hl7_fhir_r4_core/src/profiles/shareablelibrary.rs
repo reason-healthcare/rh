@@ -35,6 +35,69 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Library.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+        )
+        .with_description("The lifecycle status of an artifact.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Library", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Library.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Library.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Library.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Library.version", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.experimental", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.publisher", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Library.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Library.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Library.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Library.topic", 0, None),
+            rh_foundation::ElementCardinality::new("Library.author", 0, None),
+            rh_foundation::ElementCardinality::new("Library.editor", 0, None),
+            rh_foundation::ElementCardinality::new("Library.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("Library.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("Library.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("Library.parameter", 0, None),
+            rh_foundation::ElementCardinality::new("Library.dataRequirement", 0, None),
+            rh_foundation::ElementCardinality::new("Library.content", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Shareablelibrary {
     fn id(&self) -> Option<String> {
@@ -107,7 +170,21 @@ impl crate::validation::ValidatableResource for Shareablelibrary {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/shareablelibrary")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::shareablelibrary::{
+    ShareablelibraryAccessors, ShareablelibraryExistence, ShareablelibraryMutators,
+};

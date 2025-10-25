@@ -126,6 +126,21 @@ pub struct MessageDefinition {
     /// Extension element for the 'graph' primitive field. Contains metadata and extensions.
     pub _graph: Option<Element>,
 }
+/// MessageDefinition nested structure for the 'allowedResponse' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDefinitionAllowedresponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to allowed message definition response
+    pub message: StringType,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// When should this response be used
+    pub situation: Option<StringType>,
+    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
+    pub _situation: Option<Element>,
+}
 /// MessageDefinition nested structure for the 'focus' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageDefinitionFocus {
@@ -148,21 +163,6 @@ pub struct MessageDefinitionFocus {
     pub max: Option<StringType>,
     /// Extension element for the 'max' primitive field. Contains metadata and extensions.
     pub _max: Option<Element>,
-}
-/// MessageDefinition nested structure for the 'allowedResponse' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageDefinitionAllowedresponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to allowed message definition response
-    pub message: StringType,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// When should this response be used
-    pub situation: Option<StringType>,
-    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
-    pub _situation: Option<Element>,
 }
 
 impl Default for MessageDefinition {
@@ -215,6 +215,18 @@ impl Default for MessageDefinition {
     }
 }
 
+impl Default for MessageDefinitionAllowedresponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            situation: Default::default(),
+            _situation: Default::default(),
+        }
+    }
+}
+
 impl Default for MessageDefinitionFocus {
     fn default() -> Self {
         Self {
@@ -227,18 +239,6 @@ impl Default for MessageDefinitionFocus {
             _min: Default::default(),
             max: Default::default(),
             _max: Default::default(),
-        }
-    }
-}
-
-impl Default for MessageDefinitionAllowedresponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            situation: Default::default(),
-            _situation: Default::default(),
         }
     }
 }
@@ -260,6 +260,101 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("md-1", rh_foundation::Severity::Error, "Max must be postive int or *", "max='*' or (max.toInteger() > 0)").with_xpath("f:max/@value='*' or number(f:max/@value) > 0"),
     rh_foundation::Invariant::new("msd-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("MessageDefinition.category", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/message-significance-category|4.0.1").with_description("The impact of the content of a message."),
+    rh_foundation::ElementBinding::new("MessageDefinition.focus.code", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("MessageDefinition.responseRequired", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/messageheader-response-request|4.0.1").with_description("HL7-defined table of codes which identify conditions under which acknowledgments are required to be returned in response to a message."),
+    rh_foundation::ElementBinding::new("MessageDefinition.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MessageDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.base", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.parent", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.event[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus", 0, None),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.focus.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.profile", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.min", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageDefinition.focus.max", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.responseRequired",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MessageDefinition.allowedResponse", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.allowedResponse.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.allowedResponse.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.allowedResponse.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.allowedResponse.message",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MessageDefinition.allowedResponse.situation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MessageDefinition.graph", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -774,7 +869,21 @@ impl crate::validation::ValidatableResource for MessageDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MessageDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::message_definition::{
+    MessageDefinitionAccessors, MessageDefinitionExistence, MessageDefinitionMutators,
+};

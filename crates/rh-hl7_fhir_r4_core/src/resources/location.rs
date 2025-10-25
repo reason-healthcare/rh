@@ -98,41 +98,6 @@ pub struct Location {
     /// Technical endpoints providing access to services operated for the location
     pub endpoint: Option<Vec<Reference>>,
 }
-/// Distance
-///
-/// A calculated distance between the resource and a provided location.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/location-distance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationDistance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Location nested structure for the 'position' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationPosition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Longitude with WGS84 datum
-    pub longitude: DecimalType,
-    /// Extension element for the 'longitude' primitive field. Contains metadata and extensions.
-    pub _longitude: Option<Element>,
-    /// Latitude with WGS84 datum
-    pub latitude: DecimalType,
-    /// Extension element for the 'latitude' primitive field. Contains metadata and extensions.
-    pub _latitude: Option<Element>,
-    /// Altitude with WGS84 datum
-    pub altitude: Option<DecimalType>,
-    /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
-    pub _altitude: Option<Element>,
-}
 /// Location nested structure for the 'hoursOfOperation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocationHoursofoperation {
@@ -163,6 +128,41 @@ pub struct LocationHoursofoperation {
     /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
     #[serde(rename = "_closingTime")]
     pub _closing_time: Option<Element>,
+}
+/// Location nested structure for the 'position' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationPosition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Longitude with WGS84 datum
+    pub longitude: DecimalType,
+    /// Extension element for the 'longitude' primitive field. Contains metadata and extensions.
+    pub _longitude: Option<Element>,
+    /// Latitude with WGS84 datum
+    pub latitude: DecimalType,
+    /// Extension element for the 'latitude' primitive field. Contains metadata and extensions.
+    pub _latitude: Option<Element>,
+    /// Altitude with WGS84 datum
+    pub altitude: Option<DecimalType>,
+    /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
+    pub _altitude: Option<Element>,
+}
+/// Distance
+///
+/// A calculated distance between the resource and a provided location.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/location-distance
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationDistance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for Location {
@@ -196,10 +196,18 @@ impl Default for Location {
     }
 }
 
-impl Default for LocationDistance {
+impl Default for LocationHoursofoperation {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            days_of_week: Default::default(),
+            _days_of_week: Default::default(),
+            all_day: Default::default(),
+            _all_day: Default::default(),
+            opening_time: Default::default(),
+            _opening_time: Default::default(),
+            closing_time: Default::default(),
+            _closing_time: Default::default(),
         }
     }
 }
@@ -218,18 +226,10 @@ impl Default for LocationPosition {
     }
 }
 
-impl Default for LocationHoursofoperation {
+impl Default for LocationDistance {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            days_of_week: Default::default(),
-            _days_of_week: Default::default(),
-            all_day: Default::default(),
-            _all_day: Default::default(),
-            opening_time: Default::default(),
-            _opening_time: Default::default(),
-            closing_time: Default::default(),
-            _closing_time: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -249,6 +249,78 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Location.hoursOfOperation.daysOfWeek", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/days-of-week|4.0.1").with_description("The days of the week."),
+    rh_foundation::ElementBinding::new("Location.mode", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/location-mode|4.0.1").with_description("Indicates whether a resource instance represents a specific location or a class of locations."),
+    rh_foundation::ElementBinding::new("Location.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/location-status|4.0.1").with_description("Indicates whether the location is still in use."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Location.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Location.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Location.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Location.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Location.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.operationalStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.alias", 0, None),
+            rh_foundation::ElementCardinality::new("Location.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.mode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.type", 0, None),
+            rh_foundation::ElementCardinality::new("Location.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("Location.address", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.physicalType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.position", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.position.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.position.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Location.position.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Location.position.longitude", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.position.latitude", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.position.altitude", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.managingOrganization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.partOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.hoursOfOperation", 0, None),
+            rh_foundation::ElementCardinality::new("Location.hoursOfOperation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.hoursOfOperation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Location.hoursOfOperation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Location.hoursOfOperation.daysOfWeek", 0, None),
+            rh_foundation::ElementCardinality::new("Location.hoursOfOperation.allDay", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Location.hoursOfOperation.openingTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Location.hoursOfOperation.closingTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Location.availabilityExceptions", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Location.endpoint", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -676,7 +748,19 @@ impl crate::validation::ValidatableResource for Location {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Location")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::location::{LocationAccessors, LocationExistence, LocationMutators};

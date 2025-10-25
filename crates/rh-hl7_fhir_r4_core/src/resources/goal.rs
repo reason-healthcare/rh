@@ -104,6 +104,54 @@ pub struct Goal {
     #[serde(rename = "outcomeReference")]
     pub outcome_reference: Option<Vec<Reference>>,
 }
+/// reason rejected
+///
+/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalReasonRejected {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// related goal
+///
+/// Establishes a relationship between this goal and other goals.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalRelationship {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Goal acceptance
+///
+/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalAcceptance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Goal nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalTarget {
@@ -144,54 +192,6 @@ pub struct GoalTarget {
     #[serde(rename = "dueDuration")]
     pub due_duration: Option<Duration>,
 }
-/// reason rejected
-///
-/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalReasonRejected {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Goal acceptance
-///
-/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalAcceptance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// related goal
-///
-/// Establishes a relationship between this goal and other goals.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Goal {
     fn default() -> Self {
@@ -221,25 +221,15 @@ impl Default for Goal {
     }
 }
 
-impl Default for GoalTarget {
+impl Default for GoalReasonRejected {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            measure: Default::default(),
-            detail_quantity: Default::default(),
-            detail_range: Default::default(),
-            detail_codeable_concept: Default::default(),
-            detail_string: Default::default(),
-            detail_boolean: Default::default(),
-            detail_integer: Default::default(),
-            detail_ratio: Default::default(),
-            due_date: Default::default(),
-            due_duration: Default::default(),
+            base: Extension::default(),
         }
     }
 }
 
-impl Default for GoalReasonRejected {
+impl Default for GoalRelationship {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -255,10 +245,20 @@ impl Default for GoalAcceptance {
     }
 }
 
-impl Default for GoalRelationship {
+impl Default for GoalTarget {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            measure: Default::default(),
+            detail_quantity: Default::default(),
+            detail_range: Default::default(),
+            detail_codeable_concept: Default::default(),
+            detail_string: Default::default(),
+            detail_boolean: Default::default(),
+            detail_integer: Default::default(),
+            detail_ratio: Default::default(),
+            due_date: Default::default(),
+            due_duration: Default::default(),
         }
     }
 }
@@ -279,6 +279,56 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("gol-1", rh_foundation::Severity::Error, "Goal.target.measure is required if Goal.target.detail is populated", "(detail.exists() and measure.exists()) or detail.exists().not()").with_xpath("(exists(f:*[starts-with(local-name(.), 'detail')]) and exists(f:measure)) or not(exists(f:*[starts-with(local-name(.), 'detail')]))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Goal.lifecycleStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/goal-status|4.0.1").with_description("Codes that reflect the current state of a goal and whether the goal is still being targeted."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Goal.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.lifecycleStatus", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.achievementStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.category", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.start[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.target", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.target.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.target.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.target.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.target.measure", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.target.detail[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.target.due[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.statusDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.expressedBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Goal.addresses", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.note", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.outcomeCode", 0, None),
+            rh_foundation::ElementCardinality::new("Goal.outcomeReference", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -695,7 +745,19 @@ impl crate::validation::ValidatableResource for Goal {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Goal")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::goal::{GoalAccessors, GoalExistence, GoalMutators};

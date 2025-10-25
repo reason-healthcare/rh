@@ -34,6 +34,69 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Provenance.entity.role",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/provenance-entity-role|4.0.1",
+        )
+        .with_description("How an entity was used in an activity.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Provenance", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.target", 1, None),
+            rh_foundation::ElementCardinality::new("Provenance.occurred[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.recorded", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.policy", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.reason", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.activity", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent", 1, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.role", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.who", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.onBehalfOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.role", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.agent.who", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.agent.onBehalfOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.entity", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.entity.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.entity.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.entity.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.entity.role", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.entity.what", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Provenance.entity.agent", 0, None),
+            rh_foundation::ElementCardinality::new("Provenance.signature", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ProvenanceRelevantHistory {
     fn id(&self) -> Option<String> {
@@ -108,7 +171,22 @@ impl crate::validation::ValidatableResource for ProvenanceRelevantHistory {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/provenance-relevant-history")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::provenance_relevant_history::{
+    ProvenanceRelevantHistoryAccessors, ProvenanceRelevantHistoryExistence,
+    ProvenanceRelevantHistoryMutators,
+};

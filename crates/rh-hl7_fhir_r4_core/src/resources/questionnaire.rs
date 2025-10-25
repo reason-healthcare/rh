@@ -132,53 +132,36 @@ pub struct Questionnaire {
     /// Questions and sections within the Questionnaire
     pub item: Option<Vec<QuestionnaireItem>>,
 }
-/// hidden
-///
-/// If true, indicates that the extended item should not be displayed to the user.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-hidden
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+/// QuestionnaireItem nested structure for the 'answerOption' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireHidden {
+pub struct QuestionnaireItemAnsweroption {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: Extension,
-}
-/// choiceOrientation
-///
-/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireChoiceOrientation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// minOccurs
-///
-/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireMinOccurs {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
+    pub base: BackboneElement,
+    /// Answer value (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Answer value (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Answer value (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Answer value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Answer value (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Answer value (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Whether option is selected by default
+    #[serde(rename = "initialSelected")]
+    pub initial_selected: Option<BooleanType>,
+    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_initialSelected")]
+    pub _initial_selected: Option<Element>,
 }
 /// QuestionnaireItem nested structure for the 'initial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,6 +206,51 @@ pub struct QuestionnaireItemInitial {
     #[serde(rename = "valueReference")]
     pub value_reference: Reference,
 }
+/// QuestionnaireItem nested structure for the 'enableWhen' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemEnablewhen {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Question that determines whether item is enabled
+    pub question: StringType,
+    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
+    pub _question: Option<Element>,
+    /// exists | = | != | > | < | >= | <=
+    pub operator: QuestionnaireEnableOperator,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// Value for question comparison based on operator (boolean)
+    #[serde(rename = "answerBoolean")]
+    pub answer_boolean: BooleanType,
+    /// Value for question comparison based on operator (decimal)
+    #[serde(rename = "answerDecimal")]
+    pub answer_decimal: DecimalType,
+    /// Value for question comparison based on operator (integer)
+    #[serde(rename = "answerInteger")]
+    pub answer_integer: IntegerType,
+    /// Value for question comparison based on operator (date)
+    #[serde(rename = "answerDate")]
+    pub answer_date: DateType,
+    /// Value for question comparison based on operator (dateTime)
+    #[serde(rename = "answerDateTime")]
+    pub answer_date_time: DateTimeType,
+    /// Value for question comparison based on operator (time)
+    #[serde(rename = "answerTime")]
+    pub answer_time: TimeType,
+    /// Value for question comparison based on operator (string)
+    #[serde(rename = "answerString")]
+    pub answer_string: StringType,
+    /// Value for question comparison based on operator (Coding)
+    #[serde(rename = "answerCoding")]
+    pub answer_coding: Coding,
+    /// Value for question comparison based on operator (Quantity)
+    #[serde(rename = "answerQuantity")]
+    pub answer_quantity: Quantity,
+    /// Value for question comparison based on operator (Reference)
+    #[serde(rename = "answerReference")]
+    pub answer_reference: Reference,
+}
 /// signatureRequired
 ///
 /// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
@@ -239,20 +267,52 @@ pub struct QuestionnaireSignatureRequired {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// supportLink
+///
+/// A URL that resolves to additional supporting information or guidance related to the question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSupportLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// choiceOrientation
+///
+/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireChoiceOrientation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Questionnaire nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Only allow data when
-    #[serde(rename = "enableWhen")]
-    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
     /// Initial value(s) when item is first rendered
     pub initial: Option<Vec<QuestionnaireItemInitial>>,
     /// Permitted answer
     #[serde(rename = "answerOption")]
     pub answer_option: Option<Vec<QuestionnaireItemAnsweroption>>,
+    /// Only allow data when
+    #[serde(rename = "enableWhen")]
+    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -317,97 +377,37 @@ pub struct QuestionnaireItem {
     /// Nested questionnaire items
     pub item: Option<Vec<StringType>>,
 }
-/// supportLink
+/// minOccurs
 ///
-/// A URL that resolves to additional supporting information or guidance related to the question.
+/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSupportLink {
+pub struct QuestionnaireMinOccurs {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// QuestionnaireItem nested structure for the 'enableWhen' field
+/// hidden
+///
+/// If true, indicates that the extended item should not be displayed to the user.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-hidden
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemEnablewhen {
+pub struct QuestionnaireHidden {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Question that determines whether item is enabled
-    pub question: StringType,
-    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
-    pub _question: Option<Element>,
-    /// exists | = | != | > | < | >= | <=
-    pub operator: QuestionnaireEnableOperator,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// Value for question comparison based on operator (boolean)
-    #[serde(rename = "answerBoolean")]
-    pub answer_boolean: BooleanType,
-    /// Value for question comparison based on operator (decimal)
-    #[serde(rename = "answerDecimal")]
-    pub answer_decimal: DecimalType,
-    /// Value for question comparison based on operator (integer)
-    #[serde(rename = "answerInteger")]
-    pub answer_integer: IntegerType,
-    /// Value for question comparison based on operator (date)
-    #[serde(rename = "answerDate")]
-    pub answer_date: DateType,
-    /// Value for question comparison based on operator (dateTime)
-    #[serde(rename = "answerDateTime")]
-    pub answer_date_time: DateTimeType,
-    /// Value for question comparison based on operator (time)
-    #[serde(rename = "answerTime")]
-    pub answer_time: TimeType,
-    /// Value for question comparison based on operator (string)
-    #[serde(rename = "answerString")]
-    pub answer_string: StringType,
-    /// Value for question comparison based on operator (Coding)
-    #[serde(rename = "answerCoding")]
-    pub answer_coding: Coding,
-    /// Value for question comparison based on operator (Quantity)
-    #[serde(rename = "answerQuantity")]
-    pub answer_quantity: Quantity,
-    /// Value for question comparison based on operator (Reference)
-    #[serde(rename = "answerReference")]
-    pub answer_reference: Reference,
-}
-/// QuestionnaireItem nested structure for the 'answerOption' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemAnsweroption {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Answer value (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Answer value (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Answer value (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Answer value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Answer value (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Answer value (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Whether option is selected by default
-    #[serde(rename = "initialSelected")]
-    pub initial_selected: Option<BooleanType>,
-    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_initialSelected")]
-    pub _initial_selected: Option<Element>,
+    pub base: Extension,
 }
 
 impl Default for Questionnaire {
@@ -455,26 +455,18 @@ impl Default for Questionnaire {
     }
 }
 
-impl Default for QuestionnaireHidden {
+impl Default for QuestionnaireItemAnsweroption {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireChoiceOrientation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireMinOccurs {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_coding: Default::default(),
+            value_reference: Default::default(),
+            initial_selected: Default::default(),
+            _initial_selected: Default::default(),
         }
     }
 }
@@ -499,7 +491,45 @@ impl Default for QuestionnaireItemInitial {
     }
 }
 
+impl Default for QuestionnaireItemEnablewhen {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            question: Default::default(),
+            _question: Default::default(),
+            operator: Default::default(),
+            _operator: Default::default(),
+            answer_boolean: Default::default(),
+            answer_decimal: Default::default(),
+            answer_integer: Default::default(),
+            answer_date: Default::default(),
+            answer_date_time: Default::default(),
+            answer_time: Default::default(),
+            answer_string: Default::default(),
+            answer_coding: Default::default(),
+            answer_quantity: Default::default(),
+            answer_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for QuestionnaireSignatureRequired {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSupportLink {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireChoiceOrientation {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -511,9 +541,9 @@ impl Default for QuestionnaireItem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            enable_when: Default::default(),
             initial: Default::default(),
             answer_option: Default::default(),
+            enable_when: Default::default(),
             link_id: StringType::default(),
             _link_id: Default::default(),
             definition: Default::default(),
@@ -542,7 +572,7 @@ impl Default for QuestionnaireItem {
     }
 }
 
-impl Default for QuestionnaireSupportLink {
+impl Default for QuestionnaireMinOccurs {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -550,40 +580,10 @@ impl Default for QuestionnaireSupportLink {
     }
 }
 
-impl Default for QuestionnaireItemEnablewhen {
+impl Default for QuestionnaireHidden {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            question: Default::default(),
-            _question: Default::default(),
-            operator: Default::default(),
-            _operator: Default::default(),
-            answer_boolean: Default::default(),
-            answer_decimal: Default::default(),
-            answer_integer: Default::default(),
-            answer_date: Default::default(),
-            answer_date_time: Default::default(),
-            answer_time: Default::default(),
-            answer_string: Default::default(),
-            answer_coding: Default::default(),
-            answer_quantity: Default::default(),
-            answer_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItemAnsweroption {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_coding: Default::default(),
-            value_reference: Default::default(),
-            initial_selected: Default::default(),
-            _initial_selected: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -617,6 +617,142 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("que-8", rh_foundation::Severity::Error, "Initial values can't be specified for groups or display items", "(type!='group' and type!='display') or initial.empty()").with_xpath("not(f:type/@value=('group', 'display') and f:*[starts-with(local-name(.), 'initial')])"),
     rh_foundation::Invariant::new("que-9", rh_foundation::Severity::Error, "Read-only can't be specified for \"display\" items", "type!='display' or readOnly.empty()").with_xpath("not(f:type/@value=('group', 'display') and f:*[starts-with(local-name(.), 'initial')])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Questionnaire.item.enableBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/questionnaire-enable-behavior|4.0.1").with_description("Controls how multiple enableWhen values are interpreted -  whether all or any must be true."),
+    rh_foundation::ElementBinding::new("Questionnaire.item.enableWhen.operator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/questionnaire-enable-operator|4.0.1").with_description("The criteria by which a question is enabled."),
+    rh_foundation::ElementBinding::new("Questionnaire.item.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/item-type|4.0.1").with_description("Distinguishes groups from questions and display text and indicates data type for questions."),
+    rh_foundation::ElementBinding::new("Questionnaire.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+    rh_foundation::ElementBinding::new("Questionnaire.subjectType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Questionnaire.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.derivedFrom", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.subjectType", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.code", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.linkId", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.code", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.prefix", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableWhen", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableWhen.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.question",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.operator",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.answer[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableBehavior", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.required", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.repeats", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.readOnly", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.maxLength", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.answerValueSet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.answerOption", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.initialSelected",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.initial.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.initial.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.item", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -1113,7 +1249,21 @@ impl crate::validation::ValidatableResource for Questionnaire {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Questionnaire")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::questionnaire::{
+    QuestionnaireAccessors, QuestionnaireExistence, QuestionnaireMutators,
+};

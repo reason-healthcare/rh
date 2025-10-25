@@ -118,22 +118,43 @@ pub struct Claim {
     /// Total claim cost
     pub total: Option<Money>,
 }
-/// Claim nested structure for the 'related' field
+/// Claim nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimRelated {
+pub struct ClaimDiagnosis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference to the related claim
-    pub claim: Option<Reference>,
-    /// How the reference claim is related
+    /// Diagnosis instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Nature of illness or problem (CodeableConcept)
+    #[serde(rename = "diagnosisCodeableConcept")]
+    pub diagnosis_codeable_concept: CodeableConcept,
+    /// Nature of illness or problem (Reference)
+    #[serde(rename = "diagnosisReference")]
+    pub diagnosis_reference: Reference,
+    /// Timing or nature of the diagnosis
     ///
-    /// Binding: example (Relationship of this claim to a related Claim.)
+    /// Binding: example (The type of the diagnosis: admitting, principal, discharge.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
-    pub relationship: Option<CodeableConcept>,
-    /// File or case reference
-    pub reference: Option<Identifier>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosistype
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Present on admission
+    ///
+    /// Binding: example (Present on admission.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosis-on-admission
+    #[serde(rename = "onAdmission")]
+    pub on_admission: Option<CodeableConcept>,
+    /// Package billing code
+    ///
+    /// Binding: example (The DRG codes associated with the diagnosis.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosisrelatedgroup
+    #[serde(rename = "packageCode")]
+    pub package_code: Option<CodeableConcept>,
 }
 /// ClaimItemDetail nested structure for the 'subDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,110 +211,6 @@ pub struct ClaimItemDetailSubdetail {
     pub net: Option<Money>,
     /// Unique device identifier
     pub udi: Option<Vec<Reference>>,
-}
-/// Claim nested structure for the 'supportingInfo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimSupportinginfo {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Classification of the supplied information
-    ///
-    /// Binding: example (The valuset used for additional information category codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
-    pub category: CodeableConcept,
-    /// Type of information
-    ///
-    /// Binding: example (The valuset used for additional information codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
-    pub code: Option<CodeableConcept>,
-    /// When it occurred (date)
-    #[serde(rename = "timingDate")]
-    pub timing_date: Option<DateType>,
-    /// When it occurred (Period)
-    #[serde(rename = "timingPeriod")]
-    pub timing_period: Option<Period>,
-    /// Data to be provided (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Data to be provided (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Data to be provided (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// Data to be provided (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Option<Attachment>,
-    /// Data to be provided (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Option<Reference>,
-    /// Explanation for the information
-    ///
-    /// Binding: example (Reason codes for the missing teeth.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
-    pub reason: Option<CodeableConcept>,
-}
-/// Claim nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Diagnosis instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Nature of illness or problem (CodeableConcept)
-    #[serde(rename = "diagnosisCodeableConcept")]
-    pub diagnosis_codeable_concept: CodeableConcept,
-    /// Nature of illness or problem (Reference)
-    #[serde(rename = "diagnosisReference")]
-    pub diagnosis_reference: Reference,
-    /// Timing or nature of the diagnosis
-    ///
-    /// Binding: example (The type of the diagnosis: admitting, principal, discharge.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosistype
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Present on admission
-    ///
-    /// Binding: example (Present on admission.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosis-on-admission
-    #[serde(rename = "onAdmission")]
-    pub on_admission: Option<CodeableConcept>,
-    /// Package billing code
-    ///
-    /// Binding: example (The DRG codes associated with the diagnosis.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-diagnosisrelatedgroup
-    #[serde(rename = "packageCode")]
-    pub package_code: Option<CodeableConcept>,
-}
-/// Claim nested structure for the 'payee' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimPayee {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of recipient
-    ///
-    /// Binding: example (A code for the party to be reimbursed.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Recipient reference
-    pub party: Option<Reference>,
 }
 /// Claim nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -408,34 +325,146 @@ pub struct ClaimItem {
     /// Encounters related to this billed item
     pub encounter: Option<Vec<Reference>>,
 }
-/// Claim nested structure for the 'careTeam' field
+/// Claim nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimCareteam {
+pub struct ClaimInsurance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Order of care team
+    /// Insurance instance identifier
     pub sequence: PositiveIntType,
     /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
     pub _sequence: Option<Element>,
-    /// Practitioner or organization
-    pub provider: Reference,
-    /// Indicator of the lead practitioner
-    pub responsible: Option<BooleanType>,
-    /// Extension element for the 'responsible' primitive field. Contains metadata and extensions.
-    pub _responsible: Option<Element>,
-    /// Function within the team
+    /// Coverage to be used for adjudication
+    pub focal: BooleanType,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Pre-assigned Claim number
+    pub identifier: Option<Identifier>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Additional provider contract number
+    #[serde(rename = "businessArrangement")]
+    pub business_arrangement: Option<StringType>,
+    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_businessArrangement")]
+    pub _business_arrangement: Option<Element>,
+    /// Prior authorization reference number
+    #[serde(rename = "preAuthRef")]
+    pub pre_auth_ref: Option<Vec<StringType>>,
+    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_preAuthRef")]
+    pub _pre_auth_ref: Option<Element>,
+    /// Adjudication results
+    #[serde(rename = "claimResponse")]
+    pub claim_response: Option<Reference>,
+}
+/// Claim nested structure for the 'related' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimRelated {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the related claim
+    pub claim: Option<Reference>,
+    /// How the reference claim is related
     ///
-    /// Binding: example (The role codes for the care team members.)
+    /// Binding: example (Relationship of this claim to a related Claim.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-careteamrole
-    pub role: Option<CodeableConcept>,
-    /// Practitioner credential or specialization
+    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
+    pub relationship: Option<CodeableConcept>,
+    /// File or case reference
+    pub reference: Option<Identifier>,
+}
+/// Claim nested structure for the 'accident' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimAccident {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When the incident occurred
+    pub date: DateType,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// The nature of the accident
     ///
-    /// Binding: example (Provider professional qualifications.)
+    /// Binding: extensible (Type of accident: work place, auto, etc.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/provider-qualification
-    pub qualification: Option<CodeableConcept>,
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Where the event occurred (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Where the event occurred (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+}
+/// Claim nested structure for the 'payee' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimPayee {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category of recipient
+    ///
+    /// Binding: example (A code for the party to be reimbursed.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Recipient reference
+    pub party: Option<Reference>,
+}
+/// Claim nested structure for the 'supportingInfo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimSupportinginfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Classification of the supplied information
+    ///
+    /// Binding: example (The valuset used for additional information category codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
+    pub category: CodeableConcept,
+    /// Type of information
+    ///
+    /// Binding: example (The valuset used for additional information codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
+    pub code: Option<CodeableConcept>,
+    /// When it occurred (date)
+    #[serde(rename = "timingDate")]
+    pub timing_date: Option<DateType>,
+    /// When it occurred (Period)
+    #[serde(rename = "timingPeriod")]
+    pub timing_period: Option<Period>,
+    /// Data to be provided (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Data to be provided (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Data to be provided (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// Data to be provided (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Option<Attachment>,
+    /// Data to be provided (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Option<Reference>,
+    /// Explanation for the information
+    ///
+    /// Binding: example (Reason codes for the missing teeth.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
+    pub reason: Option<CodeableConcept>,
 }
 /// ClaimItem nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -493,63 +522,34 @@ pub struct ClaimItemDetail {
     /// Unique device identifier
     pub udi: Option<Vec<Reference>>,
 }
-/// Claim nested structure for the 'accident' field
+/// Claim nested structure for the 'careTeam' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimAccident {
+pub struct ClaimCareteam {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// When the incident occurred
-    pub date: DateType,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// The nature of the accident
-    ///
-    /// Binding: extensible (Type of accident: work place, auto, etc.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Where the event occurred (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Where the event occurred (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
-}
-/// Claim nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Insurance instance identifier
+    /// Order of care team
     pub sequence: PositiveIntType,
     /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
     pub _sequence: Option<Element>,
-    /// Coverage to be used for adjudication
-    pub focal: BooleanType,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Pre-assigned Claim number
-    pub identifier: Option<Identifier>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Additional provider contract number
-    #[serde(rename = "businessArrangement")]
-    pub business_arrangement: Option<StringType>,
-    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_businessArrangement")]
-    pub _business_arrangement: Option<Element>,
-    /// Prior authorization reference number
-    #[serde(rename = "preAuthRef")]
-    pub pre_auth_ref: Option<Vec<StringType>>,
-    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_preAuthRef")]
-    pub _pre_auth_ref: Option<Element>,
-    /// Adjudication results
-    #[serde(rename = "claimResponse")]
-    pub claim_response: Option<Reference>,
+    /// Practitioner or organization
+    pub provider: Reference,
+    /// Indicator of the lead practitioner
+    pub responsible: Option<BooleanType>,
+    /// Extension element for the 'responsible' primitive field. Contains metadata and extensions.
+    pub _responsible: Option<Element>,
+    /// Function within the team
+    ///
+    /// Binding: example (The role codes for the care team members.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-careteamrole
+    pub role: Option<CodeableConcept>,
+    /// Practitioner credential or specialization
+    ///
+    /// Binding: example (Provider professional qualifications.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/provider-qualification
+    pub qualification: Option<CodeableConcept>,
 }
 /// Claim nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -620,13 +620,17 @@ impl Default for Claim {
     }
 }
 
-impl Default for ClaimRelated {
+impl Default for ClaimDiagnosis {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            claim: Default::default(),
-            relationship: Default::default(),
-            reference: Default::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            diagnosis_codeable_concept: Default::default(),
+            diagnosis_reference: Default::default(),
+            type_: Default::default(),
+            on_admission: Default::default(),
+            package_code: Default::default(),
         }
     }
 }
@@ -648,51 +652,6 @@ impl Default for ClaimItemDetailSubdetail {
             _factor: Default::default(),
             net: Default::default(),
             udi: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimSupportinginfo {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            category: Default::default(),
-            code: Default::default(),
-            timing_date: Default::default(),
-            timing_period: Default::default(),
-            value_boolean: Default::default(),
-            value_string: Default::default(),
-            value_quantity: Default::default(),
-            value_attachment: Default::default(),
-            value_reference: Default::default(),
-            reason: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            diagnosis_codeable_concept: Default::default(),
-            diagnosis_reference: Default::default(),
-            type_: Default::default(),
-            on_admission: Default::default(),
-            package_code: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimPayee {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            party: Default::default(),
         }
     }
 }
@@ -735,17 +694,75 @@ impl Default for ClaimItem {
     }
 }
 
-impl Default for ClaimCareteam {
+impl Default for ClaimInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            focal: BooleanType::default(),
+            _focal: Default::default(),
+            identifier: Default::default(),
+            coverage: Reference::default(),
+            business_arrangement: Default::default(),
+            _business_arrangement: Default::default(),
+            pre_auth_ref: Default::default(),
+            _pre_auth_ref: Default::default(),
+            claim_response: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimRelated {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            claim: Default::default(),
+            relationship: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimAccident {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            date: DateType::default(),
+            _date: Default::default(),
+            type_: Default::default(),
+            location_address: Default::default(),
+            location_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimPayee {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimSupportinginfo {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             sequence: Default::default(),
             _sequence: Default::default(),
-            provider: Default::default(),
-            responsible: Default::default(),
-            _responsible: Default::default(),
-            role: Default::default(),
-            qualification: Default::default(),
+            category: Default::default(),
+            code: Default::default(),
+            timing_date: Default::default(),
+            timing_period: Default::default(),
+            value_boolean: Default::default(),
+            value_string: Default::default(),
+            value_quantity: Default::default(),
+            value_attachment: Default::default(),
+            value_reference: Default::default(),
+            reason: Default::default(),
         }
     }
 }
@@ -771,34 +788,17 @@ impl Default for ClaimItemDetail {
     }
 }
 
-impl Default for ClaimAccident {
+impl Default for ClaimCareteam {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            date: DateType::default(),
-            _date: Default::default(),
-            type_: Default::default(),
-            location_address: Default::default(),
-            location_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
+            sequence: Default::default(),
             _sequence: Default::default(),
-            focal: BooleanType::default(),
-            _focal: Default::default(),
-            identifier: Default::default(),
-            coverage: Reference::default(),
-            business_arrangement: Default::default(),
-            _business_arrangement: Default::default(),
-            pre_auth_ref: Default::default(),
-            _pre_auth_ref: Default::default(),
-            claim_response: Default::default(),
+            provider: Default::default(),
+            responsible: Default::default(),
+            _responsible: Default::default(),
+            role: Default::default(),
+            qualification: Default::default(),
         }
     }
 }
@@ -834,6 +834,239 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Claim.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+            rh_foundation::ElementBinding::new(
+                "Claim.use",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/claim-use|4.0.1",
+            )
+            .with_description(
+                "The purpose of the Claim: predetermination, preauthorization, claim.",
+            ),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Claim.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.subType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.use", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.billablePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.created", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.enterer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.insurer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.provider", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.priority", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.fundsReserve", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.related", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.related.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.related.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.related.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.related.claim", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.related.relationship", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.related.reference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.prescription", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.originalPrescription", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.payee", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.payee.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.payee.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.payee.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.payee.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.payee.party", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.referral", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.facility", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.provider", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.responsible", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.role", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.careTeam.qualification", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Claim.supportingInfo.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.category", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.supportingInfo.reason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.diagnosis[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.type", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.onAdmission", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.diagnosis.packageCode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.procedure", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.procedure.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.procedure.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.procedure.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.procedure.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.procedure.type", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.procedure.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.procedure.procedure[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.procedure.udi", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.insurance", 1, None),
+            rh_foundation::ElementCardinality::new("Claim.insurance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.insurance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.insurance.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.insurance.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.insurance.focal", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.insurance.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.insurance.coverage", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Claim.insurance.businessArrangement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Claim.insurance.preAuthRef", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.insurance.claimResponse", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.accident", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.accident.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.accident.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.accident.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.accident.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.accident.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.accident.location[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.careTeamSequence", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.diagnosisSequence", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.procedureSequence", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.informationSequence", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.revenue", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.productOrService", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.modifier", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.programCode", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.serviced[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.location[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.unitPrice", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.factor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.net", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.udi", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.subSite", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.encounter", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.revenue", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.productOrService",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.modifier", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.programCode", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.unitPrice", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.factor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.net", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.udi", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.subDetail", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.subDetail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.sequence",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.revenue",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.category",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.productOrService",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.subDetail.modifier", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.programCode",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.unitPrice",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Claim.item.detail.subDetail.factor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.subDetail.net", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Claim.item.detail.subDetail.udi", 0, None),
+            rh_foundation::ElementCardinality::new("Claim.total", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -1379,7 +1612,19 @@ impl crate::validation::ValidatableResource for Claim {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Claim")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::claim::{ClaimAccessors, ClaimExistence, ClaimMutators};

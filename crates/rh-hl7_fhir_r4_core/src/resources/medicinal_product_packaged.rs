@@ -168,6 +168,164 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.subject", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.legalStatusOfSupply",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.marketingStatus",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.marketingAuthorization",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.manufacturer",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier.outerPackaging",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.batchIdentifier.immediatePackaging",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductPackaged.packageItem", 1, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.quantity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.material",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.alternateMaterial",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.device",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.manufacturedItem",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.packageItem",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.physicalCharacteristics",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.otherCharacteristics",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.shelfLifeStorage",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductPackaged.packageItem.manufacturer",
+                0,
+                None,
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicinalProductPackaged {
     fn id(&self) -> Option<String> {
@@ -519,7 +677,18 @@ impl crate::validation::ValidatableResource for MedicinalProductPackaged {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductPackaged")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_packaged::{
+    MedicinalProductPackagedAccessors, MedicinalProductPackagedExistence,
+    MedicinalProductPackagedMutators,
+};

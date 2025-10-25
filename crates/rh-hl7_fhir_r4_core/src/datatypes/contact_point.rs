@@ -89,6 +89,44 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ContactPoint.system",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/contact-point-system|4.0.1",
+            )
+            .with_description("Telecommunications form for contact point."),
+            rh_foundation::ElementBinding::new(
+                "ContactPoint.use",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/contact-point-use|4.0.1",
+            )
+            .with_description("Use of contact point."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ContactPoint.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ContactPoint.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ContactPoint.system", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ContactPoint.value", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ContactPoint.use", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ContactPoint.rank", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ContactPoint.period", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for ContactPoint {
     fn resource_type(&self) -> &'static str {
         "ContactPoint"
@@ -96,6 +134,14 @@ impl crate::validation::ValidatableResource for ContactPoint {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

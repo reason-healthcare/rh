@@ -83,37 +83,6 @@ pub struct CoverageEligibilityResponse {
     /// Processing errors
     pub error: Option<Vec<CoverageEligibilityResponseError>>,
 }
-/// CoverageEligibilityResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefits and authorization details
-    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Coverage inforce indicator
-    pub inforce: Option<BooleanType>,
-    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
-    pub _inforce: Option<Element>,
-    /// When the benefits are applicable
-    #[serde(rename = "benefitPeriod")]
-    pub benefit_period: Option<Period>,
-}
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItem {
@@ -191,6 +160,37 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+}
+/// CoverageEligibilityResponse nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefits and authorization details
+    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Coverage inforce indicator
+    pub inforce: Option<BooleanType>,
+    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
+    pub _inforce: Option<Element>,
+    /// When the benefits are applicable
+    #[serde(rename = "benefitPeriod")]
+    pub benefit_period: Option<Period>,
+}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -254,28 +254,6 @@ impl Default for CoverageEligibilityResponse {
     }
 }
 
-impl Default for CoverageEligibilityResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            coverage: Reference::default(),
-            inforce: Default::default(),
-            _inforce: Default::default(),
-            benefit_period: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityResponseInsuranceItem {
     fn default() -> Self {
         Self {
@@ -298,6 +276,28 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
             authorization_supporting: Default::default(),
             authorization_url: Default::default(),
             _authorization_url: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            coverage: Reference::default(),
+            inforce: Default::default(),
+            _inforce: Default::default(),
+            benefit_period: Default::default(),
         }
     }
 }
@@ -333,6 +333,304 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "CoverageEligibilityResponse.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/remittance-outcome|4.0.1",
+            )
+            .with_description("The outcome of the processing."),
+            rh_foundation::ElementBinding::new(
+                "CoverageEligibilityResponse.purpose",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/eligibilityresponse-purpose|4.0.1",
+            )
+            .with_description("A code specifying the types of information being requested."),
+            rh_foundation::ElementBinding::new(
+                "CoverageEligibilityResponse.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.contained",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.status",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.purpose", 1, None),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.patient",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.serviced[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.created",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.requestor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.request",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.outcome",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.disposition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurer",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.coverage",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.inforce",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.benefitPeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.category",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.productOrService",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.modifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.provider",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.excluded",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.network",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.unit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.term",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.allowed[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.benefit.used[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.authorizationRequired",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.authorizationSupporting",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.insurance.item.authorizationUrl",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.preAuthRef",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.form", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CoverageEligibilityResponse.error", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.error.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.error.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.error.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CoverageEligibilityResponse.error.code",
+                1,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -721,7 +1019,22 @@ impl crate::validation::ValidatableResource for CoverageEligibilityResponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CoverageEligibilityResponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::coverage_eligibility_response::{
+    CoverageEligibilityResponseAccessors, CoverageEligibilityResponseExistence,
+    CoverageEligibilityResponseMutators,
+};

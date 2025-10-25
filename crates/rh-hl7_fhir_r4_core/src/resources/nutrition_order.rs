@@ -168,115 +168,6 @@ pub struct NutritionOrderEnteralformula {
     #[serde(rename = "_administrationInstruction")]
     pub _administration_instruction: Option<Element>,
 }
-/// NutritionOrderOraldiet nested structure for the 'nutrient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldietNutrient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of nutrient that is being modified
-    ///
-    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
-    ///
-    /// Available values:
-    /// - `33463005`: Fluid
-    /// - `39972003`: Sodium
-    /// - `88480006`: Potassium
-    pub modifier: Option<CodeableConcept>,
-    /// Quantity of the specified nutrient
-    pub amount: Option<Quantity>,
-}
-/// NutritionOrder nested structure for the 'oralDiet' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldiet {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Required  texture modifications
-    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
-    /// Required  nutrient modifications
-    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
-    /// Type of oral diet or diet restrictions that describe what can be consumed orally
-    ///
-    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Scheduled frequency of diet
-    pub schedule: Option<Vec<Timing>>,
-    /// The required consistency of fluids and liquids provided to the patient
-    ///
-    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
-    ///
-    /// Available values:
-    /// - `439031000124108`: honey thick liquid
-    /// - `439021000124105`: nectar thick liquid
-    /// - `439041000124103`: spoon thick liquid
-    /// - `439081000124109`: thin liquid
-    #[serde(rename = "fluidConsistencyType")]
-    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
-    /// Instructions or additional information about the oral diet
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// NutritionOrder nested structure for the 'supplement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderSupplement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of supplement product requested
-    ///
-    /// Binding: example (Codes for nutritional supplements to be provided to the patient.)
-    ///
-    /// Available values:
-    /// - `442901000124106`: Adult clear liquid supplement
-    /// - `443031000124106`: Adult critical care formula
-    /// - `443051000124104`: Adult diabetes specialty formula
-    /// - `442911000124109`: Adult elemental formula
-    /// - `443021000124108`: Adult hepatic specialty formula
-    /// - `442971000124100`: Adult high energy formula
-    /// - `442981000124102`: Adult hydrolyzed protein formula
-    /// - `442991000124104`: Adult high protein formula
-    /// - `443011000124100`: Adult high protein high fiber formula
-    /// - `442961000124107`: Adult low carbohydrate formula
-    /// - ... and 35 more values
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Product or brand name of the nutritional supplement
-    #[serde(rename = "productName")]
-    pub product_name: Option<StringType>,
-    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_productName")]
-    pub _product_name: Option<Element>,
-    /// Scheduled frequency of supplement
-    pub schedule: Option<Vec<Timing>>,
-    /// Amount of the nutritional supplement
-    pub quantity: Option<Quantity>,
-    /// Instructions or additional information about the oral supplement
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// NutritionOrderEnteralformula nested structure for the 'administration' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderEnteralformulaAdministration {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Scheduled frequency of enteral feeding
-    pub schedule: Option<Timing>,
-    /// The volume of formula to provide
-    pub quantity: Option<Quantity>,
-    /// Speed with which the formula is provided per period of time (Quantity)
-    #[serde(rename = "rateQuantity")]
-    pub rate_quantity: Option<Quantity>,
-    /// Speed with which the formula is provided per period of time (Ratio)
-    #[serde(rename = "rateRatio")]
-    pub rate_ratio: Option<Ratio>,
-}
 /// NutritionOrderOraldiet nested structure for the 'texture' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionOrderOraldietTexture {
@@ -318,6 +209,115 @@ pub struct NutritionOrderOraldietTexture {
     /// - ... and 4 more values
     #[serde(rename = "foodType")]
     pub food_type: Option<CodeableConcept>,
+}
+/// NutritionOrder nested structure for the 'oralDiet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldiet {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Required  nutrient modifications
+    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
+    /// Required  texture modifications
+    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
+    /// Type of oral diet or diet restrictions that describe what can be consumed orally
+    ///
+    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Scheduled frequency of diet
+    pub schedule: Option<Vec<Timing>>,
+    /// The required consistency of fluids and liquids provided to the patient
+    ///
+    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
+    ///
+    /// Available values:
+    /// - `439031000124108`: honey thick liquid
+    /// - `439021000124105`: nectar thick liquid
+    /// - `439041000124103`: spoon thick liquid
+    /// - `439081000124109`: thin liquid
+    #[serde(rename = "fluidConsistencyType")]
+    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
+    /// Instructions or additional information about the oral diet
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
+/// NutritionOrderOraldiet nested structure for the 'nutrient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldietNutrient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of nutrient that is being modified
+    ///
+    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
+    ///
+    /// Available values:
+    /// - `33463005`: Fluid
+    /// - `39972003`: Sodium
+    /// - `88480006`: Potassium
+    pub modifier: Option<CodeableConcept>,
+    /// Quantity of the specified nutrient
+    pub amount: Option<Quantity>,
+}
+/// NutritionOrderEnteralformula nested structure for the 'administration' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderEnteralformulaAdministration {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Scheduled frequency of enteral feeding
+    pub schedule: Option<Timing>,
+    /// The volume of formula to provide
+    pub quantity: Option<Quantity>,
+    /// Speed with which the formula is provided per period of time (Quantity)
+    #[serde(rename = "rateQuantity")]
+    pub rate_quantity: Option<Quantity>,
+    /// Speed with which the formula is provided per period of time (Ratio)
+    #[serde(rename = "rateRatio")]
+    pub rate_ratio: Option<Ratio>,
+}
+/// NutritionOrder nested structure for the 'supplement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderSupplement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of supplement product requested
+    ///
+    /// Binding: example (Codes for nutritional supplements to be provided to the patient.)
+    ///
+    /// Available values:
+    /// - `442901000124106`: Adult clear liquid supplement
+    /// - `443031000124106`: Adult critical care formula
+    /// - `443051000124104`: Adult diabetes specialty formula
+    /// - `442911000124109`: Adult elemental formula
+    /// - `443021000124108`: Adult hepatic specialty formula
+    /// - `442971000124100`: Adult high energy formula
+    /// - `442981000124102`: Adult hydrolyzed protein formula
+    /// - `442991000124104`: Adult high protein formula
+    /// - `443011000124100`: Adult high protein high fiber formula
+    /// - `442961000124107`: Adult low carbohydrate formula
+    /// - ... and 35 more values
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Product or brand name of the nutritional supplement
+    #[serde(rename = "productName")]
+    pub product_name: Option<StringType>,
+    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_productName")]
+    pub _product_name: Option<Element>,
+    /// Scheduled frequency of supplement
+    pub schedule: Option<Vec<Timing>>,
+    /// Amount of the nutritional supplement
+    pub quantity: Option<Quantity>,
+    /// Instructions or additional information about the oral supplement
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
 }
 
 impl Default for NutritionOrder {
@@ -371,12 +371,12 @@ impl Default for NutritionOrderEnteralformula {
     }
 }
 
-impl Default for NutritionOrderOraldietNutrient {
+impl Default for NutritionOrderOraldietTexture {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             modifier: Default::default(),
-            amount: Default::default(),
+            food_type: Default::default(),
         }
     }
 }
@@ -385,8 +385,8 @@ impl Default for NutritionOrderOraldiet {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            texture: Default::default(),
             nutrient: Default::default(),
+            texture: Default::default(),
             type_: Default::default(),
             schedule: Default::default(),
             fluid_consistency_type: Default::default(),
@@ -396,17 +396,12 @@ impl Default for NutritionOrderOraldiet {
     }
 }
 
-impl Default for NutritionOrderSupplement {
+impl Default for NutritionOrderOraldietNutrient {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            product_name: Default::default(),
-            _product_name: Default::default(),
-            schedule: Default::default(),
-            quantity: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
+            modifier: Default::default(),
+            amount: Default::default(),
         }
     }
 }
@@ -423,12 +418,17 @@ impl Default for NutritionOrderEnteralformulaAdministration {
     }
 }
 
-impl Default for NutritionOrderOraldietTexture {
+impl Default for NutritionOrderSupplement {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            modifier: Default::default(),
-            food_type: Default::default(),
+            type_: Default::default(),
+            product_name: Default::default(),
+            _product_name: Default::default(),
+            schedule: Default::default(),
+            quantity: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
         }
     }
 }
@@ -449,6 +449,237 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("nor-1", rh_foundation::Severity::Warning, "Nutrition Order SHALL contain either Oral Diet , Supplement, or Enteral Formula class", "oralDiet.exists() or supplement.exists() or enteralFormula.exists()").with_xpath("exists(f:oralDiet) or exists(f:supplement) or exists(f:enteralFormula)"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("NutritionOrder.intent", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-intent|4.0.1").with_description("Codes indicating the degree of authority/intentionality associated with a nutrition order."),
+    rh_foundation::ElementBinding::new("NutritionOrder.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-status|4.0.1").with_description("Codes identifying the lifecycle stage of the nutrition order."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("NutritionOrder.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.contained", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.extension", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.instantiates", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.dateTime", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.orderer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.allergyIntolerance", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.foodPreferenceModifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.excludeFoodModifier", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.type", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.schedule", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.nutrient", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.nutrient.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.nutrient.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.nutrient.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.nutrient.modifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.nutrient.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.oralDiet.texture", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.texture.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.texture.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.texture.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.texture.modifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.texture.foodType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.fluidConsistencyType",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.oralDiet.instruction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.supplement", 0, None),
+            rh_foundation::ElementCardinality::new("NutritionOrder.supplement.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.supplement.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.supplement.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.supplement.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.supplement.productName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.supplement.schedule", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.supplement.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.supplement.instruction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.enteralFormula", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NutritionOrder.enteralFormula.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.baseFormulaType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.baseFormulaProductName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.additiveType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.additiveProductName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.caloricDensity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.routeofAdministration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.schedule",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administration.rate[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.maxVolumeToDeliver",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "NutritionOrder.enteralFormula.administrationInstruction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("NutritionOrder.note", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -914,7 +1145,21 @@ impl crate::validation::ValidatableResource for NutritionOrder {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/NutritionOrder")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::nutrition_order::{
+    NutritionOrderAccessors, NutritionOrderExistence, NutritionOrderMutators,
+};

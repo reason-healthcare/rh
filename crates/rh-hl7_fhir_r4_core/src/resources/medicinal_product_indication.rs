@@ -106,6 +106,101 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProductIndication.subject", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.diseaseSymptomProcedure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.diseaseStatus",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.comorbidity",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.intendedEffect",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.duration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy.therapyRelationshipType",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.otherTherapy.medication[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.undesirableEffect",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductIndication.population",
+                0,
+                None,
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicinalProductIndication {
     fn id(&self) -> Option<String> {
@@ -447,7 +542,18 @@ impl crate::validation::ValidatableResource for MedicinalProductIndication {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductIndication")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_indication::{
+    MedicinalProductIndicationAccessors, MedicinalProductIndicationExistence,
+    MedicinalProductIndicationMutators,
+};

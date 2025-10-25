@@ -102,6 +102,49 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "PaymentNotice.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+        )
+        .with_description("A code specifying the state of the resource instance.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("PaymentNotice.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.contained", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentNotice.extension", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentNotice.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentNotice.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentNotice.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.request", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.response", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.created", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.provider", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.payment", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.paymentDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.payee", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.recipient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.amount", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentNotice.paymentStatus", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for PaymentNotice {
     fn id(&self) -> Option<String> {
@@ -442,7 +485,21 @@ impl crate::validation::ValidatableResource for PaymentNotice {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/PaymentNotice")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::payment_notice::{
+    PaymentNoticeAccessors, PaymentNoticeExistence, PaymentNoticeMutators,
+};

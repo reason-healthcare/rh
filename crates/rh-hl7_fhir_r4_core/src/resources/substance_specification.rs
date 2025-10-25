@@ -75,70 +75,39 @@ pub struct SubstanceSpecification {
     #[serde(rename = "sourceMaterial")]
     pub source_material: Option<Reference>,
 }
-/// SubstanceSpecification nested structure for the 'structure' field
+/// SubstanceSpecification nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructure {
+pub struct SubstanceSpecificationName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Applicable for single substances that contain a radionuclide or a non-natural isotopic ratio
-    pub isotope: Option<Vec<SubstanceSpecificationStructureIsotope>>,
-    /// Molecular structural representation
-    pub representation: Option<Vec<SubstanceSpecificationStructureRepresentation>>,
-    /// Stereochemistry type
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Specified per moiety according to the Hill system, i.e. first C, then H, then alphabetical, each moiety separated by a dot
-    #[serde(rename = "molecularFormulaByMoiety")]
-    pub molecular_formula_by_moiety: Option<StringType>,
-    /// Extension element for the 'molecularFormulaByMoiety' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormulaByMoiety")]
-    pub _molecular_formula_by_moiety: Option<Element>,
-    /// The molecular weight or weight range (for proteins, polymers or nucleic acids)
-    #[serde(rename = "molecularWeight")]
-    pub molecular_weight: Option<StringType>,
-    /// Supporting literature
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceSpecification nested structure for the 'moiety' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationMoiety {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role that the moiety is playing
-    pub role: Option<CodeableConcept>,
-    /// Identifier by which this moiety substance is known
-    pub identifier: Option<Identifier>,
-    /// Textual name for this moiety substance
-    pub name: Option<StringType>,
+    /// Details of the official nature of this name
+    pub official: Option<Vec<SubstanceSpecificationNameOfficial>>,
+    /// The actual name
+    pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Stereochemistry type
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Quantitative value for this moiety (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this moiety (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
+    /// Name type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The status of the name
+    pub status: Option<CodeableConcept>,
+    /// If this is the preferred name for this substance
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+    /// Language of the name
+    pub language: Option<Vec<CodeableConcept>>,
+    /// The use context of this name for example if there is a different name a drug active ingredient as opposed to a food colour additive
+    pub domain: Option<Vec<CodeableConcept>>,
+    /// The jurisdiction where this name applies
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// A synonym of this name
+    pub synonym: Option<Vec<StringType>>,
+    /// A translation for this name
+    pub translation: Option<Vec<StringType>>,
+    /// Supporting literature
+    pub source: Option<Vec<Reference>>,
 }
 /// SubstanceSpecification nested structure for the 'code' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,6 +147,110 @@ pub struct SubstanceSpecificationStructureRepresentation {
     pub _representation: Option<Element>,
     /// An attached file with the structural representation
     pub attachment: Option<Attachment>,
+}
+/// SubstanceSpecification nested structure for the 'moiety' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationMoiety {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role that the moiety is playing
+    pub role: Option<CodeableConcept>,
+    /// Identifier by which this moiety substance is known
+    pub identifier: Option<Identifier>,
+    /// Textual name for this moiety substance
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Stereochemistry type
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Quantitative value for this moiety (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this moiety (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+}
+/// SubstanceSpecificationName nested structure for the 'official' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationNameOfficial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Which authority uses this official name
+    pub authority: Option<CodeableConcept>,
+    /// The status of the official name
+    pub status: Option<CodeableConcept>,
+    /// Date of official name change
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+}
+/// SubstanceSpecificationStructure nested structure for the 'isotope' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationStructureIsotope {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Substance identifier for each non-natural or radioisotope
+    pub identifier: Option<Identifier>,
+    /// Substance name for each non-natural or radioisotope
+    pub name: Option<CodeableConcept>,
+    /// The type of isotopic substitution present in a single substance
+    pub substitution: Option<CodeableConcept>,
+    /// Half life - for a non-natural nuclide
+    #[serde(rename = "halfLife")]
+    pub half_life: Option<Quantity>,
+}
+/// SubstanceSpecification nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A category for this property, e.g. Physical, Chemical, Enzymatic
+    pub category: Option<CodeableConcept>,
+    /// Property type e.g. viscosity, pH, isoelectric point
+    pub code: Option<CodeableConcept>,
+    /// Parameters that were used in the measurement of a property (e.g. for viscosity: measured at 20C with a pH of 7.1)
+    pub parameters: Option<StringType>,
+    /// Extension element for the 'parameters' primitive field. Contains metadata and extensions.
+    pub _parameters: Option<Element>,
+    /// A substance upon which a defining property depends (e.g. for solubility: in water, in alcohol) (Reference)
+    #[serde(rename = "definingSubstanceReference")]
+    pub defining_substance_reference: Option<Reference>,
+    /// A substance upon which a defining property depends (e.g. for solubility: in water, in alcohol) (CodeableConcept)
+    #[serde(rename = "definingSubstanceCodeableConcept")]
+    pub defining_substance_codeable_concept: Option<CodeableConcept>,
+    /// Quantitative value for this property (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this property (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+}
+/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The method by which the molecular weight was determined
+    pub method: Option<CodeableConcept>,
+    /// Type of molecular weight such as exact, average (also known as. number average), weight average
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
+    pub amount: Option<Quantity>,
 }
 /// SubstanceSpecification nested structure for the 'relationship' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,109 +293,36 @@ pub struct SubstanceSpecificationRelationship {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceSpecificationStructure nested structure for the 'isotope' field
+/// SubstanceSpecification nested structure for the 'structure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotope {
+pub struct SubstanceSpecificationStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Substance identifier for each non-natural or radioisotope
-    pub identifier: Option<Identifier>,
-    /// Substance name for each non-natural or radioisotope
-    pub name: Option<CodeableConcept>,
-    /// The type of isotopic substitution present in a single substance
-    pub substitution: Option<CodeableConcept>,
-    /// Half life - for a non-natural nuclide
-    #[serde(rename = "halfLife")]
-    pub half_life: Option<Quantity>,
-}
-/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The method by which the molecular weight was determined
-    pub method: Option<CodeableConcept>,
-    /// Type of molecular weight such as exact, average (also known as. number average), weight average
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
-    pub amount: Option<Quantity>,
-}
-/// SubstanceSpecification nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A category for this property, e.g. Physical, Chemical, Enzymatic
-    pub category: Option<CodeableConcept>,
-    /// Property type e.g. viscosity, pH, isoelectric point
-    pub code: Option<CodeableConcept>,
-    /// Parameters that were used in the measurement of a property (e.g. for viscosity: measured at 20C with a pH of 7.1)
-    pub parameters: Option<StringType>,
-    /// Extension element for the 'parameters' primitive field. Contains metadata and extensions.
-    pub _parameters: Option<Element>,
-    /// A substance upon which a defining property depends (e.g. for solubility: in water, in alcohol) (Reference)
-    #[serde(rename = "definingSubstanceReference")]
-    pub defining_substance_reference: Option<Reference>,
-    /// A substance upon which a defining property depends (e.g. for solubility: in water, in alcohol) (CodeableConcept)
-    #[serde(rename = "definingSubstanceCodeableConcept")]
-    pub defining_substance_codeable_concept: Option<CodeableConcept>,
-    /// Quantitative value for this property (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this property (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
-}
-/// SubstanceSpecificationName nested structure for the 'official' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationNameOfficial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Which authority uses this official name
-    pub authority: Option<CodeableConcept>,
-    /// The status of the official name
-    pub status: Option<CodeableConcept>,
-    /// Date of official name change
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-}
-/// SubstanceSpecification nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Details of the official nature of this name
-    pub official: Option<Vec<SubstanceSpecificationNameOfficial>>,
-    /// The actual name
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Name type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The status of the name
-    pub status: Option<CodeableConcept>,
-    /// If this is the preferred name for this substance
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
-    /// Language of the name
-    pub language: Option<Vec<CodeableConcept>>,
-    /// The use context of this name for example if there is a different name a drug active ingredient as opposed to a food colour additive
-    pub domain: Option<Vec<CodeableConcept>>,
-    /// The jurisdiction where this name applies
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
-    /// A synonym of this name
-    pub synonym: Option<Vec<StringType>>,
-    /// A translation for this name
-    pub translation: Option<Vec<StringType>>,
+    /// Applicable for single substances that contain a radionuclide or a non-natural isotopic ratio
+    pub isotope: Option<Vec<SubstanceSpecificationStructureIsotope>>,
+    /// Molecular structural representation
+    pub representation: Option<Vec<SubstanceSpecificationStructureRepresentation>>,
+    /// Stereochemistry type
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Specified per moiety according to the Hill system, i.e. first C, then H, then alphabetical, each moiety separated by a dot
+    #[serde(rename = "molecularFormulaByMoiety")]
+    pub molecular_formula_by_moiety: Option<StringType>,
+    /// Extension element for the 'molecularFormulaByMoiety' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormulaByMoiety")]
+    pub _molecular_formula_by_moiety: Option<Element>,
+    /// The molecular weight or weight range (for proteins, polymers or nucleic acids)
+    #[serde(rename = "molecularWeight")]
+    pub molecular_weight: Option<StringType>,
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
@@ -356,38 +356,23 @@ impl Default for SubstanceSpecification {
     }
 }
 
-impl Default for SubstanceSpecificationStructure {
+impl Default for SubstanceSpecificationName {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            isotope: Default::default(),
-            representation: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            molecular_formula_by_moiety: Default::default(),
-            _molecular_formula_by_moiety: Default::default(),
-            molecular_weight: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationMoiety {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
+            official: Default::default(),
+            name: StringType::default(),
             _name: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
+            type_: Default::default(),
+            status: Default::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
+            language: Default::default(),
+            domain: Default::default(),
+            jurisdiction: Default::default(),
+            synonym: Default::default(),
+            translation: Default::default(),
+            source: Default::default(),
         }
     }
 }
@@ -419,22 +404,32 @@ impl Default for SubstanceSpecificationStructureRepresentation {
     }
 }
 
-impl Default for SubstanceSpecificationRelationship {
+impl Default for SubstanceSpecificationMoiety {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            substance_reference: Default::default(),
-            substance_codeable_concept: Default::default(),
-            relationship: Default::default(),
-            is_defining: Default::default(),
-            _is_defining: Default::default(),
+            role: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
             amount_quantity: Default::default(),
-            amount_range: Default::default(),
-            amount_ratio: Default::default(),
             amount_string: Default::default(),
-            amount_ratio_low_limit: Default::default(),
-            amount_type: Default::default(),
-            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationNameOfficial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            authority: Default::default(),
+            status: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
         }
     }
 }
@@ -447,17 +442,6 @@ impl Default for SubstanceSpecificationStructureIsotope {
             name: Default::default(),
             substitution: Default::default(),
             half_life: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            method: Default::default(),
-            type_: Default::default(),
-            amount: Default::default(),
         }
     }
 }
@@ -478,34 +462,50 @@ impl Default for SubstanceSpecificationProperty {
     }
 }
 
-impl Default for SubstanceSpecificationNameOfficial {
+impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            authority: Default::default(),
-            status: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
+            method: Default::default(),
+            type_: Default::default(),
+            amount: Default::default(),
         }
     }
 }
 
-impl Default for SubstanceSpecificationName {
+impl Default for SubstanceSpecificationRelationship {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            official: Default::default(),
-            name: StringType::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-            status: Default::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
-            language: Default::default(),
-            domain: Default::default(),
-            jurisdiction: Default::default(),
-            synonym: Default::default(),
-            translation: Default::default(),
+            substance_reference: Default::default(),
+            substance_codeable_concept: Default::default(),
+            relationship: Default::default(),
+            is_defining: Default::default(),
+            _is_defining: Default::default(),
+            amount_quantity: Default::default(),
+            amount_range: Default::default(),
+            amount_ratio: Default::default(),
+            amount_string: Default::default(),
+            amount_ratio_low_limit: Default::default(),
+            amount_type: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationStructure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            isotope: Default::default(),
+            representation: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            molecular_formula_by_moiety: Default::default(),
+            _molecular_formula_by_moiety: Default::default(),
+            molecular_weight: Default::default(),
             source: Default::default(),
         }
     }
@@ -526,6 +526,457 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.domain", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.source", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.moiety", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.moiety.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.role",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.stereochemistry",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.opticalActivity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.molecularFormula",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.moiety.amount[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.property", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.category",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.parameters",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.definingSubstance[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.property.amount[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.referenceInformation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.structure", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.stereochemistry",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.opticalActivity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.molecularFormula",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.molecularFormulaByMoiety",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.substitution",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.halfLife",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.method",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.isotope.molecularWeight.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.molecularWeight",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.source",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.representation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.structure.representation.attachment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.code", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.code.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.code.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.code.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.code.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.code.status",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.code.statusDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.code.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.code.source", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.status",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.preferred",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.language", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.domain", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.jurisdiction",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.synonym", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.translation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.official", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.authority",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.status",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.name.official.date",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.name.source", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.molecularWeight",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.relationship", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.substance[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.relationship",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.isDefining",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.amount[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.amountRatioLowLimit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.amountType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.relationship.source",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.nucleicAcid",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.polymer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSpecification.protein", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSpecification.sourceMaterial",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -986,7 +1437,18 @@ impl crate::validation::ValidatableResource for SubstanceSpecification {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstanceSpecification")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_specification::{
+    SubstanceSpecificationAccessors, SubstanceSpecificationExistence,
+    SubstanceSpecificationMutators,
+};

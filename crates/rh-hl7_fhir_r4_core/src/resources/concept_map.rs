@@ -99,29 +99,6 @@ pub struct ConceptMap {
     /// Same source and target systems
     pub group: Option<Vec<ConceptMapGroup>>,
 }
-/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetDependson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to property mapping depends on
-    pub property: StringType,
-    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
-    pub _property: Option<Element>,
-    /// Code System (if necessary)
-    pub system: Option<StringType>,
-    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
-    pub _system: Option<Element>,
-    /// Value of the referenced element
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// Display for the code (if value is a code)
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
 /// ConceptMap nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapGroup {
@@ -153,13 +130,17 @@ pub struct ConceptMapGroup {
     #[serde(rename = "_targetVersion")]
     pub _target_version: Option<Element>,
 }
-/// ConceptMapGroup nested structure for the 'element' field
+/// ConceptMapGroup nested structure for the 'unmapped' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElement {
+pub struct ConceptMapGroupUnmapped {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Identifies element being mapped
+    /// provided | fixed | other-map
+    pub mode: ConceptmapUnmappedMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Fixed code when mode = fixed
     pub code: Option<StringType>,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
@@ -167,6 +148,10 @@ pub struct ConceptMapGroupElement {
     pub display: Option<StringType>,
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
+    /// canonical reference to an additional ConceptMap to use for mapping if the source concept is unmapped
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
 }
 /// ConceptMapGroupElement nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,17 +178,36 @@ pub struct ConceptMapGroupElementTarget {
     /// Other concepts that this mapping also produces
     pub product: Option<Vec<StringType>>,
 }
-/// ConceptMapGroup nested structure for the 'unmapped' field
+/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupUnmapped {
+pub struct ConceptMapGroupElementTargetDependson {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// provided | fixed | other-map
-    pub mode: ConceptmapUnmappedMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Fixed code when mode = fixed
+    /// Reference to property mapping depends on
+    pub property: StringType,
+    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
+    pub _property: Option<Element>,
+    /// Code System (if necessary)
+    pub system: Option<StringType>,
+    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
+    pub _system: Option<Element>,
+    /// Value of the referenced element
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// Display for the code (if value is a code)
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
+/// ConceptMapGroup nested structure for the 'element' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies element being mapped
     pub code: Option<StringType>,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
@@ -211,10 +215,6 @@ pub struct ConceptMapGroupUnmapped {
     pub display: Option<StringType>,
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
-    /// canonical reference to an additional ConceptMap to use for mapping if the source concept is unmapped
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
 }
 
 impl Default for ConceptMap {
@@ -256,22 +256,6 @@ impl Default for ConceptMap {
     }
 }
 
-impl Default for ConceptMapGroupElementTargetDependson {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            property: Default::default(),
-            _property: Default::default(),
-            system: Default::default(),
-            _system: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
 impl Default for ConceptMapGroup {
     fn default() -> Self {
         Self {
@@ -290,14 +274,18 @@ impl Default for ConceptMapGroup {
     }
 }
 
-impl Default for ConceptMapGroupElement {
+impl Default for ConceptMapGroupUnmapped {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
             code: Default::default(),
             _code: Default::default(),
             display: Default::default(),
             _display: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -319,18 +307,30 @@ impl Default for ConceptMapGroupElementTarget {
     }
 }
 
-impl Default for ConceptMapGroupUnmapped {
+impl Default for ConceptMapGroupElementTargetDependson {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
+            property: Default::default(),
+            _property: Default::default(),
+            system: Default::default(),
+            _system: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             code: Default::default(),
             _code: Default::default(),
             display: Default::default(),
             _display: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
         }
     }
 }
@@ -354,6 +354,179 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ConceptMap.group.element.target.equivalence",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/concept-map-equivalence|4.0.1",
+            )
+            .with_description("The degree of equivalence between concepts."),
+            rh_foundation::ElementBinding::new(
+                "ConceptMap.group.unmapped.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/conceptmap-unmapped-mode|4.0.1",
+            )
+            .with_description("Defines which action to take if there is no match in the group."),
+            rh_foundation::ElementBinding::new(
+                "ConceptMap.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ConceptMap.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.source[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.target[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.sourceVersion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.target", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.targetVersion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element", 1, None),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element.display", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.element.target", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.display",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.equivalence",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.property",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.system",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.dependsOn.display",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.element.target.product",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ConceptMap.group.unmapped.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.mode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.display", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ConceptMap.group.unmapped.url", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -699,11 +872,11 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_source(&self) -> bool {
-        self.source_uri.is_some() || self.source_canonical.is_some()
-    }
     fn has_target(&self) -> bool {
         self.target_uri.is_some() || self.target_canonical.is_some()
+    }
+    fn has_source(&self) -> bool {
+        self.source_uri.is_some() || self.source_canonical.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()
@@ -764,7 +937,21 @@ impl crate::validation::ValidatableResource for ConceptMap {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ConceptMap")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::concept_map::{
+    ConceptMapAccessors, ConceptMapExistence, ConceptMapMutators,
+};

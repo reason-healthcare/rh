@@ -19,6 +19,9 @@ impl ValidationTraitGenerator {
     /// pub trait ValidatableResource {
     ///     fn resource_type(&self) -> &'static str;
     ///     fn invariants() -> &'static [rh_foundation::Invariant];
+    ///     fn bindings() -> &'static [rh_foundation::ElementBinding] {
+    ///         &[]
+    ///     }
     ///     fn profile_url() -> Option<&'static str> {
     ///         None
     ///     }
@@ -41,6 +44,23 @@ impl ValidationTraitGenerator {
         code.push_str("    /// for the resource to be considered valid.\n");
         code.push_str("    fn invariants() -> &'static [rh_foundation::Invariant];\n");
         code.push('\n');
+        code.push_str("    /// Returns the required bindings for this resource/datatype\n");
+        code.push_str("    ///\n");
+        code.push_str("    /// These are the ValueSet bindings with \"required\" strength that\n");
+        code.push_str("    /// must be validated at runtime.\n");
+        code.push_str("    fn bindings() -> &'static [rh_foundation::ElementBinding] {\n");
+        code.push_str("        &[]\n");
+        code.push_str("    }\n");
+        code.push('\n');
+        code.push_str("    /// Returns the cardinality constraints for this resource/datatype\n");
+        code.push_str("    ///\n");
+        code.push_str(
+            "    /// These define the minimum and maximum occurrences allowed for each element.\n",
+        );
+        code.push_str("    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {\n");
+        code.push_str("        &[]\n");
+        code.push_str("    }\n");
+        code.push('\n');
         code.push_str("    /// Returns the profile URL if this is a profile, None otherwise\n");
         code.push_str("    fn profile_url() -> Option<&'static str> {\n");
         code.push_str("        None\n");
@@ -52,7 +72,7 @@ impl ValidationTraitGenerator {
 
     /// Generate ValidatableResource trait implementation for a StructureDefinition
     ///
-    /// Only generates an implementation if the type has invariants.
+    /// Only generates an implementation if the type has invariants or bindings.
     ///
     /// Example output:
     /// ```rust,ignore
@@ -65,6 +85,10 @@ impl ValidationTraitGenerator {
     ///         &INVARIANTS
     ///     }
     ///     
+    ///     fn bindings() -> &'static [rh_foundation::ElementBinding] {
+    ///         &BINDINGS
+    ///     }
+    ///     
     ///     fn profile_url() -> Option<&'static str> {
     ///         Some("http://hl7.org/fhir/StructureDefinition/Patient")
     ///     }
@@ -72,9 +96,10 @@ impl ValidationTraitGenerator {
     /// ```
     pub fn generate_trait_impl(structure_def: &StructureDefinition) -> String {
         let invariants = invariants::extract_invariants(structure_def);
+        let bindings = crate::bindings::extract_required_bindings(structure_def);
 
-        // Only generate implementation if there are invariants
-        if invariants.is_empty() {
+        // Only generate implementation if there are invariants or bindings
+        if invariants.is_empty() && bindings.is_empty() {
             return String::new();
         }
 
@@ -91,8 +116,31 @@ impl ValidationTraitGenerator {
         code.push_str("    }\n");
         code.push('\n');
         code.push_str("    fn invariants() -> &'static [rh_foundation::Invariant] {\n");
-        code.push_str("        &INVARIANTS\n");
+        if invariants.is_empty() {
+            code.push_str("        &[]\n");
+        } else {
+            code.push_str("        &INVARIANTS\n");
+        }
         code.push_str("    }\n");
+
+        // Add bindings() method if there are bindings
+        if !bindings.is_empty() {
+            code.push('\n');
+            code.push_str("    fn bindings() -> &'static [rh_foundation::ElementBinding] {\n");
+            code.push_str("        &BINDINGS\n");
+            code.push_str("    }\n");
+        }
+
+        // Add cardinalities() method - always include for resources/complex types
+        // We check if CARDINALITIES constant exists by looking at kind
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            code.push('\n');
+            code.push_str(
+                "    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {\n",
+            );
+            code.push_str("        &CARDINALITIES\n");
+            code.push_str("    }\n");
+        }
 
         // Add profile_url if this is a constraint (profile)
         // Profiles are identified by having kind="resource" and derivation="constraint"

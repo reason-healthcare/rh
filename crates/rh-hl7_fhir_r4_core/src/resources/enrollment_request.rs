@@ -74,6 +74,44 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "EnrollmentRequest.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+        )
+        .with_description("A code specifying the state of the resource instance.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.insurer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.provider", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.candidate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentRequest.coverage", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for EnrollmentRequest {
     fn id(&self) -> Option<String> {
@@ -359,7 +397,21 @@ impl crate::validation::ValidatableResource for EnrollmentRequest {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/EnrollmentRequest")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::enrollment_request::{
+    EnrollmentRequestAccessors, EnrollmentRequestExistence, EnrollmentRequestMutators,
+};

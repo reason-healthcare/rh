@@ -33,22 +33,6 @@ pub struct ObservationGeneticsDNARegionName {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Interpretation
-///
-/// Clinical Interpretations for variant. It's a reference to an Observation resource.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsInterpretation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// AminoAcidChange
 ///
 /// AminoAcidChange information.
@@ -65,22 +49,6 @@ pub struct ObservationGeneticsAminoAcidChange {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Allele
-///
-/// Allele information.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsAllele {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Ancestry
 ///
 /// Ancestry information.
@@ -93,6 +61,38 @@ pub struct ObservationGeneticsAllele {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservationGeneticsAncestry {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Interpretation
+///
+/// Clinical Interpretations for variant. It's a reference to an Observation resource.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsInterpretation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Allele
+///
+/// Allele information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsAllele {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -116,6 +116,101 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("obs-6", rh_foundation::Severity::Error, "dataAbsentReason SHALL only be present if Observation.value[x] is not present", "dataAbsentReason.empty() or value.empty()").with_xpath("not(exists(f:dataAbsentReason)) or (not(exists(*[starts-with(local-name(.), 'value')])))"),
     rh_foundation::Invariant::new("obs-7", rh_foundation::Severity::Error, "If Observation.code is the same as an Observation.component.code then the value element associated with the code SHALL NOT be present", "value.empty() or component.code.where(coding.intersect(%resource.code.coding).exists()).empty()").with_xpath("not(f:*[starts-with(local-name(.), 'value')] and (for $coding in f:code/f:coding return f:component/f:code/f:coding[f:code/@value=$coding/f:code/@value] [f:system/@value=$coding/f:system/@value]))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Observation.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/observation-status|4.0.1",
+        )
+        .with_description("Codes providing the status of an observation.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Observation", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.category", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.focus", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.effective[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.issued", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.performer", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.dataAbsentReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.interpretation", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.note", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.specimen", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.device", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Observation.referenceRange.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.low", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.high", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.appliesTo", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.age", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.hasMember", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.derivedFrom", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.component", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.component.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.component.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Observation.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Observation.component.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.component.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Observation.component.dataAbsentReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Observation.component.interpretation", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.component.referenceRange", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -190,7 +285,21 @@ impl crate::validation::ValidatableResource for ObservationGenetics {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/observation-genetics")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::observation_genetics::{
+    ObservationGeneticsAccessors, ObservationGeneticsExistence, ObservationGeneticsMutators,
+};

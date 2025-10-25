@@ -72,38 +72,14 @@ pub struct InsurancePlan {
     /// Plan details
     pub plan: Option<Vec<InsurancePlanPlan>>,
 }
-/// InsurancePlan nested structure for the 'contact' field
+/// InsurancePlanPlan nested structure for the 'specificCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanContact {
+pub struct InsurancePlanPlanSpecificcost {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of contact
-    ///
-    /// Binding: extensible (The purpose for which you would contact a contact party.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
-    pub purpose: Option<CodeableConcept>,
-    /// A name associated with the contact
-    pub name: Option<HumanName>,
-    /// Contact details (telephone, email, etc.)  for a contact
-    pub telecom: Option<Vec<ContactPoint>>,
-    /// Visiting or postal addresses for the contact
-    pub address: Option<Address>,
-}
-/// InsurancePlanCoverage nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverageBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of benefit
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Referral requirements
-    pub requirement: Option<StringType>,
-    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
-    pub _requirement: Option<Element>,
+    /// General category of benefit
+    pub category: CodeableConcept,
 }
 /// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,6 +120,35 @@ pub struct InsurancePlanPlan {
     /// What networks provide coverage
     pub network: Option<Vec<Reference>>,
 }
+/// InsurancePlan nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of contact
+    ///
+    /// Binding: extensible (The purpose for which you would contact a contact party.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
+    pub purpose: Option<CodeableConcept>,
+    /// A name associated with the contact
+    pub name: Option<HumanName>,
+    /// Contact details (telephone, email, etc.)  for a contact
+    pub telecom: Option<Vec<ContactPoint>>,
+    /// Visiting or postal addresses for the contact
+    pub address: Option<Address>,
+}
+/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcostBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of specific benefit
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+}
 /// InsurancePlan nested structure for the 'coverage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePlanCoverage {
@@ -157,6 +162,31 @@ pub struct InsurancePlanCoverage {
     pub type_: CodeableConcept,
     /// What networks provide coverage
     pub network: Option<Vec<Reference>>,
+}
+/// InsurancePlanCoverageBenefit nested structure for the 'limit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanCoverageBenefitLimit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Maximum value allowed
+    pub value: Option<Quantity>,
+    /// Benefit limit details
+    pub code: Option<CodeableConcept>,
+}
+/// InsurancePlanCoverage nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanCoverageBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of benefit
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Referral requirements
+    pub requirement: Option<StringType>,
+    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
+    pub _requirement: Option<Element>,
 }
 /// InsurancePlanPlan nested structure for the 'generalCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,36 +209,6 @@ pub struct InsurancePlanPlanGeneralcost {
     pub comment: Option<StringType>,
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
-}
-/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcostBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of specific benefit
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-}
-/// InsurancePlanPlan nested structure for the 'specificCost' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcost {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// General category of benefit
-    pub category: CodeableConcept,
-}
-/// InsurancePlanCoverageBenefit nested structure for the 'limit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverageBenefitLimit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Maximum value allowed
-    pub value: Option<Quantity>,
-    /// Benefit limit details
-    pub code: Option<CodeableConcept>,
 }
 
 impl Default for InsurancePlan {
@@ -236,25 +236,11 @@ impl Default for InsurancePlan {
     }
 }
 
-impl Default for InsurancePlanContact {
+impl Default for InsurancePlanPlanSpecificcost {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            purpose: Default::default(),
-            name: Default::default(),
-            telecom: Default::default(),
-            address: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanCoverageBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
+            category: Default::default(),
         }
     }
 }
@@ -285,6 +271,27 @@ impl Default for InsurancePlanPlan {
     }
 }
 
+impl Default for InsurancePlanContact {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            purpose: Default::default(),
+            name: Default::default(),
+            telecom: Default::default(),
+            address: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanPlanSpecificcostBenefit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+        }
+    }
+}
+
 impl Default for InsurancePlanCoverage {
     fn default() -> Self {
         Self {
@@ -292,6 +299,27 @@ impl Default for InsurancePlanCoverage {
             benefit: Vec::new(),
             type_: Default::default(),
             network: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanCoverageBenefitLimit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value: Default::default(),
+            code: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanCoverageBenefit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
         }
     }
 }
@@ -306,34 +334,6 @@ impl Default for InsurancePlanPlanGeneralcost {
             cost: Default::default(),
             comment: Default::default(),
             _comment: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlanSpecificcostBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlanSpecificcost {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanCoverageBenefitLimit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value: Default::default(),
-            code: Default::default(),
         }
     }
 }
@@ -354,6 +354,254 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("ipn-1", rh_foundation::Severity::Error, "The organization SHALL at least have a name or an idendtifier, and possibly more than one", "(identifier.count() + name.count()) > 0").with_xpath("count(f:identifier | f:name) > 0"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.applicability",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/insuranceplan-applicability|4.0.1",
+            )
+            .with_description(
+                "Whether the cost applies to in-network or out-of-network providers.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "InsurancePlan.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("InsurancePlan.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contained", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.extension", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.type", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.alias", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.ownedBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.administeredBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverageArea", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.contact.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.contact.address", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.endpoint", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.network", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.network", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.benefit", 1, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.benefit.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.requirement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("InsurancePlan.coverage.benefit.limit", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.limit.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.limit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.limit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.limit.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.coverage.benefit.limit.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.extension", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.coverageArea", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.network", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.generalCost", 0, None),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.generalCost.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.groupSize",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.cost",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.generalCost.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("InsurancePlan.plan.specificCost", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.category",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.applicability",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.qualifiers",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "InsurancePlan.plan.specificCost.benefit.cost.value",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -761,7 +1009,21 @@ impl crate::validation::ValidatableResource for InsurancePlan {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/InsurancePlan")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::insurance_plan::{
+    InsurancePlanAccessors, InsurancePlanExistence, InsurancePlanMutators,
+};

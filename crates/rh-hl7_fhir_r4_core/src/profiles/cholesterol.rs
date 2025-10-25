@@ -39,6 +39,111 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Observation.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/observation-status|4.0.1",
+            )
+            .with_description("Codes providing the status of an observation."),
+            rh_foundation::ElementBinding::new(
+                "Observation.value[x].comparator",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/quantity-comparator|4.0.1",
+            )
+            .with_description("How the Quantity should be understood and represented."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Observation", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.category", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.focus", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.effective[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.issued", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.performer", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].extension", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.value[x].value", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].comparator", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].unit", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].system", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.value[x].code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.dataAbsentReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.interpretation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.note", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.specimen", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.device", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Observation.referenceRange.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.low", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.high", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.type", 0, Some(0)),
+            rh_foundation::ElementCardinality::new(
+                "Observation.referenceRange.appliesTo",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.age", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Observation.referenceRange.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.hasMember", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Observation.derivedFrom", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Observation.component", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.component.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.component.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Observation.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Observation.component.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Observation.component.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Observation.component.dataAbsentReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Observation.component.interpretation", 0, None),
+            rh_foundation::ElementCardinality::new("Observation.component.referenceRange", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Cholesterol {
     fn id(&self) -> Option<String> {
@@ -111,7 +216,21 @@ impl crate::validation::ValidatableResource for Cholesterol {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/cholesterol")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::cholesterol::{
+    CholesterolAccessors, CholesterolExistence, CholesterolMutators,
+};

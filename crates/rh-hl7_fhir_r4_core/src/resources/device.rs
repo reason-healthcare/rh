@@ -129,6 +129,54 @@ pub struct Device {
     /// The parent device
     pub parent: Option<Reference>,
 }
+/// Device nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of the device version
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// A single component of the device version
+    pub component: Option<Identifier>,
+    /// The version text
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// Status of Implantable Devices
+///
+/// Codes to represent the functional status of a device implanted in a patient.  Both overall device status and an implant status need to be considered. The implant status should only be used when the [device status](device-definitions.html#Device.status) is `active `.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/device-implantStatus
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceImplantStatus {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Device nested structure for the 'deviceName' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDevicename {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
 /// Device nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceProperty {
@@ -184,22 +232,6 @@ pub struct DeviceUdicarrier {
     #[serde(rename = "_entryType")]
     pub _entry_type: Option<Element>,
 }
-/// Status of Implantable Devices
-///
-/// Codes to represent the functional status of a device implanted in a patient.  Both overall device status and an implant status need to be considered. The implant status should only be used when the [device status](device-definitions.html#Device.status) is `active `.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/device-implantStatus
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceImplantStatus {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Device nested structure for the 'specialization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceSpecialization {
@@ -213,38 +245,6 @@ pub struct DeviceSpecialization {
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
-}
-/// Device nested structure for the 'deviceName' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDevicename {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// Device nested structure for the 'version' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceVersion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of the device version
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A single component of the device version
-    pub component: Option<Identifier>,
-    /// The version text
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
 }
 
 impl Default for Device {
@@ -291,6 +291,38 @@ impl Default for Device {
     }
 }
 
+impl Default for DeviceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            component: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceImplantStatus {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DeviceDevicename {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
 impl Default for DeviceProperty {
     fn default() -> Self {
         Self {
@@ -322,14 +354,6 @@ impl Default for DeviceUdicarrier {
     }
 }
 
-impl Default for DeviceImplantStatus {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for DeviceSpecialization {
     fn default() -> Self {
         Self {
@@ -337,30 +361,6 @@ impl Default for DeviceSpecialization {
             system_type: CodeableConcept::default(),
             version: Default::default(),
             _version: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDevicename {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceVersion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            component: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -380,6 +380,116 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Device.deviceName.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/device-nametype|4.0.1",
+            )
+            .with_description("The type of name the device is referred by."),
+            rh_foundation::ElementBinding::new(
+                "Device.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/device-status|4.0.1",
+            )
+            .with_description("The availability status of the device."),
+            rh_foundation::ElementBinding::new(
+                "Device.udiCarrier.entryType",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/udi-entry-type|4.0.1",
+            )
+            .with_description("Codes to identify how UDI data was entered."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Device.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Device.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Device.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier", 0, None),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Device.udiCarrier.deviceIdentifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.issuer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.jurisdiction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.carrierAIDC", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.carrierHRF", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.udiCarrier.entryType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.statusReason", 0, None),
+            rh_foundation::ElementCardinality::new("Device.distinctIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.manufacturer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.manufactureDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.expirationDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.lotNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.serialNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.deviceName", 0, None),
+            rh_foundation::ElementCardinality::new("Device.deviceName.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.deviceName.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.deviceName.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.deviceName.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.deviceName.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.modelNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.partNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.specialization", 0, None),
+            rh_foundation::ElementCardinality::new("Device.specialization.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.specialization.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Device.specialization.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Device.specialization.systemType", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.specialization.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.version", 0, None),
+            rh_foundation::ElementCardinality::new("Device.version.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.version.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.version.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.version.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.version.component", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.version.value", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.property", 0, None),
+            rh_foundation::ElementCardinality::new("Device.property.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.property.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.property.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Device.property.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.property.valueQuantity", 0, None),
+            rh_foundation::ElementCardinality::new("Device.property.valueCode", 0, None),
+            rh_foundation::ElementCardinality::new("Device.patient", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.owner", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Device.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Device.note", 0, None),
+            rh_foundation::ElementCardinality::new("Device.safety", 0, None),
+            rh_foundation::ElementCardinality::new("Device.parent", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -927,7 +1037,19 @@ impl crate::validation::ValidatableResource for Device {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Device")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::device::{DeviceAccessors, DeviceExistence, DeviceMutators};

@@ -61,15 +61,6 @@ pub struct MeasureReport {
     #[serde(rename = "evaluatedResource")]
     pub evaluated_resource: Option<Vec<Reference>>,
 }
-/// MeasureReportGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What stratifier of the group
-    pub code: Option<Vec<CodeableConcept>>,
-}
 /// MeasureReportGroupStratifierStratum nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroupStratifierStratumPopulation {
@@ -110,6 +101,17 @@ pub struct MeasureReportGroupPopulation {
     #[serde(rename = "subjectResults")]
     pub subject_results: Option<Reference>,
 }
+/// MeasureReportGroupStratifierStratum nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupStratifierStratumComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What stratifier component of the group
+    pub code: CodeableConcept,
+    /// The stratum component value, e.g. male
+    pub value: CodeableConcept,
+}
 /// MeasureReport nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroup {
@@ -126,6 +128,15 @@ pub struct MeasureReportGroup {
     #[serde(rename = "measureScore")]
     pub measure_score: Option<Quantity>,
 }
+/// MeasureReportGroup nested structure for the 'stratifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupStratifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What stratifier of the group
+    pub code: Option<Vec<CodeableConcept>>,
+}
 /// MeasureReportGroupStratifier nested structure for the 'stratum' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroupStratifierStratum {
@@ -137,17 +148,6 @@ pub struct MeasureReportGroupStratifierStratum {
     /// What score this stratum achieved
     #[serde(rename = "measureScore")]
     pub measure_score: Option<Quantity>,
-}
-/// MeasureReportGroupStratifierStratum nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifierStratumComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What stratifier component of the group
-    pub code: CodeableConcept,
-    /// The stratum component value, e.g. male
-    pub value: CodeableConcept,
 }
 
 impl Default for MeasureReport {
@@ -169,15 +169,6 @@ impl Default for MeasureReport {
             improvement_notation: Default::default(),
             group: Default::default(),
             evaluated_resource: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
         }
     }
 }
@@ -206,6 +197,16 @@ impl Default for MeasureReportGroupPopulation {
     }
 }
 
+impl Default for MeasureReportGroupStratifierStratumComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureReportGroup {
     fn default() -> Self {
         Self {
@@ -218,22 +219,21 @@ impl Default for MeasureReportGroup {
     }
 }
 
+impl Default for MeasureReportGroupStratifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureReportGroupStratifierStratum {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             value: Default::default(),
             measure_score: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroupStratifierStratumComponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value: Default::default(),
         }
     }
 }
@@ -255,6 +255,191 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("mrp-1", rh_foundation::Severity::Error, "Measure Reports used for data collection SHALL NOT communicate group and score information", "(type != 'data-collection') or group.exists().not()").with_xpath("not(f:kind/@value='data-collection') or not(exists(f:group))"),
     rh_foundation::Invariant::new("mrp-2", rh_foundation::Severity::Error, "Stratifiers SHALL be either a single criteria or a set of criteria components", "group.stratifier.stratum.all(value.exists() xor component.exists())").with_xpath("not(f:kind/@value='data-collection') or not(exists(f:group))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("MeasureReport.improvementNotation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-improvement-notation|4.0.1").with_description("Observation values that indicate what change in a measurement value or score is indicative of an improvement in the measured item or scored issue."),
+    rh_foundation::ElementBinding::new("MeasureReport.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-report-status|4.0.1").with_description("The status of the measure report."),
+    rh_foundation::ElementBinding::new("MeasureReport.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-report-type|4.0.1").with_description("The type of the measure report."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MeasureReport.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.measure", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.reporter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.period", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.improvementNotation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.group", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.population", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.population.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.population.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.population.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.population.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.population.count",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.population.subjectResults",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.measureScore", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.stratifier", 0, None),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.stratifier.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MeasureReport.group.stratifier.code", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.component.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.count",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.population.subjectResults",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MeasureReport.group.stratifier.stratum.measureScore",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MeasureReport.evaluatedResource", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -601,7 +786,21 @@ impl crate::validation::ValidatableResource for MeasureReport {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MeasureReport")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::measure_report::{
+    MeasureReportAccessors, MeasureReportExistence, MeasureReportMutators,
+};

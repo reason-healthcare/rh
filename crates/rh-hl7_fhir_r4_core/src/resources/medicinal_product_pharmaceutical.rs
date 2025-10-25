@@ -42,23 +42,6 @@ pub struct MedicinalProductPharmaceutical {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<MedicinalProductPharmaceuticalRouteofadministration>,
 }
-/// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the type of tissue for which the withdrawal period applues, e.g. meat, milk
-    pub tissue: CodeableConcept,
-    /// A value for the time
-    pub value: Quantity,
-    /// Extra information about the withdrawal period
-    #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<StringType>,
-    /// Extension element for the 'supportingInformation' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_supportingInformation")]
-    pub _supporting_information: Option<Element>,
-}
 /// MedicinalProductPharmaceutical nested structure for the 'characteristics' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalCharacteristics {
@@ -98,6 +81,23 @@ pub struct MedicinalProductPharmaceuticalRouteofadministration {
     #[serde(rename = "maxTreatmentPeriod")]
     pub max_treatment_period: Option<Duration>,
 }
+/// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the type of tissue for which the withdrawal period applues, e.g. meat, milk
+    pub tissue: CodeableConcept,
+    /// A value for the time
+    pub value: Quantity,
+    /// Extra information about the withdrawal period
+    #[serde(rename = "supportingInformation")]
+    pub supporting_information: Option<StringType>,
+    /// Extension element for the 'supportingInformation' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_supportingInformation")]
+    pub _supporting_information: Option<Element>,
+}
 /// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
@@ -119,18 +119,6 @@ impl Default for MedicinalProductPharmaceutical {
             device: Default::default(),
             characteristics: Default::default(),
             route_of_administration: Vec::new(),
-        }
-    }
-}
-
-impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            tissue: Default::default(),
-            value: Default::default(),
-            supporting_information: Default::default(),
-            _supporting_information: Default::default(),
         }
     }
 }
@@ -160,6 +148,18 @@ impl Default for MedicinalProductPharmaceuticalRouteofadministration {
     }
 }
 
+impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            tissue: Default::default(),
+            value: Default::default(),
+            supporting_information: Default::default(),
+            _supporting_information: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
     fn default() -> Self {
         Self {
@@ -183,6 +183,56 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.meta", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.implicitRules", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.language", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.text", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.contained", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.identifier", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.administrableDoseForm", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.unitOfPresentation", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.ingredient", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.device", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics.code", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.characteristics.status", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration", 1, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.code", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.firstDose", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.maxSingleDose", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.maxDosePerDay", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.maxDosePerTreatmentPeriod", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.maxTreatmentPeriod", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.code", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.tissue", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.value", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductPharmaceutical.routeOfAdministration.targetSpecies.withdrawalPeriod.supportingInformation", 0, Some(1)),
 ]
     });
 
@@ -509,7 +559,18 @@ impl crate::validation::ValidatableResource for MedicinalProductPharmaceutical {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductPharmaceutical")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_pharmaceutical::{
+    MedicinalProductPharmaceuticalAccessors, MedicinalProductPharmaceuticalExistence,
+    MedicinalProductPharmaceuticalMutators,
+};

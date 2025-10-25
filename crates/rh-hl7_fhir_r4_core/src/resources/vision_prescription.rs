@@ -55,22 +55,6 @@ pub struct VisionPrescription {
     #[serde(rename = "lensSpecification")]
     pub lens_specification: Vec<VisionPrescriptionLensspecification>,
 }
-/// VisionPrescriptionLensspecification nested structure for the 'prism' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisionPrescriptionLensspecificationPrism {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Amount of adjustment
-    pub amount: DecimalType,
-    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
-    pub _amount: Option<Element>,
-    /// up | down | in | out
-    #[serde(rename = "base")]
-    pub base_definition: VisionBaseCodes,
-    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
-    pub _base: Option<Element>,
-}
 /// VisionPrescription nested structure for the 'lensSpecification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisionPrescriptionLensspecification {
@@ -132,6 +116,22 @@ pub struct VisionPrescriptionLensspecification {
     /// Notes for coatings
     pub note: Option<Vec<Annotation>>,
 }
+/// VisionPrescriptionLensspecification nested structure for the 'prism' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisionPrescriptionLensspecificationPrism {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Amount of adjustment
+    pub amount: DecimalType,
+    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
+    pub _amount: Option<Element>,
+    /// up | down | in | out
+    #[serde(rename = "base")]
+    pub base_definition: VisionBaseCodes,
+    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
+    pub _base: Option<Element>,
+}
 
 impl Default for VisionPrescription {
     fn default() -> Self {
@@ -148,18 +148,6 @@ impl Default for VisionPrescription {
             _date_written: Default::default(),
             prescriber: Reference::default(),
             lens_specification: Vec::new(),
-        }
-    }
-}
-
-impl Default for VisionPrescriptionLensspecificationPrism {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            amount: Default::default(),
-            _amount: Default::default(),
-            base_definition: Default::default(),
-            _base: Default::default(),
         }
     }
 }
@@ -196,6 +184,18 @@ impl Default for VisionPrescriptionLensspecification {
     }
 }
 
+impl Default for VisionPrescriptionLensspecificationPrism {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            amount: Default::default(),
+            _amount: Default::default(),
+            base_definition: Default::default(),
+            _base: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -211,6 +211,169 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "VisionPrescription.lensSpecification.eye",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/vision-eye-codes|4.0.1",
+            )
+            .with_description("A coded concept listing the eye codes."),
+            rh_foundation::ElementBinding::new(
+                "VisionPrescription.lensSpecification.prism.base",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/vision-base-codes|4.0.1",
+            )
+            .with_description("A coded concept listing the base codes."),
+            rh_foundation::ElementBinding::new(
+                "VisionPrescription.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("VisionPrescription.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.contained", 0, None),
+            rh_foundation::ElementCardinality::new("VisionPrescription.extension", 0, None),
+            rh_foundation::ElementCardinality::new("VisionPrescription.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("VisionPrescription.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("VisionPrescription.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.created", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.dateWritten", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.prescriber", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("VisionPrescription.lensSpecification", 1, None),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.product",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.eye",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.sphere",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.cylinder",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.axis",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism.amount",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.prism.base",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.add",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.power",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.backCurve",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.diameter",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.duration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.color",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.brand",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "VisionPrescription.lensSpecification.note",
+                0,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -514,7 +677,21 @@ impl crate::validation::ValidatableResource for VisionPrescription {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/VisionPrescription")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::vision_prescription::{
+    VisionPrescriptionAccessors, VisionPrescriptionExistence, VisionPrescriptionMutators,
+};

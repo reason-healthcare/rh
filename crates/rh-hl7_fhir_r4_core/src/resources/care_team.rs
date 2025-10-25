@@ -141,6 +141,61 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "CareTeam.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/care-team-status|4.0.1",
+        )
+        .with_description("Indicates the status of the care team.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CareTeam.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.category", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.participant", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CareTeam.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.role", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.member", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.onBehalfOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.participant.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CareTeam.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.managingOrganization", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("CareTeam.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for CareTeam {
     fn id(&self) -> Option<String> {
@@ -537,7 +592,19 @@ impl crate::validation::ValidatableResource for CareTeam {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CareTeam")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::care_team::{CareTeamAccessors, CareTeamExistence, CareTeamMutators};

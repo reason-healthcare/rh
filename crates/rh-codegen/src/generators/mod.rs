@@ -14,6 +14,8 @@
 //! - `type_utilities`: Utility functions for type classification and helpers
 
 pub mod accessor_trait_generator;
+pub mod binding_generator;
+pub mod cardinality_generator;
 pub mod crate_generator;
 pub mod documentation_generator;
 pub mod enum_generator;

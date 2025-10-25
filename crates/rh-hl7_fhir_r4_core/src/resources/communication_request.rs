@@ -188,6 +188,101 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "CommunicationRequest.priority",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-priority|4.0.1",
+            )
+            .with_description(
+                "Codes indicating the relative importance of a communication request.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "CommunicationRequest.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-status|4.0.1",
+            )
+            .with_description("The status of the communication request."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CommunicationRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.replaces", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.groupIdentifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.category", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.doNotPerform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.medium", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.about", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.payload", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.payload.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.payload.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.payload.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.payload.content[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CommunicationRequest.occurrence[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.recipient", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.sender", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("CommunicationRequest.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for CommunicationRequest {
     fn id(&self) -> Option<String> {
@@ -685,7 +780,21 @@ impl crate::validation::ValidatableResource for CommunicationRequest {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CommunicationRequest")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::communication_request::{
+    CommunicationRequestAccessors, CommunicationRequestExistence, CommunicationRequestMutators,
+};

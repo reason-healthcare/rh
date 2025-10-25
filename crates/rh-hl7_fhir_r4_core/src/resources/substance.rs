@@ -52,21 +52,6 @@ pub struct Substance {
     /// Composition information about the substance
     pub ingredient: Option<Vec<SubstanceIngredient>>,
 }
-/// Substance nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier of the package/container
-    pub identifier: Option<Identifier>,
-    /// When no longer valid to use
-    pub expiry: Option<DateTimeType>,
-    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
-    pub _expiry: Option<Element>,
-    /// Amount of substance in the package
-    pub quantity: Option<Quantity>,
-}
 /// Substance nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceIngredient {
@@ -81,6 +66,21 @@ pub struct SubstanceIngredient {
     /// A component of the substance (Reference)
     #[serde(rename = "substanceReference")]
     pub substance_reference: Reference,
+}
+/// Substance nested structure for the 'instance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceInstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier of the package/container
+    pub identifier: Option<Identifier>,
+    /// When no longer valid to use
+    pub expiry: Option<DateTimeType>,
+    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
+    pub _expiry: Option<Element>,
+    /// Amount of substance in the package
+    pub quantity: Option<Quantity>,
 }
 
 impl Default for Substance {
@@ -100,6 +100,17 @@ impl Default for Substance {
     }
 }
 
+impl Default for SubstanceIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            substance_codeable_concept: Default::default(),
+            substance_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceInstance {
     fn default() -> Self {
         Self {
@@ -108,17 +119,6 @@ impl Default for SubstanceInstance {
             expiry: Default::default(),
             _expiry: Default::default(),
             quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            substance_codeable_concept: Default::default(),
-            substance_reference: Default::default(),
         }
     }
 }
@@ -138,6 +138,59 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Substance.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/substance-status|4.0.1",
+        )
+        .with_description("A code to indicate if the substance is actively used.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Substance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.category", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.instance", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.instance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.instance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.instance.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.instance.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.instance.expiry", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.instance.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.ingredient", 0, None),
+            rh_foundation::ElementCardinality::new("Substance.ingredient.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.ingredient.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Substance.ingredient.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Substance.ingredient.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Substance.ingredient.substance[x]", 1, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -440,7 +493,19 @@ impl crate::validation::ValidatableResource for Substance {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Substance")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance::{SubstanceAccessors, SubstanceExistence, SubstanceMutators};

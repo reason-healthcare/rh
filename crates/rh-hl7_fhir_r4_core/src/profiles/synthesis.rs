@@ -35,6 +35,66 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Evidence.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+        )
+        .with_description("The lifecycle status of an artifact.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Evidence", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.shortTitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.note", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.topic", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.author", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.editor", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("Evidence.exposureBackground", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Evidence.exposureVariant", 1, Some(2)),
+            rh_foundation::ElementCardinality::new("Evidence.outcome", 1, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Synthesis {
     fn id(&self) -> Option<String> {
@@ -107,7 +167,19 @@ impl crate::validation::ValidatableResource for Synthesis {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/synthesis")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::synthesis::{SynthesisAccessors, SynthesisExistence, SynthesisMutators};

@@ -44,22 +44,6 @@ pub struct Resource {
     /// Extension element for the 'language' primitive field. Contains metadata and extensions.
     pub _language: Option<Element>,
 }
-/// Last Review Date
-///
-/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceLastReviewDate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// pertains to goal
 ///
 /// Indicates that the resource is related to either the measurement, achievement or progress towards the referenced goal.  For example, a Procedure to exercise pertainsToGoal of losing weight.
@@ -92,6 +76,22 @@ pub struct ResourceApprovalDate {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// Last Review Date
+///
+/// The date on which the asset content was last reviewed. Review happens periodically after that, but doesn't change the original approval date.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceLastReviewDate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Resource {
     fn default() -> Self {
@@ -102,14 +102,6 @@ impl Default for Resource {
             _implicit_rules: Default::default(),
             language: Default::default(),
             _language: Default::default(),
-        }
-    }
-}
-
-impl Default for ResourceLastReviewDate {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -130,6 +122,14 @@ impl Default for ResourceApprovalDate {
     }
 }
 
+impl Default for ResourceLastReviewDate {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -143,6 +143,19 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
             "hasValue() or (children().count() > id.count())",
         )
         .with_xpath("@value|f:*|h:div")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Resource.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Resource.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Resource.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Resource.language", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -210,4 +223,12 @@ impl crate::validation::ValidatableResource for Resource {
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
     }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::resource::{ResourceAccessors, ResourceExistence, ResourceMutators};

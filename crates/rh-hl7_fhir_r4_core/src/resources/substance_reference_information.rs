@@ -37,6 +37,21 @@ pub struct SubstanceReferenceInformation {
     /// Todo
     pub target: Option<Vec<SubstanceReferenceInformationTarget>>,
 }
+/// SubstanceReferenceInformation nested structure for the 'classification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationClassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub domain: Option<CodeableConcept>,
+    /// Todo
+    pub classification: Option<CodeableConcept>,
+    /// Todo
+    pub subtype: Option<Vec<CodeableConcept>>,
+    /// Todo
+    pub source: Option<Vec<Reference>>,
+}
 /// SubstanceReferenceInformation nested structure for the 'gene' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceReferenceInformationGene {
@@ -51,18 +66,17 @@ pub struct SubstanceReferenceInformationGene {
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceReferenceInformation nested structure for the 'classification' field
+/// SubstanceReferenceInformation nested structure for the 'geneElement' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationClassification {
+pub struct SubstanceReferenceInformationGeneelement {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Todo
-    pub domain: Option<CodeableConcept>,
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
     /// Todo
-    pub classification: Option<CodeableConcept>,
-    /// Todo
-    pub subtype: Option<Vec<CodeableConcept>>,
+    pub element: Option<Identifier>,
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
@@ -99,20 +113,6 @@ pub struct SubstanceReferenceInformationTarget {
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceReferenceInformation nested structure for the 'geneElement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGeneelement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub element: Option<Identifier>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
-}
 
 impl Default for SubstanceReferenceInformation {
     fn default() -> Self {
@@ -128,6 +128,18 @@ impl Default for SubstanceReferenceInformation {
     }
 }
 
+impl Default for SubstanceReferenceInformationClassification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            domain: Default::default(),
+            classification: Default::default(),
+            subtype: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceReferenceInformationGene {
     fn default() -> Self {
         Self {
@@ -139,13 +151,12 @@ impl Default for SubstanceReferenceInformationGene {
     }
 }
 
-impl Default for SubstanceReferenceInformationClassification {
+impl Default for SubstanceReferenceInformationGeneelement {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            domain: Default::default(),
-            classification: Default::default(),
-            subtype: Default::default(),
+            type_: Default::default(),
+            element: Default::default(),
             source: Default::default(),
         }
     }
@@ -169,17 +180,6 @@ impl Default for SubstanceReferenceInformationTarget {
     }
 }
 
-impl Default for SubstanceReferenceInformationGeneelement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            element: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -195,6 +195,218 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceReferenceInformation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.meta",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.text",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.contained",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceReferenceInformation.gene", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.geneSequenceOrigin",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.gene",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.gene.source",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.element",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.geneElement.source",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.domain",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.classification",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.subtype",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.classification.source",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceReferenceInformation.target", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.target",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.interaction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.organism",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.organismType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.amount[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.amountType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceReferenceInformation.target.source",
+                0,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -487,7 +699,18 @@ impl crate::validation::ValidatableResource for SubstanceReferenceInformation {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstanceReferenceInformation")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_reference_information::{
+    SubstanceReferenceInformationAccessors, SubstanceReferenceInformationExistence,
+    SubstanceReferenceInformationMutators,
+};

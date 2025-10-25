@@ -103,6 +103,31 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("BodyStructure.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.contained", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.extension", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.morphology", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.locationQualifier", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("BodyStructure.image", 0, None),
+            rh_foundation::ElementCardinality::new("BodyStructure.patient", 1, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for BodyStructure {
     fn id(&self) -> Option<String> {
@@ -414,7 +439,17 @@ impl crate::validation::ValidatableResource for BodyStructure {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/BodyStructure")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::body_structure::{
+    BodyStructureAccessors, BodyStructureExistence, BodyStructureMutators,
+};

@@ -120,6 +120,50 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Person.gender", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1").with_description("The gender of a person used for administrative purposes."),
+    rh_foundation::ElementBinding::new("Person.link.assurance", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/identity-assuranceLevel|4.0.1").with_description("The level of confidence that this link represents the same actual person, based on NIST Authentication Levels."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Person.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Person.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Person.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Person.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Person.name", 0, None),
+            rh_foundation::ElementCardinality::new("Person.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("Person.gender", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.birthDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.address", 0, None),
+            rh_foundation::ElementCardinality::new("Person.photo", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.managingOrganization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.link", 0, None),
+            rh_foundation::ElementCardinality::new("Person.link.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.link.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Person.link.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Person.link.target", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Person.link.assurance", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Person {
     fn id(&self) -> Option<String> {
@@ -458,7 +502,19 @@ impl crate::validation::ValidatableResource for Person {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Person")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::person::{PersonAccessors, PersonExistence, PersonMutators};

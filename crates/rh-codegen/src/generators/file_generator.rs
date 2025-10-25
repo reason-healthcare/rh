@@ -1,6 +1,47 @@
 //! File generation and organization functionality
 //!
 //! This module handles writing generated code to files and organizing the output structure.
+//!
+//! ## Ergonomic Improvements for Trait Usage
+//!
+//! This module implements two key ergonomic improvements for generated FHIR resources:
+//!
+//! ### 1. Trait Re-exports in Resource Modules
+//!
+//! Each generated resource module (e.g., `resources::patient`) automatically re-exports its
+//! associated traits (`PatientMutators`, `PatientAccessors`, `PatientExistence`). This allows
+//! users to import just the resource module and get all necessary traits:
+//!
+//! ```ignore
+//! // Before: Required importing from multiple modules
+//! use hl7_fhir_r4_core::resources::patient::Patient;
+//! use hl7_fhir_r4_core::traits::patient::PatientMutators;
+//! use hl7_fhir_r4_core::traits::domain_resource::DomainResourceMutators;
+//! use hl7_fhir_r4_core::traits::resource::ResourceMutators;
+//!
+//! // After: Single import gets everything needed
+//! use hl7_fhir_r4_core::resources::patient::{Patient, PatientMutators};
+//! // Note: Parent traits (ResourceMutators, DomainResourceMutators) are trait bounds,
+//! // so they're brought into scope automatically when PatientMutators is used
+//! ```
+//!
+//! ### 2. Prelude Module
+//!
+//! A `prelude` module is generated that re-exports commonly used base traits:
+//!
+//! ```ignore
+//! use hl7_fhir_r4_core::prelude::*;
+//! use hl7_fhir_r4_core::resources::patient::{Patient, PatientMutators};
+//!
+//! // Now all base traits are in scope
+//! let patient = <Patient as PatientMutators>::new()
+//!     .set_id("example".to_string())  // from ResourceMutators
+//!     .set_active(true);               // from PatientMutators
+//! ```
+//!
+//! These improvements follow idiomatic Rust patterns used by popular crates like
+//! `serde`, `tokio`, and `diesel`, making the generated code more ergonomic and
+//! reducing the cognitive load on users.
 
 use std::collections::HashSet;
 use std::fs;
@@ -10,6 +51,7 @@ use quote::{format_ident, quote};
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
+use crate::generators::binding_generator::BindingGenerator;
 use crate::generators::enum_generator::EnumGenerator;
 use crate::generators::import_manager::ImportManager;
 use crate::generators::primitive_generator::PrimitiveGenerator;
@@ -460,6 +502,27 @@ impl<'a> FileGenerator<'a> {
             }
         }
 
+        // Add bindings constant for resources and complex types
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            let bindings_const = BindingGenerator::generate_bindings_constant(structure_def);
+            if !bindings_const.is_empty() {
+                formatted_code.push_str("\n\n");
+                formatted_code.push_str(&bindings_const);
+            }
+        }
+
+        // Add cardinalities constant for resources and complex types
+        if structure_def.kind == "resource" || structure_def.kind == "complex-type" {
+            let cardinalities_const =
+                crate::generators::cardinality_generator::CardinalityGenerator::generate_cardinalities_constant(
+                    structure_def,
+                );
+            if !cardinalities_const.is_empty() {
+                formatted_code.push_str("\n\n");
+                formatted_code.push_str(&cardinalities_const);
+            }
+        }
+
         // Add trait implementations for FHIR resources
         if structure_def.kind == "resource" {
             formatted_code.push_str("\n\n");
@@ -474,6 +537,12 @@ impl<'a> FileGenerator<'a> {
                 formatted_code.push_str("\n\n");
                 formatted_code.push_str(&validation_impl);
             }
+        }
+
+        // Re-export the mutator traits for convenience (resources only)
+        if structure_def.kind == "resource" {
+            formatted_code.push_str("\n\n");
+            formatted_code.push_str(&self.generate_trait_reexports(structure_def));
         }
 
         // Add Resource trait impl if this is the Resource struct (legacy)
@@ -863,6 +932,60 @@ impl<'a> FileGenerator<'a> {
         } else {
             format!("// Trait implementations\n{}", implementations.join("\n\n"))
         }
+    }
+
+    /// Generate re-exports for mutator traits for convenient importing
+    ///
+    /// This generates `pub use` statements that re-export the resource's associated traits
+    /// from the traits module. This allows users to import just the resource module and
+    /// get all the traits they need for working with that resource.
+    ///
+    /// For example, for the Patient resource, this generates:
+    ///
+    /// ```ignore
+    /// pub use crate::traits::patient::{
+    ///     PatientMutators,
+    ///     PatientAccessors,
+    ///     PatientExistence,
+    /// };
+    /// ```
+    ///
+    /// This enables the idiomatic Rust pattern:
+    ///
+    /// ```ignore
+    /// use hl7_fhir_r4_core::resources::patient::{Patient, PatientMutators};
+    /// // Now PatientMutators is in scope without importing from traits module
+    /// ```
+    fn generate_trait_reexports(&self, structure_def: &StructureDefinition) -> String {
+        // For profiles, the trait file is named based on struct_name (from baseDefinition),
+        // not the profile ID. For regular resources, use the structure name.
+        let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
+
+        let (trait_module_name, trait_prefix) = if is_profile {
+            // For profiles, get the struct name (e.g., "Vitalsigns" from baseDefinition)
+            let struct_name = crate::naming::Naming::struct_name(structure_def);
+            let snake_module = crate::naming::Naming::to_rust_identifier(
+                &crate::naming::Naming::to_snake_case(&struct_name),
+            );
+            (snake_module, struct_name)
+        } else {
+            // For regular resources, use the structure name
+            let resource_name = crate::naming::Naming::to_rust_identifier(&structure_def.name);
+            let snake_name = crate::naming::Naming::to_rust_identifier(
+                &crate::naming::Naming::to_snake_case(&resource_name),
+            );
+            (snake_name, resource_name)
+        };
+
+        format!(
+            r#"// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::{trait_module_name}::{{
+    {trait_prefix}Mutators,
+    {trait_prefix}Accessors,
+    {trait_prefix}Existence,
+}};"#
+        )
     }
 
     /// Generate Default implementation for a struct if needed

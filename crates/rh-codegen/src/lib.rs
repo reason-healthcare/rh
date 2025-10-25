@@ -23,6 +23,7 @@
 /// These macros automatically generate both the primitive field and its companion extension field.
 pub use rh_foundation::{Config, FoundationError};
 
+pub mod bindings;
 mod config;
 pub mod fhir_types;
 mod generator;

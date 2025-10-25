@@ -153,21 +153,6 @@ pub struct HealthcareService {
     /// Technical endpoints providing access to electronic services operated for the healthcare service
     pub endpoint: Option<Vec<Reference>>,
 }
-/// HealthcareService nested structure for the 'eligibility' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthcareServiceEligibility {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded value for the eligibility
-    ///
-    /// Binding: example (Coded values underwhich a specific service is made available.)
-    pub code: Option<CodeableConcept>,
-    /// Describes the eligibility conditions for the service
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-}
 /// HealthcareService nested structure for the 'notAvailable' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthcareServiceNotavailable {
@@ -212,6 +197,21 @@ pub struct HealthcareServiceAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
+/// HealthcareService nested structure for the 'eligibility' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthcareServiceEligibility {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded value for the eligibility
+    ///
+    /// Binding: example (Coded values underwhich a specific service is made available.)
+    pub code: Option<CodeableConcept>,
+    /// Describes the eligibility conditions for the service
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+}
 
 impl Default for HealthcareService {
     fn default() -> Self {
@@ -251,17 +251,6 @@ impl Default for HealthcareService {
     }
 }
 
-impl Default for HealthcareServiceEligibility {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-        }
-    }
-}
-
 impl Default for HealthcareServiceNotavailable {
     fn default() -> Self {
         Self {
@@ -289,6 +278,17 @@ impl Default for HealthcareServiceAvailabletime {
     }
 }
 
+impl Default for HealthcareServiceEligibility {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -304,6 +304,150 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "HealthcareService.availableTime.daysOfWeek",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/days-of-week|4.0.1",
+        )
+        .with_description("The days of the week.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("HealthcareService.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.contained", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.extension", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.providedBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.category", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.type", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.location", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.extraDetails", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.photo", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("HealthcareService.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.coverageArea", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.serviceProvisionCode",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("HealthcareService.eligibility", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.eligibility.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.eligibility.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.eligibility.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.eligibility.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.eligibility.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("HealthcareService.program", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.characteristic", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.communication", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.referralMethod", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.appointmentRequired",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("HealthcareService.availableTime", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.daysOfWeek",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.allDay",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.availableStartTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availableTime.availableEndTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("HealthcareService.notAvailable", 0, None),
+            rh_foundation::ElementCardinality::new("HealthcareService.notAvailable.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.notAvailable.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.notAvailable.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.notAvailable.description",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.notAvailable.during",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "HealthcareService.availabilityExceptions",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("HealthcareService.endpoint", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -876,7 +1020,21 @@ impl crate::validation::ValidatableResource for HealthcareService {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/HealthcareService")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::healthcare_service::{
+    HealthcareServiceAccessors, HealthcareServiceExistence, HealthcareServiceMutators,
+};

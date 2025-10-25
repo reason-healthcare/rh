@@ -41,6 +41,43 @@ pub struct MedicinalProductIngredient {
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
 }
+/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
+    /// The specified substance
+    pub code: CodeableConcept,
+    /// The group of specified substance, e.g. group 1 to 4
+    pub group: CodeableConcept,
+    /// Confidentiality level of the specified substance as the ingredient
+    pub confidentiality: Option<CodeableConcept>,
+}
+/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Relevant reference substance
+    pub substance: Option<CodeableConcept>,
+    /// Strength expressed in terms of a reference substance
+    pub strength: Ratio,
+    /// Strength expressed in terms of a reference substance
+    #[serde(rename = "strengthLowLimit")]
+    pub strength_low_limit: Option<Ratio>,
+    /// For when strength is measured at a particular point or distance
+    #[serde(rename = "measurementPoint")]
+    pub measurement_point: Option<StringType>,
+    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_measurementPoint")]
+    pub _measurement_point: Option<Element>,
+    /// The country or countries for which the strength range applies
+    pub country: Option<Vec<CodeableConcept>>,
+}
 /// MedicinalProductIngredient nested structure for the 'substance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductIngredientSubstance {
@@ -77,43 +114,6 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     /// The country or countries for which the strength range applies
     pub country: Option<Vec<CodeableConcept>>,
 }
-/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Relevant reference substance
-    pub substance: Option<CodeableConcept>,
-    /// Strength expressed in terms of a reference substance
-    pub strength: Ratio,
-    /// Strength expressed in terms of a reference substance
-    #[serde(rename = "strengthLowLimit")]
-    pub strength_low_limit: Option<Ratio>,
-    /// For when strength is measured at a particular point or distance
-    #[serde(rename = "measurementPoint")]
-    pub measurement_point: Option<StringType>,
-    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_measurementPoint")]
-    pub _measurement_point: Option<Element>,
-    /// The country or countries for which the strength range applies
-    pub country: Option<Vec<CodeableConcept>>,
-}
-/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
-    /// The specified substance
-    pub code: CodeableConcept,
-    /// The group of specified substance, e.g. group 1 to 4
-    pub group: CodeableConcept,
-    /// Confidentiality level of the specified substance as the ingredient
-    pub confidentiality: Option<CodeableConcept>,
-}
 
 impl Default for MedicinalProductIngredient {
     fn default() -> Self {
@@ -126,6 +126,32 @@ impl Default for MedicinalProductIngredient {
             manufacturer: Default::default(),
             specified_substance: Default::default(),
             substance: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductIngredientSpecifiedsubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: Default::default(),
+            group: Default::default(),
+            confidentiality: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substance: Default::default(),
+            strength: Default::default(),
+            strength_low_limit: Default::default(),
+            measurement_point: Default::default(),
+            _measurement_point: Default::default(),
+            country: Default::default(),
         }
     }
 }
@@ -155,32 +181,6 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
     }
 }
 
-impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance: Default::default(),
-            strength: Default::default(),
-            strength_low_limit: Default::default(),
-            measurement_point: Default::default(),
-            _measurement_point: Default::default(),
-            country: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSpecifiedsubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: Default::default(),
-            group: Default::default(),
-            confidentiality: Default::default(),
-        }
-    }
-}
-
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -195,6 +195,59 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()").with_xpath("exists(f:text/h:div)"),
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.meta", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.implicitRules", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.language", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.text", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.contained", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.identifier", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.role", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.allergenicIndicator", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.manufacturer", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.code", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.group", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.confidentiality", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.presentation", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.presentationLowLimit", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.concentration", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.concentrationLowLimit", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.measurementPoint", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.country", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.substance", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.strength", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.strengthLowLimit", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.measurementPoint", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.specifiedSubstance.strength.referenceStrength.country", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance.id", 0, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance.extension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance.modifierExtension", 0, None),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance.code", 1, Some(1)),
+    rh_foundation::ElementCardinality::new("MedicinalProductIngredient.substance.strength", 0, None),
 ]
     });
 
@@ -494,7 +547,18 @@ impl crate::validation::ValidatableResource for MedicinalProductIngredient {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductIngredient")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_ingredient::{
+    MedicinalProductIngredientAccessors, MedicinalProductIngredientExistence,
+    MedicinalProductIngredientMutators,
+};

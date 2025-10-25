@@ -175,183 +175,6 @@ pub struct Task {
     /// Information produced as part of task
     pub output: Option<Vec<TaskOutput>>,
 }
-/// Task nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
-}
-/// Task nested structure for the 'output' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskOutput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for output
-    ///
-    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Result of output (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-    /// Result of output (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Result of output (canonical)
-    #[serde(rename = "valueCanonical")]
-    pub value_canonical: StringType,
-    /// Result of output (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Result of output (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Result of output (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Result of output (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Result of output (id)
-    #[serde(rename = "valueId")]
-    pub value_id: StringType,
-    /// Result of output (instant)
-    #[serde(rename = "valueInstant")]
-    pub value_instant: InstantType,
-    /// Result of output (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Result of output (markdown)
-    #[serde(rename = "valueMarkdown")]
-    pub value_markdown: StringType,
-    /// Result of output (oid)
-    #[serde(rename = "valueOid")]
-    pub value_oid: StringType,
-    /// Result of output (positiveInt)
-    #[serde(rename = "valuePositiveInt")]
-    pub value_positive_int: PositiveIntType,
-    /// Result of output (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Result of output (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Result of output (unsignedInt)
-    #[serde(rename = "valueUnsignedInt")]
-    pub value_unsigned_int: UnsignedIntType,
-    /// Result of output (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Result of output (url)
-    #[serde(rename = "valueUrl")]
-    pub value_url: StringType,
-    /// Result of output (uuid)
-    #[serde(rename = "valueUuid")]
-    pub value_uuid: StringType,
-    /// Result of output (Address)
-    #[serde(rename = "valueAddress")]
-    pub value_address: Address,
-    /// Result of output (Age)
-    #[serde(rename = "valueAge")]
-    pub value_age: Age,
-    /// Result of output (Annotation)
-    #[serde(rename = "valueAnnotation")]
-    pub value_annotation: Annotation,
-    /// Result of output (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Result of output (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Result of output (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Result of output (ContactPoint)
-    #[serde(rename = "valueContactPoint")]
-    pub value_contact_point: ContactPoint,
-    /// Result of output (Count)
-    #[serde(rename = "valueCount")]
-    pub value_count: Count,
-    /// Result of output (Distance)
-    #[serde(rename = "valueDistance")]
-    pub value_distance: Distance,
-    /// Result of output (Duration)
-    #[serde(rename = "valueDuration")]
-    pub value_duration: Duration,
-    /// Result of output (HumanName)
-    #[serde(rename = "valueHumanName")]
-    pub value_human_name: HumanName,
-    /// Result of output (Identifier)
-    #[serde(rename = "valueIdentifier")]
-    pub value_identifier: Identifier,
-    /// Result of output (Money)
-    #[serde(rename = "valueMoney")]
-    pub value_money: Money,
-    /// Result of output (Period)
-    #[serde(rename = "valuePeriod")]
-    pub value_period: Period,
-    /// Result of output (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Result of output (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Result of output (Ratio)
-    #[serde(rename = "valueRatio")]
-    pub value_ratio: Ratio,
-    /// Result of output (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Result of output (SampledData)
-    #[serde(rename = "valueSampledData")]
-    pub value_sampled_data: SampledData,
-    /// Result of output (Signature)
-    #[serde(rename = "valueSignature")]
-    pub value_signature: Signature,
-    /// Result of output (Timing)
-    #[serde(rename = "valueTiming")]
-    pub value_timing: Timing,
-    /// Result of output (ContactDetail)
-    #[serde(rename = "valueContactDetail")]
-    pub value_contact_detail: ContactDetail,
-    /// Result of output (Contributor)
-    #[serde(rename = "valueContributor")]
-    pub value_contributor: Contributor,
-    /// Result of output (DataRequirement)
-    #[serde(rename = "valueDataRequirement")]
-    pub value_data_requirement: DataRequirement,
-    /// Result of output (Expression)
-    #[serde(rename = "valueExpression")]
-    pub value_expression: Expression,
-    /// Result of output (ParameterDefinition)
-    #[serde(rename = "valueParameterDefinition")]
-    pub value_parameter_definition: ParameterDefinition,
-    /// Result of output (RelatedArtifact)
-    #[serde(rename = "valueRelatedArtifact")]
-    pub value_related_artifact: RelatedArtifact,
-    /// Result of output (TriggerDefinition)
-    #[serde(rename = "valueTriggerDefinition")]
-    pub value_trigger_definition: TriggerDefinition,
-    /// Result of output (UsageContext)
-    #[serde(rename = "valueUsageContext")]
-    pub value_usage_context: UsageContext,
-    /// Result of output (Dosage)
-    #[serde(rename = "valueDosage")]
-    pub value_dosage: Dosage,
-    /// Result of output (Meta)
-    #[serde(rename = "valueMeta")]
-    pub value_meta: Meta,
-}
 /// replaces
 ///
 /// Completed or terminated task(s) whose function is taken by this new task.
@@ -368,21 +191,20 @@ pub struct TaskReplaces {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Candidate List
-///
-/// Identifies the individuals who are candidates for being the owner of the task.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+/// Task nested structure for the 'restriction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskCandidateList {
+pub struct TaskRestriction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: Extension,
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
 }
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -546,6 +368,184 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// Task nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for output
+    ///
+    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Result of output (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+    /// Result of output (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Result of output (canonical)
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: StringType,
+    /// Result of output (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Result of output (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Result of output (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Result of output (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Result of output (id)
+    #[serde(rename = "valueId")]
+    pub value_id: StringType,
+    /// Result of output (instant)
+    #[serde(rename = "valueInstant")]
+    pub value_instant: InstantType,
+    /// Result of output (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Result of output (markdown)
+    #[serde(rename = "valueMarkdown")]
+    pub value_markdown: StringType,
+    /// Result of output (oid)
+    #[serde(rename = "valueOid")]
+    pub value_oid: StringType,
+    /// Result of output (positiveInt)
+    #[serde(rename = "valuePositiveInt")]
+    pub value_positive_int: PositiveIntType,
+    /// Result of output (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Result of output (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Result of output (unsignedInt)
+    #[serde(rename = "valueUnsignedInt")]
+    pub value_unsigned_int: UnsignedIntType,
+    /// Result of output (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Result of output (url)
+    #[serde(rename = "valueUrl")]
+    pub value_url: StringType,
+    /// Result of output (uuid)
+    #[serde(rename = "valueUuid")]
+    pub value_uuid: StringType,
+    /// Result of output (Address)
+    #[serde(rename = "valueAddress")]
+    pub value_address: Address,
+    /// Result of output (Age)
+    #[serde(rename = "valueAge")]
+    pub value_age: Age,
+    /// Result of output (Annotation)
+    #[serde(rename = "valueAnnotation")]
+    pub value_annotation: Annotation,
+    /// Result of output (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Result of output (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Result of output (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Result of output (ContactPoint)
+    #[serde(rename = "valueContactPoint")]
+    pub value_contact_point: ContactPoint,
+    /// Result of output (Count)
+    #[serde(rename = "valueCount")]
+    pub value_count: Count,
+    /// Result of output (Distance)
+    #[serde(rename = "valueDistance")]
+    pub value_distance: Distance,
+    /// Result of output (Duration)
+    #[serde(rename = "valueDuration")]
+    pub value_duration: Duration,
+    /// Result of output (HumanName)
+    #[serde(rename = "valueHumanName")]
+    pub value_human_name: HumanName,
+    /// Result of output (Identifier)
+    #[serde(rename = "valueIdentifier")]
+    pub value_identifier: Identifier,
+    /// Result of output (Money)
+    #[serde(rename = "valueMoney")]
+    pub value_money: Money,
+    /// Result of output (Period)
+    #[serde(rename = "valuePeriod")]
+    pub value_period: Period,
+    /// Result of output (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Result of output (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Result of output (Ratio)
+    #[serde(rename = "valueRatio")]
+    pub value_ratio: Ratio,
+    /// Result of output (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Result of output (SampledData)
+    #[serde(rename = "valueSampledData")]
+    pub value_sampled_data: SampledData,
+    /// Result of output (Signature)
+    #[serde(rename = "valueSignature")]
+    pub value_signature: Signature,
+    /// Result of output (Timing)
+    #[serde(rename = "valueTiming")]
+    pub value_timing: Timing,
+    /// Result of output (ContactDetail)
+    #[serde(rename = "valueContactDetail")]
+    pub value_contact_detail: ContactDetail,
+    /// Result of output (Contributor)
+    #[serde(rename = "valueContributor")]
+    pub value_contributor: Contributor,
+    /// Result of output (DataRequirement)
+    #[serde(rename = "valueDataRequirement")]
+    pub value_data_requirement: DataRequirement,
+    /// Result of output (Expression)
+    #[serde(rename = "valueExpression")]
+    pub value_expression: Expression,
+    /// Result of output (ParameterDefinition)
+    #[serde(rename = "valueParameterDefinition")]
+    pub value_parameter_definition: ParameterDefinition,
+    /// Result of output (RelatedArtifact)
+    #[serde(rename = "valueRelatedArtifact")]
+    pub value_related_artifact: RelatedArtifact,
+    /// Result of output (TriggerDefinition)
+    #[serde(rename = "valueTriggerDefinition")]
+    pub value_trigger_definition: TriggerDefinition,
+    /// Result of output (UsageContext)
+    #[serde(rename = "valueUsageContext")]
+    pub value_usage_context: UsageContext,
+    /// Result of output (Dosage)
+    #[serde(rename = "valueDosage")]
+    pub value_dosage: Dosage,
+    /// Result of output (Meta)
+    #[serde(rename = "valueMeta")]
+    pub value_meta: Meta,
+}
+/// Candidate List
+///
+/// Identifies the individuals who are candidates for being the owner of the task.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskCandidateList {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Task {
     fn default() -> Self {
@@ -594,77 +594,6 @@ impl Default for Task {
     }
 }
 
-impl Default for TaskRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
-        }
-    }
-}
-
-impl Default for TaskOutput {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_base64_binary: Default::default(),
-            value_boolean: Default::default(),
-            value_canonical: Default::default(),
-            value_code: Default::default(),
-            value_date: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-            value_id: Default::default(),
-            value_instant: Default::default(),
-            value_integer: Default::default(),
-            value_markdown: Default::default(),
-            value_oid: Default::default(),
-            value_positive_int: Default::default(),
-            value_string: Default::default(),
-            value_time: Default::default(),
-            value_unsigned_int: Default::default(),
-            value_uri: Default::default(),
-            value_url: Default::default(),
-            value_uuid: Default::default(),
-            value_address: Default::default(),
-            value_age: Default::default(),
-            value_annotation: Default::default(),
-            value_attachment: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_coding: Default::default(),
-            value_contact_point: Default::default(),
-            value_count: Default::default(),
-            value_distance: Default::default(),
-            value_duration: Default::default(),
-            value_human_name: Default::default(),
-            value_identifier: Default::default(),
-            value_money: Default::default(),
-            value_period: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            value_ratio: Default::default(),
-            value_reference: Default::default(),
-            value_sampled_data: Default::default(),
-            value_signature: Default::default(),
-            value_timing: Default::default(),
-            value_contact_detail: Default::default(),
-            value_contributor: Default::default(),
-            value_data_requirement: Default::default(),
-            value_expression: Default::default(),
-            value_parameter_definition: Default::default(),
-            value_related_artifact: Default::default(),
-            value_trigger_definition: Default::default(),
-            value_usage_context: Default::default(),
-            value_dosage: Default::default(),
-            value_meta: Default::default(),
-        }
-    }
-}
-
 impl Default for TaskReplaces {
     fn default() -> Self {
         Self {
@@ -673,10 +602,14 @@ impl Default for TaskReplaces {
     }
 }
 
-impl Default for TaskCandidateList {
+impl Default for TaskRestriction {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }
@@ -740,6 +673,73 @@ impl Default for TaskInput {
     }
 }
 
+impl Default for TaskOutput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_base64_binary: Default::default(),
+            value_boolean: Default::default(),
+            value_canonical: Default::default(),
+            value_code: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+            value_id: Default::default(),
+            value_instant: Default::default(),
+            value_integer: Default::default(),
+            value_markdown: Default::default(),
+            value_oid: Default::default(),
+            value_positive_int: Default::default(),
+            value_string: Default::default(),
+            value_time: Default::default(),
+            value_unsigned_int: Default::default(),
+            value_uri: Default::default(),
+            value_url: Default::default(),
+            value_uuid: Default::default(),
+            value_address: Default::default(),
+            value_age: Default::default(),
+            value_annotation: Default::default(),
+            value_attachment: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_coding: Default::default(),
+            value_contact_point: Default::default(),
+            value_count: Default::default(),
+            value_distance: Default::default(),
+            value_duration: Default::default(),
+            value_human_name: Default::default(),
+            value_identifier: Default::default(),
+            value_money: Default::default(),
+            value_period: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_ratio: Default::default(),
+            value_reference: Default::default(),
+            value_sampled_data: Default::default(),
+            value_signature: Default::default(),
+            value_timing: Default::default(),
+            value_contact_detail: Default::default(),
+            value_contributor: Default::default(),
+            value_data_requirement: Default::default(),
+            value_expression: Default::default(),
+            value_parameter_definition: Default::default(),
+            value_related_artifact: Default::default(),
+            value_trigger_definition: Default::default(),
+            value_usage_context: Default::default(),
+            value_dosage: Default::default(),
+            value_meta: Default::default(),
+        }
+    }
+}
+
+impl Default for TaskCandidateList {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -756,6 +756,98 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("inv-1", rh_foundation::Severity::Error, "Last modified date must be greater than or equal to authored-on date.", "lastModified.exists().not() or authoredOn.exists().not() or lastModified >= authoredOn").with_xpath("not(exists(f:lastModified/@value)) or not(exists(f:authoredOn/@value)) or f:lastModified/@value >= f:authoredOn/@value"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Task.intent",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/task-intent|4.0.1",
+            )
+            .with_description("Distinguishes whether the task is a proposal, plan or full order."),
+            rh_foundation::ElementBinding::new(
+                "Task.priority",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-priority|4.0.1",
+            )
+            .with_description("The task's priority."),
+            rh_foundation::ElementBinding::new(
+                "Task.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/task-status|4.0.1",
+            )
+            .with_description("The current status of the task."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Task.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Task.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Task.instantiatesCanonical", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.instantiatesUri", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Task.groupIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("Task.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.businessStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.focus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.for", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.executionPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.lastModified", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.performerType", 0, None),
+            rh_foundation::ElementCardinality::new("Task.owner", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.reasonCode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.reasonReference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("Task.note", 0, None),
+            rh_foundation::ElementCardinality::new("Task.relevantHistory", 0, None),
+            rh_foundation::ElementCardinality::new("Task.restriction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.restriction.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.restriction.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.restriction.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.restriction.repetitions", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.restriction.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.restriction.recipient", 0, None),
+            rh_foundation::ElementCardinality::new("Task.input", 0, None),
+            rh_foundation::ElementCardinality::new("Task.input.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.input.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.input.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.input.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.input.value[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.output", 0, None),
+            rh_foundation::ElementCardinality::new("Task.output.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.output.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.output.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Task.output.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Task.output.value[x]", 1, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -1355,7 +1447,19 @@ impl crate::validation::ValidatableResource for Task {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Task")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::task::{TaskAccessors, TaskExistence, TaskMutators};

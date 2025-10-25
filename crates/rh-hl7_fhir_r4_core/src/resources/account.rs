@@ -61,6 +61,19 @@ pub struct Account {
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
 }
+/// Account nested structure for the 'coverage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountCoverage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The party(s), such as insurances, that may contribute to the payment of this account
+    pub coverage: Reference,
+    /// The priority of the coverage in the context of this account
+    pub priority: Option<PositiveIntType>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
+}
 /// Account nested structure for the 'guarantor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountGuarantor {
@@ -77,19 +90,6 @@ pub struct AccountGuarantor {
     pub _on_hold: Option<Element>,
     /// Guarantee account during
     pub period: Option<Period>,
-}
-/// Account nested structure for the 'coverage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountCoverage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The party(s), such as insurances, that may contribute to the payment of this account
-    pub coverage: Reference,
-    /// The priority of the coverage in the context of this account
-    pub priority: Option<PositiveIntType>,
-    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
-    pub _priority: Option<Element>,
 }
 
 impl Default for Account {
@@ -114,6 +114,17 @@ impl Default for Account {
     }
 }
 
+impl Default for AccountCoverage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            coverage: Reference::default(),
+            priority: Default::default(),
+            _priority: Default::default(),
+        }
+    }
+}
+
 impl Default for AccountGuarantor {
     fn default() -> Self {
         Self {
@@ -122,17 +133,6 @@ impl Default for AccountGuarantor {
             on_hold: Default::default(),
             _on_hold: Default::default(),
             period: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountCoverage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            coverage: Reference::default(),
-            priority: Default::default(),
-            _priority: Default::default(),
         }
     }
 }
@@ -152,6 +152,59 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Account.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/account-status|4.0.1",
+        )
+        .with_description("Indicates whether the account is available to be used.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Account.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Account.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Account.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.subject", 0, None),
+            rh_foundation::ElementCardinality::new("Account.servicePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.coverage", 0, None),
+            rh_foundation::ElementCardinality::new("Account.coverage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.coverage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.coverage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.coverage.coverage", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.coverage.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.owner", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.guarantor", 0, None),
+            rh_foundation::ElementCardinality::new("Account.guarantor.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.guarantor.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.guarantor.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Account.guarantor.party", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.guarantor.onHold", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.guarantor.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Account.partOf", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -498,7 +551,19 @@ impl crate::validation::ValidatableResource for Account {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Account")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::account::{AccountAccessors, AccountExistence, AccountMutators};

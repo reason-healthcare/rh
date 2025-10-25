@@ -83,6 +83,36 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "TriggerDefinition.type",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/trigger-type|4.0.1",
+        )
+        .with_description("The type of trigger.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("TriggerDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.data", 0, None),
+            rh_foundation::ElementCardinality::new("TriggerDefinition.condition", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for TriggerDefinition {
     fn resource_type(&self) -> &'static str {
         "TriggerDefinition"
@@ -90,6 +120,14 @@ impl crate::validation::ValidatableResource for TriggerDefinition {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

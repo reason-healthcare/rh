@@ -135,31 +135,6 @@ pub struct SpecimenCollection {
     #[serde(rename = "fastingStatusDuration")]
     pub fasting_status_duration: Option<Duration>,
 }
-/// Specimen nested structure for the 'processing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenProcessing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of procedure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Indicates the treatment step  applied to the specimen
-    ///
-    /// Binding: example (Type indicating the technique used to process the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
-    pub procedure: Option<CodeableConcept>,
-    /// Material used in the processing step
-    pub additive: Option<Vec<Reference>>,
-    /// Date and time of specimen processing (dateTime)
-    #[serde(rename = "timeDateTime")]
-    pub time_date_time: Option<DateTimeType>,
-    /// Date and time of specimen processing (Period)
-    #[serde(rename = "timePeriod")]
-    pub time_period: Option<Period>,
-}
 /// Specimen nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenContainer {
@@ -190,6 +165,31 @@ pub struct SpecimenContainer {
     /// Additive associated with container (Reference)
     #[serde(rename = "additiveReference")]
     pub additive_reference: Option<Reference>,
+}
+/// Specimen nested structure for the 'processing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of procedure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Indicates the treatment step  applied to the specimen
+    ///
+    /// Binding: example (Type indicating the technique used to process the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
+    pub procedure: Option<CodeableConcept>,
+    /// Material used in the processing step
+    pub additive: Option<Vec<Reference>>,
+    /// Date and time of specimen processing (dateTime)
+    #[serde(rename = "timeDateTime")]
+    pub time_date_time: Option<DateTimeType>,
+    /// Date and time of specimen processing (Period)
+    #[serde(rename = "timePeriod")]
+    pub time_period: Option<Period>,
 }
 
 impl Default for Specimen {
@@ -240,20 +240,6 @@ impl Default for SpecimenCollection {
     }
 }
 
-impl Default for SpecimenProcessing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            procedure: Default::default(),
-            additive: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
 impl Default for SpecimenContainer {
     fn default() -> Self {
         Self {
@@ -266,6 +252,20 @@ impl Default for SpecimenContainer {
             specimen_quantity: Default::default(),
             additive_codeable_concept: Default::default(),
             additive_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessing {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            procedure: Default::default(),
+            additive: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
         }
     }
 }
@@ -285,6 +285,92 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Specimen.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/specimen-status|4.0.1",
+        )
+        .with_description("Codes providing the status/availability of a specimen.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Specimen.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.accessionIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.receivedTime", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.parent", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.request", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.collection", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Specimen.collection.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Specimen.collection.collector", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.collected[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.duration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.collection.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Specimen.collection.fastingStatus[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Specimen.processing", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.processing.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.processing.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Specimen.processing.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Specimen.processing.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.processing.procedure", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.processing.additive", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.processing.time[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.container", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.container.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.container.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.container.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.container.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.container.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.container.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.container.capacity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Specimen.container.specimenQuantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Specimen.container.additive[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Specimen.condition", 0, None),
+            rh_foundation::ElementCardinality::new("Specimen.note", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -668,7 +754,19 @@ impl crate::validation::ValidatableResource for Specimen {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Specimen")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::specimen::{SpecimenAccessors, SpecimenExistence, SpecimenMutators};

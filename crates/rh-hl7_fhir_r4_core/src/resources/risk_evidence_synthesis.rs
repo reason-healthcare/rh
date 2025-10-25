@@ -183,6 +183,47 @@ pub struct RiskEvidenceSynthesisRiskestimate {
     #[serde(rename = "_numeratorCount")]
     pub _numerator_count: Option<Element>,
 }
+/// RiskEvidenceSynthesis nested structure for the 'certainty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisCertainty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    pub certainty_subcomponent: Option<Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
+}
+/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
+}
 /// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
@@ -209,29 +250,6 @@ pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     /// Extension element for the 'to' primitive field. Contains metadata and extensions.
     pub _to: Option<Element>,
 }
-/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-}
 /// RiskEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
@@ -250,24 +268,6 @@ pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// RiskEvidenceSynthesis nested structure for the 'certainty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisCertainty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    pub certainty_subcomponent: Option<Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
     pub rating: Option<Vec<CodeableConcept>>,
     /// Used for footnotes or explanatory notes
     pub note: Option<Vec<Annotation>>,
@@ -342,17 +342,13 @@ impl Default for RiskEvidenceSynthesisRiskestimate {
     }
 }
 
-impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+impl Default for RiskEvidenceSynthesisCertainty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            level: Default::default(),
-            _level: Default::default(),
-            from: Default::default(),
-            _from: Default::default(),
-            to: Default::default(),
-            _to: Default::default(),
+            certainty_subcomponent: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
         }
     }
 }
@@ -371,22 +367,26 @@ impl Default for RiskEvidenceSynthesisSamplesize {
     }
 }
 
+impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            level: Default::default(),
+            _level: Default::default(),
+            from: Default::default(),
+            _from: Default::default(),
+            to: Default::default(),
+            _to: Default::default(),
+        }
+    }
+}
+
 impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
-impl Default for RiskEvidenceSynthesisCertainty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            certainty_subcomponent: Default::default(),
             rating: Default::default(),
             note: Default::default(),
         }
@@ -409,6 +409,279 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("rvs-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "RiskEvidenceSynthesis.riskEstimate.unitOfMeasure",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/ucum-units|4.0.1",
+            )
+            .with_description("Unified Code for Units of Measure (UCUM)."),
+            rh_foundation::ElementBinding::new(
+                "RiskEvidenceSynthesis.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.contained", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.contact", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.note", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.approvalDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.lastReviewDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.effectivePeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.topic", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.author", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.editor", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.endorser", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.relatedArtifact",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.synthesisType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.studyType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.population", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.exposure", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.outcome", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.sampleSize", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.numberOfStudies",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.sampleSize.numberOfParticipants",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.unitOfMeasure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.denominatorCount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.numeratorCount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.level",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.from",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.riskEstimate.precisionEstimate.to",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.certainty", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.rating",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("RiskEvidenceSynthesis.certainty.note", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.rating",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskEvidenceSynthesis.certainty.certaintySubcomponent.note",
+                0,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -1029,7 +1302,21 @@ impl crate::validation::ValidatableResource for RiskEvidenceSynthesis {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/RiskEvidenceSynthesis")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::risk_evidence_synthesis::{
+    RiskEvidenceSynthesisAccessors, RiskEvidenceSynthesisExistence, RiskEvidenceSynthesisMutators,
+};

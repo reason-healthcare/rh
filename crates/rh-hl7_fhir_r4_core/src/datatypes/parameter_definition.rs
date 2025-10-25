@@ -97,6 +97,36 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ParameterDefinition.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/all-types|4.0.1").with_description("A list of all the concrete types defined in this version of the FHIR specification - Abstract Types, Data Types and Resource Types."),
+    rh_foundation::ElementBinding::new("ParameterDefinition.use", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/operation-parameter-use|4.0.1").with_description("Whether the parameter is input or output."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ParameterDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.use", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.min", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.max", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.documentation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ParameterDefinition.profile", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for ParameterDefinition {
     fn resource_type(&self) -> &'static str {
         "ParameterDefinition"
@@ -104,6 +134,14 @@ impl crate::validation::ValidatableResource for ParameterDefinition {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

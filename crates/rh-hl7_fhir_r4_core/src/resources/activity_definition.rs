@@ -231,19 +231,6 @@ pub struct ActivityDefinition {
     #[serde(rename = "dynamicValue")]
     pub dynamic_value: Option<Vec<ActivityDefinitionDynamicvalue>>,
 }
-/// ActivityDefinition nested structure for the 'dynamicValue' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActivityDefinitionDynamicvalue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The path to the element to be set dynamically
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// An expression that provides the dynamic value for the customization
-    pub expression: Expression,
-}
 /// ActivityDefinition nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityDefinitionParticipant {
@@ -261,6 +248,19 @@ pub struct ActivityDefinitionParticipant {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-role
     pub role: Option<CodeableConcept>,
+}
+/// ActivityDefinition nested structure for the 'dynamicValue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityDefinitionDynamicvalue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The path to the element to be set dynamically
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// An expression that provides the dynamic value for the customization
+    pub expression: Expression,
 }
 
 impl Default for ActivityDefinition {
@@ -346,17 +346,6 @@ impl Default for ActivityDefinition {
     }
 }
 
-impl Default for ActivityDefinitionDynamicvalue {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
 impl Default for ActivityDefinitionParticipant {
     fn default() -> Self {
         Self {
@@ -364,6 +353,17 @@ impl Default for ActivityDefinitionParticipant {
             type_: Default::default(),
             _type: Default::default(),
             role: Default::default(),
+        }
+    }
+}
+
+impl Default for ActivityDefinitionDynamicvalue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            expression: Default::default(),
         }
     }
 }
@@ -384,6 +384,146 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ActivityDefinition.intent", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-intent|4.0.1").with_description("Codes indicating the degree of authority/intentionality associated with a request."),
+    rh_foundation::ElementBinding::new("ActivityDefinition.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-resource-types|4.0.1").with_description("The kind of activity the definition is describing."),
+    rh_foundation::ElementBinding::new("ActivityDefinition.participant.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-participant-type|4.0.1").with_description("The type of participant in the activity."),
+    rh_foundation::ElementBinding::new("ActivityDefinition.priority", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-priority|4.0.1").with_description("Identifies the level of importance to be assigned to actioning the request."),
+    rh_foundation::ElementBinding::new("ActivityDefinition.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ActivityDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.effectivePeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.topic", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.author", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.editor", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.library", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.kind", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.profile", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.intent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.doNotPerform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.participant", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.participant.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.participant.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.participant.role",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.product[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.dosage", 0, None),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.bodySite", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.specimenRequirement",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.observationRequirement",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.observationResultRequirement",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.transform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ActivityDefinition.dynamicValue", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.dynamicValue.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.dynamicValue.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.dynamicValue.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.dynamicValue.path",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ActivityDefinition.dynamicValue.expression",
+                1,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -1032,8 +1172,8 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
+    fn has_subject(&self) -> bool {
+        self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
     }
     fn has_timing(&self) -> bool {
         self.timing_timing.is_some()
@@ -1043,8 +1183,8 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
             || self.timing_range.is_some()
             || self.timing_duration.is_some()
     }
-    fn has_subject(&self) -> bool {
-        self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()
@@ -1194,7 +1334,21 @@ impl crate::validation::ValidatableResource for ActivityDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ActivityDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::activity_definition::{
+    ActivityDefinitionAccessors, ActivityDefinitionExistence, ActivityDefinitionMutators,
+};

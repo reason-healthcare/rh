@@ -109,6 +109,34 @@ pub struct DocumentReference {
     /// Clinical context of document
     pub context: Option<DocumentReferenceContext>,
 }
+/// DocumentReference nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship
+    pub target: Reference,
+}
+/// DocumentReference nested structure for the 'content' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Where to access the document
+    pub attachment: Attachment,
+    /// Format/content rules for the document
+    ///
+    /// Binding: preferred (Document Format Codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
+    pub format: Option<Coding>,
+}
 /// DocumentReference nested structure for the 'context' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReferenceContext {
@@ -167,34 +195,6 @@ pub struct DocumentReferenceContext {
     /// Related identifiers or resources
     pub related: Option<Vec<Reference>>,
 }
-/// DocumentReference nested structure for the 'content' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Where to access the document
-    pub attachment: Attachment,
-    /// Format/content rules for the document
-    ///
-    /// Binding: preferred (Document Format Codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
-    pub format: Option<Coding>,
-}
-/// DocumentReference nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship
-    pub target: Reference,
-}
 
 impl Default for DocumentReference {
     fn default() -> Self {
@@ -224,17 +224,13 @@ impl Default for DocumentReference {
     }
 }
 
-impl Default for DocumentReferenceContext {
+impl Default for DocumentReferenceRelatesto {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            encounter: Default::default(),
-            event: Default::default(),
-            period: Default::default(),
-            facility_type: Default::default(),
-            practice_setting: Default::default(),
-            source_patient_info: Default::default(),
-            related: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target: Default::default(),
         }
     }
 }
@@ -249,13 +245,17 @@ impl Default for DocumentReferenceContent {
     }
 }
 
-impl Default for DocumentReferenceRelatesto {
+impl Default for DocumentReferenceContext {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target: Default::default(),
+            encounter: Default::default(),
+            event: Default::default(),
+            period: Default::default(),
+            facility_type: Default::default(),
+            practice_setting: Default::default(),
+            source_patient_info: Default::default(),
+            related: Default::default(),
         }
     }
 }
@@ -275,6 +275,127 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "DocumentReference.docStatus",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/composition-status|4.0.1",
+            )
+            .with_description("Status of the underlying document."),
+            rh_foundation::ElementBinding::new(
+                "DocumentReference.relatesTo.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/document-relationship-type|4.0.1",
+            )
+            .with_description("The type of relationship between documents."),
+            rh_foundation::ElementBinding::new(
+                "DocumentReference.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/document-reference-status|4.0.1",
+            )
+            .with_description("The status of the document reference."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DocumentReference.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.masterIdentifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.docStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.category", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.author", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.authenticator", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.custodian", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.relatesTo", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.relatesTo.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.relatesTo.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.relatesTo.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.relatesTo.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.relatesTo.target",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.securityLabel", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.content", 1, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.content.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.content.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.content.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.content.attachment",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.content.format", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.context", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.context.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.encounter", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.event", 0, None),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.context.facilityType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.context.practiceSetting",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "DocumentReference.context.sourcePatientInfo",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("DocumentReference.context.related", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -689,7 +810,21 @@ impl crate::validation::ValidatableResource for DocumentReference {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DocumentReference")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::document_reference::{
+    DocumentReferenceAccessors, DocumentReferenceExistence, DocumentReferenceMutators,
+};
