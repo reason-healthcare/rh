@@ -34,6 +34,69 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "DiagnosticReport.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/diagnostic-report-status|4.0.1",
+        )
+        .with_description("The status of the diagnostic report.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DiagnosticReport", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.category", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.effective[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.issued", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.performer", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.resultsInterpreter", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.specimen", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.result", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.imagingStudy", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.media", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.media.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.media.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DiagnosticReport.media.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.media.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.media.link", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.conclusion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.conclusionCode", 0, None),
+            rh_foundation::ElementCardinality::new("DiagnosticReport.presentedForm", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Hlaresult {
     fn id(&self) -> Option<String> {
@@ -106,7 +169,19 @@ impl crate::validation::ValidatableResource for Hlaresult {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/hlaresult")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::hlaresult::{HlaresultAccessors, HlaresultExistence, HlaresultMutators};

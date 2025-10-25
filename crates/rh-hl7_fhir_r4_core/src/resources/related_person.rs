@@ -145,6 +145,70 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "RelatedPerson.gender",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1",
+        )
+        .with_description("The gender of a person used for administrative purposes.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("RelatedPerson.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.contained", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.extension", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.relationship", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.name", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.gender", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.birthDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.address", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.photo", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RelatedPerson.communication", 0, None),
+            rh_foundation::ElementCardinality::new("RelatedPerson.communication.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RelatedPerson.communication.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RelatedPerson.communication.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RelatedPerson.communication.language",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RelatedPerson.communication.preferred",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for RelatedPerson {
     fn id(&self) -> Option<String> {
@@ -521,7 +585,21 @@ impl crate::validation::ValidatableResource for RelatedPerson {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/RelatedPerson")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::related_person::{
+    RelatedPersonAccessors, RelatedPersonExistence, RelatedPersonMutators,
+};

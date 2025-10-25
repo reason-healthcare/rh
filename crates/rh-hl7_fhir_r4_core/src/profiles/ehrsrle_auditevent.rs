@@ -35,6 +35,115 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.action",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/audit-event-action|4.0.1",
+            )
+            .with_description(
+                "Indicator for type of action performed during the event that generated the event.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.agent.network.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/network-type|4.0.1",
+            )
+            .with_description("The type of network access point of this agent in the audit event."),
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/audit-event-outcome|4.0.1",
+            )
+            .with_description("Indicates whether the event succeeded or failed."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("AuditEvent", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.contained", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.subtype", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.action", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.recorded", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.outcomeDesc", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.purposeOfEvent", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent", 1, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.role", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.who", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.altId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.requestor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.policy", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.media", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AuditEvent.agent.network.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.address", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.purposeOfUse", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.site", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.observer", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.type", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.what", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.role", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.lifecycle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.securityLabel", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.query", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AuditEvent.entity.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.value[x]", 1, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for EhrsrleAuditevent {
     fn id(&self) -> Option<String> {
@@ -107,7 +216,21 @@ impl crate::validation::ValidatableResource for EhrsrleAuditevent {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ehrsrle-auditevent")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::ehrsrle_auditevent::{
+    EhrsrleAuditeventAccessors, EhrsrleAuditeventExistence, EhrsrleAuditeventMutators,
+};

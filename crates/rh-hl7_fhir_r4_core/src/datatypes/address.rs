@@ -114,6 +114,49 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Address.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/address-type|4.0.1",
+            )
+            .with_description("The type of an address (physical / postal)."),
+            rh_foundation::ElementBinding::new(
+                "Address.use",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/address-use|4.0.1",
+            )
+            .with_description("The use of an address."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Address.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Address.use", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.line", 0, None),
+            rh_foundation::ElementCardinality::new("Address.city", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.district", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.state", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.postalCode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.country", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Address.period", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Address {
     fn resource_type(&self) -> &'static str {
         "Address"
@@ -121,6 +164,14 @@ impl crate::validation::ValidatableResource for Address {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

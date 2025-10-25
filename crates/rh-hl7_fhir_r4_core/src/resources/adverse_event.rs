@@ -201,6 +201,121 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "AdverseEvent.actuality",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/adverse-event-actuality|4.0.1",
+            )
+            .with_description("Overall nature of the adverse event, e.g. real or potential."),
+            rh_foundation::ElementBinding::new(
+                "AdverseEvent.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/adverse-event-outcome|4.0.1",
+            )
+            .with_description("TODO (and should this be required?)."),
+            rh_foundation::ElementBinding::new(
+                "AdverseEvent.severity",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/adverse-event-severity|4.0.1",
+            )
+            .with_description(
+                "The severity of the adverse event itself, in direct relation to the subject.",
+            ),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("AdverseEvent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.contained", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.actuality", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.category", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.event", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.detected", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.recordedDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.resultingCondition", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.seriousness", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.severity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.recorder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.contributor", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.suspectEntity", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.suspectEntity.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AdverseEvent.suspectEntity.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.instance",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AdverseEvent.suspectEntity.causality", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.assessment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.productRelatedness",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.author",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AdverseEvent.suspectEntity.causality.method",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AdverseEvent.subjectMedicalHistory", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.referenceDocument", 0, None),
+            rh_foundation::ElementCardinality::new("AdverseEvent.study", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for AdverseEvent {
     fn id(&self) -> Option<String> {
@@ -677,7 +792,21 @@ impl crate::validation::ValidatableResource for AdverseEvent {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/AdverseEvent")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::adverse_event::{
+    AdverseEventAccessors, AdverseEventExistence, AdverseEventMutators,
+};

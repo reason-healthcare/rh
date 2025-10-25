@@ -128,6 +128,48 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Slot.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/slotstatus|4.0.1",
+        )
+        .with_description("The free/busy status of the slot.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Slot.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.serviceCategory", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.serviceType", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("Slot.appointmentType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.schedule", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.start", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.end", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.overbooked", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Slot.comment", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Slot {
     fn id(&self) -> Option<String> {
@@ -480,7 +522,19 @@ impl crate::validation::ValidatableResource for Slot {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Slot")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::slot::{SlotAccessors, SlotExistence, SlotMutators};

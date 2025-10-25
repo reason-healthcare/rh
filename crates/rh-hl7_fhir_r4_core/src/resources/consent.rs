@@ -156,6 +156,42 @@ pub struct ConsentLocation {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// Consent nested structure for the 'verification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentVerification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Has been verified
+    pub verified: BooleanType,
+    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
+    pub _verified: Option<Element>,
+    /// Person who verified
+    #[serde(rename = "verifiedWith")]
+    pub verified_with: Option<Reference>,
+    /// When consent verified
+    #[serde(rename = "verificationDate")]
+    pub verification_date: Option<DateTimeType>,
+    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_verificationDate")]
+    pub _verification_date: Option<Element>,
+}
+/// Transcriber
+///
+/// Any person/thing who transcribed the consent into the system.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Transcriber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentTranscriber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// ConsentProvision nested structure for the 'actor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentProvisionActor {
@@ -182,41 +218,18 @@ pub struct ConsentProvisionActor {
     /// Resource for the actor (or group, by role)
     pub reference: Reference,
 }
-/// Consent nested structure for the 'verification' field
+/// ConsentProvision nested structure for the 'data' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentVerification {
+pub struct ConsentProvisionData {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Has been verified
-    pub verified: BooleanType,
-    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
-    pub _verified: Option<Element>,
-    /// Person who verified
-    #[serde(rename = "verifiedWith")]
-    pub verified_with: Option<Reference>,
-    /// When consent verified
-    #[serde(rename = "verificationDate")]
-    pub verification_date: Option<DateTimeType>,
-    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_verificationDate")]
-    pub _verification_date: Option<Element>,
-}
-/// Disclosure Notification Endpoint
-///
-/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentNotificationEndpoint {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
+    /// instance | related | dependents | authoredby
+    pub meaning: ConsentDataMeaning,
+    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
+    pub _meaning: Option<Element>,
+    /// The actual data reference
+    pub reference: Reference,
 }
 /// Consent nested structure for the 'policy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,34 +246,21 @@ pub struct ConsentPolicy {
     /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
     pub _uri: Option<Element>,
 }
-/// Transcriber
+/// Disclosure Notification Endpoint
 ///
-/// Any person/thing who transcribed the consent into the system.
+/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Transcriber
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentTranscriber {
+pub struct ConsentNotificationEndpoint {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
-}
-/// ConsentProvision nested structure for the 'data' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionData {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// instance | related | dependents | authoredby
-    pub meaning: ConsentDataMeaning,
-    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
-    pub _meaning: Option<Element>,
-    /// The actual data reference
-    pub reference: Reference,
 }
 
 impl Default for Consent {
@@ -315,16 +315,6 @@ impl Default for ConsentLocation {
     }
 }
 
-impl Default for ConsentProvisionActor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
 impl Default for ConsentVerification {
     fn default() -> Self {
         Self {
@@ -338,10 +328,31 @@ impl Default for ConsentVerification {
     }
 }
 
-impl Default for ConsentNotificationEndpoint {
+impl Default for ConsentTranscriber {
     fn default() -> Self {
         Self {
             base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionActor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionData {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            meaning: Default::default(),
+            _meaning: Default::default(),
+            reference: Default::default(),
         }
     }
 }
@@ -358,21 +369,10 @@ impl Default for ConsentPolicy {
     }
 }
 
-impl Default for ConsentTranscriber {
+impl Default for ConsentNotificationEndpoint {
     fn default() -> Self {
         Self {
             base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentProvisionData {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            meaning: Default::default(),
-            _meaning: Default::default(),
-            reference: Default::default(),
         }
     }
 }
@@ -397,6 +397,100 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ppc-4", rh_foundation::Severity::Error, "IF Scope=adr, there must be a patient", "patient.exists() or scope.coding.where(system='something' and code='adr').exists().not()").with_xpath("exists(f:patient) or not(exists(f:scope/f:coding[f:system/@value='something' and f:code/@value='adr'])))"),
     rh_foundation::Invariant::new("ppc-5", rh_foundation::Severity::Error, "IF Scope=treatment, there must be a patient", "patient.exists() or scope.coding.where(system='something' and code='treatment').exists().not()").with_xpath("exists(f:patient) or not(exists(f:scope/f:coding[f:system/@value='something' and f:code/@value='treatment'])))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Consent.provision.data.meaning", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/consent-data-meaning|4.0.1").with_description("How a resource reference is interpreted when testing consent restrictions."),
+    rh_foundation::ElementBinding::new("Consent.provision.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/consent-provision-type|4.0.1").with_description("How a rule statement is applied, such as adding additional consent or removing consent."),
+    rh_foundation::ElementBinding::new("Consent.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/consent-state-codes|4.0.1").with_description("Indicates the state of the consent."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Consent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.scope", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.category", 1, None),
+            rh_foundation::ElementCardinality::new("Consent.patient", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.dateTime", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.performer", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.organization", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.source[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.policy", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.policy.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.policy.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.policy.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.policy.authority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.policy.uri", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.policyRule", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.verification", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.verification.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.verification.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Consent.verification.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Consent.verification.verified", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.verification.verifiedWith", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Consent.verification.verificationDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Consent.provision", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.actor", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.actor.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.actor.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Consent.provision.actor.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Consent.provision.actor.role", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.actor.reference", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.action", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.securityLabel", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.purpose", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.class", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.code", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.dataPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.data", 0, None),
+            rh_foundation::ElementCardinality::new("Consent.provision.data.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.data.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Consent.provision.data.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Consent.provision.data.meaning", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.data.reference", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Consent.provision.provision", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -773,7 +867,19 @@ impl crate::validation::ValidatableResource for Consent {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Consent")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::consent::{ConsentAccessors, ConsentExistence, ConsentMutators};

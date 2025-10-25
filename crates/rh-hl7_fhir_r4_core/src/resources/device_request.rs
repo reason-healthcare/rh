@@ -221,6 +221,86 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.intent",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-intent|4.0.1",
+            )
+            .with_description("The kind of diagnostic request."),
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.priority",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-priority|4.0.1",
+            )
+            .with_description(
+                "Identifies the level of importance to be assigned to actioning the request.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-status|4.0.1",
+            )
+            .with_description("Codes representing the status of the request."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DeviceRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.priorRequest", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.groupIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.code[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DeviceRequest.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.occurrence[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.performerType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.note", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.relevantHistory", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DeviceRequest {
     fn id(&self) -> Option<String> {
@@ -667,13 +747,13 @@ impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
+    fn has_code(&self) -> bool {
+        true
+    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
-    }
-    fn has_code(&self) -> bool {
-        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -760,7 +840,21 @@ impl crate::validation::ValidatableResource for DeviceRequest {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DeviceRequest")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::device_request::{
+    DeviceRequestAccessors, DeviceRequestExistence, DeviceRequestMutators,
+};

@@ -176,34 +176,66 @@ pub struct Procedure {
     #[serde(rename = "usedCode")]
     pub used_code: Option<Vec<CodeableConcept>>,
 }
-/// targetBodyStructure
+/// method
 ///
-/// The target body site used for this procedure.  Multiple locations are allowed.
+/// The method used to perform this procedure.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-method
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureTargetBodyStructure {
+pub struct ProcedureMethod {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// approachBodyStructure
+/// directedBy
 ///
-/// The approach body site used for this procedure.  Multiple locations are allowed.
+/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-approachBodyStructure
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureApproachBodyStructure {
+pub struct ProcedureDirectedBy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// causedBy
+///
+/// This procedure is because of the related item.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureCausedBy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// incisionDateTime
+///
+/// The time of the first incision.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureIncisionDateTime {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -223,34 +255,34 @@ pub struct ProcedureFocaldevice {
     /// Device that was changed
     pub manipulated: Reference,
 }
-/// causedBy
+/// targetBodyStructure
 ///
-/// This procedure is because of the related item.
+/// The target body site used for this procedure.  Multiple locations are allowed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureCausedBy {
+pub struct ProcedureTargetBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// schedule
+/// progressStatus
 ///
-/// The schedule that was followed.
+/// A code to track a detailed progress of  a procedure (e.g. In Recovery, Prepared for Surgery).
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-progressStatus
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureSchedule {
+pub struct ProcedureProgressStatus {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -273,66 +305,34 @@ pub struct ProcedurePerformer {
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
 }
-/// incisionDateTime
+/// schedule
 ///
-/// The time of the first incision.
+/// The schedule that was followed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureIncisionDateTime {
+pub struct ProcedureSchedule {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// progressStatus
+/// approachBodyStructure
 ///
-/// A code to track a detailed progress of  a procedure (e.g. In Recovery, Prepared for Surgery).
+/// The approach body site used for this procedure.  Multiple locations are allowed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-progressStatus
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-approachBodyStructure
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureProgressStatus {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// directedBy
-///
-/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureDirectedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// method
-///
-/// The method used to perform this procedure.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-method
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureMethod {
+pub struct ProcedureApproachBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -381,7 +381,7 @@ impl Default for Procedure {
     }
 }
 
-impl Default for ProcedureTargetBodyStructure {
+impl Default for ProcedureMethod {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -389,7 +389,23 @@ impl Default for ProcedureTargetBodyStructure {
     }
 }
 
-impl Default for ProcedureApproachBodyStructure {
+impl Default for ProcedureDirectedBy {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureCausedBy {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureIncisionDateTime {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -407,7 +423,7 @@ impl Default for ProcedureFocaldevice {
     }
 }
 
-impl Default for ProcedureCausedBy {
+impl Default for ProcedureTargetBodyStructure {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -415,7 +431,7 @@ impl Default for ProcedureCausedBy {
     }
 }
 
-impl Default for ProcedureSchedule {
+impl Default for ProcedureProgressStatus {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -434,7 +450,7 @@ impl Default for ProcedurePerformer {
     }
 }
 
-impl Default for ProcedureIncisionDateTime {
+impl Default for ProcedureSchedule {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -442,23 +458,7 @@ impl Default for ProcedureIncisionDateTime {
     }
 }
 
-impl Default for ProcedureProgressStatus {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureDirectedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureMethod {
+impl Default for ProcedureApproachBodyStructure {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -481,6 +481,84 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Procedure.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/event-status|4.0.1",
+        )
+        .with_description("A code specifying the state of the procedure.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Procedure.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.performed[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.recorder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.asserter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.performer", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.performer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.performer.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Procedure.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Procedure.performer.function", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.performer.actor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.performer.onBehalfOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.bodySite", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.report", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.complication", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.complicationDetail", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.followUp", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.note", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.focalDevice", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.focalDevice.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.focalDevice.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Procedure.focalDevice.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Procedure.focalDevice.action", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.focalDevice.manipulated", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Procedure.usedReference", 0, None),
+            rh_foundation::ElementCardinality::new("Procedure.usedCode", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -1104,7 +1182,19 @@ impl crate::validation::ValidatableResource for Procedure {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Procedure")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::procedure::{ProcedureAccessors, ProcedureExistence, ProcedureMutators};

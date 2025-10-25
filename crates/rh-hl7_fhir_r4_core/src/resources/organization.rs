@@ -131,6 +131,44 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Organization.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.type", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.alias", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.address", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.partOf", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.contact.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.contact.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Organization.contact.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Organization.contact.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.contact.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.contact.telecom", 0, None),
+            rh_foundation::ElementCardinality::new("Organization.contact.address", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Organization.endpoint", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Organization {
     fn id(&self) -> Option<String> {
@@ -479,7 +517,17 @@ impl crate::validation::ValidatableResource for Organization {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Organization")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::organization::{
+    OrganizationAccessors, OrganizationExistence, OrganizationMutators,
+};

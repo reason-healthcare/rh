@@ -109,21 +109,6 @@ pub struct MedicationDispense {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
-/// MedicationDispense nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationDispensePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who performed the dispense and what they did
-    ///
-    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
-    pub function: Option<CodeableConcept>,
-    /// Individual who was performing
-    pub actor: Reference,
-}
 /// MedicationDispense nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationDispenseSubstitution {
@@ -152,6 +137,21 @@ pub struct MedicationDispenseSubstitution {
     /// Who is responsible for the substitution
     #[serde(rename = "responsibleParty")]
     pub responsible_party: Option<Vec<Reference>>,
+}
+/// MedicationDispense nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationDispensePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who performed the dispense and what they did
+    ///
+    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
+    pub function: Option<CodeableConcept>,
+    /// Individual who was performing
+    pub actor: Reference,
 }
 
 impl Default for MedicationDispense {
@@ -191,16 +191,6 @@ impl Default for MedicationDispense {
     }
 }
 
-impl Default for MedicationDispensePerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for MedicationDispenseSubstitution {
     fn default() -> Self {
         Self {
@@ -210,6 +200,16 @@ impl Default for MedicationDispenseSubstitution {
             type_: Default::default(),
             reason: Default::default(),
             responsible_party: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationDispensePerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -230,6 +230,129 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("mdd-1", rh_foundation::Severity::Error, "whenHandedOver cannot be before whenPrepared", "whenHandedOver.empty() or whenPrepared.empty() or whenHandedOver >= whenPrepared").with_xpath("not(exists(f:whenHandedOver/@value)) or not(exists(f:whenPrepared/@value)) or ( f:whenHandedOver/@value >= f:whenPrepared/@value)"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "MedicationDispense.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/medicationdispense-status|4.0.1",
+        )
+        .with_description("A coded concept specifying the state of the dispense event.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicationDispense.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.statusReason[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationDispense.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.medication[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.context", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.supportingInformation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationDispense.performer", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.performer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.performer.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.performer.function",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.performer.actor",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationDispense.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.authorizingPrescription",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationDispense.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.daysSupply", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.whenPrepared", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.whenHandedOver", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.destination", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationDispense.receiver", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.note", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.dosageInstruction", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.substitution", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.wasSubstituted",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.reason",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationDispense.substitution.responsibleParty",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationDispense.detectedIssue", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationDispense.eventHistory", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -665,11 +788,11 @@ impl crate::traits::medication_dispense::MedicationDispenseExistence for Medicat
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_medication(&self) -> bool {
-        true
-    }
     fn has_status_reason(&self) -> bool {
         self.status_reason_codeable_concept.is_some() || self.status_reason_reference.is_some()
+    }
+    fn has_medication(&self) -> bool {
+        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -754,7 +877,21 @@ impl crate::validation::ValidatableResource for MedicationDispense {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicationDispense")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication_dispense::{
+    MedicationDispenseAccessors, MedicationDispenseExistence, MedicationDispenseMutators,
+};

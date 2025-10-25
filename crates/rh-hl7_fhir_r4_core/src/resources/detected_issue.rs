@@ -66,6 +66,21 @@ pub struct DetectedIssue {
     /// Step taken to address
     pub mitigation: Option<Vec<DetectedIssueMitigation>>,
 }
+/// DetectedIssue nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedIssueEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation
+    ///
+    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    pub code: Option<Vec<CodeableConcept>>,
+    /// Supporting information
+    pub detail: Option<Vec<Reference>>,
+}
 /// DetectedIssue nested structure for the 'mitigation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectedIssueMitigation {
@@ -84,21 +99,6 @@ pub struct DetectedIssueMitigation {
     pub _date: Option<Element>,
     /// Who is committing?
     pub author: Option<Reference>,
-}
-/// DetectedIssue nested structure for the 'evidence' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DetectedIssueEvidence {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation
-    ///
-    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Supporting information
-    pub detail: Option<Vec<Reference>>,
 }
 
 impl Default for DetectedIssue {
@@ -126,6 +126,16 @@ impl Default for DetectedIssue {
     }
 }
 
+impl Default for DetectedIssueEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
 impl Default for DetectedIssueMitigation {
     fn default() -> Self {
         Self {
@@ -134,16 +144,6 @@ impl Default for DetectedIssueMitigation {
             date: Default::default(),
             _date: Default::default(),
             author: Default::default(),
-        }
-    }
-}
-
-impl Default for DetectedIssueEvidence {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
         }
     }
 }
@@ -163,6 +163,78 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "DetectedIssue.severity",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/detectedissue-severity|4.0.1",
+            )
+            .with_description(
+                "Indicates the potential degree of impact of the identified issue on the patient.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "DetectedIssue.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/observation-status|4.0.1",
+            )
+            .with_description("Indicates the status of the identified issue."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DetectedIssue.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.severity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.patient", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.identified[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.implicated", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.evidence", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.evidence.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.evidence.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DetectedIssue.evidence.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DetectedIssue.evidence.code", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.evidence.detail", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.detail", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.reference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation", 0, None),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DetectedIssue.mitigation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation.action", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DetectedIssue.mitigation.author", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -512,7 +584,21 @@ impl crate::validation::ValidatableResource for DetectedIssue {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DetectedIssue")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::detected_issue::{
+    DetectedIssueAccessors, DetectedIssueExistence, DetectedIssueMutators,
+};

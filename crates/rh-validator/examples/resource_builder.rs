@@ -7,6 +7,10 @@
 //! rather than parsing them from JSON.
 //!
 //! NEW in Phase 4: Direct struct validation with validate_resource()!
+//!
+//! NOTE: Trait imports are now much simpler! You can either:
+//! 1. Import the resource module and get all traits via re-exports (shown below)
+//! 2. Use the prelude module for base traits like ResourceMutators
 
 use hl7_fhir_r4_core::bindings::administrative_gender::AdministrativeGender;
 use hl7_fhir_r4_core::bindings::contact_point_system::ContactPointSystem;
@@ -21,10 +25,13 @@ use hl7_fhir_r4_core::datatypes::extension::Extension;
 use hl7_fhir_r4_core::datatypes::human_name::HumanName;
 use hl7_fhir_r4_core::datatypes::identifier::Identifier;
 use hl7_fhir_r4_core::datatypes::narrative::Narrative;
-use hl7_fhir_r4_core::resources::patient::Patient;
-use hl7_fhir_r4_core::traits::domain_resource::DomainResourceMutators;
-use hl7_fhir_r4_core::traits::patient::PatientMutators;
-use hl7_fhir_r4_core::traits::resource::ResourceMutators;
+
+// Option 1: Import resource module - all associated traits are re-exported
+use hl7_fhir_r4_core::resources::patient::{Patient, PatientMutators};
+
+// Option 2: Use prelude for base traits (ResourceMutators, DomainResourceMutators)
+use hl7_fhir_r4_core::prelude::*;
+
 use rh_validator::FhirValidator;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

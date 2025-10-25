@@ -66,16 +66,35 @@ pub struct SubstanceNucleicAcidSubunitLinkage {
     #[serde(rename = "_residueSite")]
     pub _residue_site: Option<Element>,
 }
+/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunitSugar {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
+    pub identifier: Option<Identifier>,
+    /// The name of the sugar or sugar-like component that make up the nucleotide
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
+    #[serde(rename = "residueSite")]
+    pub residue_site: Option<StringType>,
+    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_residueSite")]
+    pub _residue_site: Option<Element>,
+}
 /// SubstanceNucleicAcid nested structure for the 'subunit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceNucleicAcidSubunit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The linkages between sugar residues will also be captured
-    pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
     /// 5.3.6.8.1 Sugar ID (Mandatory)
     pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
+    /// The linkages between sugar residues will also be captured
+    pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
     /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
     pub subunit: Option<IntegerType>,
     /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
@@ -97,25 +116,6 @@ pub struct SubstanceNucleicAcidSubunit {
     /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
     #[serde(rename = "threePrime")]
     pub three_prime: Option<CodeableConcept>,
-}
-/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunitSugar {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
-    pub identifier: Option<Identifier>,
-    /// The name of the sugar or sugar-like component that make up the nucleotide
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
-    #[serde(rename = "residueSite")]
-    pub residue_site: Option<StringType>,
-    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_residueSite")]
-    pub _residue_site: Option<Element>,
 }
 
 impl Default for SubstanceNucleicAcid {
@@ -148,25 +148,6 @@ impl Default for SubstanceNucleicAcidSubunitLinkage {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            linkage: Default::default(),
-            sugar: Default::default(),
-            subunit: Default::default(),
-            _subunit: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            length: Default::default(),
-            _length: Default::default(),
-            sequence_attachment: Default::default(),
-            five_prime: Default::default(),
-            three_prime: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceNucleicAcidSubunitSugar {
     fn default() -> Self {
         Self {
@@ -176,6 +157,25 @@ impl Default for SubstanceNucleicAcidSubunitSugar {
             _name: Default::default(),
             residue_site: Default::default(),
             _residue_site: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceNucleicAcidSubunit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sugar: Default::default(),
+            linkage: Default::default(),
+            subunit: Default::default(),
+            _subunit: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            length: Default::default(),
+            _length: Default::default(),
+            sequence_attachment: Default::default(),
+            five_prime: Default::default(),
+            three_prime: Default::default(),
         }
     }
 }
@@ -195,6 +195,156 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.sequenceType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.numberOfSubunits",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.areaOfHybridisation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.oligoNucleotideType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.subunit", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.subunit.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.subunit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sequence",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.length",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sequenceAttachment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.fivePrime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.threePrime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.subunit.linkage", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.connectivity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.linkage.residueSite",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceNucleicAcid.subunit.sugar", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceNucleicAcid.subunit.sugar.residueSite",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -460,7 +610,17 @@ impl crate::validation::ValidatableResource for SubstanceNucleicAcid {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstanceNucleicAcid")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_nucleic_acid::{
+    SubstanceNucleicAcidAccessors, SubstanceNucleicAcidExistence, SubstanceNucleicAcidMutators,
+};

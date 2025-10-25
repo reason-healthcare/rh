@@ -185,6 +185,78 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "NamingSystem.kind",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/namingsystem-type|4.0.1",
+            )
+            .with_description("Identifies the purpose of the naming system."),
+            rh_foundation::ElementBinding::new(
+                "NamingSystem.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+            rh_foundation::ElementBinding::new(
+                "NamingSystem.uniqueId.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/namingsystem-identifier-type|4.0.1",
+            )
+            .with_description(
+                "Identifies the style of unique identifier used to identify a namespace.",
+            ),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("NamingSystem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.contained", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.extension", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.kind", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.contact", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.responsible", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId", 1, None),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "NamingSystem.uniqueId.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.value", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.preferred", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("NamingSystem.uniqueId.period", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for NamingSystem {
     fn id(&self) -> Option<String> {
@@ -554,7 +626,21 @@ impl crate::validation::ValidatableResource for NamingSystem {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/NamingSystem")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::naming_system::{
+    NamingSystemAccessors, NamingSystemExistence, NamingSystemMutators,
+};

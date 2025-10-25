@@ -29,3 +29,4 @@ rh-fhirpath = { path = "../../crates/rh-fhirpath" }
 rh-validator = { path = "../../crates/rh-validator" }
 rh-loader = { path = "../../crates/rh-loader" }
 rh-vcl = { path = "../../crates/rh-vcl" }
+hl7_fhir_r4_core = { path = "../../crates/rh-hl7_fhir_r4_core" }

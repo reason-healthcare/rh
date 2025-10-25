@@ -107,104 +107,22 @@ pub struct ImplementationGuide {
     /// Information about an assembled IG
     pub manifest: Option<ImplementationGuideManifest>,
 }
-/// ImplementationGuideDefinition nested structure for the 'template' field
+/// ImplementationGuide nested structure for the 'definition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinitionTemplate {
+pub struct ImplementationGuideDefinition {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of template specified
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// The source location for the template
-    pub source: StringType,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// The scope in which the template applies
-    pub scope: Option<StringType>,
-    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
-    pub _scope: Option<Element>,
-}
-/// ImplementationGuide nested structure for the 'manifest' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideManifest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
+    /// Page/Section in the Guide
+    pub page: Option<ImplementationGuideDefinitionPage>,
+    /// Grouping used to present related resources in the IG
+    pub grouping: Option<Vec<ImplementationGuideDefinitionGrouping>>,
+    /// A template for building resources
+    pub template: Option<Vec<ImplementationGuideDefinitionTemplate>>,
     /// Resource in the implementation guide
-    pub resource: Vec<ImplementationGuideManifestResource>,
-    /// HTML page within the parent IG
-    pub page: Option<Vec<ImplementationGuideManifestPage>>,
-    /// Location of rendered implementation guide
-    pub rendering: Option<StringType>,
-    /// Extension element for the 'rendering' primitive field. Contains metadata and extensions.
-    pub _rendering: Option<Element>,
-    /// Image within the IG
-    pub image: Option<Vec<StringType>>,
-    /// Extension element for the 'image' primitive field. Contains metadata and extensions.
-    pub _image: Option<Element>,
-    /// Additional linkable file in IG
-    pub other: Option<Vec<StringType>>,
-    /// Extension element for the 'other' primitive field. Contains metadata and extensions.
-    pub _other: Option<Element>,
-}
-/// ImplementationGuideDefinition nested structure for the 'page' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinitionPage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Where to find that page (url)
-    #[serde(rename = "nameUrl")]
-    pub name_url: StringType,
-    /// Where to find that page (Reference)
-    #[serde(rename = "nameReference")]
-    pub name_reference: Reference,
-    /// Short title shown for navigational assistance
-    pub title: StringType,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// html | markdown | xml | generated
-    pub generation: GuidePageGeneration,
-    /// Extension element for the 'generation' primitive field. Contains metadata and extensions.
-    pub _generation: Option<Element>,
-    /// Nested Pages / Sections
-    pub page: Option<Vec<StringType>>,
-}
-/// ImplementationGuideDefinition nested structure for the 'grouping' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinitionGrouping {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Descriptive name for the package
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Human readable text describing the package
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// ImplementationGuideManifest nested structure for the 'page' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideManifestPage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// HTML page name
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Title of the page, for references
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// Anchor available on the page
-    pub anchor: Option<Vec<StringType>>,
-    /// Extension element for the 'anchor' primitive field. Contains metadata and extensions.
-    pub _anchor: Option<Element>,
+    pub resource: Vec<ImplementationGuideDefinitionResource>,
+    /// Defines how IG is built by tools
+    pub parameter: Option<Vec<ImplementationGuideDefinitionParameter>>,
 }
 /// ImplementationGuideDefinition nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,6 +159,56 @@ pub struct ImplementationGuideDefinitionResource {
     #[serde(rename = "_groupingId")]
     pub _grouping_id: Option<Element>,
 }
+/// ImplementationGuideManifest nested structure for the 'page' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifestPage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// HTML page name
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Title of the page, for references
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// Anchor available on the page
+    pub anchor: Option<Vec<StringType>>,
+    /// Extension element for the 'anchor' primitive field. Contains metadata and extensions.
+    pub _anchor: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'grouping' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionGrouping {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Descriptive name for the package
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Human readable text describing the package
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'global' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideGlobal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type this profile applies to
+    #[serde(rename = "type")]
+    pub type_: ResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Profile that all resources must conform to
+    pub profile: StringType,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
 /// ImplementationGuideManifest nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImplementationGuideManifestResource {
@@ -262,37 +230,28 @@ pub struct ImplementationGuideManifestResource {
     #[serde(rename = "_relativePath")]
     pub _relative_path: Option<Element>,
 }
-/// ImplementationGuide nested structure for the 'definition' field
+/// ImplementationGuideDefinition nested structure for the 'page' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinition {
+pub struct ImplementationGuideDefinitionPage {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Grouping used to present related resources in the IG
-    pub grouping: Option<Vec<ImplementationGuideDefinitionGrouping>>,
-    /// Defines how IG is built by tools
-    pub parameter: Option<Vec<ImplementationGuideDefinitionParameter>>,
-    /// Resource in the implementation guide
-    pub resource: Vec<ImplementationGuideDefinitionResource>,
-    /// A template for building resources
-    pub template: Option<Vec<ImplementationGuideDefinitionTemplate>>,
-    /// Page/Section in the Guide
-    pub page: Option<ImplementationGuideDefinitionPage>,
-}
-/// ImplementationGuideDefinition nested structure for the 'parameter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinitionParameter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// apply | path-resource | path-pages | path-tx-cache | expansion-parameter | rule-broken-links | generate-xml | generate-json | generate-turtle | html-template
-    pub code: GuideParameterCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Value for named type
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
+    /// Where to find that page (url)
+    #[serde(rename = "nameUrl")]
+    pub name_url: StringType,
+    /// Where to find that page (Reference)
+    #[serde(rename = "nameReference")]
+    pub name_reference: Reference,
+    /// Short title shown for navigational assistance
+    pub title: StringType,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// html | markdown | xml | generated
+    pub generation: GuidePageGeneration,
+    /// Extension element for the 'generation' primitive field. Contains metadata and extensions.
+    pub _generation: Option<Element>,
+    /// Nested Pages / Sections
+    pub page: Option<Vec<StringType>>,
 }
 /// ImplementationGuide nested structure for the 'dependsOn' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -315,21 +274,62 @@ pub struct ImplementationGuideDependson {
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
 }
-/// ImplementationGuide nested structure for the 'global' field
+/// ImplementationGuideDefinition nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideGlobal {
+pub struct ImplementationGuideDefinitionParameter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type this profile applies to
-    #[serde(rename = "type")]
-    pub type_: ResourceTypes,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Profile that all resources must conform to
-    pub profile: StringType,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
+    /// apply | path-resource | path-pages | path-tx-cache | expansion-parameter | rule-broken-links | generate-xml | generate-json | generate-turtle | html-template
+    pub code: GuideParameterCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value for named type
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'manifest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Resource in the implementation guide
+    pub resource: Vec<ImplementationGuideManifestResource>,
+    /// HTML page within the parent IG
+    pub page: Option<Vec<ImplementationGuideManifestPage>>,
+    /// Location of rendered implementation guide
+    pub rendering: Option<StringType>,
+    /// Extension element for the 'rendering' primitive field. Contains metadata and extensions.
+    pub _rendering: Option<Element>,
+    /// Image within the IG
+    pub image: Option<Vec<StringType>>,
+    /// Extension element for the 'image' primitive field. Contains metadata and extensions.
+    pub _image: Option<Element>,
+    /// Additional linkable file in IG
+    pub other: Option<Vec<StringType>>,
+    /// Extension element for the 'other' primitive field. Contains metadata and extensions.
+    pub _other: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'template' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionTemplate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of template specified
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// The source location for the template
+    pub source: StringType,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// The scope in which the template applies
+    pub scope: Option<StringType>,
+    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
+    pub _scope: Option<Element>,
 }
 
 impl Default for ImplementationGuide {
@@ -373,73 +373,15 @@ impl Default for ImplementationGuide {
     }
 }
 
-impl Default for ImplementationGuideDefinitionTemplate {
+impl Default for ImplementationGuideDefinition {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            scope: Default::default(),
-            _scope: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideManifest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
+            page: Default::default(),
+            grouping: Default::default(),
+            template: Default::default(),
             resource: Vec::new(),
-            page: Default::default(),
-            rendering: Default::default(),
-            _rendering: Default::default(),
-            image: Default::default(),
-            _image: Default::default(),
-            other: Default::default(),
-            _other: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideDefinitionPage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name_url: Default::default(),
-            name_reference: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            generation: Default::default(),
-            _generation: Default::default(),
-            page: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideDefinitionGrouping {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideManifestPage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            anchor: Default::default(),
-            _anchor: Default::default(),
+            parameter: Default::default(),
         }
     }
 }
@@ -463,6 +405,44 @@ impl Default for ImplementationGuideDefinitionResource {
     }
 }
 
+impl Default for ImplementationGuideManifestPage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            anchor: Default::default(),
+            _anchor: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionGrouping {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideGlobal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            profile: StringType::default(),
+            _profile: Default::default(),
+        }
+    }
+}
+
 impl Default for ImplementationGuideManifestResource {
     fn default() -> Self {
         Self {
@@ -476,27 +456,17 @@ impl Default for ImplementationGuideManifestResource {
     }
 }
 
-impl Default for ImplementationGuideDefinition {
+impl Default for ImplementationGuideDefinitionPage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            grouping: Default::default(),
-            parameter: Default::default(),
-            resource: Vec::new(),
-            template: Default::default(),
+            name_url: Default::default(),
+            name_reference: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            generation: Default::default(),
+            _generation: Default::default(),
             page: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideDefinitionParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -515,14 +485,44 @@ impl Default for ImplementationGuideDependson {
     }
 }
 
-impl Default for ImplementationGuideGlobal {
+impl Default for ImplementationGuideDefinitionParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            profile: StringType::default(),
-            _profile: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideManifest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            resource: Vec::new(),
+            page: Default::default(),
+            rendering: Default::default(),
+            _rendering: Default::default(),
+            image: Default::default(),
+            _image: Default::default(),
+            other: Default::default(),
+            _other: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionTemplate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            scope: Default::default(),
+            _scope: Default::default(),
         }
     }
 }
@@ -545,6 +545,379 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ig-1", rh_foundation::Severity::Error, "If a resource has a groupingId, it must refer to a grouping defined in the Implementation Guide", "resource.groupingId.all(%context.grouping.id contains $this)").with_xpath("count(for $id in (f:resource/f:groupingId) return $id[not(ancestor::f:grouping/@id=$id/@value)])=0"),
     rh_foundation::Invariant::new("ig-2", rh_foundation::Severity::Error, "If a resource has a fhirVersion, it must be oe of the versions defined for the Implementation Guide", "definition.resource.fhirVersion.all(%context.fhirVersion contains $this)").with_xpath("count(for $id in (f:resource/f:fhirVersion) return $id[not(ancestor::f:fhirVersion/@value=$id/@value)])=0"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ImplementationGuide.definition.page.generation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/guide-page-generation|4.0.1").with_description("A code that indicates how the page is generated."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.definition.parameter.code", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/guide-parameter-code|4.0.1").with_description("Code of parameter that is input to the guide."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.definition.resource.fhirVersion", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/FHIR-version|4.0.1").with_description("All published FHIR Versions."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.fhirVersion", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/FHIR-version|4.0.1").with_description("All published FHIR Versions."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.global.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.license", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/spdx-license|4.0.1").with_description("The license that applies to an Implementation Guide (using an SPDX license Identifiers, or 'not-open-source'). The binding is required but new SPDX license Identifiers are allowed to be used (https://spdx.org/licenses/)."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ImplementationGuide.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.packageId", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.license", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.fhirVersion", 1, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn.uri", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.packageId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.version",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.global.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.global.profile",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.definition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.reference",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.fhirVersion",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.example[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.groupingId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.name[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.title",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.generation",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.page",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.source",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.scope",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.rendering",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.reference",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.example[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.relativePath",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.page", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.title",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.anchor",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.image", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.other", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -1003,7 +1376,21 @@ impl crate::validation::ValidatableResource for ImplementationGuide {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ImplementationGuide")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::implementation_guide::{
+    ImplementationGuideAccessors, ImplementationGuideExistence, ImplementationGuideMutators,
+};

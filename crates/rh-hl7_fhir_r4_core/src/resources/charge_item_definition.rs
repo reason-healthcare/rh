@@ -125,6 +125,18 @@ pub struct ChargeItemDefinition {
     #[serde(rename = "propertyGroup")]
     pub property_group: Option<Vec<ChargeItemDefinitionPropertygroup>>,
 }
+/// ChargeItemDefinition nested structure for the 'propertyGroup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChargeItemDefinitionPropertygroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    pub price_component: Option<Vec<ChargeItemDefinitionPropertygroupPricecomponent>>,
+    /// Conditions under which the priceComponent is applicable
+    pub applicability: Option<Vec<StringType>>,
+}
 /// ChargeItemDefinitionPropertygroup nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChargeItemDefinitionPropertygroupPricecomponent {
@@ -144,18 +156,6 @@ pub struct ChargeItemDefinitionPropertygroupPricecomponent {
     pub _factor: Option<Element>,
     /// Monetary amount associated with this component
     pub amount: Option<Money>,
-}
-/// ChargeItemDefinition nested structure for the 'propertyGroup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChargeItemDefinitionPropertygroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    pub price_component: Option<Vec<ChargeItemDefinitionPropertygroupPricecomponent>>,
-    /// Conditions under which the priceComponent is applicable
-    pub applicability: Option<Vec<StringType>>,
 }
 /// ChargeItemDefinition nested structure for the 'applicability' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -222,6 +222,16 @@ impl Default for ChargeItemDefinition {
     }
 }
 
+impl Default for ChargeItemDefinitionPropertygroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            price_component: Default::default(),
+            applicability: Default::default(),
+        }
+    }
+}
+
 impl Default for ChargeItemDefinitionPropertygroupPricecomponent {
     fn default() -> Self {
         Self {
@@ -232,16 +242,6 @@ impl Default for ChargeItemDefinitionPropertygroupPricecomponent {
             factor: Default::default(),
             _factor: Default::default(),
             amount: Default::default(),
-        }
-    }
-}
-
-impl Default for ChargeItemDefinitionPropertygroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            price_component: Default::default(),
-            applicability: Default::default(),
         }
     }
 }
@@ -276,6 +276,174 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/invoice-priceComponentType|4.0.1",
+            )
+            .with_description("Codes indicating the kind of the price component."),
+            rh_foundation::ElementBinding::new(
+                "ChargeItemDefinition.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.derivedFromUri", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.lastReviewDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.effectivePeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.instance", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.applicability", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.applicability.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ChargeItemDefinition.propertyGroup", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.applicability",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.factor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItemDefinition.propertyGroup.priceComponent.amount",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -798,7 +966,21 @@ impl crate::validation::ValidatableResource for ChargeItemDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ChargeItemDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::charge_item_definition::{
+    ChargeItemDefinitionAccessors, ChargeItemDefinitionExistence, ChargeItemDefinitionMutators,
+};

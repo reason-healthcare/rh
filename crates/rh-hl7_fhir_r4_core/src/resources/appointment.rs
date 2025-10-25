@@ -245,6 +245,85 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Appointment.participant.required",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/participantrequired|4.0.1",
+            )
+            .with_description("Is the Participant required to attend the appointment."),
+            rh_foundation::ElementBinding::new(
+                "Appointment.participant.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/participationstatus|4.0.1",
+            )
+            .with_description("The Participation status of an appointment."),
+            rh_foundation::ElementBinding::new(
+                "Appointment.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/appointmentstatus|4.0.1",
+            )
+            .with_description("The free/busy status of an appointment."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Appointment.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.cancelationReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.serviceCategory", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.serviceType", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.appointmentType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.supportingInformation", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.start", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.end", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.minutesDuration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.slot", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.patientInstruction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.participant", 1, None),
+            rh_foundation::ElementCardinality::new("Appointment.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.participant.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Appointment.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Appointment.participant.type", 0, None),
+            rh_foundation::ElementCardinality::new("Appointment.participant.actor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.participant.required", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.participant.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.participant.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Appointment.requestedPeriod", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Appointment {
     fn id(&self) -> Option<String> {
@@ -768,7 +847,21 @@ impl crate::validation::ValidatableResource for Appointment {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Appointment")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::appointment::{
+    AppointmentAccessors, AppointmentExistence, AppointmentMutators,
+};

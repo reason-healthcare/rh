@@ -68,6 +68,32 @@ pub struct SubstanceSourceMaterial {
     #[serde(rename = "partDescription")]
     pub part_description: Option<Vec<SubstanceSourceMaterialPartdescription>>,
 }
+/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialFractiondescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
+    pub fraction: Option<StringType>,
+    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
+    pub _fraction: Option<Element>,
+    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
+    #[serde(rename = "materialType")]
+    pub material_type: Option<CodeableConcept>,
+}
+/// SubstanceSourceMaterial nested structure for the 'partDescription' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialPartdescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Entity of anatomical origin of source material within an organism
+    pub part: Option<CodeableConcept>,
+    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
+    #[serde(rename = "partLocation")]
+    pub part_location: Option<CodeableConcept>,
+}
 /// SubstanceSourceMaterialOrganism nested structure for the 'author' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceSourceMaterialOrganismAuthor {
@@ -83,20 +109,6 @@ pub struct SubstanceSourceMaterialOrganismAuthor {
     /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
     #[serde(rename = "_authorDescription")]
     pub _author_description: Option<Element>,
-}
-/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialFractiondescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
-    pub fraction: Option<StringType>,
-    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
-    pub _fraction: Option<Element>,
-    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
-    #[serde(rename = "materialType")]
-    pub material_type: Option<CodeableConcept>,
 }
 /// SubstanceSourceMaterialOrganism nested structure for the 'organismGeneral' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,31 +159,19 @@ pub struct SubstanceSourceMaterialOrganismHybrid {
     #[serde(rename = "hybridType")]
     pub hybrid_type: Option<CodeableConcept>,
 }
-/// SubstanceSourceMaterial nested structure for the 'partDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialPartdescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Entity of anatomical origin of source material within an organism
-    pub part: Option<CodeableConcept>,
-    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
-    #[serde(rename = "partLocation")]
-    pub part_location: Option<CodeableConcept>,
-}
 /// SubstanceSourceMaterial nested structure for the 'organism' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceSourceMaterialOrganism {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// 4.9.13.7.1 Kingdom (Conditional)
+    #[serde(rename = "organismGeneral")]
+    pub organism_general: Option<SubstanceSourceMaterialOrganismOrganismgeneral>,
     /// 4.9.13.8.1 Hybrid species maternal organism ID (Optional)
     pub hybrid: Option<SubstanceSourceMaterialOrganismHybrid>,
     /// 4.9.13.6.1 Author type (Conditional)
     pub author: Option<Vec<SubstanceSourceMaterialOrganismAuthor>>,
-    /// 4.9.13.7.1 Kingdom (Conditional)
-    #[serde(rename = "organismGeneral")]
-    pub organism_general: Option<SubstanceSourceMaterialOrganismOrganismgeneral>,
     /// The family of an organism shall be specified
     pub family: Option<CodeableConcept>,
     /// The genus of an organism shall be specified; refers to the Latin epithet of the genus element of the plant/animal scientific name; it is present in names for genera, species and infraspecies
@@ -213,17 +213,6 @@ impl Default for SubstanceSourceMaterial {
     }
 }
 
-impl Default for SubstanceSourceMaterialOrganismAuthor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            author_type: Default::default(),
-            author_description: Default::default(),
-            _author_description: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSourceMaterialFractiondescription {
     fn default() -> Self {
         Self {
@@ -231,6 +220,27 @@ impl Default for SubstanceSourceMaterialFractiondescription {
             fraction: Default::default(),
             _fraction: Default::default(),
             material_type: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSourceMaterialPartdescription {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            part_location: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSourceMaterialOrganismAuthor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            author_type: Default::default(),
+            author_description: Default::default(),
+            _author_description: Default::default(),
         }
     }
 }
@@ -264,23 +274,13 @@ impl Default for SubstanceSourceMaterialOrganismHybrid {
     }
 }
 
-impl Default for SubstanceSourceMaterialPartdescription {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            part_location: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSourceMaterialOrganism {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            organism_general: Default::default(),
             hybrid: Default::default(),
             author: Default::default(),
-            organism_general: Default::default(),
             family: Default::default(),
             genus: Default::default(),
             species: Default::default(),
@@ -306,6 +306,297 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.sourceMaterialClass",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.sourceMaterialType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.sourceMaterialState",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organismId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organismName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.parentSubstanceId",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.parentSubstanceName",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.countryOfOrigin",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.geographicalLocation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.developmentStage",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription.fraction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.fractionDescription.materialType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstanceSourceMaterial.organism", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.family",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.genus",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.species",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.intraspecificType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.intraspecificDescription",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author.authorType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.author.authorDescription",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.maternalOrganismId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.maternalOrganismName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.paternalOrganismId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.paternalOrganismName",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.hybrid.hybridType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.kingdom",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.phylum",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.class",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.organism.organismGeneral.order",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription.part",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceSourceMaterial.partDescription.partLocation",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -723,7 +1014,18 @@ impl crate::validation::ValidatableResource for SubstanceSourceMaterial {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstanceSourceMaterial")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_source_material::{
+    SubstanceSourceMaterialAccessors, SubstanceSourceMaterialExistence,
+    SubstanceSourceMaterialMutators,
+};

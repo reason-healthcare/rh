@@ -98,6 +98,33 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.height", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.width", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.depth", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.weight", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.nominalVolume", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ProdCharacteristic.externalDiameter",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.shape", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.color", 0, None),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.imprint", 0, None),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.image", 0, None),
+            rh_foundation::ElementCardinality::new("ProdCharacteristic.scoring", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for ProdCharacteristic {
     fn resource_type(&self) -> &'static str {
         "ProdCharacteristic"
@@ -105,6 +132,10 @@ impl crate::validation::ValidatableResource for ProdCharacteristic {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

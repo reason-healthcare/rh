@@ -126,6 +126,69 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Subscription.channel.payload",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1",
+            )
+            .with_description("The mime type of an attachment. Any valid mime type is allowed."),
+            rh_foundation::ElementBinding::new(
+                "Subscription.channel.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/subscription-channel-type|4.0.1",
+            )
+            .with_description("The type of method used to execute a subscription."),
+            rh_foundation::ElementBinding::new(
+                "Subscription.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/subscription-status|4.0.1",
+            )
+            .with_description("The status of a subscription."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Subscription.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Subscription.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Subscription.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Subscription.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Subscription.end", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.reason", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.criteria", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.error", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Subscription.channel.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Subscription.channel.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel.endpoint", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel.payload", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Subscription.channel.header", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Subscription {
     fn id(&self) -> Option<String> {
@@ -411,7 +474,21 @@ impl crate::validation::ValidatableResource for Subscription {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Subscription")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::subscription::{
+    SubscriptionAccessors, SubscriptionExistence, SubscriptionMutators,
+};

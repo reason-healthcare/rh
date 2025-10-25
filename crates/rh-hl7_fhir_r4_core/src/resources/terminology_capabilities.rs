@@ -114,6 +114,98 @@ pub struct TerminologyCapabilities {
     /// Information about the [ConceptMap/$closure](conceptmap-operation-closure.html) operation
     pub closure: Option<TerminologyCapabilitiesClosure>,
 }
+/// TerminologyCapabilities nested structure for the 'implementation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesImplementation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Describes this specific instance
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Base URL for the implementation
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'expansion' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesExpansion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Supported expansion parameter
+    pub parameter: Option<Vec<TerminologyCapabilitiesExpansionParameter>>,
+    /// Whether the server can return nested value sets
+    pub hierarchical: Option<BooleanType>,
+    /// Extension element for the 'hierarchical' primitive field. Contains metadata and extensions.
+    pub _hierarchical: Option<Element>,
+    /// Whether the server supports paging on expansion
+    pub paging: Option<BooleanType>,
+    /// Extension element for the 'paging' primitive field. Contains metadata and extensions.
+    pub _paging: Option<Element>,
+    /// Allow request for incomplete expansions?
+    pub incomplete: Option<BooleanType>,
+    /// Extension element for the 'incomplete' primitive field. Contains metadata and extensions.
+    pub _incomplete: Option<Element>,
+    /// Documentation about text searching works
+    #[serde(rename = "textFilter")]
+    pub text_filter: Option<StringType>,
+    /// Extension element for the 'textFilter' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_textFilter")]
+    pub _text_filter: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'validateCode' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesValidatecode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether translations are validated
+    pub translations: BooleanType,
+    /// Extension element for the 'translations' primitive field. Contains metadata and extensions.
+    pub _translations: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'closure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesClosure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// If cross-system closure is supported
+    pub translation: Option<BooleanType>,
+    /// Extension element for the 'translation' primitive field. Contains metadata and extensions.
+    pub _translation: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'translation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesTranslation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether the client must identify the map
+    #[serde(rename = "needsMap")]
+    pub needs_map: BooleanType,
+    /// Extension element for the 'needsMap' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_needsMap")]
+    pub _needs_map: Option<Element>,
+}
+/// TerminologyCapabilitiesExpansion nested structure for the 'parameter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesExpansionParameter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Expansion Parameter name
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Description of support for parameter
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
 /// TerminologyCapabilitiesCodesystem nested structure for the 'version' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerminologyCapabilitiesCodesystemVersion {
@@ -143,72 +235,6 @@ pub struct TerminologyCapabilitiesCodesystemVersion {
     /// Extension element for the 'property' primitive field. Contains metadata and extensions.
     pub _property: Option<Element>,
 }
-/// TerminologyCapabilities nested structure for the 'translation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesTranslation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether the client must identify the map
-    #[serde(rename = "needsMap")]
-    pub needs_map: BooleanType,
-    /// Extension element for the 'needsMap' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_needsMap")]
-    pub _needs_map: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'expansion' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesExpansion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Supported expansion parameter
-    pub parameter: Option<Vec<TerminologyCapabilitiesExpansionParameter>>,
-    /// Whether the server can return nested value sets
-    pub hierarchical: Option<BooleanType>,
-    /// Extension element for the 'hierarchical' primitive field. Contains metadata and extensions.
-    pub _hierarchical: Option<Element>,
-    /// Whether the server supports paging on expansion
-    pub paging: Option<BooleanType>,
-    /// Extension element for the 'paging' primitive field. Contains metadata and extensions.
-    pub _paging: Option<Element>,
-    /// Allow request for incomplete expansions?
-    pub incomplete: Option<BooleanType>,
-    /// Extension element for the 'incomplete' primitive field. Contains metadata and extensions.
-    pub _incomplete: Option<Element>,
-    /// Documentation about text searching works
-    #[serde(rename = "textFilter")]
-    pub text_filter: Option<StringType>,
-    /// Extension element for the 'textFilter' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_textFilter")]
-    pub _text_filter: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'software' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesSoftware {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name the software is known by
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Version covered by this statement
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'validateCode' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesValidatecode {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether translations are validated
-    pub translations: BooleanType,
-    /// Extension element for the 'translations' primitive field. Contains metadata and extensions.
-    pub _translations: Option<Element>,
-}
 /// TerminologyCapabilities nested structure for the 'codeSystem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerminologyCapabilitiesCodesystem {
@@ -226,47 +252,6 @@ pub struct TerminologyCapabilitiesCodesystem {
     /// Extension element for the 'subsumption' primitive field. Contains metadata and extensions.
     pub _subsumption: Option<Element>,
 }
-/// TerminologyCapabilities nested structure for the 'closure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesClosure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// If cross-system closure is supported
-    pub translation: Option<BooleanType>,
-    /// Extension element for the 'translation' primitive field. Contains metadata and extensions.
-    pub _translation: Option<Element>,
-}
-/// TerminologyCapabilitiesExpansion nested structure for the 'parameter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesExpansionParameter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Expansion Parameter name
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Description of support for parameter
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'implementation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesImplementation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes this specific instance
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Base URL for the implementation
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
 /// TerminologyCapabilitiesCodesystemVersion nested structure for the 'filter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerminologyCapabilitiesCodesystemVersionFilter {
@@ -281,6 +266,21 @@ pub struct TerminologyCapabilitiesCodesystemVersionFilter {
     pub op: Vec<StringType>,
     /// Extension element for the 'op' primitive field. Contains metadata and extensions.
     pub _op: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'software' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesSoftware {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name the software is known by
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Version covered by this statement
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
 }
 
 impl Default for TerminologyCapabilities {
@@ -329,30 +329,14 @@ impl Default for TerminologyCapabilities {
     }
 }
 
-impl Default for TerminologyCapabilitiesCodesystemVersion {
+impl Default for TerminologyCapabilitiesImplementation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            is_default: Default::default(),
-            _is_default: Default::default(),
-            compositional: Default::default(),
-            _compositional: Default::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            property: Default::default(),
-            _property: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesTranslation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            needs_map: BooleanType::default(),
-            _needs_map: Default::default(),
+            description: StringType::default(),
+            _description: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -374,24 +358,62 @@ impl Default for TerminologyCapabilitiesExpansion {
     }
 }
 
-impl Default for TerminologyCapabilitiesSoftware {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: StringType::default(),
-            _name: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-        }
-    }
-}
-
 impl Default for TerminologyCapabilitiesValidatecode {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             translations: Default::default(),
             _translations: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesClosure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            translation: Default::default(),
+            _translation: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesTranslation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            needs_map: BooleanType::default(),
+            _needs_map: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesExpansionParameter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesCodesystemVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            is_default: Default::default(),
+            _is_default: Default::default(),
+            compositional: Default::default(),
+            _compositional: Default::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            property: Default::default(),
+            _property: Default::default(),
         }
     }
 }
@@ -409,40 +431,6 @@ impl Default for TerminologyCapabilitiesCodesystem {
     }
 }
 
-impl Default for TerminologyCapabilitiesClosure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            translation: Default::default(),
-            _translation: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesExpansionParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesImplementation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: StringType::default(),
-            _description: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
-        }
-    }
-}
-
 impl Default for TerminologyCapabilitiesCodesystemVersionFilter {
     fn default() -> Self {
         Self {
@@ -451,6 +439,18 @@ impl Default for TerminologyCapabilitiesCodesystemVersionFilter {
             _code: Default::default(),
             op: Default::default(),
             _op: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesSoftware {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
         }
     }
 }
@@ -476,6 +476,371 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("tcp-4", rh_foundation::Severity::Error, "If kind = capability, implementation must be absent, software must be present", "(kind != 'capability') or (implementation.exists().not() and software.exists())").with_xpath(" not(f:kind/@value='instance') or (not(exists(f:implementation)) and exists(f:software))"),
     rh_foundation::Invariant::new("tcp-5", rh_foundation::Severity::Error, "If kind = requirements, implementation and software must be absent", "(kind!='requirements') or (implementation.exists().not() and software.exists().not())").with_xpath("not(f:kind/@value='instance') or (not(exists(f:implementation)) and not(exists(f:software)))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("TerminologyCapabilities.codeSearch", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/code-search-support|4.0.1").with_description("The degree to which the server supports the code search parameter on ValueSet, if it is supported."),
+    rh_foundation::ElementBinding::new("TerminologyCapabilities.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/capability-statement-kind|4.0.1").with_description("How a capability statement is intended to be used."),
+    rh_foundation::ElementBinding::new("TerminologyCapabilities.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.contained", 0, None),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.experimental",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.contact", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.kind", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.software", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.software.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.software.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.software.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.software.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.software.version",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation.description",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.implementation.url",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.lockedDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.codeSystem", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.uri",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.isDefault",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.compositional",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.language",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.filter.op",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.version.property",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSystem.subsumption",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.expansion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.hierarchical",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.paging",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.incomplete",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.parameter.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.expansion.textFilter",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.codeSearch",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.validateCode",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.validateCode.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.validateCode.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.validateCode.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.validateCode.translations",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.translation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.translation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.translation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.translation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.translation.needsMap",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TerminologyCapabilities.closure", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.closure.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.closure.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.closure.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TerminologyCapabilities.closure.translation",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -974,7 +1339,22 @@ impl crate::validation::ValidatableResource for TerminologyCapabilities {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/TerminologyCapabilities")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::terminology_capabilities::{
+    TerminologyCapabilitiesAccessors, TerminologyCapabilitiesExistence,
+    TerminologyCapabilitiesMutators,
+};

@@ -116,6 +116,50 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "DeviceUseStatement.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/device-statement-status|4.0.1",
+        )
+        .with_description("A coded concept indicating the current status of the Device Usage.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.derivedFrom", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.recordedOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.device", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceUseStatement.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DeviceUseStatement {
     fn id(&self) -> Option<String> {
@@ -494,7 +538,21 @@ impl crate::validation::ValidatableResource for DeviceUseStatement {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DeviceUseStatement")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::device_use_statement::{
+    DeviceUseStatementAccessors, DeviceUseStatementExistence, DeviceUseStatementMutators,
+};

@@ -92,6 +92,23 @@ pub struct ClinicalImpression {
     /// Comments made about the ClinicalImpression
     pub note: Option<Vec<Annotation>>,
 }
+/// ClinicalImpression nested structure for the 'investigation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalImpressionInvestigation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name/code for the set
+    ///
+    /// Binding: example (A name/code for a set of investigations.)
+    ///
+    /// Available values:
+    /// - `271336007`: Examination / signs
+    /// - `160237006`: History/symptoms
+    pub code: CodeableConcept,
+    /// Record of a specific investigation
+    pub item: Option<Vec<Reference>>,
+}
 /// ClinicalImpression nested structure for the 'finding' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClinicalImpressionFinding {
@@ -113,23 +130,6 @@ pub struct ClinicalImpressionFinding {
     pub basis: Option<StringType>,
     /// Extension element for the 'basis' primitive field. Contains metadata and extensions.
     pub _basis: Option<Element>,
-}
-/// ClinicalImpression nested structure for the 'investigation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalImpressionInvestigation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name/code for the set
-    ///
-    /// Binding: example (A name/code for a set of investigations.)
-    ///
-    /// Available values:
-    /// - `271336007`: Examination / signs
-    /// - `160237006`: History/symptoms
-    pub code: CodeableConcept,
-    /// Record of a specific investigation
-    pub item: Option<Vec<Reference>>,
 }
 
 impl Default for ClinicalImpression {
@@ -166,6 +166,16 @@ impl Default for ClinicalImpression {
     }
 }
 
+impl Default for ClinicalImpressionInvestigation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            item: Default::default(),
+        }
+    }
+}
+
 impl Default for ClinicalImpressionFinding {
     fn default() -> Self {
         Self {
@@ -174,16 +184,6 @@ impl Default for ClinicalImpressionFinding {
             item_reference: Default::default(),
             basis: Default::default(),
             _basis: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalImpressionInvestigation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            item: Default::default(),
         }
     }
 }
@@ -203,6 +203,108 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ClinicalImpression.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/clinicalimpression-status|4.0.1",
+        )
+        .with_description("The workflow state of a clinical impression.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ClinicalImpression.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.statusReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.effective[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.assessor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.previous", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.problem", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.investigation", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.investigation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.investigation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.investigation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.investigation.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.investigation.item",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.protocol", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.summary", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.finding", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.finding.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.finding.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.finding.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.finding.itemCodeableConcept",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.finding.itemReference",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.finding.basis", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.prognosisCodeableConcept",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClinicalImpression.prognosisReference",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("ClinicalImpression.note", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -681,7 +783,21 @@ impl crate::validation::ValidatableResource for ClinicalImpression {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ClinicalImpression")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::clinical_impression::{
+    ClinicalImpressionAccessors, ClinicalImpressionExistence, ClinicalImpressionMutators,
+};

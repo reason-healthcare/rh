@@ -105,6 +105,38 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstanceAmount.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.extension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.amount[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.amountType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.amountText", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.referenceRange", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstanceAmount.referenceRange.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceAmount.referenceRange.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceAmount.referenceRange.lowLimit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstanceAmount.referenceRange.highLimit",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for SubstanceAmount {
     fn resource_type(&self) -> &'static str {
         "SubstanceAmount"
@@ -112,6 +144,10 @@ impl crate::validation::ValidatableResource for SubstanceAmount {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

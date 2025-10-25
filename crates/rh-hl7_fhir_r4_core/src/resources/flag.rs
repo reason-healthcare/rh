@@ -83,6 +83,42 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Flag.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/flag-status|4.0.1").with_description("Indicates whether this flag is active and needs to be displayed to a user, or whether it is no longer needed or was entered in error."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Flag.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Flag.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Flag.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Flag.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Flag.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.category", 0, None),
+            rh_foundation::ElementCardinality::new("Flag.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Flag.author", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Flag {
     fn id(&self) -> Option<String> {
@@ -384,7 +420,19 @@ impl crate::validation::ValidatableResource for Flag {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Flag")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::flag::{FlagAccessors, FlagExistence, FlagMutators};

@@ -97,6 +97,24 @@ pub struct AuditEvent {
     /// Data or objects used
     pub entity: Option<Vec<AuditEventEntity>>,
 }
+/// AuditEventEntity nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntityDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the property
+    #[serde(rename = "type")]
+    pub type_: StringType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Property value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Property value (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+}
 /// AuditEvent nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEventSource {
@@ -166,23 +184,21 @@ pub struct AuditEventEntity {
     /// Extension element for the 'query' primitive field. Contains metadata and extensions.
     pub _query: Option<Element>,
 }
-/// AuditEventEntity nested structure for the 'detail' field
+/// AuditEventAgent nested structure for the 'network' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntityDetail {
+pub struct AuditEventAgentNetwork {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name of the property
+    /// Identifier for the network access point of the user device
+    pub address: Option<StringType>,
+    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
+    pub _address: Option<Element>,
+    /// The type of network access point
     #[serde(rename = "type")]
-    pub type_: StringType,
+    pub type_: Option<NetworkType>,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
-    /// Property value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Property value (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
 }
 /// AuditEvent nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -273,22 +289,6 @@ pub struct AuditEventAgent {
     #[serde(rename = "purposeOfUse")]
     pub purpose_of_use: Option<Vec<CodeableConcept>>,
 }
-/// AuditEventAgent nested structure for the 'network' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventAgentNetwork {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier for the network access point of the user device
-    pub address: Option<StringType>,
-    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
-    pub _address: Option<Element>,
-    /// The type of network access point
-    #[serde(rename = "type")]
-    pub type_: Option<NetworkType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
 
 impl Default for AuditEvent {
     fn default() -> Self {
@@ -309,6 +309,18 @@ impl Default for AuditEvent {
             agent: Vec::new(),
             source: AuditEventSource::default(),
             entity: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventEntityDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            value_string: Default::default(),
+            value_base64_binary: Default::default(),
         }
     }
 }
@@ -345,14 +357,14 @@ impl Default for AuditEventEntity {
     }
 }
 
-impl Default for AuditEventEntityDetail {
+impl Default for AuditEventAgentNetwork {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            address: Default::default(),
+            _address: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
-            value_string: Default::default(),
-            value_base64_binary: Default::default(),
         }
     }
 }
@@ -380,18 +392,6 @@ impl Default for AuditEventAgent {
     }
 }
 
-impl Default for AuditEventAgentNetwork {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            address: Default::default(),
-            _address: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -408,6 +408,114 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
     rh_foundation::Invariant::new("sev-1", rh_foundation::Severity::Error, "Either a name or a query (NOT both)", "name.empty() or query.empty()").with_xpath("not(exists(f:name)) or not(exists(f:query))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.action",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/audit-event-action|4.0.1",
+            )
+            .with_description(
+                "Indicator for type of action performed during the event that generated the event.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.agent.network.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/network-type|4.0.1",
+            )
+            .with_description("The type of network access point of this agent in the audit event."),
+            rh_foundation::ElementBinding::new(
+                "AuditEvent.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/audit-event-outcome|4.0.1",
+            )
+            .with_description("Indicates whether the event succeeded or failed."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("AuditEvent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.contained", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.subtype", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.action", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.recorded", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.outcomeDesc", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.purposeOfEvent", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent", 1, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.role", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.who", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.altId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.requestor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.policy", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.media", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AuditEvent.agent.network.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.address", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.network.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.agent.purposeOfUse", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.site", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.observer", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.source.type", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.what", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.role", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.lifecycle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.securityLabel", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.query", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail", 0, None),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "AuditEvent.entity.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AuditEvent.entity.detail.value[x]", 1, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -759,7 +867,21 @@ impl crate::validation::ValidatableResource for AuditEvent {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/AuditEvent")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::audit_event::{
+    AuditEventAccessors, AuditEventExistence, AuditEventMutators,
+};

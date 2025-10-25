@@ -272,6 +272,99 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "FamilyMemberHistory.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/history-status|4.0.1",
+        )
+        .with_description("A code that identifies the status of the family history record.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.contained", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.identifier", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.instantiatesCanonical",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.dataAbsentReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.relationship", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.sex", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.born[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.age[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.estimatedAge", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.deceased[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.note", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.condition", 0, None),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.condition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.outcome",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.contributedToDeath",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "FamilyMemberHistory.condition.onset[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("FamilyMemberHistory.condition.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for FamilyMemberHistory {
     fn id(&self) -> Option<String> {
@@ -628,18 +721,18 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
+    fn has_born(&self) -> bool {
+        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
+    }
+    fn has_age(&self) -> bool {
+        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
+    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some()
             || self.deceased_age.is_some()
             || self.deceased_range.is_some()
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
-    }
-    fn has_born(&self) -> bool {
-        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
-    }
-    fn has_age(&self) -> bool {
-        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -703,7 +796,21 @@ impl crate::validation::ValidatableResource for FamilyMemberHistory {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::family_member_history::{
+    FamilyMemberHistoryAccessors, FamilyMemberHistoryExistence, FamilyMemberHistoryMutators,
+};

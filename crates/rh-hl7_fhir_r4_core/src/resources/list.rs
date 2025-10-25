@@ -158,6 +158,65 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "List.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/list-mode|4.0.1",
+            )
+            .with_description("The processing mode that applies to this list."),
+            rh_foundation::ElementBinding::new(
+                "List.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/list-status|4.0.1",
+            )
+            .with_description("The current state of the list."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("List.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.contained", 0, None),
+            rh_foundation::ElementCardinality::new("List.extension", 0, None),
+            rh_foundation::ElementCardinality::new("List.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("List.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("List.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("List.mode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("List.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.orderedBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.note", 0, None),
+            rh_foundation::ElementCardinality::new("List.entry", 0, None),
+            rh_foundation::ElementCardinality::new("List.entry.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.entry.extension", 0, None),
+            rh_foundation::ElementCardinality::new("List.entry.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("List.entry.flag", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.entry.deleted", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.entry.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("List.entry.item", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("List.emptyReason", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for List {
     fn id(&self) -> Option<String> {
@@ -519,7 +578,19 @@ impl crate::validation::ValidatableResource for List {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/List")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::list::{ListAccessors, ListExistence, ListMutators};

@@ -37,6 +37,7 @@ pub mod datatypes;
 pub mod extensions;
 pub mod macros;
 pub mod metadata;
+pub mod prelude;
 pub mod primitives;
 pub mod profiles;
 pub mod resources;

@@ -177,6 +177,36 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Dosage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.sequence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.additionalInstruction", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.patientInstruction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.timing", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.asNeeded[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.site", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.route", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.dose[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.rate[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerAdministration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerLifetime", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Dosage {
     fn resource_type(&self) -> &'static str {
         "Dosage"
@@ -184,6 +214,10 @@ impl crate::validation::ValidatableResource for Dosage {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

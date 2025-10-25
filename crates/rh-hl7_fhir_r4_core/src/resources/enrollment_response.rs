@@ -86,6 +86,57 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "EnrollmentResponse.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/remittance-outcome|4.0.1",
+            )
+            .with_description("The outcome of the processing."),
+            rh_foundation::ElementBinding::new(
+                "EnrollmentResponse.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.request", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.disposition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EnrollmentResponse.organization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EnrollmentResponse.requestProvider",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for EnrollmentResponse {
     fn id(&self) -> Option<String> {
@@ -382,7 +433,21 @@ impl crate::validation::ValidatableResource for EnrollmentResponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/EnrollmentResponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::enrollment_response::{
+    EnrollmentResponseAccessors, EnrollmentResponseExistence, EnrollmentResponseMutators,
+};

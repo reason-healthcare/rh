@@ -80,22 +80,6 @@ pub struct PaymentReconciliation {
     #[serde(rename = "processNote")]
     pub process_note: Option<Vec<PaymentReconciliationProcessnote>>,
 }
-/// PaymentReconciliation nested structure for the 'processNote' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaymentReconciliationProcessnote {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// display | print | printoper
-    #[serde(rename = "type")]
-    pub type_: Option<NoteType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Note explanatory text
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
 /// PaymentReconciliation nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentReconciliationDetail {
@@ -130,6 +114,22 @@ pub struct PaymentReconciliationDetail {
     /// Amount allocated to this payable
     pub amount: Option<Money>,
 }
+/// PaymentReconciliation nested structure for the 'processNote' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentReconciliationProcessnote {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// display | print | printoper
+    #[serde(rename = "type")]
+    pub type_: Option<NoteType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Note explanatory text
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+}
 
 impl Default for PaymentReconciliation {
     fn default() -> Self {
@@ -159,18 +159,6 @@ impl Default for PaymentReconciliation {
     }
 }
 
-impl Default for PaymentReconciliationProcessnote {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-        }
-    }
-}
-
 impl Default for PaymentReconciliationDetail {
     fn default() -> Self {
         Self {
@@ -190,6 +178,18 @@ impl Default for PaymentReconciliationDetail {
     }
 }
 
+impl Default for PaymentReconciliationProcessnote {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -205,6 +205,164 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "PaymentReconciliation.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/remittance-outcome|4.0.1",
+            )
+            .with_description("The outcome of the processing."),
+            rh_foundation::ElementBinding::new(
+                "PaymentReconciliation.processNote.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/note-type|4.0.1",
+            )
+            .with_description("The presentation types of notes."),
+            rh_foundation::ElementBinding::new(
+                "PaymentReconciliation.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.created", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.paymentIssuer",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.request", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.requestor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.disposition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.paymentDate", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.paymentAmount",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.paymentIdentifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.detail", 0, None),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.predecessor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.detail.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.request",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.submitter",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.response",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.detail.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.responsible",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.payee",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.detail.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.formCode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PaymentReconciliation.processNote", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.processNote.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.processNote.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.processNote.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.processNote.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PaymentReconciliation.processNote.text",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -599,7 +757,21 @@ impl crate::validation::ValidatableResource for PaymentReconciliation {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/PaymentReconciliation")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::payment_reconciliation::{
+    PaymentReconciliationAccessors, PaymentReconciliationExistence, PaymentReconciliationMutators,
+};

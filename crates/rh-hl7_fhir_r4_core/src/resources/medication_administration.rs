@@ -224,6 +224,164 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "MedicationAdministration.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/medication-admin-status|4.0.1",
+        )
+        .with_description(
+            "A set of codes indicating the current status of a MedicationAdministration.",
+        )]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicationAdministration.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.identifier", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.instantiates",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.statusReason",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.medication[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.context", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.supportingInformation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.effective[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.performer", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.performer.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.performer.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.performer.function",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.performer.actor",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.reasonReference",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.request", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.device", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.note", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationAdministration.dosage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.text",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.site",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.route",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.method",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.dose",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.dosage.rate[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicationAdministration.eventHistory",
+                0,
+                None,
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicationAdministration {
     fn id(&self) -> Option<String> {
@@ -700,7 +858,22 @@ impl crate::validation::ValidatableResource for MedicationAdministration {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicationAdministration")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication_administration::{
+    MedicationAdministrationAccessors, MedicationAdministrationExistence,
+    MedicationAdministrationMutators,
+};

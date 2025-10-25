@@ -95,6 +95,11 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     let validation_path = src_dir.join("validation.rs");
     fs::write(&validation_path, validation_content)?;
 
+    // Generate prelude.rs module with commonly used trait re-exports
+    let prelude_content = generate_prelude_module();
+    let prelude_path = src_dir.join("prelude.rs");
+    fs::write(&prelude_path, prelude_content)?;
+
     // Generate mod.rs files for each module
     generate_module_files(
         &resource_dir,
@@ -221,13 +226,13 @@ pub mod profiles;
 pub mod traits;
 pub mod bindings;
 pub mod validation;
+pub mod prelude;
 
 pub use serde::{Deserialize, Serialize};
 "#;
 
     Ok(lib_content.to_string())
 }
-
 /// Generate mod.rs files for each module directory
 pub fn generate_module_files(
     resource_dir: &Path,
@@ -464,16 +469,60 @@ fn generate_readme_md(
     content.push_str("```\n\n");
 
     content.push_str("### Creating Resources Programmatically\n\n");
+    content.push_str("This crate provides two idiomatic ways to work with FHIR resources using builder traits:\n\n");
+
+    content.push_str("#### Option 1: Resource Module with Re-exported Traits (Recommended)\n\n");
+    content.push_str("Each resource module re-exports its associated traits for convenience:\n\n");
+    content.push_str("```rust\n");
+    content.push_str("// Import resource with its traits - all in one place!\n");
+    content.push_str(&format!(
+        "use {crate_name}::resources::patient::{{Patient, PatientMutators}};\n"
+    ));
+    content.push_str(&format!(
+        "use {crate_name}::prelude::*;  // Gets base traits (ResourceMutators, etc.)\n"
+    ));
+    content.push_str(&format!(
+        "use {crate_name}::datatypes::human_name::HumanName;\n\n"
+    ));
+    content.push_str("// Build a patient using the builder pattern\n");
+    content.push_str("let patient = <Patient as PatientMutators>::new()\n");
+    content.push_str("    .set_id(\"patient-123\".to_string())\n");
+    content.push_str("    .set_active(true)\n");
+    content.push_str("    .add_name(HumanName {\n");
+    content.push_str("        family: Some(\"Doe\".to_string()),\n");
+    content.push_str("        given: vec![\"John\".to_string()],\n");
+    content.push_str("        ..Default::default()\n");
+    content.push_str("    })\n");
+    content.push_str("    .set_gender(Some(AdministrativeGender::Male))\n");
+    content.push_str("    .set_birth_date(\"1990-01-15\".to_string());\n");
+    content.push_str("```\n\n");
+
+    content.push_str("#### Option 2: Prelude Module\n\n");
+    content.push_str("For common base traits, use the prelude module:\n\n");
+    content.push_str("```rust\n");
+    content.push_str(&format!(
+        "use {crate_name}::prelude::*;  // ValidatableResource, ResourceMutators, etc.\n"
+    ));
+    content.push_str(&format!(
+        "use {crate_name}::resources::patient::{{Patient, PatientMutators}};\n\n"
+    ));
+    content.push_str("let patient = <Patient as PatientMutators>::new()\n");
+    content.push_str("    .set_id(\"example\".to_string());\n");
+    content.push_str("```\n\n");
+    content.push_str("The prelude includes:\n");
+    content.push_str("- `ValidatableResource` - Access invariants and validation rules\n");
+    content.push_str("- `ResourceMutators` - Builder methods for all resources\n");
+    content.push_str("- `DomainResourceMutators` - Builder methods for domain resources\n\n");
+
+    content.push_str("#### Direct Struct Construction\n\n");
+    content.push_str("You can also construct resources directly:\n\n");
     content.push_str("```rust\n");
     content.push_str(&format!("use {crate_name}::resources::patient::Patient;\n"));
     content.push_str(&format!(
         "use {crate_name}::datatypes::human_name::HumanName;\n"
     ));
     content.push_str(&format!(
-        "use {crate_name}::bindings::administrative_gender::AdministrativeGender;\n"
-    ));
-    content.push_str(&format!(
-        "use {crate_name}::primitives::date::DateType;\n\n"
+        "use {crate_name}::bindings::administrative_gender::AdministrativeGender;\n\n"
     ));
     content.push_str("let patient = Patient {\n");
     content.push_str("    id: Some(\"patient-123\".to_string()),\n");
@@ -530,11 +579,16 @@ fn generate_readme_md(
     content.push_str("## Structure\n\n");
     content.push_str("This crate organizes FHIR types into logical modules:\n\n");
     content.push_str("- **resources/** - All FHIR resources (Patient, Observation, etc.)\n");
+    content.push_str("- **profiles/** - FHIR profiles (Vitalsigns, BodyHeight, etc.)\n");
     content.push_str(
         "- **datatypes/** - Complex and primitive datatypes (HumanName, Address, etc.)\n",
     );
     content.push_str("- **bindings/** - ValueSet enumerations (AdministrativeGender, etc.)\n");
     content.push_str("- **primitives/** - Base primitive types (DateType, DateTimeType, etc.)\n");
+    content.push_str("- **traits/** - Mutator, accessor, and existence traits for all types\n");
+    content.push_str(
+        "- **prelude.rs** - Commonly used traits (ValidatableResource, ResourceMutators, etc.)\n",
+    );
     content.push_str("- **metadata.rs** - Type metadata and path resolution functions\n\n");
 
     content.push_str("## Regenerating This Crate\n\n");
@@ -557,6 +611,40 @@ fn generate_readme_md(
     ));
 
     content
+}
+
+/// Generate a prelude module with commonly used trait re-exports
+fn generate_prelude_module() -> String {
+    r#"//! Prelude module - commonly used traits for convenience
+//!
+//! This module re-exports the most commonly used traits for working with
+//! FHIR resources. Import this module to avoid having to import individual
+//! traits from the `traits` module.
+//!
+//! # Example
+//!
+//! ```ignore
+//! use hl7_fhir_r4_core::prelude::*;
+//! use hl7_fhir_r4_core::resources::patient::Patient;
+//!
+//! // All mutator traits are now in scope
+//! let patient = <Patient as PatientMutators>::new()
+//!     .set_id("example".to_string())
+//!     .set_active(true);
+//! ```
+
+// Resource mutator traits - for building resources with method chaining
+pub use crate::traits::resource::ResourceMutators;
+pub use crate::traits::domain_resource::DomainResourceMutators;
+
+// Note: Individual resource mutator traits (PatientMutators, ObservationMutators, etc.)
+// are re-exported from their respective resource modules for convenience.
+// For example: use hl7_fhir_r4_core::resources::patient::PatientMutators;
+
+// Validation trait
+pub use crate::validation::ValidatableResource;
+"#
+    .to_string()
 }
 
 /// Parse package.json to extract metadata for crate generation

@@ -57,6 +57,23 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DomainResource.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DomainResource.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DomainResource.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DomainResource.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DomainResource.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DomainResource.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DomainResource.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DomainResource.modifierExtension", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DomainResource {
     fn id(&self) -> Option<String> {
@@ -210,4 +227,14 @@ impl crate::validation::ValidatableResource for DomainResource {
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
     }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::domain_resource::{
+    DomainResourceAccessors, DomainResourceExistence, DomainResourceMutators,
+};

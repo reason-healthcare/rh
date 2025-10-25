@@ -85,6 +85,42 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Linkage.item.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/linkage-type|4.0.1").with_description("Used to distinguish different roles a resource can play within a set of linked resources."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Linkage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Linkage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Linkage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Linkage.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.item", 1, None),
+            rh_foundation::ElementCardinality::new("Linkage.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Linkage.item.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Linkage.item.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Linkage.item.resource", 1, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Linkage {
     fn id(&self) -> Option<String> {
@@ -326,7 +362,19 @@ impl crate::validation::ValidatableResource for Linkage {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Linkage")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::linkage::{LinkageAccessors, LinkageExistence, LinkageMutators};

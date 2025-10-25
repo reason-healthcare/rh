@@ -208,6 +208,97 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("AllergyIntolerance.category", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/allergy-intolerance-category|4.0.1").with_description("Category of an identified substance associated with allergies or intolerances."),
+    rh_foundation::ElementBinding::new("AllergyIntolerance.clinicalStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/allergyintolerance-clinical|4.0.1").with_description("The clinical status of the allergy or intolerance."),
+    rh_foundation::ElementBinding::new("AllergyIntolerance.criticality", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality|4.0.1").with_description("Estimate of the potential clinical harm, or seriousness, of a reaction to an identified substance."),
+    rh_foundation::ElementBinding::new("AllergyIntolerance.reaction.severity", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/reaction-event-severity|4.0.1").with_description("Clinical assessment of the severity of a reaction event as a whole, potentially considering multiple different manifestations."),
+    rh_foundation::ElementBinding::new("AllergyIntolerance.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/allergy-intolerance-type|4.0.1").with_description("Identification of the underlying physiological mechanism for a Reaction Risk."),
+    rh_foundation::ElementBinding::new("AllergyIntolerance.verificationStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/allergyintolerance-verification|4.0.1").with_description("Assertion about certainty associated with a propensity, or potential risk, of a reaction to the identified substance."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.contained", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.clinicalStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.verificationStatus",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.category", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.criticality", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.onset[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.recordedDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.recorder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.asserter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.lastOccurrence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.note", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.reaction", 0, None),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.reaction.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.substance",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.manifestation",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.reaction.onset", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.severity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "AllergyIntolerance.reaction.exposureRoute",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("AllergyIntolerance.reaction.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for AllergyIntolerance {
     fn id(&self) -> Option<String> {
@@ -603,7 +694,21 @@ impl crate::validation::ValidatableResource for AllergyIntolerance {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/AllergyIntolerance")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::allergy_intolerance::{
+    AllergyIntoleranceAccessors, AllergyIntoleranceExistence, AllergyIntoleranceMutators,
+};

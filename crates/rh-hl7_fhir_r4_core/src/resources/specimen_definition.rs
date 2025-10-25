@@ -68,16 +68,53 @@ pub struct SpecimenDefinition {
     #[serde(rename = "typeTested")]
     pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
 }
+/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedContainerAdditive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additive associated with container (CodeableConcept)
+    #[serde(rename = "additiveCodeableConcept")]
+    pub additive_codeable_concept: CodeableConcept,
+    /// Additive associated with container (Reference)
+    #[serde(rename = "additiveReference")]
+    pub additive_reference: Reference,
+}
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Temperature qualifier
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 /// SpecimenDefinition nested structure for the 'typeTested' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetested {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The specimen's container
-    pub container: Option<SpecimenDefinitionTypetestedContainer>,
     /// Specimen handling before testing
     pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
+    /// The specimen's container
+    pub container: Option<SpecimenDefinitionTypetestedContainer>,
     /// Primary or secondary specimen
     #[serde(rename = "isDerived")]
     pub is_derived: Option<BooleanType>,
@@ -109,43 +146,6 @@ pub struct SpecimenDefinitionTypetested {
     /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
     #[serde(rename = "rejectionCriterion")]
     pub rejection_criterion: Option<Vec<CodeableConcept>>,
-}
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Temperature qualifier
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedContainerAdditive {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additive associated with container (CodeableConcept)
-    #[serde(rename = "additiveCodeableConcept")]
-    pub additive_codeable_concept: CodeableConcept,
-    /// Additive associated with container (Reference)
-    #[serde(rename = "additiveReference")]
-    pub additive_reference: Reference,
 }
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,21 +208,12 @@ impl Default for SpecimenDefinition {
     }
 }
 
-impl Default for SpecimenDefinitionTypetested {
+impl Default for SpecimenDefinitionTypetestedContainerAdditive {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            container: Default::default(),
-            handling: Default::default(),
-            is_derived: Default::default(),
-            _is_derived: Default::default(),
-            type_: Default::default(),
-            preference: Default::default(),
-            _preference: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
-            retention_time: Default::default(),
-            rejection_criterion: Default::default(),
+            additive_codeable_concept: Default::default(),
+            additive_reference: Default::default(),
         }
     }
 }
@@ -240,12 +231,21 @@ impl Default for SpecimenDefinitionTypetestedHandling {
     }
 }
 
-impl Default for SpecimenDefinitionTypetestedContainerAdditive {
+impl Default for SpecimenDefinitionTypetested {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            additive_codeable_concept: Default::default(),
-            additive_reference: Default::default(),
+            handling: Default::default(),
+            container: Default::default(),
+            is_derived: Default::default(),
+            _is_derived: Default::default(),
+            type_: Default::default(),
+            preference: Default::default(),
+            _preference: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
+            retention_time: Default::default(),
+            rejection_criterion: Default::default(),
         }
     }
 }
@@ -283,6 +283,208 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "SpecimenDefinition.typeTested.preference",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/specimen-contained-preference|4.0.1",
+        )
+        .with_description("Degree of preference of a type of conditioned specimen.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.typeCollected", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.patientPreparation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.timeAspect", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.collection", 0, None),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.typeTested", 0, None),
+            rh_foundation::ElementCardinality::new("SpecimenDefinition.typeTested.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.isDerived",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.preference",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.material",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.cap",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.capacity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.minimumVolume[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.additive",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.additive.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.additive.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.additive.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.additive.additive[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.container.preparation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.requirement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.retentionTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.rejectionCriterion",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.temperatureQualifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.temperatureRange",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.maxDuration",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SpecimenDefinition.typeTested.handling.instruction",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -574,7 +776,21 @@ impl crate::validation::ValidatableResource for SpecimenDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SpecimenDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::specimen_definition::{
+    SpecimenDefinitionAccessors, SpecimenDefinitionExistence, SpecimenDefinitionMutators,
+};

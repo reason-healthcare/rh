@@ -39,6 +39,36 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Distance.comparator",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/quantity-comparator|4.0.1",
+        )
+        .with_description("How the Quantity should be understood and represented.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Distance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Distance.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Distance.value", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Distance.comparator", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Distance.unit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Distance.system", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Distance.code", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Distance {
     fn resource_type(&self) -> &'static str {
         "Distance"
@@ -46,6 +76,14 @@ impl crate::validation::ValidatableResource for Distance {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

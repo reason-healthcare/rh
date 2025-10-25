@@ -30,8 +30,8 @@ rh-foundation = { path = "../rh-foundation" }
 rh-fhirpath = { path = "../rh-fhirpath" }  # Phase 3: FHIRPath invariant validation
 hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }  # Phase 3: Generated FHIR types
 
-# Additional dependencies for future phases
-# rayon = "1.10"  # Phase 4: Parallel validation
+# Additional dependencies
+rayon = "1.10"  # Phase 5: Parallel batch validation
 
 [dev-dependencies]
 tempfile = "3.0"

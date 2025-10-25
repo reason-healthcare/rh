@@ -69,6 +69,28 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Basic.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Basic.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Basic.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Basic.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Basic.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Basic.author", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Basic {
     fn id(&self) -> Option<String> {
@@ -332,7 +354,15 @@ impl crate::validation::ValidatableResource for Basic {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Basic")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::basic::{BasicAccessors, BasicExistence, BasicMutators};

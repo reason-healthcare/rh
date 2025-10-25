@@ -52,25 +52,6 @@ pub struct Medication {
     /// Details about packaged medications
     pub batch: Option<MedicationBatch>,
 }
-/// Medication nested structure for the 'batch' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationBatch {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier assigned to batch
-    #[serde(rename = "lotNumber")]
-    pub lot_number: Option<StringType>,
-    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lotNumber")]
-    pub _lot_number: Option<Element>,
-    /// When batch will expire
-    #[serde(rename = "expirationDate")]
-    pub expiration_date: Option<DateTimeType>,
-    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_expirationDate")]
-    pub _expiration_date: Option<Element>,
-}
 /// Medication nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationIngredient {
@@ -92,6 +73,25 @@ pub struct MedicationIngredient {
     /// Quantity of ingredient present
     pub strength: Option<Ratio>,
 }
+/// Medication nested structure for the 'batch' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationBatch {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier assigned to batch
+    #[serde(rename = "lotNumber")]
+    pub lot_number: Option<StringType>,
+    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lotNumber")]
+    pub _lot_number: Option<Element>,
+    /// When batch will expire
+    #[serde(rename = "expirationDate")]
+    pub expiration_date: Option<DateTimeType>,
+    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_expirationDate")]
+    pub _expiration_date: Option<Element>,
+}
 
 impl Default for Medication {
     fn default() -> Self {
@@ -110,18 +110,6 @@ impl Default for Medication {
     }
 }
 
-impl Default for MedicationBatch {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            lot_number: Default::default(),
-            _lot_number: Default::default(),
-            expiration_date: Default::default(),
-            _expiration_date: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicationIngredient {
     fn default() -> Self {
         Self {
@@ -131,6 +119,18 @@ impl Default for MedicationIngredient {
             is_active: Default::default(),
             _is_active: Default::default(),
             strength: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationBatch {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            lot_number: Default::default(),
+            _lot_number: Default::default(),
+            expiration_date: Default::default(),
+            _expiration_date: Default::default(),
         }
     }
 }
@@ -150,6 +150,60 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Medication.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/medication-status|4.0.1",
+        )
+        .with_description("A coded concept defining if the medication is in active use.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Medication.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.manufacturer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.form", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.amount", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.ingredient", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.ingredient.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.ingredient.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Medication.ingredient.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Medication.ingredient.item[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.ingredient.isActive", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.ingredient.strength", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.batch", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.batch.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.batch.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.batch.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Medication.batch.lotNumber", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Medication.batch.expirationDate", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -453,7 +507,19 @@ impl crate::validation::ValidatableResource for Medication {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Medication")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication::{MedicationAccessors, MedicationExistence, MedicationMutators};

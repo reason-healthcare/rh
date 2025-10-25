@@ -85,6 +85,46 @@ pub struct MedicinalProduct {
     #[serde(rename = "specialDesignation")]
     pub special_designation: Option<Vec<MedicinalProductSpecialdesignation>>,
 }
+/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductManufacturingbusinessoperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of manufacturing operation
+    #[serde(rename = "operationType")]
+    pub operation_type: Option<CodeableConcept>,
+    /// Regulatory authorization reference number
+    #[serde(rename = "authorisationReferenceNumber")]
+    pub authorisation_reference_number: Option<Identifier>,
+    /// Regulatory authorization date
+    #[serde(rename = "effectiveDate")]
+    pub effective_date: Option<DateTimeType>,
+    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_effectiveDate")]
+    pub _effective_date: Option<Element>,
+    /// To indicate if this proces is commercially confidential
+    #[serde(rename = "confidentialityIndicator")]
+    pub confidentiality_indicator: Option<CodeableConcept>,
+    /// The manufacturer or establishment associated with the process
+    pub manufacturer: Option<Vec<Reference>>,
+    /// A regulator which oversees the operation
+    pub regulator: Option<Reference>,
+}
+/// MedicinalProductName nested structure for the 'namePart' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameNamepart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Idenifying type for this part of the name (e.g. strength part)
+    #[serde(rename = "type")]
+    pub type_: Coding,
+}
 /// MedicinalProduct nested structure for the 'specialDesignation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductSpecialdesignation {
@@ -114,31 +154,18 @@ pub struct MedicinalProductSpecialdesignation {
     /// Animal species for which this applies
     pub species: Option<CodeableConcept>,
 }
-/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
+/// MedicinalProductName nested structure for the 'countryLanguage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductManufacturingbusinessoperation {
+pub struct MedicinalProductNameCountrylanguage {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of manufacturing operation
-    #[serde(rename = "operationType")]
-    pub operation_type: Option<CodeableConcept>,
-    /// Regulatory authorization reference number
-    #[serde(rename = "authorisationReferenceNumber")]
-    pub authorisation_reference_number: Option<Identifier>,
-    /// Regulatory authorization date
-    #[serde(rename = "effectiveDate")]
-    pub effective_date: Option<DateTimeType>,
-    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_effectiveDate")]
-    pub _effective_date: Option<Element>,
-    /// To indicate if this proces is commercially confidential
-    #[serde(rename = "confidentialityIndicator")]
-    pub confidentiality_indicator: Option<CodeableConcept>,
-    /// The manufacturer or establishment associated with the process
-    pub manufacturer: Option<Vec<Reference>>,
-    /// A regulator which oversees the operation
-    pub regulator: Option<Reference>,
+    /// Country code for where this name applies
+    pub country: CodeableConcept,
+    /// Jurisdiction code for where this name applies
+    pub jurisdiction: Option<CodeableConcept>,
+    /// Language code for this name
+    pub language: CodeableConcept,
 }
 /// MedicinalProduct nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -158,33 +185,6 @@ pub struct MedicinalProductName {
     /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
     #[serde(rename = "_productName")]
     pub _product_name: Option<Element>,
-}
-/// MedicinalProductName nested structure for the 'countryLanguage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameCountrylanguage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Country code for where this name applies
-    pub country: CodeableConcept,
-    /// Jurisdiction code for where this name applies
-    pub jurisdiction: Option<CodeableConcept>,
-    /// Language code for this name
-    pub language: CodeableConcept,
-}
-/// MedicinalProductName nested structure for the 'namePart' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameNamepart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Idenifying type for this part of the name (e.g. strength part)
-    #[serde(rename = "type")]
-    pub type_: Coding,
 }
 
 impl Default for MedicinalProduct {
@@ -216,6 +216,32 @@ impl Default for MedicinalProduct {
     }
 }
 
+impl Default for MedicinalProductManufacturingbusinessoperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation_type: Default::default(),
+            authorisation_reference_number: Default::default(),
+            effective_date: Default::default(),
+            _effective_date: Default::default(),
+            confidentiality_indicator: Default::default(),
+            manufacturer: Default::default(),
+            regulator: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameNamepart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            _part: Default::default(),
+            type_: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductSpecialdesignation {
     fn default() -> Self {
         Self {
@@ -233,17 +259,13 @@ impl Default for MedicinalProductSpecialdesignation {
     }
 }
 
-impl Default for MedicinalProductManufacturingbusinessoperation {
+impl Default for MedicinalProductNameCountrylanguage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            operation_type: Default::default(),
-            authorisation_reference_number: Default::default(),
-            effective_date: Default::default(),
-            _effective_date: Default::default(),
-            confidentiality_indicator: Default::default(),
-            manufacturer: Default::default(),
-            regulator: Default::default(),
+            country: Default::default(),
+            jurisdiction: Default::default(),
+            language: Default::default(),
         }
     }
 }
@@ -256,28 +278,6 @@ impl Default for MedicinalProductName {
             name_part: Default::default(),
             product_name: StringType::default(),
             _product_name: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductNameCountrylanguage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            country: Default::default(),
-            jurisdiction: Default::default(),
-            language: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductNameNamepart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
         }
     }
 }
@@ -297,6 +297,235 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProduct.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.domain", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.combinedPharmaceuticalDoseForm",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.legalStatusOfSupply",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.additionalMonitoringIndicator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.specialMeasures", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.paediatricUseIndicator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.productClassification",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.marketingStatus", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.pharmaceuticalProduct",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.packagedMedicinalProduct",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.attachedDocument", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.masterFile", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.contact", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.clinicalTrial", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name", 1, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name.productName", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name.namePart", 0, None),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.name.namePart.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.namePart.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.namePart.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.namePart.part",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.namePart.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.country",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.jurisdiction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.name.countryLanguage.language",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.crossReference", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.operationType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.authorisationReferenceNumber",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.effectiveDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.confidentialityIndicator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.manufacturer",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.manufacturingBusinessOperation.regulator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicinalProduct.specialDesignation", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.intendedUse",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.indication[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.status",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.date",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProduct.specialDesignation.species",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -848,7 +1077,17 @@ impl crate::validation::ValidatableResource for MedicinalProduct {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProduct")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product::{
+    MedicinalProductAccessors, MedicinalProductExistence, MedicinalProductMutators,
+};

@@ -94,6 +94,23 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Meta.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Meta.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Meta.versionId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Meta.lastUpdated", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Meta.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Meta.profile", 0, None),
+            rh_foundation::ElementCardinality::new("Meta.security", 0, None),
+            rh_foundation::ElementCardinality::new("Meta.tag", 0, None),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Meta {
     fn resource_type(&self) -> &'static str {
         "Meta"
@@ -101,6 +118,10 @@ impl crate::validation::ValidatableResource for Meta {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

@@ -41,6 +41,244 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ValueSet.compose.include.filter.op",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/filter-operator|4.0.1",
+            )
+            .with_description(
+                "The kind of operation to perform as a part of a property based filter.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "ValueSet.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ValueSet", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.version", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.experimental", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.publisher", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.immutable", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.lockedDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.inactive", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include", 1, None),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.system", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.concept", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.display",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.use",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.concept.designation.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.filter", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.property",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.op",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.compose.include.filter.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.include.valueSet", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.compose.exclude", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.timestamp", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.total", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.offset", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.parameter", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.parameter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.parameter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.parameter.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.parameter.value[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.contains", 0, None),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.contains.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.system",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.abstract",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.inactive",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.version",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.contains.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.display",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ValueSet.expansion.contains.designation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ValueSet.expansion.contains.contains", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Shareablevalueset {
     fn id(&self) -> Option<String> {
@@ -113,7 +351,21 @@ impl crate::validation::ValidatableResource for Shareablevalueset {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/shareablevalueset")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::shareablevalueset::{
+    ShareablevaluesetAccessors, ShareablevaluesetExistence, ShareablevaluesetMutators,
+};

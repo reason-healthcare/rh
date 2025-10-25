@@ -34,6 +34,63 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "GuidanceResponse.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/guidance-response-status|4.0.1",
+        )
+        .with_description("The status of a guidance response.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("GuidanceResponse", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.extension", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "GuidanceResponse.requestIdentifier",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.identifier", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.module[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.module[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "GuidanceResponse.occurrenceDateTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.note", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.evaluationMessage", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.outputParameters", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.result", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.dataRequirement", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Cdshooksguidanceresponse {
     fn id(&self) -> Option<String> {
@@ -108,7 +165,22 @@ impl crate::validation::ValidatableResource for Cdshooksguidanceresponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/cdshooksguidanceresponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::cdshooksguidanceresponse::{
+    CdshooksguidanceresponseAccessors, CdshooksguidanceresponseExistence,
+    CdshooksguidanceresponseMutators,
+};

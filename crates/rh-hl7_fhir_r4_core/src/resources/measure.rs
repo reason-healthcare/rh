@@ -200,6 +200,21 @@ pub struct Measure {
     #[serde(rename = "supplementalData")]
     pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
 }
+/// MeasureGroupStratifier nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifierComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Meaning of the stratifier component
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier component
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Component of how the measure should be stratified
+    pub criteria: Expression,
+}
 /// MeasureGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroupStratifier {
@@ -236,6 +251,23 @@ pub struct MeasureSupplementaldata {
     /// Expression describing additional data to be reported
     pub criteria: Expression,
 }
+/// Measure nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
+    /// Stratifier criteria for the measure
+    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Meaning of the group
+    pub code: Option<CodeableConcept>,
+    /// Summary description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// MeasureGroup nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroupPopulation {
@@ -254,38 +286,6 @@ pub struct MeasureGroupPopulation {
     pub _description: Option<Element>,
     /// The criteria that defines this population
     pub criteria: Expression,
-}
-/// MeasureGroupStratifier nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifierComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Meaning of the stratifier component
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier component
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Component of how the measure should be stratified
-    pub criteria: Expression,
-}
-/// Measure nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
-    /// Stratifier criteria for the measure
-    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
-    /// Meaning of the group
-    pub code: Option<CodeableConcept>,
-    /// Summary description
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
 }
 
 impl Default for Measure {
@@ -361,6 +361,18 @@ impl Default for Measure {
     }
 }
 
+impl Default for MeasureGroupStratifierComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureGroupStratifier {
     fn default() -> Self {
         Self {
@@ -386,30 +398,6 @@ impl Default for MeasureSupplementaldata {
     }
 }
 
-impl Default for MeasureGroupPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureGroupStratifierComponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureGroup {
     fn default() -> Self {
         Self {
@@ -419,6 +407,18 @@ impl Default for MeasureGroup {
             code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
         }
     }
 }
@@ -440,6 +440,161 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("mea-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')").with_xpath("not(exists(f:name/@value)) or matches(f:name/@value, '[A-Z]([A-Za-z0-9_]){0,254}')"),
     rh_foundation::Invariant::new("mea-1", rh_foundation::Severity::Error, "Stratifier SHALL be either a single criteria or a set of criteria components", "group.stratifier.all((code | description | criteria).exists() xor component.exists())").with_xpath("exists(f:group/stratifier/code) or exists(f:group/stratifier/component)"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Measure.improvementNotation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-improvement-notation|4.0.1").with_description("Observation values that indicate what change in a measurement value or score is indicative of an improvement in the measured item or scored issue."),
+    rh_foundation::ElementBinding::new("Measure.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Measure.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.topic", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.author", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.editor", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.library", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.disclaimer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.scoring", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.compositeScoring", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.type", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.riskAdjustment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.rateAggregation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.rationale", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.clinicalRecommendationStatement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.improvementNotation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.definition", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.guidance", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.population", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.population.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.population.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.population.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.population.criteria", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.criteria", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.component", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.criteria",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.supplementalData.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.usage", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.supplementalData.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.criteria", 1, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -1176,7 +1331,19 @@ impl crate::validation::ValidatableResource for Measure {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Measure")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::measure::{MeasureAccessors, MeasureExistence, MeasureMutators};

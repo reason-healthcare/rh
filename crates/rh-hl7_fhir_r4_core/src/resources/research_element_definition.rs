@@ -365,6 +365,215 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.characteristic.participantEffectiveGroupMeasure", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/group-measure|4.0.1").with_description("Possible group measure aggregates (E.g. Mean, Median)."),
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.characteristic.studyEffectiveGroupMeasure", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/group-measure|4.0.1").with_description("Possible group measure aggregates (E.g. Mean, Median)."),
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.characteristic.unitOfMeasure", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/ucum-units|4.0.1").with_description("Unified Code for Units of Measure (UCUM)."),
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/research-element-type|4.0.1").with_description("The possible types of research elements (E.g. Population, Exposure, Outcome)."),
+    rh_foundation::ElementBinding::new("ResearchElementDefinition.variableType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/variable-type|4.0.1").with_description("The possible types of variables for exposures or outcomes (E.g. Dichotomous, Continuous, Descriptive)."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.shortTitle",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.subtitle",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.experimental",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.subject[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.publisher",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.comment", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.jurisdiction",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.copyright",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.approvalDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.lastReviewDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.effectivePeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.topic", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.author", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.editor", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.endorser", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.relatedArtifact",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.library", 0, None),
+            rh_foundation::ElementCardinality::new("ResearchElementDefinition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.variableType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.definition[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.usageContext",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.exclude",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.unitOfMeasure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.studyEffectiveDescription",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.studyEffective[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.studyEffectiveTimeFromStart",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.studyEffectiveGroupMeasure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.participantEffectiveDescription",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.participantEffective[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.participantEffectiveTimeFromStart",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ResearchElementDefinition.characteristic.participantEffectiveGroupMeasure",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ResearchElementDefinition {
     fn id(&self) -> Option<String> {
@@ -1002,7 +1211,22 @@ impl crate::validation::ValidatableResource for ResearchElementDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ResearchElementDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::research_element_definition::{
+    ResearchElementDefinitionAccessors, ResearchElementDefinitionExistence,
+    ResearchElementDefinitionMutators,
+};

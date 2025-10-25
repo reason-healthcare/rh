@@ -181,6 +181,85 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "RiskAssessment.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/observation-status|4.0.1",
+        )
+        .with_description(
+            "The status of the risk assessment; e.g. preliminary, final, amended, etc.",
+        )]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("RiskAssessment.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.contained", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.extension", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.basedOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.parent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.occurrence[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.condition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.basis", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.prediction", 0, None),
+            rh_foundation::ElementCardinality::new("RiskAssessment.prediction.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.prediction.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "RiskAssessment.prediction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("RiskAssessment.prediction.outcome", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RiskAssessment.prediction.probability[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskAssessment.prediction.qualitativeRisk",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "RiskAssessment.prediction.relativeRisk",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskAssessment.prediction.when[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "RiskAssessment.prediction.rationale",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("RiskAssessment.mitigation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("RiskAssessment.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for RiskAssessment {
     fn id(&self) -> Option<String> {
@@ -598,7 +677,21 @@ impl crate::validation::ValidatableResource for RiskAssessment {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/RiskAssessment")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::risk_assessment::{
+    RiskAssessmentAccessors, RiskAssessmentExistence, RiskAssessmentMutators,
+};

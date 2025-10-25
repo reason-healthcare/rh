@@ -140,6 +140,64 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "MedicationStatement.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/medication-statement-status|4.0.1",
+        )
+        .with_description(
+            "A coded concept indicating the current status of a MedicationStatement.",
+        )]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicationStatement.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MedicationStatement.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MedicationStatement.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.statusReason", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.medication[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.context", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.effective[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MedicationStatement.dateAsserted", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicationStatement.informationSource",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MedicationStatement.derivedFrom", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.note", 0, None),
+            rh_foundation::ElementCardinality::new("MedicationStatement.dosage", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MedicationStatement {
     fn id(&self) -> Option<String> {
@@ -506,11 +564,11 @@ impl crate::traits::medication_statement::MedicationStatementExistence for Medic
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_medication(&self) -> bool {
-        true
-    }
     fn has_effective(&self) -> bool {
         self.effective_date_time.is_some() || self.effective_period.is_some()
+    }
+    fn has_medication(&self) -> bool {
+        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -570,7 +628,21 @@ impl crate::validation::ValidatableResource for MedicationStatement {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicationStatement")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medication_statement::{
+    MedicationStatementAccessors, MedicationStatementExistence, MedicationStatementMutators,
+};

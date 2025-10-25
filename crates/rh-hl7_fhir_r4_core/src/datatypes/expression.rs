@@ -91,6 +91,22 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Expression.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Expression.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Expression.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Expression.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Expression.language", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Expression.expression", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Expression.reference", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Expression {
     fn resource_type(&self) -> &'static str {
         "Expression"
@@ -98,6 +114,10 @@ impl crate::validation::ValidatableResource for Expression {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

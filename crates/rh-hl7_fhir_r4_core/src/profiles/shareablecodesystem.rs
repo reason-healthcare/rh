@@ -36,6 +36,135 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("CodeSystem.content", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/codesystem-content-mode|4.0.1").with_description("The extent of the content of the code system (the concepts and codes it defines) are represented in a code system resource."),
+    rh_foundation::ElementBinding::new("CodeSystem.filter.operator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/filter-operator|4.0.1").with_description("The kind of operation to perform as a part of a property based filter."),
+    rh_foundation::ElementBinding::new("CodeSystem.hierarchyMeaning", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/codesystem-hierarchy-meaning|4.0.1").with_description("The meaning of the hierarchy of concepts in a code system."),
+    rh_foundation::ElementBinding::new("CodeSystem.property.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/concept-property-type|4.0.1").with_description("The type of a property value."),
+    rh_foundation::ElementBinding::new("CodeSystem.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CodeSystem", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.version", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.experimental", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.publisher", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.contact", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.caseSensitive", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.valueSet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.hierarchyMeaning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.compositional", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.versionNeeded", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.content", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.supplements", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.count", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.operator", 1, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.value", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.property.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.uri", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept", 1, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.display", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.designation", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.designation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.use",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.concept", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Shareablecodesystem {
     fn id(&self) -> Option<String> {
@@ -108,7 +237,21 @@ impl crate::validation::ValidatableResource for Shareablecodesystem {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/shareablecodesystem")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::shareablecodesystem::{
+    ShareablecodesystemAccessors, ShareablecodesystemExistence, ShareablecodesystemMutators,
+};

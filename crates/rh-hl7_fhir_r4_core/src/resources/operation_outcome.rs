@@ -103,6 +103,63 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "OperationOutcome.issue.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/issue-type|4.0.1",
+            )
+            .with_description("A code that describes the type of issue."),
+            rh_foundation::ElementBinding::new(
+                "OperationOutcome.issue.severity",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/issue-severity|4.0.1",
+            )
+            .with_description("How the issue affects the success of the action."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("OperationOutcome.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.contained", 0, None),
+            rh_foundation::ElementCardinality::new("OperationOutcome.extension", 0, None),
+            rh_foundation::ElementCardinality::new("OperationOutcome.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue", 1, None),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "OperationOutcome.issue.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.severity", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.details", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "OperationOutcome.issue.diagnostics",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.location", 0, None),
+            rh_foundation::ElementCardinality::new("OperationOutcome.issue.expression", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for OperationOutcome {
     fn id(&self) -> Option<String> {
@@ -322,7 +379,21 @@ impl crate::validation::ValidatableResource for OperationOutcome {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/OperationOutcome")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::operation_outcome::{
+    OperationOutcomeAccessors, OperationOutcomeExistence, OperationOutcomeMutators,
+};

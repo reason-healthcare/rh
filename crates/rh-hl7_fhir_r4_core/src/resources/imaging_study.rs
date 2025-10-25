@@ -98,16 +98,36 @@ pub struct ImagingStudy {
     /// Each study has one or more series of instances
     pub series: Option<Vec<ImagingStudySeries>>,
 }
+/// ImagingStudySeries nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagingStudySeriesPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performance
+    ///
+    /// Binding: extensible (The type of involvement of the performer.)
+    ///
+    /// Available values:
+    /// - `CON`: consultant
+    /// - `VRF`: verifier
+    /// - `PRF`: performer
+    /// - `SPRF`: secondary performer
+    /// - `REF`: referrer
+    pub function: Option<CodeableConcept>,
+    /// Who performed the series
+    pub actor: Reference,
+}
 /// ImagingStudy nested structure for the 'series' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImagingStudySeries {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A single SOP instance from the series
-    pub instance: Option<Vec<ImagingStudySeriesInstance>>,
     /// Who performed the series
     pub performer: Option<Vec<ImagingStudySeriesPerformer>>,
+    /// A single SOP instance from the series
+    pub instance: Option<Vec<ImagingStudySeriesInstance>>,
     /// DICOM Series Instance UID for the series
     pub uid: StringType,
     /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
@@ -156,26 +176,6 @@ pub struct ImagingStudySeries {
     pub started: Option<DateTimeType>,
     /// Extension element for the 'started' primitive field. Contains metadata and extensions.
     pub _started: Option<Element>,
-}
-/// ImagingStudySeries nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingStudySeriesPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performance
-    ///
-    /// Binding: extensible (The type of involvement of the performer.)
-    ///
-    /// Available values:
-    /// - `CON`: consultant
-    /// - `VRF`: verifier
-    /// - `PRF`: performer
-    /// - `SPRF`: secondary performer
-    /// - `REF`: referrer
-    pub function: Option<CodeableConcept>,
-    /// Who performed the series
-    pub actor: Reference,
 }
 /// ImagingStudySeries nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,12 +237,22 @@ impl Default for ImagingStudy {
     }
 }
 
+impl Default for ImagingStudySeriesPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Default::default(),
+        }
+    }
+}
+
 impl Default for ImagingStudySeries {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            instance: Default::default(),
             performer: Default::default(),
+            instance: Default::default(),
             uid: StringType::default(),
             _uid: Default::default(),
             number: Default::default(),
@@ -258,16 +268,6 @@ impl Default for ImagingStudySeries {
             specimen: Default::default(),
             started: Default::default(),
             _started: Default::default(),
-        }
-    }
-}
-
-impl Default for ImagingStudySeriesPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Default::default(),
         }
     }
 }
@@ -302,6 +302,128 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ImagingStudy.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/imagingstudy-status|4.0.1",
+        )
+        .with_description("The status of the ImagingStudy.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ImagingStudy.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.modality", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.started", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.referrer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.interpreter", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.endpoint", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.numberOfSeries", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.numberOfInstances", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.procedureReference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.procedureCode", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.note", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.uid", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.number", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.modality", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.numberOfInstances",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.endpoint", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.laterality", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.specimen", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.started", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.performer", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.performer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.performer.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.performer.function",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.performer.actor",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.instance", 0, None),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.instance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.instance.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.instance.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImagingStudy.series.instance.uid", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.instance.sopClass",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.instance.number",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImagingStudy.series.instance.title",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -785,7 +907,21 @@ impl crate::validation::ValidatableResource for ImagingStudy {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ImagingStudy")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::imaging_study::{
+    ImagingStudyAccessors, ImagingStudyExistence, ImagingStudyMutators,
+};

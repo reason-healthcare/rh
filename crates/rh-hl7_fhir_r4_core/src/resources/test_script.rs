@@ -155,40 +155,31 @@ pub struct TestScriptVariable {
     #[serde(rename = "_sourceId")]
     pub _source_id: Option<Element>,
 }
-/// TestScriptMetadata nested structure for the 'capability' field
+/// TestScript nested structure for the 'metadata' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadataCapability {
+pub struct TestScriptMetadata {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Are the capabilities required?
-    pub required: BooleanType,
-    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
-    pub _required: Option<Element>,
-    /// Are the capabilities validated?
-    pub validated: BooleanType,
-    /// Extension element for the 'validated' primitive field. Contains metadata and extensions.
-    pub _validated: Option<Element>,
-    /// The expected capabilities of the server
+    /// Capabilities  that are assumed to function correctly on the FHIR server being tested
+    pub capability: Vec<TestScriptMetadataCapability>,
+    /// Links to the FHIR specification
+    pub link: Option<Vec<TestScriptMetadataLink>>,
+}
+/// TestScriptMetadata nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptMetadataLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// URL to the specification
+    pub url: StringType,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Short description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// Which origin server these requirements apply to
-    pub origin: Option<Vec<IntegerType>>,
-    /// Extension element for the 'origin' primitive field. Contains metadata and extensions.
-    pub _origin: Option<Element>,
-    /// Which server these requirements apply to
-    pub destination: Option<IntegerType>,
-    /// Extension element for the 'destination' primitive field. Contains metadata and extensions.
-    pub _destination: Option<Element>,
-    /// Links to the FHIR specification
-    pub link: Option<Vec<StringType>>,
-    /// Extension element for the 'link' primitive field. Contains metadata and extensions.
-    pub _link: Option<Element>,
-    /// Required Capability Statement
-    pub capabilities: StringType,
-    /// Extension element for the 'capabilities' primitive field. Contains metadata and extensions.
-    pub _capabilities: Option<Element>,
 }
 /// TestScriptSetupAction nested structure for the 'assert' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -311,51 +302,31 @@ pub struct TestScriptSetupActionAssert {
     #[serde(rename = "_warningOnly")]
     pub _warning_only: Option<Element>,
 }
-/// TestScript nested structure for the 'setup' field
+/// TestScript nested structure for the 'fixture' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetup {
+pub struct TestScriptFixture {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A setup operation or assert to perform
-    pub action: Vec<TestScriptSetupAction>,
+    /// Whether or not to implicitly create the fixture during setup
+    pub autocreate: BooleanType,
+    /// Extension element for the 'autocreate' primitive field. Contains metadata and extensions.
+    pub _autocreate: Option<Element>,
+    /// Whether or not to implicitly delete the fixture during teardown
+    pub autodelete: BooleanType,
+    /// Extension element for the 'autodelete' primitive field. Contains metadata and extensions.
+    pub _autodelete: Option<Element>,
+    /// Reference of the resource
+    pub resource: Option<Reference>,
 }
-/// TestScriptTest nested structure for the 'action' field
+/// TestScript nested structure for the 'teardown' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTestAction {
+pub struct TestScriptTeardown {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The setup operation to perform
-    pub operation: Option<StringType>,
-    /// The setup assertion to perform
-    pub assert: Option<StringType>,
-}
-/// TestScriptSetupActionOperation nested structure for the 'requestHeader' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetupActionOperationRequestheader {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// HTTP header field name
-    pub field: StringType,
-    /// Extension element for the 'field' primitive field. Contains metadata and extensions.
-    pub _field: Option<Element>,
-    /// HTTP headerfield value
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// TestScript nested structure for the 'metadata' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadata {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Capabilities  that are assumed to function correctly on the FHIR server being tested
-    pub capability: Vec<TestScriptMetadataCapability>,
-    /// Links to the FHIR specification
-    pub link: Option<Vec<TestScriptMetadataLink>>,
+    /// One or more teardown operations to perform
+    pub action: Vec<TestScriptTeardownAction>,
 }
 /// TestScript nested structure for the 'origin' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -374,20 +345,55 @@ pub struct TestScriptOrigin {
     /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-profile-origin-types
     pub profile: Coding,
 }
-/// TestScriptMetadata nested structure for the 'link' field
+/// TestScriptSetupActionOperation nested structure for the 'requestHeader' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadataLink {
+pub struct TestScriptSetupActionOperationRequestheader {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// URL to the specification
-    pub url: StringType,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Short description
+    /// HTTP header field name
+    pub field: StringType,
+    /// Extension element for the 'field' primitive field. Contains metadata and extensions.
+    pub _field: Option<Element>,
+    /// HTTP headerfield value
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// TestScriptMetadata nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptMetadataCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Are the capabilities required?
+    pub required: BooleanType,
+    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
+    pub _required: Option<Element>,
+    /// Are the capabilities validated?
+    pub validated: BooleanType,
+    /// Extension element for the 'validated' primitive field. Contains metadata and extensions.
+    pub _validated: Option<Element>,
+    /// The expected capabilities of the server
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+    /// Which origin server these requirements apply to
+    pub origin: Option<Vec<IntegerType>>,
+    /// Extension element for the 'origin' primitive field. Contains metadata and extensions.
+    pub _origin: Option<Element>,
+    /// Which server these requirements apply to
+    pub destination: Option<IntegerType>,
+    /// Extension element for the 'destination' primitive field. Contains metadata and extensions.
+    pub _destination: Option<Element>,
+    /// Links to the FHIR specification
+    pub link: Option<Vec<StringType>>,
+    /// Extension element for the 'link' primitive field. Contains metadata and extensions.
+    pub _link: Option<Element>,
+    /// Required Capability Statement
+    pub capabilities: StringType,
+    /// Extension element for the 'capabilities' primitive field. Contains metadata and extensions.
+    pub _capabilities: Option<Element>,
 }
 /// TestScriptSetup nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -395,75 +401,6 @@ pub struct TestScriptSetupAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-}
-/// TestScript nested structure for the 'test' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A test operation or assert to perform
-    pub action: Vec<TestScriptTestAction>,
-    /// Tracking/logging name of this test
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Tracking/reporting short description of the test
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// TestScriptTeardown nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTeardownAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The teardown operation to perform
-    pub operation: StringType,
-}
-/// TestScript nested structure for the 'teardown' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTeardown {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// One or more teardown operations to perform
-    pub action: Vec<TestScriptTeardownAction>,
-}
-/// TestScript nested structure for the 'fixture' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptFixture {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether or not to implicitly create the fixture during setup
-    pub autocreate: BooleanType,
-    /// Extension element for the 'autocreate' primitive field. Contains metadata and extensions.
-    pub _autocreate: Option<Element>,
-    /// Whether or not to implicitly delete the fixture during teardown
-    pub autodelete: BooleanType,
-    /// Extension element for the 'autodelete' primitive field. Contains metadata and extensions.
-    pub _autodelete: Option<Element>,
-    /// Reference of the resource
-    pub resource: Option<Reference>,
-}
-/// TestScript nested structure for the 'destination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptDestination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The index of the abstract destination server starting at 1
-    pub index: IntegerType,
-    /// Extension element for the 'index' primitive field. Contains metadata and extensions.
-    pub _index: Option<Element>,
-    /// FHIR-Server | FHIR-SDC-FormManager | FHIR-SDC-FormReceiver | FHIR-SDC-FormProcessor
-    ///
-    /// Binding: extensible (The type of destination profile the test system supports.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-profile-destination-types
-    pub profile: Coding,
 }
 /// TestScriptSetupAction nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -551,6 +488,69 @@ pub struct TestScriptSetupActionOperation {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
 }
+/// TestScriptTeardown nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptTeardownAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The teardown operation to perform
+    pub operation: StringType,
+}
+/// TestScript nested structure for the 'setup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptSetup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A setup operation or assert to perform
+    pub action: Vec<TestScriptSetupAction>,
+}
+/// TestScript nested structure for the 'destination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptDestination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The index of the abstract destination server starting at 1
+    pub index: IntegerType,
+    /// Extension element for the 'index' primitive field. Contains metadata and extensions.
+    pub _index: Option<Element>,
+    /// FHIR-Server | FHIR-SDC-FormManager | FHIR-SDC-FormReceiver | FHIR-SDC-FormProcessor
+    ///
+    /// Binding: extensible (The type of destination profile the test system supports.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-profile-destination-types
+    pub profile: Coding,
+}
+/// TestScript nested structure for the 'test' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptTest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A test operation or assert to perform
+    pub action: Vec<TestScriptTestAction>,
+    /// Tracking/logging name of this test
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Tracking/reporting short description of the test
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// TestScriptTest nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptTestAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The setup operation to perform
+    pub operation: Option<StringType>,
+    /// The setup assertion to perform
+    pub assert: Option<StringType>,
+}
 
 impl Default for TestScript {
     fn default() -> Self {
@@ -619,24 +619,24 @@ impl Default for TestScriptVariable {
     }
 }
 
-impl Default for TestScriptMetadataCapability {
+impl Default for TestScriptMetadata {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            required: Default::default(),
-            _required: Default::default(),
-            validated: Default::default(),
-            _validated: Default::default(),
+            capability: Vec::new(),
+            link: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptMetadataLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            url: Default::default(),
+            _url: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-            origin: Default::default(),
-            _origin: Default::default(),
-            destination: Default::default(),
-            _destination: Default::default(),
-            link: Default::default(),
-            _link: Default::default(),
-            capabilities: Default::default(),
-            _capabilities: Default::default(),
         }
     }
 }
@@ -693,7 +693,20 @@ impl Default for TestScriptSetupActionAssert {
     }
 }
 
-impl Default for TestScriptSetup {
+impl Default for TestScriptFixture {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            autocreate: BooleanType::default(),
+            _autocreate: Default::default(),
+            autodelete: BooleanType::default(),
+            _autodelete: Default::default(),
+            resource: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptTeardown {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -702,12 +715,13 @@ impl Default for TestScriptSetup {
     }
 }
 
-impl Default for TestScriptTestAction {
+impl Default for TestScriptOrigin {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            operation: Default::default(),
-            assert: Default::default(),
+            index: IntegerType::default(),
+            _index: Default::default(),
+            profile: Coding::default(),
         }
     }
 }
@@ -724,35 +738,24 @@ impl Default for TestScriptSetupActionOperationRequestheader {
     }
 }
 
-impl Default for TestScriptMetadata {
+impl Default for TestScriptMetadataCapability {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            capability: Vec::new(),
-            link: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptOrigin {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            index: IntegerType::default(),
-            _index: Default::default(),
-            profile: Coding::default(),
-        }
-    }
-}
-
-impl Default for TestScriptMetadataLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            url: Default::default(),
-            _url: Default::default(),
+            required: Default::default(),
+            _required: Default::default(),
+            validated: Default::default(),
+            _validated: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+            origin: Default::default(),
+            _origin: Default::default(),
+            destination: Default::default(),
+            _destination: Default::default(),
+            link: Default::default(),
+            _link: Default::default(),
+            capabilities: Default::default(),
+            _capabilities: Default::default(),
         }
     }
 }
@@ -761,61 +764,6 @@ impl Default for TestScriptSetupAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTeardownAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTeardown {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestScriptFixture {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            autocreate: BooleanType::default(),
-            _autocreate: Default::default(),
-            autodelete: BooleanType::default(),
-            _autodelete: Default::default(),
-            resource: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptDestination {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            index: IntegerType::default(),
-            _index: Default::default(),
-            profile: Coding::default(),
         }
     }
 }
@@ -859,6 +807,58 @@ impl Default for TestScriptSetupActionOperation {
     }
 }
 
+impl Default for TestScriptTeardownAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptSetup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
+        }
+    }
+}
+
+impl Default for TestScriptDestination {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            index: IntegerType::default(),
+            _index: Default::default(),
+            profile: Coding::default(),
+        }
+    }
+}
+
+impl Default for TestScriptTest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptTestAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+            assert: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -888,6 +888,461 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("tst-8", rh_foundation::Severity::Error, "Test operation SHALL contain either sourceId or targetId or params or url.", "sourceId.exists() or (targetId.count() + url.count() + params.count() = 1) or (type.code in ('capabilities' | 'search' | 'transaction' | 'history'))").with_xpath("f:sourceId or (f:targetId or f:url or f:params) and (count(f:targetId) + count(f:url) + count(f:params) =1) or (f:type/f:code/@value='capabilities' or f:type/f:code/@value='search' or f:type/f:code/@value='transaction' or f:type/f:code/@value='history')"),
     rh_foundation::Invariant::new("tst-9", rh_foundation::Severity::Error, "Teardown operation SHALL contain either sourceId or targetId or params or url.", "sourceId.exists() or (targetId.count() + url.count() + params.count() = 1) or (type.code in ('capabilities' | 'search' | 'transaction' | 'history'))").with_xpath("f:sourceId or (f:targetId or f:url or (f:params and f:resource)) and (count(f:targetId) + count(f:url) + count(f:params) =1) or (f:type/f:code/@value='capabilities' or f:type/f:code/@value='search' or f:type/f:code/@value='transaction' or f:type/f:code/@value='history')"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.contentType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1").with_description("The mime type of an attachment. Any valid mime type is allowed."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.direction", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/assert-direction-codes|4.0.1").with_description("The type of direction to use for assertion."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.operator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/assert-operator-codes|4.0.1").with_description("The type of operator to use for assertion."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.requestMethod", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/http-operations|4.0.1").with_description("The allowable request method or HTTP operation codes."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.resource", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/defined-types|4.0.1").with_description("A list of all the concrete types defined in this version of the FHIR specification - Data Types and Resource Types."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.assert.response", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/assert-response-code-types|4.0.1").with_description("The type of response code to use for assertion."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.operation.accept", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1").with_description("The mime type of an attachment. Any valid mime type is allowed."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.operation.contentType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/mimetypes|4.0.1").with_description("The mime type of an attachment. Any valid mime type is allowed."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.operation.method", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/http-operations|4.0.1").with_description("The allowable request method or HTTP operation codes."),
+    rh_foundation::ElementBinding::new("TestScript.setup.action.operation.resource", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/defined-types|4.0.1").with_description("A list of all the concrete types defined in this version of the FHIR specification - Data Types and Resource Types."),
+    rh_foundation::ElementBinding::new("TestScript.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("TestScript.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.contained", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.contact", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.origin", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.origin.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.origin.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.origin.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.origin.index", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.origin.profile", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.destination", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.destination.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.destination.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.destination.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.destination.index", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.destination.profile", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.metadata", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.link", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.link.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.link.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.link.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.link.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.link.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.capability", 1, None),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.capability.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.required",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.validated",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.origin",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.destination",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.metadata.capability.link", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.metadata.capability.capabilities",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.fixture", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.autocreate", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.autodelete", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.fixture.resource", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.profile", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.variable", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.variable.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.variable.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.variable.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.defaultValue", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.expression", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.headerField", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.hint", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.path", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.variable.sourceId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.setup", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.setup.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.setup.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.setup.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action", 1, None),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action.operation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.resource",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.label",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.accept",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.contentType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.destination",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.encodeRequestUrl",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.method",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.origin",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.params",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader.field",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestHeader.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.requestId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.responseId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.sourceId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.targetId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.operation.url",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action.assert", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.setup.action.assert.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.label",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.direction",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.compareToSourceId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.compareToSourceExpression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.compareToSourcePath",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.contentType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.headerField",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.minimumId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.navigationLinks",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.operator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.path",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.requestMethod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.requestURL",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.resource",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.response",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.responseCode",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.sourceId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.validateProfileId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.setup.action.assert.warningOnly",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.test", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.test.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.test.extension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.test.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("TestScript.test.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.test.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.test.action", 1, None),
+            rh_foundation::ElementCardinality::new("TestScript.test.action.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.test.action.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.test.action.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.test.action.operation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.test.action.assert", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.teardown", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.teardown.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.teardown.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.teardown.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("TestScript.teardown.action", 1, None),
+            rh_foundation::ElementCardinality::new("TestScript.teardown.action.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("TestScript.teardown.action.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.teardown.action.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "TestScript.teardown.action.operation",
+                1,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -1405,7 +1860,21 @@ impl crate::validation::ValidatableResource for TestScript {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/TestScript")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::test_script::{
+    TestScriptAccessors, TestScriptExistence, TestScriptMutators,
+};

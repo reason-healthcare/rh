@@ -104,29 +104,6 @@ pub struct CarePlan {
     /// Comments about the plan
     pub note: Option<Vec<Annotation>>,
 }
-/// CarePlan nested structure for the 'activity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CarePlanActivity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// In-line definition of activity
-    pub detail: Option<CarePlanActivityDetail>,
-    /// Results of the activity
-    ///
-    /// Binding: example (Identifies the results of the activity.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-activity-outcome
-    #[serde(rename = "outcomeCodeableConcept")]
-    pub outcome_codeable_concept: Option<Vec<CodeableConcept>>,
-    /// Appointment, Encounter, Procedure, etc.
-    #[serde(rename = "outcomeReference")]
-    pub outcome_reference: Option<Vec<Reference>>,
-    /// Comments about the activity status/progress
-    pub progress: Option<Vec<Annotation>>,
-    /// Activity details defined in specific resource
-    pub reference: Option<Reference>,
-}
 /// CarePlanActivity nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CarePlanActivityDetail {
@@ -209,6 +186,29 @@ pub struct CarePlanActivityDetail {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
+/// CarePlan nested structure for the 'activity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CarePlanActivity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// In-line definition of activity
+    pub detail: Option<CarePlanActivityDetail>,
+    /// Results of the activity
+    ///
+    /// Binding: example (Identifies the results of the activity.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-activity-outcome
+    #[serde(rename = "outcomeCodeableConcept")]
+    pub outcome_codeable_concept: Option<Vec<CodeableConcept>>,
+    /// Appointment, Encounter, Procedure, etc.
+    #[serde(rename = "outcomeReference")]
+    pub outcome_reference: Option<Vec<Reference>>,
+    /// Comments about the activity status/progress
+    pub progress: Option<Vec<Annotation>>,
+    /// Activity details defined in specific resource
+    pub reference: Option<Reference>,
+}
 
 impl Default for CarePlan {
     fn default() -> Self {
@@ -248,19 +248,6 @@ impl Default for CarePlan {
     }
 }
 
-impl Default for CarePlanActivity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail: Default::default(),
-            outcome_codeable_concept: Default::default(),
-            outcome_reference: Default::default(),
-            progress: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
 impl Default for CarePlanActivityDetail {
     fn default() -> Self {
         Self {
@@ -295,6 +282,19 @@ impl Default for CarePlanActivityDetail {
     }
 }
 
+impl Default for CarePlanActivity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail: Default::default(),
+            outcome_codeable_concept: Default::default(),
+            outcome_reference: Default::default(),
+            progress: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -311,6 +311,132 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("CarePlan.activity.detail.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/care-plan-activity-kind|4.0.1").with_description("Resource types defined as part of FHIR that can be represented as in-line definitions of a care plan activity."),
+    rh_foundation::ElementBinding::new("CarePlan.activity.detail.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/care-plan-activity-status|4.0.1").with_description("Codes that reflect the current state of a care plan activity within its overall life cycle."),
+    rh_foundation::ElementBinding::new("CarePlan.intent", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/care-plan-intent|4.0.1").with_description("Codes indicating the degree of authority/intentionality associated with a care plan."),
+    rh_foundation::ElementBinding::new("CarePlan.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-status|4.0.1").with_description("Indicates whether the plan is currently being acted upon, represents future intentions or is now a historical record."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CarePlan.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.category", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.created", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.contributor", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.careTeam", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.addresses", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.goal", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.outcomeCodeableConcept",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.outcomeReference", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.progress", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.reference", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.kind", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.instantiatesCanonical",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.instantiatesUri",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.reasonReference",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.goal", 0, None),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.statusReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.doNotPerform",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.scheduled[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.location", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.performer", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.product[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.dailyAmount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.activity.detail.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CarePlan.activity.detail.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CarePlan.note", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -852,7 +978,19 @@ impl crate::validation::ValidatableResource for CarePlan {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CarePlan")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::care_plan::{CarePlanAccessors, CarePlanExistence, CarePlanMutators};

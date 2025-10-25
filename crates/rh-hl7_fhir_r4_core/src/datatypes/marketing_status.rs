@@ -74,6 +74,23 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MarketingStatus.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MarketingStatus.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MarketingStatus.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MarketingStatus.country", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MarketingStatus.jurisdiction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MarketingStatus.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MarketingStatus.dateRange", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MarketingStatus.restoreDate", 0, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for MarketingStatus {
     fn resource_type(&self) -> &'static str {
         "MarketingStatus"
@@ -81,6 +98,10 @@ impl crate::validation::ValidatableResource for MarketingStatus {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

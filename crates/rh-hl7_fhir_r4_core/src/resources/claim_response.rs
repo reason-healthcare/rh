@@ -134,45 +134,6 @@ pub struct ClaimResponse {
     /// Processing errors
     pub error: Option<Vec<ClaimResponseError>>,
 }
-/// ClaimResponseAdditemDetail nested structure for the 'subDetail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseAdditemDetailSubdetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items detail adjudication
-    pub adjudication: Vec<StringType>,
-}
 /// ClaimResponse nested structure for the 'error' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimResponseError {
@@ -203,135 +164,6 @@ pub struct ClaimResponseError {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
     pub code: CodeableConcept,
-}
-/// ClaimResponseItem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Claim detail instance identifier
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: PositiveIntType,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Detail level adjudication details
-    pub adjudication: Vec<StringType>,
-}
-/// ClaimResponseItem nested structure for the 'adjudication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemAdjudication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of adjudication information
-    ///
-    /// Binding: example (The adjudication codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
-    pub category: CodeableConcept,
-    /// Explanation of adjudication outcome
-    ///
-    /// Binding: example (The adjudication reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
-    pub reason: Option<CodeableConcept>,
-    /// Monetary amount
-    pub amount: Option<Money>,
-    /// Non-monetary value
-    pub value: Option<DecimalType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// ClaimResponseAdditem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseAdditemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items detail adjudication
-    pub adjudication: Vec<StringType>,
-}
-/// ClaimResponse nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Adjudication details
-    pub adjudication: Vec<ClaimResponseItemAdjudication>,
-    /// Adjudication for claim details
-    pub detail: Option<Vec<ClaimResponseItemDetail>>,
-    /// Claim item instance identifier
-    #[serde(rename = "itemSequence")]
-    pub item_sequence: PositiveIntType,
-    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_itemSequence")]
-    pub _item_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-}
-/// ClaimResponseItemDetail nested structure for the 'subDetail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemDetailSubdetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Claim sub-detail instance identifier
-    #[serde(rename = "subDetailSequence")]
-    pub sub_detail_sequence: PositiveIntType,
-    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subDetailSequence")]
-    pub _sub_detail_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Subdetail level adjudication details
-    pub adjudication: Option<Vec<StringType>>,
 }
 /// ClaimResponse nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -374,6 +206,66 @@ pub struct ClaimResponseTotal {
     /// Financial total for the category
     pub amount: Money,
 }
+/// ClaimResponseItem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Claim detail instance identifier
+    #[serde(rename = "detailSequence")]
+    pub detail_sequence: PositiveIntType,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    pub _detail_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Detail level adjudication details
+    pub adjudication: Vec<StringType>,
+}
+/// ClaimResponseAdditem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseAdditemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Added items detail adjudication
+    pub adjudication: Vec<StringType>,
+}
 /// ClaimResponse nested structure for the 'payment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimResponsePayment {
@@ -404,6 +296,91 @@ pub struct ClaimResponsePayment {
     pub amount: Money,
     /// Business identifier for the payment
     pub identifier: Option<Identifier>,
+}
+/// ClaimResponseItem nested structure for the 'adjudication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemAdjudication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of adjudication information
+    ///
+    /// Binding: example (The adjudication codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    pub category: CodeableConcept,
+    /// Explanation of adjudication outcome
+    ///
+    /// Binding: example (The adjudication reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
+    pub reason: Option<CodeableConcept>,
+    /// Monetary amount
+    pub amount: Option<Money>,
+    /// Non-monetary value
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ClaimResponseItemDetail nested structure for the 'subDetail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemDetailSubdetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Claim sub-detail instance identifier
+    #[serde(rename = "subDetailSequence")]
+    pub sub_detail_sequence: PositiveIntType,
+    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subDetailSequence")]
+    pub _sub_detail_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Subdetail level adjudication details
+    pub adjudication: Option<Vec<StringType>>,
+}
+/// ClaimResponseAdditemDetail nested structure for the 'subDetail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseAdditemDetailSubdetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Added items detail adjudication
+    pub adjudication: Vec<StringType>,
 }
 /// ClaimResponse nested structure for the 'processNote' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -539,6 +516,29 @@ pub struct ClaimResponseAdditem {
     /// Added items adjudication
     pub adjudication: Vec<StringType>,
 }
+/// ClaimResponse nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Adjudication details
+    pub adjudication: Vec<ClaimResponseItemAdjudication>,
+    /// Adjudication for claim details
+    pub detail: Option<Vec<ClaimResponseItemDetail>>,
+    /// Claim item instance identifier
+    #[serde(rename = "itemSequence")]
+    pub item_sequence: PositiveIntType,
+    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_itemSequence")]
+    pub _item_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+}
 
 impl Default for ClaimResponse {
     fn default() -> Self {
@@ -581,24 +581,6 @@ impl Default for ClaimResponse {
     }
 }
 
-impl Default for ClaimResponseAdditemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
 impl Default for ClaimResponseError {
     fn default() -> Self {
         Self {
@@ -610,77 +592,6 @@ impl Default for ClaimResponseError {
             sub_detail_sequence: Default::default(),
             _sub_detail_sequence: Default::default(),
             code: CodeableConcept::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail_sequence: Default::default(),
-            _detail_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemAdjudication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            reason: Default::default(),
-            amount: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseAdditemDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            adjudication: Vec::new(),
-            detail: Default::default(),
-            item_sequence: PositiveIntType::default(),
-            _item_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sub_detail_sequence: Default::default(),
-            _sub_detail_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
         }
     }
 }
@@ -711,6 +622,37 @@ impl Default for ClaimResponseTotal {
     }
 }
 
+impl Default for ClaimResponseItemDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail_sequence: Default::default(),
+            _detail_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseAdditemDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
 impl Default for ClaimResponsePayment {
     fn default() -> Self {
         Self {
@@ -722,6 +664,50 @@ impl Default for ClaimResponsePayment {
             _date: Default::default(),
             amount: Money::default(),
             identifier: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemAdjudication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            reason: Default::default(),
+            amount: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemDetailSubdetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sub_detail_sequence: Default::default(),
+            _sub_detail_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseAdditemDetailSubdetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
         }
     }
 }
@@ -775,6 +761,20 @@ impl Default for ClaimResponseAdditem {
     }
 }
 
+impl Default for ClaimResponseItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            adjudication: Vec::new(),
+            detail: Default::default(),
+            item_sequence: PositiveIntType::default(),
+            _item_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+        }
+    }
+}
+
 /// FHIR invariants for this resource/datatype
 ///
 /// These constraints are defined in the FHIR specification and must be validated
@@ -790,6 +790,395 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "ClaimResponse.outcome",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/remittance-outcome|4.0.1",
+            )
+            .with_description("The result of the claim processing."),
+            rh_foundation::ElementBinding::new(
+                "ClaimResponse.processNote.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/note-type|4.0.1",
+            )
+            .with_description("The presentation types of notes."),
+            rh_foundation::ElementBinding::new(
+                "ClaimResponse.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/fm-status|4.0.1",
+            )
+            .with_description("A code specifying the state of the resource instance."),
+            rh_foundation::ElementBinding::new(
+                "ClaimResponse.use",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/claim-use|4.0.1",
+            )
+            .with_description("Claim, preauthorization, predetermination."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ClaimResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.subType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.use", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.created", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurer", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.requestor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.request", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.outcome", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.disposition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.preAuthRef", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.preAuthPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payeeType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.itemSequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.noteNumber", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.adjudication", 1, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.category",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.reason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.adjudication.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.detail", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.detail.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.detailSequence",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.detail.noteNumber", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.adjudication",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.item.detail.subDetail", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.subDetailSequence",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.noteNumber",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.item.detail.subDetail.adjudication",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.itemSequence", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.detailSequence", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.subdetailSequence",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.provider", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.productOrService",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.modifier", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.programCode", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.serviced[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.location[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.unitPrice", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.factor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.net", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.bodySite", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.subSite", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.noteNumber", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.adjudication", 1, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.detail", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.detail.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.productOrService",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.modifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.unitPrice",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.factor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.addItem.detail.net", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.noteNumber",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.adjudication",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.productOrService",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.modifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.quantity",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.unitPrice",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.factor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.net",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.noteNumber",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.addItem.detail.subDetail.adjudication",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.adjudication", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.total", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.total.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.total.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.total.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.total.category", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.total.amount", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.payment.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.adjustment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.payment.adjustmentReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.amount", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.payment.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.fundsReserve", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.formCode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.form", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.processNote.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote.number", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.processNote.text", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.processNote.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.communicationRequest", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.insurance.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance.sequence", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance.focal", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.insurance.coverage", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.insurance.businessArrangement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.insurance.claimResponse",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.error", 0, None),
+            rh_foundation::ElementCardinality::new("ClaimResponse.error.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ClaimResponse.error.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.error.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.error.itemSequence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.error.detailSequence",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ClaimResponse.error.subDetailSequence",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ClaimResponse.error.code", 1, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -1345,7 +1734,21 @@ impl crate::validation::ValidatableResource for ClaimResponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ClaimResponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::claim_response::{
+    ClaimResponseAccessors, ClaimResponseExistence, ClaimResponseMutators,
+};

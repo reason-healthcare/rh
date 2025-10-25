@@ -138,6 +138,79 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "CatalogEntry.relatedEntry.relationtype",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/relation-type|4.0.1",
+            )
+            .with_description("The type of relations between entries."),
+            rh_foundation::ElementBinding::new(
+                "CatalogEntry.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CatalogEntry.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.orderable", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.referencedItem", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.additionalIdentifier", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.classification", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.validityPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.validTo", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.lastUpdated", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CatalogEntry.additionalCharacteristic",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CatalogEntry.additionalClassification",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CatalogEntry.relatedEntry", 0, None),
+            rh_foundation::ElementCardinality::new("CatalogEntry.relatedEntry.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CatalogEntry.relatedEntry.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CatalogEntry.relatedEntry.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CatalogEntry.relatedEntry.relationtype",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CatalogEntry.relatedEntry.item", 1, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for CatalogEntry {
     fn id(&self) -> Option<String> {
@@ -535,7 +608,21 @@ impl crate::validation::ValidatableResource for CatalogEntry {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CatalogEntry")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::catalog_entry::{
+    CatalogEntryAccessors, CatalogEntryExistence, CatalogEntryMutators,
+};

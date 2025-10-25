@@ -49,6 +49,34 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Extension.value[x]",
+            rh_foundation::BindingStrength::Required,
+            "http://terminology.hl7.org/ValueSet/v3-NullFlavor|4.0.1",
+        )
+        .with_description("A collection of codes specifying why a valid value is not present.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Extension.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Extension.extension", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Extension.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Extension.value[x]", 1, Some(1)),
+        ]
+    });
+
 impl crate::validation::ValidatableResource for Iso21090NullFlavor {
     fn resource_type(&self) -> &'static str {
         "Extension"
@@ -56,6 +84,14 @@ impl crate::validation::ValidatableResource for Iso21090NullFlavor {
 
     fn invariants() -> &'static [rh_foundation::Invariant] {
         &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
     }
 
     fn profile_url() -> Option<&'static str> {

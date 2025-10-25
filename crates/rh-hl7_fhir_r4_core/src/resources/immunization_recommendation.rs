@@ -207,6 +207,156 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.patient",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImmunizationRecommendation.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.authority",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.vaccineCode",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.targetDisease",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.contraindicatedVaccineCode",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.forecastStatus",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.forecastReason",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.dateCriterion.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.series",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.doseNumber[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.seriesDoses[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.supportingImmunization",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImmunizationRecommendation.recommendation.supportingPatientInformation",
+                0,
+                None,
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ImmunizationRecommendation {
     fn id(&self) -> Option<String> {
@@ -481,7 +631,18 @@ impl crate::validation::ValidatableResource for ImmunizationRecommendation {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ImmunizationRecommendation")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::immunization_recommendation::{
+    ImmunizationRecommendationAccessors, ImmunizationRecommendationExistence,
+    ImmunizationRecommendationMutators,
+};

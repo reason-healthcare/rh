@@ -200,6 +200,89 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "MessageHeader.response.code",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/response-code|4.0.1",
+        )
+        .with_description("The kind of response to a message.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MessageHeader.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.contained", 0, None),
+            rh_foundation::ElementCardinality::new("MessageHeader.extension", 0, None),
+            rh_foundation::ElementCardinality::new("MessageHeader.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("MessageHeader.event[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.destination", 0, None),
+            rh_foundation::ElementCardinality::new("MessageHeader.destination.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.destination.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MessageHeader.destination.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MessageHeader.destination.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.destination.target", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MessageHeader.destination.endpoint",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MessageHeader.destination.receiver",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("MessageHeader.sender", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.enterer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MessageHeader.source.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.software", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.contact", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.source.endpoint", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.responsible", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.reason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.response", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.response.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.response.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "MessageHeader.response.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("MessageHeader.response.identifier", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.response.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.response.details", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("MessageHeader.focus", 0, None),
+            rh_foundation::ElementCardinality::new("MessageHeader.definition", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for MessageHeader {
     fn id(&self) -> Option<String> {
@@ -526,7 +609,21 @@ impl crate::validation::ValidatableResource for MessageHeader {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MessageHeader")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::message_header::{
+    MessageHeaderAccessors, MessageHeaderExistence, MessageHeaderMutators,
+};

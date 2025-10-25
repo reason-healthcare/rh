@@ -77,6 +77,25 @@ pub struct MedicinalProductAuthorization {
     /// The regulatory procedure for granting or amending a marketing authorization
     pub procedure: Option<MedicinalProductAuthorizationProcedure>,
 }
+/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The assigned number for the marketing authorization
+    pub identifier: Option<Vec<Identifier>>,
+    /// Country of authorization
+    pub country: Option<CodeableConcept>,
+    /// Jurisdiction within a country
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// The legal status of supply in a jurisdiction or region
+    #[serde(rename = "legalStatusOfSupply")]
+    pub legal_status_of_supply: Option<CodeableConcept>,
+    /// The start and expected end date of the authorization
+    #[serde(rename = "validityPeriod")]
+    pub validity_period: Option<Period>,
+}
 /// MedicinalProductAuthorization nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductAuthorizationProcedure {
@@ -96,25 +115,6 @@ pub struct MedicinalProductAuthorizationProcedure {
     pub date_date_time: Option<DateTimeType>,
     /// Applcations submitted to obtain a marketing authorization
     pub application: Option<Vec<StringType>>,
-}
-/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The assigned number for the marketing authorization
-    pub identifier: Option<Vec<Identifier>>,
-    /// Country of authorization
-    pub country: Option<CodeableConcept>,
-    /// Jurisdiction within a country
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
-    /// The legal status of supply in a jurisdiction or region
-    #[serde(rename = "legalStatusOfSupply")]
-    pub legal_status_of_supply: Option<CodeableConcept>,
-    /// The start and expected end date of the authorization
-    #[serde(rename = "validityPeriod")]
-    pub validity_period: Option<Period>,
 }
 
 impl Default for MedicinalProductAuthorization {
@@ -145,19 +145,6 @@ impl Default for MedicinalProductAuthorization {
     }
 }
 
-impl Default for MedicinalProductAuthorizationProcedure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            type_: Default::default(),
-            date_period: Default::default(),
-            date_date_time: Default::default(),
-            application: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
     fn default() -> Self {
         Self {
@@ -167,6 +154,19 @@ impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
             jurisdiction: Default::default(),
             legal_status_of_supply: Default::default(),
             validity_period: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductAuthorizationProcedure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            type_: Default::default(),
+            date_period: Default::default(),
+            date_date_time: Default::default(),
+            application: Default::default(),
         }
     }
 }
@@ -186,6 +186,206 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("MedicinalProductAuthorization.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.meta",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.text",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.contained",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.subject",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.country",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdiction",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.status",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.statusDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.restoreDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.validityPeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.dataExclusivityPeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.dateOfFirstAuthorization",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.internationalBirthDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.legalBasis",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.identifier",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.country",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.jurisdiction",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.legalStatusOfSupply",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.jurisdictionalAuthorization.validityPeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.holder",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.regulator",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.identifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.date[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "MedicinalProductAuthorization.procedure.application",
+                0,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -609,7 +809,18 @@ impl crate::validation::ValidatableResource for MedicinalProductAuthorization {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/MedicinalProductAuthorization")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::medicinal_product_authorization::{
+    MedicinalProductAuthorizationAccessors, MedicinalProductAuthorizationExistence,
+    MedicinalProductAuthorizationMutators,
+};

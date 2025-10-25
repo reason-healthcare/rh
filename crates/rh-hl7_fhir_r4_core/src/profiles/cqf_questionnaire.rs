@@ -48,6 +48,144 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Questionnaire.item.enableBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/questionnaire-enable-behavior|4.0.1").with_description("Controls how multiple enableWhen values are interpreted -  whether all or any must be true."),
+    rh_foundation::ElementBinding::new("Questionnaire.item.enableWhen.operator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/questionnaire-enable-operator|4.0.1").with_description("The criteria by which a question is enabled."),
+    rh_foundation::ElementBinding::new("Questionnaire.item.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/item-type|4.0.1").with_description("Distinguishes groups from questions and display text and indicates data type for questions."),
+    rh_foundation::ElementBinding::new("Questionnaire.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+    rh_foundation::ElementBinding::new("Questionnaire.subjectType", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|4.0.1").with_description("One of the resource types defined as part of this version of FHIR."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Questionnaire", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.derivedFrom", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.subjectType", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.code", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.linkId", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.code", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.prefix", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableWhen", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableWhen.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.question",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.operator",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.enableWhen.answer[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.enableBehavior", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.required", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.repeats", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.readOnly", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.maxLength", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.answerValueSet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.answerOption", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.answerOption.initialSelected",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial", 0, None),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.initial.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.initial.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Questionnaire.item.initial.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Questionnaire.item.item", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for CQFQuestionnaire {
     fn id(&self) -> Option<String> {
@@ -120,7 +258,21 @@ impl crate::validation::ValidatableResource for CQFQuestionnaire {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/cqf-questionnaire")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::cqf_questionnaire::{
+    CQFQuestionnaireAccessors, CQFQuestionnaireExistence, CQFQuestionnaireMutators,
+};

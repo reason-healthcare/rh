@@ -137,57 +137,41 @@ pub struct CodeSystem {
     /// Concepts in the code system
     pub concept: Option<Vec<CodeSystemConcept>>,
 }
-/// CodeSystemConcept nested structure for the 'property' field
+/// CodeSystemConcept nested structure for the 'designation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConceptProperty {
+pub struct CodeSystemConceptDesignation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference to CodeSystem.property.code
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Value of the property for this concept (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Value of the property for this concept (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Value of the property for this concept (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the property for this concept (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the property for this concept (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the property for this concept (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Value of the property for this concept (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-}
-/// CodeSystem nested structure for the 'filter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that identifies the filter
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// How or why the filter is used
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
-    pub operator: Vec<FilterOperator>,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// What to use for the value
+    /// Human language of the designation
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `da`: Danish
+    /// - `de`: German
+    /// - `de-AT`: German (Austria)
+    /// - `de-CH`: German (Switzerland)
+    /// - `de-DE`: German (Germany)
+    /// - `el`: Greek
+    /// - `en`: English
+    /// - ... and 46 more values
+    pub language: Option<StringType>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Details how this designation would be used
+    ///
+    /// Binding: extensible (Details of how a designation would be used.)
+    ///
+    /// Available values:
+    /// - `900000000000003001`
+    /// - `900000000000013009`
+    #[serde(rename = "use")]
+    pub use_: Option<Coding>,
+    /// The text value for this designation
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
@@ -241,41 +225,57 @@ pub struct CodeSystemProperty {
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
 }
-/// CodeSystemConcept nested structure for the 'designation' field
+/// CodeSystemConcept nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConceptDesignation {
+pub struct CodeSystemConceptProperty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Human language of the designation
-    ///
-    /// Binding: preferred (A human language.)
-    ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `da`: Danish
-    /// - `de`: German
-    /// - `de-AT`: German (Austria)
-    /// - `de-CH`: German (Switzerland)
-    /// - `de-DE`: German (Germany)
-    /// - `el`: Greek
-    /// - `en`: English
-    /// - ... and 46 more values
-    pub language: Option<StringType>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Details how this designation would be used
-    ///
-    /// Binding: extensible (Details of how a designation would be used.)
-    ///
-    /// Available values:
-    /// - `900000000000003001`
-    /// - `900000000000013009`
-    #[serde(rename = "use")]
-    pub use_: Option<Coding>,
-    /// The text value for this designation
+    /// Reference to CodeSystem.property.code
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value of the property for this concept (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Value of the property for this concept (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Value of the property for this concept (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the property for this concept (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the property for this concept (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the property for this concept (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Value of the property for this concept (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+}
+/// CodeSystem nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies the filter
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// How or why the filter is used
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
+    pub operator: Vec<FilterOperator>,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// What to use for the value
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
@@ -334,34 +334,14 @@ impl Default for CodeSystem {
     }
 }
 
-impl Default for CodeSystemConceptProperty {
+impl Default for CodeSystemConceptDesignation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            value_code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_integer: Default::default(),
-            value_boolean: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-        }
-    }
-}
-
-impl Default for CodeSystemFilter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            operator: Vec::new(),
-            _operator: Default::default(),
-            value: StringType::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            use_: Default::default(),
+            value: Default::default(),
             _value: Default::default(),
         }
     }
@@ -400,14 +380,34 @@ impl Default for CodeSystemProperty {
     }
 }
 
-impl Default for CodeSystemConceptDesignation {
+impl Default for CodeSystemConceptProperty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            use_: Default::default(),
-            value: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value_code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_integer: Default::default(),
+            value_boolean: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+        }
+    }
+}
+
+impl Default for CodeSystemFilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: StringType::default(),
+            _code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            operator: Vec::new(),
+            _operator: Default::default(),
+            value: StringType::default(),
             _value: Default::default(),
         }
     }
@@ -430,6 +430,134 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("CodeSystem.content", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/codesystem-content-mode|4.0.1").with_description("The extent of the content of the code system (the concepts and codes it defines) are represented in a code system resource."),
+    rh_foundation::ElementBinding::new("CodeSystem.filter.operator", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/filter-operator|4.0.1").with_description("The kind of operation to perform as a part of a property based filter."),
+    rh_foundation::ElementBinding::new("CodeSystem.hierarchyMeaning", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/codesystem-hierarchy-meaning|4.0.1").with_description("The meaning of the hierarchy of concepts in a code system."),
+    rh_foundation::ElementBinding::new("CodeSystem.property.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/concept-property-type|4.0.1").with_description("The type of a property value."),
+    rh_foundation::ElementBinding::new("CodeSystem.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("CodeSystem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.contained", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.contact", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.caseSensitive", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.valueSet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.hierarchyMeaning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.compositional", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.versionNeeded", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.content", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.supplements", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.count", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.operator", 1, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.filter.value", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.property.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.uri", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.property.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.extension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.display", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.designation", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.designation.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.use",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.designation.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property", 0, None),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.property.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "CodeSystem.concept.property.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("CodeSystem.concept.concept", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -959,7 +1087,21 @@ impl crate::validation::ValidatableResource for CodeSystem {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/CodeSystem")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::code_system::{
+    CodeSystemAccessors, CodeSystemExistence, CodeSystemMutators,
+};

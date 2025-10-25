@@ -36,6 +36,122 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Composition.attester.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/composition-attestation-mode|4.0.1",
+            )
+            .with_description("The way in which a person authenticated a composition."),
+            rh_foundation::ElementBinding::new(
+                "Composition.confidentiality",
+                rh_foundation::BindingStrength::Required,
+                "http://terminology.hl7.org/ValueSet/v3-ConfidentialityClassification|2014-03-26",
+            )
+            .with_description("Codes specifying the level of confidentiality of the composition."),
+            rh_foundation::ElementBinding::new(
+                "Composition.relatesTo.code",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/document-relationship-type|4.0.1",
+            )
+            .with_description("The type of relationship between documents."),
+            rh_foundation::ElementBinding::new(
+                "Composition.section.mode",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/list-mode|4.0.1",
+            )
+            .with_description("The processing mode that applies to this section."),
+            rh_foundation::ElementBinding::new(
+                "Composition.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/composition-status|4.0.1",
+            )
+            .with_description("The workflow/clinical status of the composition."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Composition", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.extension", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.category", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.subject", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("Composition.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.date", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.author", 1, None),
+            rh_foundation::ElementCardinality::new("Composition.title", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.confidentiality", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.attester", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.attester.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.attester.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Composition.attester.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Composition.attester.mode", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.attester.time", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.attester.party", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.custodian", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.relatesTo", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.relatesTo.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.relatesTo.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Composition.relatesTo.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Composition.relatesTo.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.relatesTo.target[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.event", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.event.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.event.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.event.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.event.code", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.event.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.event.detail", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.section", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.section.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Composition.section.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Composition.section.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.author", 0, None),
+            rh_foundation::ElementCardinality::new("Composition.section.focus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.mode", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.orderedBy", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.entry", 1, None),
+            rh_foundation::ElementCardinality::new("Composition.section.emptyReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Composition.section.section", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Catalog {
     fn id(&self) -> Option<String> {
@@ -108,7 +224,19 @@ impl crate::validation::ValidatableResource for Catalog {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/catalog")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::catalog::{CatalogAccessors, CatalogExistence, CatalogMutators};

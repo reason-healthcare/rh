@@ -209,6 +209,101 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "QuestionnaireResponse.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/questionnaire-answers-status|4.0.1",
+        )
+        .with_description("Lifecycle status of the questionnaire response.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.identifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.partOf", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.questionnaire",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.authored", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.author", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item", 0, None),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.linkId", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.definition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.answer", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.answer.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.answer.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.answer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.answer.value[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "QuestionnaireResponse.item.answer.item",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("QuestionnaireResponse.item.item", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for QuestionnaireResponse {
     fn id(&self) -> Option<String> {
@@ -554,7 +649,21 @@ impl crate::validation::ValidatableResource for QuestionnaireResponse {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::questionnaire_response::{
+    QuestionnaireResponseAccessors, QuestionnaireResponseExistence, QuestionnaireResponseMutators,
+};

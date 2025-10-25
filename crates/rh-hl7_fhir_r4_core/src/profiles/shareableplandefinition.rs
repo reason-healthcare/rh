@@ -35,6 +35,274 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("PlanDefinition.action.cardinalityBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|4.0.1").with_description("Defines behavior for an action or a group for how many times that item may be repeated."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.condition.kind", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-condition-kind|4.0.1").with_description("Defines the kinds of conditions that can appear on actions."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.groupingBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-grouping-behavior|4.0.1").with_description("Defines organization behavior of a group."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.participant.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-participant-type|4.0.1").with_description("The type of participant for the action."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.precheckBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-precheck-behavior|4.0.1").with_description("Defines selection frequency behavior for an action or group."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.priority", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/request-priority|4.0.1").with_description("Identifies the level of importance to be assigned to actioning the request."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.relatedAction.relationship", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-relationship-type|4.0.1").with_description("Defines the types of relationships between actions."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.requiredBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-required-behavior|4.0.1").with_description("Defines expectations around whether an action or action group is required."),
+    rh_foundation::ElementBinding::new("PlanDefinition.action.selectionBehavior", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/action-selection-behavior|4.0.1").with_description("Defines selection behavior of a group."),
+    rh_foundation::ElementBinding::new("PlanDefinition.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("PlanDefinition", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.version", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.experimental", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.publisher", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.topic", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.author", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.editor", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.library", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.goal.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.category", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.description", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.start", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.addresses", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.documentation", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.target", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.target.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.target.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.goal.target.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.goal.target.measure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.goal.target.detail[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.goal.target.due", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.prefix", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.textEquivalent",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.code", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.reason", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.documentation", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.goalId", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.trigger", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.condition", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.condition.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.condition.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.condition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.condition.kind",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.condition.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.input", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.output", 0, None),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.relatedAction", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.actionId",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.relationship",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.relatedAction.offset[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.timing[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.participant", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.participant.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.participant.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.participant.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.participant.role",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.groupingBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.selectionBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.requiredBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.precheckBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.cardinalityBehavior",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.definition[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.transform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.dynamicValue", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.dynamicValue.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.dynamicValue.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.dynamicValue.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.dynamicValue.path",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "PlanDefinition.action.dynamicValue.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("PlanDefinition.action.action", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Shareableplandefinition {
     fn id(&self) -> Option<String> {
@@ -109,7 +377,22 @@ impl crate::validation::ValidatableResource for Shareableplandefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/shareableplandefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::shareableplandefinition::{
+    ShareableplandefinitionAccessors, ShareableplandefinitionExistence,
+    ShareableplandefinitionMutators,
+};

@@ -143,6 +143,22 @@ pub struct StructureDefinition {
     /// Differential view of the structure
     pub differential: Option<StructureDefinitionDifferential>,
 }
+/// StructureDefinition nested structure for the 'context' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionContext {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// fhirpath | element | extension
+    #[serde(rename = "type")]
+    pub type_: ExtensionContextType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Where the extension can be used in instances
+    pub expression: StringType,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+}
 /// StructureDefinition nested structure for the 'differential' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinitionDifferential {
@@ -160,22 +176,6 @@ pub struct StructureDefinitionSnapshot {
     pub base: BackboneElement,
     /// Definition of elements in the resource (if no StructureDefinition)
     pub element: Vec<ElementDefinition>,
-}
-/// StructureDefinition nested structure for the 'context' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionContext {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// fhirpath | element | extension
-    #[serde(rename = "type")]
-    pub type_: ExtensionContextType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Where the extension can be used in instances
-    pub expression: StringType,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
 }
 /// StructureDefinition nested structure for the 'mapping' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -254,6 +254,18 @@ impl Default for StructureDefinition {
     }
 }
 
+impl Default for StructureDefinitionContext {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            expression: StringType::default(),
+            _expression: Default::default(),
+        }
+    }
+}
+
 impl Default for StructureDefinitionDifferential {
     fn default() -> Self {
         Self {
@@ -268,18 +280,6 @@ impl Default for StructureDefinitionSnapshot {
         Self {
             base: BackboneElement::default(),
             element: Vec::new(),
-        }
-    }
-}
-
-impl Default for StructureDefinitionContext {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            expression: StringType::default(),
-            _expression: Default::default(),
         }
     }
 }
@@ -339,6 +339,170 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("sdf-8b", rh_foundation::Severity::Error, "All snapshot elements must have a base definition", "element.all(base.exists())").with_xpath("count(f:element) = count(f:element/f:base)"),
     rh_foundation::Invariant::new("sdf-9", rh_foundation::Severity::Error, "In any snapshot or differential, no label, code or requirements on an element without a \".\" in the path (e.g. the first element)", "children().element.where(path.contains('.').not()).label.empty() and children().element.where(path.contains('.').not()).code.empty() and children().element.where(path.contains('.').not()).requirements.empty()").with_xpath("not(exists(f:snapshot/f:element[not(contains(f:path/@value, '.')) and (f:label or f:code or f:requirements)])) and not(exists(f:differential/f:element[not(contains(f:path/@value, '.')) and (f:label or f:code or f:requirements)]))"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "StructureDefinition.context.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/extension-context-type|4.0.1",
+            )
+            .with_description("How an extension context is interpreted."),
+            rh_foundation::ElementBinding::new(
+                "StructureDefinition.derivation",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/type-derivation-rule|4.0.1",
+            )
+            .with_description("How a type relates to its baseDefinition."),
+            rh_foundation::ElementBinding::new(
+                "StructureDefinition.fhirVersion",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/FHIR-version|4.0.1",
+            )
+            .with_description("All published FHIR Versions."),
+            rh_foundation::ElementBinding::new(
+                "StructureDefinition.kind",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/structure-definition-kind|4.0.1",
+            )
+            .with_description("Defines the type of structure that a definition is describing."),
+            rh_foundation::ElementBinding::new(
+                "StructureDefinition.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/publication-status|4.0.1",
+            )
+            .with_description("The lifecycle status of an artifact."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("StructureDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.contact", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.keyword", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.fhirVersion", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.mapping", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.mapping.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.mapping.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.mapping.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.mapping.identity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.mapping.uri", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.mapping.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.mapping.comment",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.kind", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.abstract", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.context", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.context.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.context.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.context.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.context.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.context.expression",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.contextInvariant", 0, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.baseDefinition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.derivation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.snapshot", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("StructureDefinition.snapshot.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.snapshot.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.snapshot.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("StructureDefinition.snapshot.element", 1, None),
+            rh_foundation::ElementCardinality::new("StructureDefinition.differential", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.differential.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.differential.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.differential.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "StructureDefinition.differential.element",
+                1,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -889,7 +1053,21 @@ impl crate::validation::ValidatableResource for StructureDefinition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/StructureDefinition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::structure_definition::{
+    StructureDefinitionAccessors, StructureDefinitionExistence, StructureDefinitionMutators,
+};

@@ -289,6 +289,113 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("EvidenceVariable.characteristic.groupMeasure", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/group-measure|4.0.1").with_description("Possible group measure aggregates (E.g. Mean, Median)."),
+    rh_foundation::ElementBinding::new("EvidenceVariable.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+    rh_foundation::ElementBinding::new("EvidenceVariable.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/variable-type|4.0.1").with_description("The possible types of variables for exposures or outcomes (E.g. Dichotomous, Continuous, Descriptive)."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("EvidenceVariable.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.contained", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.extension", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.shortTitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.contact", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.note", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.topic", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.author", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.editor", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EvidenceVariable.characteristic", 1, None),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.definition[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.usageContext",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.exclude",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.participantEffective[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.timeFromStart",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EvidenceVariable.characteristic.groupMeasure",
+                0,
+                Some(1),
+            ),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for EvidenceVariable {
     fn id(&self) -> Option<String> {
@@ -857,7 +964,21 @@ impl crate::validation::ValidatableResource for EvidenceVariable {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/EvidenceVariable")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::evidence_variable::{
+    EvidenceVariableAccessors, EvidenceVariableExistence, EvidenceVariableMutators,
+};

@@ -5,9 +5,9 @@
 default:
     @just --list
 
-# Run all tests
+# Run all tests (skipping doctests due to incremental compilation issues)
 test:
-    cargo test --workspace --all-features
+    cargo test --workspace --all-features --lib --bins --tests
 
 # Run tests with nextest if available
 test-fast:

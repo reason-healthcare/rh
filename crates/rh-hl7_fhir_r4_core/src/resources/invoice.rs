@@ -212,6 +212,111 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Invoice.lineItem.priceComponent.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/invoice-priceComponentType|4.0.1",
+            )
+            .with_description("Codes indicating the kind of the price component."),
+            rh_foundation::ElementBinding::new(
+                "Invoice.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/invoice-status|4.0.1",
+            )
+            .with_description("Codes identifying the lifecycle stage of an Invoice."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Invoice.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.cancelledReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.recipient", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.participant", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.participant.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Invoice.participant.role", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.participant.actor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.issuer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.account", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.sequence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.chargeItem[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.lineItem.priceComponent", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.factor",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Invoice.lineItem.priceComponent.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Invoice.totalPriceComponent", 0, None),
+            rh_foundation::ElementCardinality::new("Invoice.totalNet", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.totalGross", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.paymentTerms", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Invoice.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Invoice {
     fn id(&self) -> Option<String> {
@@ -618,7 +723,19 @@ impl crate::validation::ValidatableResource for Invoice {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Invoice")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::invoice::{InvoiceAccessors, InvoiceExistence, InvoiceMutators};

@@ -150,104 +150,6 @@ pub struct EffectEvidenceSynthesis {
     /// How certain is the effect
     pub certainty: Option<Vec<EffectEvidenceSynthesisCertainty>>,
 }
-/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of subcomponent of certainty rating
-    ///
-    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Subcomponent certainty rating
-    ///
-    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisEffectestimatePrecisionestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of precision estimate
-    ///
-    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Level of confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower bound
-    pub from: Option<DecimalType>,
-    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
-    pub _from: Option<Element>,
-    /// Upper bound
-    pub to: Option<DecimalType>,
-    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
-    pub _to: Option<Element>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'resultsByExposure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisResultsbyexposure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of results by exposure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// exposure | exposure-alternative
-    #[serde(rename = "exposureState")]
-    pub exposure_state: Option<ExposureState>,
-    /// Extension element for the 'exposureState' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_exposureState")]
-    pub _exposure_state: Option<Element>,
-    /// Variant exposure states
-    ///
-    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
-    #[serde(rename = "variantState")]
-    pub variant_state: Option<CodeableConcept>,
-    /// Risk evidence synthesis
-    #[serde(rename = "riskEvidenceSynthesis")]
-    pub risk_evidence_synthesis: Reference,
-}
 /// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectEvidenceSynthesisEffectestimate {
@@ -282,6 +184,104 @@ pub struct EffectEvidenceSynthesisEffectestimate {
     /// What unit is the outcome described in?
     #[serde(rename = "unitOfMeasure")]
     pub unit_of_measure: Option<CodeableConcept>,
+}
+/// EffectEvidenceSynthesis nested structure for the 'resultsByExposure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisResultsbyexposure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of results by exposure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// exposure | exposure-alternative
+    #[serde(rename = "exposureState")]
+    pub exposure_state: Option<ExposureState>,
+    /// Extension element for the 'exposureState' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_exposureState")]
+    pub _exposure_state: Option<Element>,
+    /// Variant exposure states
+    ///
+    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
+    #[serde(rename = "variantState")]
+    pub variant_state: Option<CodeableConcept>,
+    /// Risk evidence synthesis
+    #[serde(rename = "riskEvidenceSynthesis")]
+    pub risk_evidence_synthesis: Reference,
+}
+/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of subcomponent of certainty rating
+    ///
+    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Subcomponent certainty rating
+    ///
+    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
+}
+/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
+}
+/// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisEffectestimatePrecisionestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of precision estimate
+    ///
+    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Level of confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower bound
+    pub from: Option<DecimalType>,
+    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
+    pub _from: Option<Element>,
+    /// Upper bound
+    pub to: Option<DecimalType>,
+    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
+    pub _to: Option<Element>,
 }
 /// EffectEvidenceSynthesis nested structure for the 'certainty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -354,42 +354,18 @@ impl Default for EffectEvidenceSynthesis {
     }
 }
 
-impl Default for EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
+impl Default for EffectEvidenceSynthesisEffectestimate {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisEffectestimatePrecisionestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            level: Default::default(),
-            _level: Default::default(),
-            from: Default::default(),
-            _from: Default::default(),
-            to: Default::default(),
-            _to: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
+            precision_estimate: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
+            type_: Default::default(),
+            variant_state: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            unit_of_measure: Default::default(),
         }
     }
 }
@@ -408,18 +384,42 @@ impl Default for EffectEvidenceSynthesisResultsbyexposure {
     }
 }
 
-impl Default for EffectEvidenceSynthesisEffectestimate {
+impl Default for EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            precision_estimate: Default::default(),
+            type_: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
+impl Default for EffectEvidenceSynthesisSamplesize {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             description: Default::default(),
             _description: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
+        }
+    }
+}
+
+impl Default for EffectEvidenceSynthesisEffectestimatePrecisionestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             type_: Default::default(),
-            variant_state: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            unit_of_measure: Default::default(),
+            level: Default::default(),
+            _level: Default::default(),
+            from: Default::default(),
+            _from: Default::default(),
+            to: Default::default(),
+            _to: Default::default(),
         }
     }
 }
@@ -451,6 +451,326 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("EffectEvidenceSynthesis.effectEstimate.unitOfMeasure", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/ucum-units|4.0.1").with_description("Unified Code for Units of Measure (UCUM)."),
+    rh_foundation::ElementBinding::new("EffectEvidenceSynthesis.resultsByExposure.exposureState", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/exposure-state|4.0.1").with_description("Whether the results by exposure is describing the results for the primary exposure of interest (exposure) or the alternative state (exposureAlternative)."),
+    rh_foundation::ElementBinding::new("EffectEvidenceSynthesis.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|4.0.1").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.implicitRules",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.contained", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.contact", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.note", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.approvalDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.lastReviewDate",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectivePeriod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.topic", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.author", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.editor", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.endorser", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.relatedArtifact",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.synthesisType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.studyType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.population",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.exposure", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.exposureAlternative",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.outcome", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.numberOfStudies",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.sampleSize.numberOfParticipants",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.exposureState",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.variantState",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.resultsByExposure.riskEvidenceSynthesis",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.variantState",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.value",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.unitOfMeasure",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.level",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.from",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.effectEstimate.precisionEstimate.to",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EffectEvidenceSynthesis.certainty", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.rating",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.note",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.rating",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EffectEvidenceSynthesis.certainty.certaintySubcomponent.note",
+                0,
+                None,
+            ),
+        ]
     });
 
 // Trait implementations
@@ -1111,7 +1431,22 @@ impl crate::validation::ValidatableResource for EffectEvidenceSynthesis {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/EffectEvidenceSynthesis")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::effect_evidence_synthesis::{
+    EffectEvidenceSynthesisAccessors, EffectEvidenceSynthesisExistence,
+    EffectEvidenceSynthesisMutators,
+};

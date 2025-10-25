@@ -127,6 +127,47 @@ pub struct EncounterLocation {
     /// Time period during which the patient was present at the location
     pub period: Option<Period>,
 }
+/// Encounter nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role of participant in encounter
+    ///
+    /// Binding: extensible (Role of participant in encounter.)
+    ///
+    /// Available values:
+    /// - `SPRF`
+    /// - `PPRF`
+    /// - `PART`
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Period of time during the encounter that the participant participated
+    pub period: Option<Period>,
+    /// Persons involved in the encounter other than the patient
+    pub individual: Option<Reference>,
+}
+/// Encounter nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The diagnosis or procedure relevant to the encounter
+    pub condition: Reference,
+    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
+    ///
+    /// Binding: preferred (The type of diagnosis this condition represents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
+    #[serde(rename = "use")]
+    pub use_: Option<CodeableConcept>,
+    /// Ranking of the diagnosis (for each role type)
+    pub rank: Option<PositiveIntType>,
+    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
+    pub _rank: Option<Element>,
+}
 /// Encounter nested structure for the 'hospitalization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterHospitalization {
@@ -189,26 +230,18 @@ pub struct EncounterHospitalization {
     #[serde(rename = "dischargeDisposition")]
     pub discharge_disposition: Option<CodeableConcept>,
 }
-/// Encounter nested structure for the 'participant' field
+/// Encounter nested structure for the 'statusHistory' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterParticipant {
+pub struct EncounterStatushistory {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Role of participant in encounter
-    ///
-    /// Binding: extensible (Role of participant in encounter.)
-    ///
-    /// Available values:
-    /// - `SPRF`
-    /// - `PPRF`
-    /// - `PART`
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Period of time during the encounter that the participant participated
-    pub period: Option<Period>,
-    /// Persons involved in the encounter other than the patient
-    pub individual: Option<Reference>,
+    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
+    pub status: EncounterStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The time that the episode was in the specified status
+    pub period: Period,
 }
 /// Encounter nested structure for the 'classHistory' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,39 +257,6 @@ pub struct EncounterClasshistory {
     pub class: Coding,
     /// The time that the episode was in the specified class
     pub period: Period,
-}
-/// Encounter nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
-    pub status: EncounterStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The time that the episode was in the specified status
-    pub period: Period,
-}
-/// Encounter nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The diagnosis or procedure relevant to the encounter
-    pub condition: Reference,
-    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
-    ///
-    /// Binding: preferred (The type of diagnosis this condition represents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
-    #[serde(rename = "use")]
-    pub use_: Option<CodeableConcept>,
-    /// Ranking of the diagnosis (for each role type)
-    pub rank: Option<PositiveIntType>,
-    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
-    pub _rank: Option<Element>,
 }
 
 impl Default for Encounter {
@@ -304,6 +304,29 @@ impl Default for EncounterLocation {
     }
 }
 
+impl Default for EncounterParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+            individual: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            condition: Reference::default(),
+            use_: Default::default(),
+            rank: Default::default(),
+            _rank: Default::default(),
+        }
+    }
+}
+
 impl Default for EncounterHospitalization {
     fn default() -> Self {
         Self {
@@ -321,27 +344,6 @@ impl Default for EncounterHospitalization {
     }
 }
 
-impl Default for EncounterParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-            individual: Default::default(),
-        }
-    }
-}
-
-impl Default for EncounterClasshistory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            class: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
 impl Default for EncounterStatushistory {
     fn default() -> Self {
         Self {
@@ -353,14 +355,12 @@ impl Default for EncounterStatushistory {
     }
 }
 
-impl Default for EncounterDiagnosis {
+impl Default for EncounterClasshistory {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            condition: Reference::default(),
-            use_: Default::default(),
-            rank: Default::default(),
-            _rank: Default::default(),
+            class: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -380,6 +380,167 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "Encounter.location.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/encounter-location-status|4.0.1",
+            )
+            .with_description("The status of the location."),
+            rh_foundation::ElementBinding::new(
+                "Encounter.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/encounter-status|4.0.1",
+            )
+            .with_description("Current state of the encounter."),
+            rh_foundation::ElementBinding::new(
+                "Encounter.statusHistory.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/encounter-status|4.0.1",
+            )
+            .with_description("Current state of the encounter."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Encounter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.statusHistory", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.statusHistory.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.statusHistory.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.statusHistory.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.statusHistory.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.statusHistory.period", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.class", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.classHistory", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.classHistory.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.classHistory.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.classHistory.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.classHistory.class", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.classHistory.period", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.type", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.serviceType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.episodeOfCare", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.participant", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.participant.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.participant.type", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.participant.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.participant.individual", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.appointment", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.length", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.reasonCode", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.reasonReference", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.diagnosis.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis.condition", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis.use", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.diagnosis.rank", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.account", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.hospitalization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.hospitalization.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.hospitalization.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.preAdmissionIdentifier",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.hospitalization.origin", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.admitSource",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.reAdmission",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.dietPreference",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.specialCourtesy",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.specialArrangement",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.destination",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Encounter.hospitalization.dischargeDisposition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Encounter.location", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.location.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.location.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.location.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Encounter.location.location", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.location.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.location.physicalType", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.location.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.serviceProvider", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Encounter.partOf", 0, Some(1)),
+        ]
     });
 
 // Trait implementations
@@ -917,7 +1078,19 @@ impl crate::validation::ValidatableResource for Encounter {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Encounter")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::encounter::{EncounterAccessors, EncounterExistence, EncounterMutators};

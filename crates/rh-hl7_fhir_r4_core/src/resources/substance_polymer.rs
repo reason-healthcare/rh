@@ -40,73 +40,6 @@ pub struct SubstancePolymer {
     /// Todo
     pub repeat: Option<Vec<SubstancePolymerRepeat>>,
 }
-/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "orientationOfPolymerisation")]
-    pub orientation_of_polymerisation: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "repeatUnit")]
-    pub repeat_unit: Option<StringType>,
-    /// Extension element for the 'repeatUnit' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_repeatUnit")]
-    pub _repeat_unit: Option<Element>,
-    /// Todo
-    pub amount: Option<SubstanceAmount>,
-}
-/// SubstancePolymerRepeatRepeatunit nested structure for the 'structuralRepresentation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub representation: Option<StringType>,
-    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
-    pub _representation: Option<Element>,
-    /// Todo
-    pub attachment: Option<Attachment>,
-}
-/// SubstancePolymer nested structure for the 'monomerSet' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomerset {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "startingMaterial")]
-    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
-    /// Todo
-    #[serde(rename = "ratioType")]
-    pub ratio_type: Option<CodeableConcept>,
-}
-/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomersetStartingmaterial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub material: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "isDefining")]
-    pub is_defining: Option<BooleanType>,
-    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDefining")]
-    pub _is_defining: Option<Element>,
-    /// Todo
-    pub amount: Option<SubstanceAmount>,
-}
 /// SubstancePolymer nested structure for the 'repeat' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerRepeat {
@@ -131,6 +64,73 @@ pub struct SubstancePolymerRepeat {
     /// Todo
     #[serde(rename = "repeatUnitAmountType")]
     pub repeat_unit_amount_type: Option<CodeableConcept>,
+}
+/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomersetStartingmaterial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub material: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "isDefining")]
+    pub is_defining: Option<BooleanType>,
+    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDefining")]
+    pub _is_defining: Option<Element>,
+    /// Todo
+    pub amount: Option<SubstanceAmount>,
+}
+/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "orientationOfPolymerisation")]
+    pub orientation_of_polymerisation: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "repeatUnit")]
+    pub repeat_unit: Option<StringType>,
+    /// Extension element for the 'repeatUnit' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_repeatUnit")]
+    pub _repeat_unit: Option<Element>,
+    /// Todo
+    pub amount: Option<SubstanceAmount>,
+}
+/// SubstancePolymer nested structure for the 'monomerSet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomerset {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "startingMaterial")]
+    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
+    /// Todo
+    #[serde(rename = "ratioType")]
+    pub ratio_type: Option<CodeableConcept>,
+}
+/// SubstancePolymerRepeatRepeatunit nested structure for the 'structuralRepresentation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub representation: Option<StringType>,
+    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
+    pub _representation: Option<Element>,
+    /// Todo
+    pub attachment: Option<Attachment>,
 }
 /// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -159,36 +159,16 @@ impl Default for SubstancePolymer {
     }
 }
 
-impl Default for SubstancePolymerRepeatRepeatunit {
+impl Default for SubstancePolymerRepeat {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            orientation_of_polymerisation: Default::default(),
             repeat_unit: Default::default(),
-            _repeat_unit: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            representation: Default::default(),
-            _representation: Default::default(),
-            attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerMonomerset {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            starting_material: Default::default(),
-            ratio_type: Default::default(),
+            number_of_units: Default::default(),
+            _number_of_units: Default::default(),
+            average_molecular_formula: Default::default(),
+            _average_molecular_formula: Default::default(),
+            repeat_unit_amount_type: Default::default(),
         }
     }
 }
@@ -206,16 +186,36 @@ impl Default for SubstancePolymerMonomersetStartingmaterial {
     }
 }
 
-impl Default for SubstancePolymerRepeat {
+impl Default for SubstancePolymerRepeatRepeatunit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            orientation_of_polymerisation: Default::default(),
             repeat_unit: Default::default(),
-            number_of_units: Default::default(),
-            _number_of_units: Default::default(),
-            average_molecular_formula: Default::default(),
-            _average_molecular_formula: Default::default(),
-            repeat_unit_amount_type: Default::default(),
+            _repeat_unit: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerMonomerset {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            starting_material: Default::default(),
+            ratio_type: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            representation: Default::default(),
+            _representation: Default::default(),
+            attachment: Default::default(),
         }
     }
 }
@@ -245,6 +245,207 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("SubstancePolymer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.contained", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.extension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.class", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.geometry", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.copolymerConnectivity",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.modification", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.monomerSet", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.monomerSet.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.ratioType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.material",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.isDefining",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.monomerSet.startingMaterial.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.repeat", 0, None),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.repeat.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.repeat.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.numberOfUnits",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.averageMolecularFormula",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnitAmountType",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("SubstancePolymer.repeat.repeatUnit", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.orientationOfPolymerisation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.repeatUnit",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation.degree",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.degreeOfPolymerisation.amount",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.type",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.representation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "SubstancePolymer.repeat.repeatUnit.structuralRepresentation.attachment",
+                0,
+                Some(1),
+            ),
+        ]
     });
 
 // Trait implementations
@@ -544,7 +745,17 @@ impl crate::validation::ValidatableResource for SubstancePolymer {
         &INVARIANTS
     }
 
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/SubstancePolymer")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::substance_polymer::{
+    SubstancePolymerAccessors, SubstancePolymerExistence, SubstancePolymerMutators,
+};

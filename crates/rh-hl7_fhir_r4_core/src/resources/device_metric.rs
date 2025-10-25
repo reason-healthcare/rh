@@ -139,6 +139,83 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "DeviceMetric.calibration.state",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/metric-calibration-state|4.0.1",
+            )
+            .with_description("Describes the state of a metric calibration."),
+            rh_foundation::ElementBinding::new(
+                "DeviceMetric.calibration.type",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/metric-calibration-type|4.0.1",
+            )
+            .with_description("Describes the type of a metric calibration."),
+            rh_foundation::ElementBinding::new(
+                "DeviceMetric.category",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/metric-category|4.0.1",
+            )
+            .with_description("Describes the category of the metric."),
+            rh_foundation::ElementBinding::new(
+                "DeviceMetric.color",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/metric-color|4.0.1",
+            )
+            .with_description("Describes the typical color of representation."),
+            rh_foundation::ElementBinding::new(
+                "DeviceMetric.operationalStatus",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/metric-operational-status|4.0.1",
+            )
+            .with_description("Describes the operational status of the DeviceMetric."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DeviceMetric.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceMetric.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceMetric.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceMetric.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceMetric.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.unit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.source", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.parent", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.operationalStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.color", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.category", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.measurementPeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DeviceMetric.calibration.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration.state", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceMetric.calibration.time", 0, Some(1)),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for DeviceMetric {
     fn id(&self) -> Option<String> {
@@ -462,7 +539,21 @@ impl crate::validation::ValidatableResource for DeviceMetric {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/DeviceMetric")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::device_metric::{
+    DeviceMetricAccessors, DeviceMetricExistence, DeviceMetricMutators,
+};

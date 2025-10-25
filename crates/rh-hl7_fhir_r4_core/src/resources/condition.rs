@@ -231,6 +231,63 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Condition.clinicalStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/condition-clinical|4.0.1").with_description("The clinical status of the condition or diagnosis."),
+    rh_foundation::ElementBinding::new("Condition.verificationStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/condition-ver-status|4.0.1").with_description("The verification status to support or decline the clinical status of the condition or diagnosis."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Condition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.clinicalStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.verificationStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.category", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.severity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.bodySite", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.onset[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.abatement[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.recordedDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.recorder", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.asserter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.summary", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage.assessment", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.evidence", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.evidence.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.evidence.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.evidence.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.evidence.code", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.evidence.detail", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.note", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for Condition {
     fn id(&self) -> Option<String> {
@@ -573,19 +630,19 @@ impl crate::traits::condition::ConditionExistence for Condition {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_onset(&self) -> bool {
-        self.onset_date_time.is_some()
-            || self.onset_age.is_some()
-            || self.onset_period.is_some()
-            || self.onset_range.is_some()
-            || self.onset_string.is_some()
-    }
     fn has_abatement(&self) -> bool {
         self.abatement_date_time.is_some()
             || self.abatement_age.is_some()
             || self.abatement_period.is_some()
             || self.abatement_range.is_some()
             || self.abatement_string.is_some()
+    }
+    fn has_onset(&self) -> bool {
+        self.onset_date_time.is_some()
+            || self.onset_age.is_some()
+            || self.onset_period.is_some()
+            || self.onset_range.is_some()
+            || self.onset_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -643,7 +700,19 @@ impl crate::validation::ValidatableResource for Condition {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/Condition")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::condition::{ConditionAccessors, ConditionExistence, ConditionMutators};

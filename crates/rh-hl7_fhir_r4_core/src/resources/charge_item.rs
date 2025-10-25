@@ -226,6 +226,72 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
 ]
     });
 
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "ChargeItem.status",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/chargeitem-status|4.0.1",
+        )
+        .with_description("Codes identifying the lifecycle stage of a ChargeItem.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ChargeItem.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.definitionUri", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.definitionCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.partOf", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.context", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.occurrence[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.performer", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.performer.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.performer.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ChargeItem.performer.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ChargeItem.performer.function", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.performer.actor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.performingOrganization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.requestingOrganization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.costCenter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.bodysite", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.factorOverride", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.priceOverride", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.overrideReason", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.enterer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.enteredDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.reason", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.service", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.product[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ChargeItem.account", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.note", 0, None),
+            rh_foundation::ElementCardinality::new("ChargeItem.supportingInformation", 0, None),
+        ]
+    });
+
 // Trait implementations
 impl crate::traits::resource::ResourceAccessors for ChargeItem {
     fn id(&self) -> Option<String> {
@@ -674,13 +740,13 @@ impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
+    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
-    }
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
@@ -769,7 +835,21 @@ impl crate::validation::ValidatableResource for ChargeItem {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/ChargeItem")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::charge_item::{
+    ChargeItemAccessors, ChargeItemExistence, ChargeItemMutators,
+};

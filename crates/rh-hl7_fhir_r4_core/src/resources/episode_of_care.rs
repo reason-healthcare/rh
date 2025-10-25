@@ -59,6 +59,19 @@ pub struct EpisodeOfCare {
     /// The set of accounts that may be used for billing for this EpisodeOfCare
     pub account: Option<Vec<Reference>>,
 }
+/// EpisodeOfCare nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpisodeOfCareStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
+    pub status: EpisodeOfCareStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// Duration the EpisodeOfCare was in the specified status
+    pub period: Period,
+}
 /// EpisodeOfCare nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EpisodeOfCareDiagnosis {
@@ -77,19 +90,6 @@ pub struct EpisodeOfCareDiagnosis {
     pub rank: Option<PositiveIntType>,
     /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
     pub _rank: Option<Element>,
-}
-/// EpisodeOfCare nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EpisodeOfCareStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
-    pub status: EpisodeOfCareStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// Duration the EpisodeOfCare was in the specified status
-    pub period: Period,
 }
 
 impl Default for EpisodeOfCare {
@@ -113,6 +113,17 @@ impl Default for EpisodeOfCare {
     }
 }
 
+impl Default for EpisodeOfCareStatushistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for EpisodeOfCareDiagnosis {
     fn default() -> Self {
         Self {
@@ -121,17 +132,6 @@ impl Default for EpisodeOfCareDiagnosis {
             role: Default::default(),
             rank: Default::default(),
             _rank: Default::default(),
-        }
-    }
-}
-
-impl Default for EpisodeOfCareStatushistory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -151,6 +151,92 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
     rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())").with_xpath("@value|f:*|h:div"),
     rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()").with_xpath("exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])"),
 ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "EpisodeOfCare.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/episode-of-care-status|4.0.1",
+            )
+            .with_description("The status of the episode of care."),
+            rh_foundation::ElementBinding::new(
+                "EpisodeOfCare.statusHistory.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/episode-of-care-status|4.0.1",
+            )
+            .with_description("The status of the episode of care."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.contained", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.extension", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.statusHistory", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.statusHistory.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.statusHistory.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.statusHistory.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.statusHistory.status",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.statusHistory.period",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.type", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.diagnosis.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis.condition", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis.role", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.diagnosis.rank", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.patient", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "EpisodeOfCare.managingOrganization",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.referralRequest", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.careManager", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.team", 0, None),
+            rh_foundation::ElementCardinality::new("EpisodeOfCare.account", 0, None),
+        ]
     });
 
 // Trait implementations
@@ -531,7 +617,21 @@ impl crate::validation::ValidatableResource for EpisodeOfCare {
         &INVARIANTS
     }
 
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
     fn profile_url() -> Option<&'static str> {
         Some("http://hl7.org/fhir/StructureDefinition/EpisodeOfCare")
     }
 }
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::episode_of_care::{
+    EpisodeOfCareAccessors, EpisodeOfCareExistence, EpisodeOfCareMutators,
+};

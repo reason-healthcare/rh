@@ -407,71 +407,111 @@ The RH CLI supports all VCL language constructs:
 
 ## Validation (`rh validate`)
 
-Validate JSON syntax and FHIR resources with comprehensive error reporting and multiple output formats.
+Validate FHIR resources with comprehensive error reporting, including structural validation, FHIRPath invariants, and ValueSet binding checks.
 
-### JSON Syntax Validation
+### Resource Validation
 
-Validate JSON documents for syntax errors and structural issues:
+Validate a single FHIR resource:
 
 ```bash
-# Validate a single JSON file
-cargo run -p rh -- validate json --input patient.json
+# Validate from file
+cargo run -p rh -- validate resource --input patient.json
 
 # Validate from stdin
-echo '{"resourceType": "Patient", "id": "123"}' | cargo run -p rh -- validate json
+cat patient.json | cargo run -p rh -- validate resource
 
 # JSON output format
-cargo run -p rh -- validate json --input patient.json --format json
+cargo run -p rh -- validate resource --input patient.json --format json
 
-# Multiple JSON documents (NDJSON)
-cargo run -p rh -- validate json --input bundle.ndjson --multiple
+# Skip invariant validation (structural only)
+cargo run -p rh -- validate resource --input patient.json --skip-invariants
 
-# Custom validation parameters
-cargo run -p rh -- validate json --input deep.json --max-depth 50
+# Skip binding validation
+cargo run -p rh -- validate resource --input patient.json --skip-bindings
 
-# Strict mode (exit with error code on validation failure)
-cargo run -p rh -- validate json --input data.json --strict
+# Strict mode (exit with error code on any issues, including warnings)
+cargo run -p rh -- validate resource --input patient.json --strict
+```
+
+### Batch Validation
+
+Validate multiple FHIR resources from NDJSON:
+
+```bash
+# Validate NDJSON file
+cargo run -p rh -- validate batch --input patients.ndjson
+
+# Summary only (hide individual issues)
+cargo run -p rh -- validate batch --input patients.ndjson --summary-only
+
+# Custom thread count
+cargo run -p rh -- validate batch --input patients.ndjson --threads 8
+
+# Skip invariants and bindings
+cargo run -p rh -- validate batch --input patients.ndjson --skip-invariants --skip-bindings
 ```
 
 ### Validation Options
 
+**Common Options:**
 - `--input, -i`: Input file path (reads from stdin if not provided)
 - `--format, -f`: Output format (`text` or `json`)
-- `--multiple`: Process as NDJSON (multiple JSON documents)
-- `--max-depth`: Maximum allowed nesting depth (default: 100)
-- `--stats`: Show detailed statistics for valid JSON
-- `--strict`: Exit with non-zero code on validation failure
+- `--skip-invariants`: Skip FHIRPath invariant validation (structural only)
+- `--skip-bindings`: Skip ValueSet binding validation
+- `--strict`: Exit with non-zero code on any issues (including warnings)
+
+**Batch-Specific Options:**
+- `--threads`: Number of threads for parallel validation (default: 4)
+- `--summary-only`: Show summary only (hide individual issues)
 
 ### Output Examples
 
 **Text Format (Default):**
 ```
-✅ JSON is valid
+✅ FHIR resource is valid
+⚠️  3 warning(s)
+
+Issues:
+  1. ⚠️  Failed to parse invariant dom-6 expression: ...
+     Location: 
+     Invariant: dom-6
 ```
 
 **Error Reporting:**
 ```
-❌ JSON validation failed with 1 error(s):
-  1. JSON syntax error: expected ',' or ']' at line 5, column 12
+❌ FHIR validation failed
+  Errors: 2
+  Warnings: 1
+
+Issues:
+  1. ❌ Invariant pat-1 failed: SHALL at least contain a contact's details or a reference to an organization
+     Location: Patient
+     Invariant: pat-1
+  2. ⚠️  Failed to parse invariant dom-6 expression: ...
+     Invariant: dom-6
 ```
 
-**Multiple Document Summary:**
+**Batch Validation Summary:**
 ```
-📋 Validation Summary:
-  Total documents: 8
-  ✅ Valid: 6
+📋 Batch Validation Summary:
+  Total resources: 10
+  ✅ Valid: 8
   ❌ Invalid: 2
+  Total errors: 3
+  Total warnings: 5
 
-❌ Invalid documents:
-  Line 4: 1 error(s)
-    - JSON syntax error: key must be a string at line 1, column 2
+❌ Invalid resources:
+  Line 4 (Patient): 1 error(s), 2 warning(s)
+    ❌ Invariant ext-1 failed: Must have either extensions or value[x], not both
+       at 
 ```
 
 **JSON Format:**
 ```json
 {
+  "resourceType": "Patient",
   "valid": true,
-  "errors": []
+  "issues": []
 }
 ```
 
@@ -479,62 +519,69 @@ cargo run -p rh -- validate json --input data.json --strict
 
 **Basic Validation:**
 ```bash
-# Valid JSON
-echo '{"resourceType": "Patient", "id": "123"}' | cargo run -p rh -- validate json
-# Output: ✅ JSON is valid
+# Valid Patient resource
+cat > patient.json << EOF
+{
+  "resourceType": "Patient",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Example</div>"
+  },
+  "gender": "male",
+  "name": [{
+    "family": "Doe",
+    "given": ["John"]
+  }]
+}
+EOF
 
-# Invalid JSON
-echo '{"resourceType": "Patient", "id":}' | cargo run -p rh -- validate json
-# Output: ❌ JSON validation failed with 1 error(s):
-#   1. JSON syntax error: expected value at line 1, column 32
+cargo run -p rh -- validate resource --input patient.json --skip-invariants
+# Output: ✅ FHIR resource is valid
 ```
 
-**Multiple Document Processing:**
+**Batch Processing:**
 ```bash
 # Create test NDJSON file
-cat > test.ndjson << EOF
-{"resourceType": "Patient", "id": "1"}
-{"resourceType": "Observation", "id": "2"}
-{invalid json}
-{"resourceType": "Organization", "id": "3"}
+cat > patients.ndjson << EOF
+{"resourceType":"Patient","id":"p1","text":{"status":"generated","div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">P1</div>"},"gender":"male","name":[{"family":"Doe"}]}
+{"resourceType":"Patient","id":"p2","text":{"status":"generated","div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">P2</div>"},"gender":"female","name":[{"family":"Smith"}]}
+{"resourceType":"Patient","id":"p3","text":{"status":"generated","div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">P3</div>"},"gender":"other","name":[{"family":"Jones"}]}
 EOF
 
 # Validate with summary
-cargo run -p rh -- validate json --input test.ndjson --multiple
+cargo run -p rh -- validate batch --input patients.ndjson --skip-invariants
 # Output:
-# 📋 Validation Summary:
-#   Total documents: 4
+# 📋 Batch Validation Summary:
+#   Total resources: 3
 #   ✅ Valid: 3
-#   ❌ Invalid: 1
+#   ❌ Invalid: 0
+#   Total errors: 0
+#   Total warnings: 0
 ```
 
 **Structured Output:**
 ```bash
 # JSON format for integration with other tools
-echo '{"test": "value"}' | cargo run -p rh -- validate json --format json
+cargo run -p rh -- validate resource --input patient.json --format json --skip-invariants
 # Output:
 # {
+#   "resourceType": "Patient",
 #   "valid": true,
-#   "errors": []
+#   "issues": []
 # }
 ```
 
-**Depth Validation:**
+**Configuration Options:**
 ```bash
-# Test nesting limits
-echo '{"a":{"b":{"c":{"d":"too deep"}}}}' | cargo run -p rh -- validate json --max-depth 2
-# Output: ❌ JSON validation failed with 1 error(s):
-#   1. Schema validation error: Maximum nesting depth of 2 exceeded at depth 3
-```
+# Structural validation only (no invariants or bindings)
+cargo run -p rh -- validate resource --input patient.json --skip-invariants --skip-bindings
 
-**Batch Processing:**
-```bash
-# Validate multiple FHIR resources with strict error handling
-cargo run -p rh -- validate json \
-  --input fhir-bundle.ndjson \
-  --multiple \
-  --format json \
-  --strict
+# Strict mode (warnings cause non-zero exit)
+cargo run -p rh -- validate resource --input patient.json --strict
+
+# Parallel batch validation with 8 threads
+cargo run -p rh -- validate batch --input large-dataset.ndjson --threads 8 --summary-only
 ```
 
 ## 🛠️ Global Options
