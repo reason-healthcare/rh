@@ -72,6 +72,7 @@ pub struct ElementType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementBinding {
     pub strength: String,
+    #[serde(rename = "valueSet")]
     pub value_set: Option<String>,
 }
 

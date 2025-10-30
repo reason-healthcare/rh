@@ -1,22 +1,20 @@
 [package]
 name = "rh-validator"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-description = "Comprehensive FHIR validation library with JSON syntax validation, resource conformance checking, and profile-based validation capabilities"
+description = "Hybrid FHIR R4 validator with snapshot-based profile validation"
 keywords = [
     "fhir",
     "healthcare",
     "validation",
-    "json",
+    "profile",
     "hl7",
-    "interoperability",
-    "medical",
 ]
-categories = ["parsing", "data-structures", "healthcare", "validation"]
+categories = ["parsing", "data-structures", "healthcare"]
 
 [dependencies]
 # Workspace dependencies
@@ -27,16 +25,22 @@ thiserror = { workspace = true }
 
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation" }
-rh-fhirpath = { path = "../rh-fhirpath" }  # Phase 3: FHIRPath invariant validation
-hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }  # Phase 3: Generated FHIR types
+rh-snapshot = { path = "../rh-snapshot" }  # NEW: Snapshot-based validation
+rh-loader = { path = "../rh-loader" }      # NEW: FHIR package loading
+rh-fhirpath = { path = "../rh-fhirpath" }  # FHIRPath invariant validation
 
-# Additional dependencies
-rayon = "1.10"  # Phase 5: Parallel batch validation
+# Caching
+lru = "0.12"
+
+# Parallelism (for future batch validation)
+rayon = "1.10"
 
 [dev-dependencies]
-tempfile = "3.0"
-criterion = "0.5"  # For benchmarking
+# Testing with generated FHIR types
+hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }
 
-[[bench]]
-name = "validation"
-harness = false
+# Test utilities
+dirs = "5.0"
+
+# Benchmarking (to be added in Phase 8)
+criterion = { version = "0.5", features = ["html_reports"] }
