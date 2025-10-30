@@ -18,6 +18,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
 | 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
+| 🚀 | [rh-snapshot](crates/rh-snapshot/README.md)  | StructureDefinition snapshot generator |
 | 🔜 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
 | 🚀 | [rh-loader](crates/rh-loader/README.md)  | FHIR package loader from npm-style registries |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
