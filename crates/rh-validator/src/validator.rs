@@ -1,1002 +1,723 @@
-//! FHIR validation implementation
-//!
-//! Provides structural validation via Rust's type system and serde deserialization,
-//! plus FHIRPath-based invariant validation.
-
-use crate::types::{IssueCode, Severity, ValidationIssue, ValidationResult, ValidatorError};
-use crate::valuesets::ValueSetRegistry;
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use anyhow::{Context, Result};
+use serde_json::Value;
 use std::path::PathBuf;
 
-/// Configuration for FHIR validator
-#[derive(Debug, Clone)]
-pub struct ValidatorConfig {
-    /// Maximum nesting depth for JSON documents
-    pub max_depth: usize,
-    /// Whether to report unknown fields as warnings
-    pub warn_on_unknown_fields: bool,
-    /// Whether to skip invariant validation (structural only)
-    pub skip_invariants: bool,
-    /// Whether to skip binding validation
-    pub skip_bindings: bool,
-    /// Whether to skip cardinality validation
-    pub skip_cardinality: bool,
-    /// Custom package directory for profiles (future use)
-    pub package_dir: Option<PathBuf>,
-    /// FHIR version to validate against
-    pub fhir_version: String,
-    /// ValueSet registry for binding validation
-    pub valueset_registry: ValueSetRegistry,
-}
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 
-impl Default for ValidatorConfig {
-    fn default() -> Self {
-        Self {
-            max_depth: 100,
-            warn_on_unknown_fields: true,
-            skip_invariants: false,
-            skip_bindings: false,
-            skip_cardinality: false,
-            package_dir: None,
-            fhir_version: "4.0.1".to_string(),
-            valueset_registry: ValueSetRegistry::with_builtin(),
-        }
-    }
-}
+use crate::profile::ProfileRegistry;
+use crate::rules::RuleCompiler;
+use crate::types::{IssueCode, ValidationIssue, ValidationResult};
+use crate::valueset::ValueSetLoader;
 
-impl ValidatorConfig {
-    /// Create a new configuration with defaults
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Set maximum nesting depth
-    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
-        self.max_depth = max_depth;
-        self
-    }
-
-    /// Set whether to warn on unknown fields
-    pub fn with_warn_on_unknown_fields(mut self, warn: bool) -> Self {
-        self.warn_on_unknown_fields = warn;
-        self
-    }
-
-    /// Set whether to skip invariant validation
-    pub fn with_skip_invariants(mut self, skip: bool) -> Self {
-        self.skip_invariants = skip;
-        self
-    }
-
-    /// Set whether to skip binding validation
-    pub fn with_skip_bindings(mut self, skip: bool) -> Self {
-        self.skip_bindings = skip;
-        self
-    }
-
-    /// Set whether to skip cardinality validation
-    pub fn with_skip_cardinality(mut self, skip: bool) -> Self {
-        self.skip_cardinality = skip;
-        self
-    }
-
-    /// Set custom package directory
-    pub fn with_package_dir(mut self, package_dir: PathBuf) -> Self {
-        self.package_dir = Some(package_dir);
-        self
-    }
-
-    /// Set FHIR version
-    pub fn with_fhir_version(mut self, version: impl Into<String>) -> Self {
-        self.fhir_version = version.into();
-        self
-    }
-
-    /// Set ValueSet registry
-    pub fn with_valueset_registry(mut self, registry: ValueSetRegistry) -> Self {
-        self.valueset_registry = registry;
-        self
-    }
-}
-
-/// FHIR resource validator
-///
-/// Performs structural validation via Rust's type system and serde deserialization,
-/// plus FHIRPath-based invariant validation using the embedded FHIRPath engine.
 pub struct FhirValidator {
-    config: ValidatorConfig,
+    profile_registry: ProfileRegistry,
+    rule_compiler: RuleCompiler,
+    valueset_loader: ValueSetLoader,
     fhirpath_parser: FhirPathParser,
     fhirpath_evaluator: FhirPathEvaluator,
 }
 
 impl FhirValidator {
-    /// Create a new FHIR validator with default configuration
-    pub fn new() -> Result<Self, ValidatorError> {
-        Ok(Self {
-            config: ValidatorConfig::default(),
-            fhirpath_parser: FhirPathParser::new(),
-            fhirpath_evaluator: FhirPathEvaluator::new(),
-        })
-    }
-
-    /// Create a validator with custom configuration
-    pub fn with_config(config: ValidatorConfig) -> Result<Self, ValidatorError> {
-        Ok(Self {
-            config,
-            fhirpath_parser: FhirPathParser::new(),
-            fhirpath_evaluator: FhirPathEvaluator::new(),
-        })
-    }
-
-    /// Create a validator with a custom package directory
-    pub fn with_package_dir(package_dir: PathBuf) -> Result<Self, ValidatorError> {
-        Ok(Self {
-            config: ValidatorConfig::default().with_package_dir(package_dir),
-            fhirpath_parser: FhirPathParser::new(),
-            fhirpath_evaluator: FhirPathEvaluator::new(),
-        })
-    }
-
-    /// Get the validator configuration
-    pub fn config(&self) -> &ValidatorConfig {
-        &self.config
-    }
-
-    /// Validate a FHIR resource from JSON string
-    ///
-    /// This performs structural validation by deserializing into the typed resource.
-    /// Type parameter T should be a FHIR resource type from rh-hl7_fhir_r4_core.
-    pub fn validate_json<T: DeserializeOwned>(
-        &self,
-        json: &str,
-    ) -> Result<ValidationResult, ValidatorError> {
-        // Parse JSON to determine resource type
-        let json_value: serde_json::Value = serde_json::from_str(json)?;
-
-        let resource_type = json_value
-            .get("resourceType")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Unknown");
-
-        let mut result = ValidationResult::new(resource_type);
-
-        // Attempt to deserialize into the typed resource
-        match serde_json::from_str::<T>(json) {
-            Ok(_resource) => {
-                // Structural validation passed
-                // Phase 3 will add invariant validation here
-            }
-            Err(e) => {
-                // Convert serde error to validation issue
-                let issue = convert_serde_error(&e, resource_type);
-                result.add_issue(issue);
-            }
-        }
-
-        Ok(result)
-    }
-
-    /// Validate a FHIR resource that's already been parsed
-    ///
-    /// This is useful when you already have a deserialized resource and want to validate it.
-    pub fn validate<T: DeserializeOwned + serde::Serialize>(
-        &self,
-        resource: &T,
-    ) -> Result<ValidationResult, ValidatorError> {
-        // For now, we need to serialize then deserialize to validate structure
-        // This is inefficient but will work for Phase 1
-        // Phase 3 will optimize this
-        let json = serde_json::to_string(resource)
-            .map_err(|e| ValidatorError::Other(format!("Failed to serialize: {e}")))?;
-        self.validate_json::<T>(&json)
-    }
-
-    /// Validate invariants for a resource that implements ValidatableResource
-    ///
-    /// This evaluates all FHIRPath invariants defined for the resource type.
-    /// Returns validation issues for any invariants that fail.
-    pub fn validate_invariants<T>(
-        &self,
-        resource: &T,
-    ) -> Result<Vec<ValidationIssue>, ValidatorError>
-    where
-        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        let mut issues = Vec::new();
-
-        // Get all invariants for this resource type
-        let invariants = T::invariants();
-
-        // Serialize resource to JSON for FHIRPath evaluation
-        let json_value = serde_json::to_value(resource)
-            .map_err(|e| ValidatorError::Other(format!("Failed to serialize resource: {e}")))?;
-
-        // Create evaluation context from the resource
-        let context = EvaluationContext::new(json_value);
-
-        // Evaluate each invariant
-        for invariant in invariants {
-            // Parse the FHIRPath expression
-            let expression = match self.fhirpath_parser.parse(&invariant.expression) {
-                Ok(expr) => expr,
-                Err(e) => {
-                    // FHIRPath parsing error
-                    issues.push(ValidationIssue {
-                        severity: Severity::Warning,
-                        code: IssueCode::InvariantEvaluation,
-                        details: format!(
-                            "Failed to parse invariant {} expression: {}",
-                            invariant.key, e
-                        ),
-                        location: Some(format!("Invariant: {}", invariant.key)),
-                        expression: Some(invariant.expression.clone()),
-                        invariant_key: Some(invariant.key.clone()),
-                    });
-                    continue;
-                }
-            };
-
-            // Evaluate the expression
-            match self.fhirpath_evaluator.evaluate(&expression, &context) {
-                Ok(result) => {
-                    // Check if invariant passed (result should be true)
-                    let passed = match result {
-                        FhirPathValue::Boolean(b) => b,
-                        FhirPathValue::Collection(coll) => {
-                            // Empty collection means false, non-empty means true
-                            !coll.is_empty()
-                        }
-                        _ => {
-                            // Other values are treated as true if they exist
-                            true
-                        }
-                    };
-
-                    if !passed {
-                        // Invariant failed
-                        issues.push(ValidationIssue {
-                            severity: invariant.severity,
-                            code: IssueCode::Invariant,
-                            details: format!(
-                                "Invariant {} failed: {}",
-                                invariant.key, invariant.human
-                            ),
-                            location: Some(format!("Invariant: {}", invariant.key)),
-                            expression: Some(invariant.expression.clone()),
-                            invariant_key: Some(invariant.key.clone()),
-                        });
-                    }
-                }
-                Err(e) => {
-                    // FHIRPath evaluation error
-                    issues.push(ValidationIssue {
-                        severity: Severity::Warning,
-                        code: IssueCode::InvariantEvaluation,
-                        details: format!("Failed to evaluate invariant {}: {}", invariant.key, e),
-                        location: Some(format!("Invariant: {}", invariant.key)),
-                        expression: Some(invariant.expression.clone()),
-                        invariant_key: Some(invariant.key.clone()),
-                    });
-                }
-            }
-        }
-
-        Ok(issues)
-    }
-
-    /// Validate required bindings for coded elements
-    ///
-    /// This method checks that coded values in the resource conform to their
-    /// required ValueSet bindings. Only "required" strength bindings are validated.
-    ///
-    /// # Arguments
-    ///
-    /// * `resource` - The resource instance to validate
-    ///
-    /// # Returns
-    ///
-    /// A vector of validation issues for any binding violations found
-    pub fn validate_bindings<T>(&self, resource: &T) -> Result<Vec<ValidationIssue>, ValidatorError>
-    where
-        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        let mut issues = Vec::new();
-
-        // Get all required bindings for this resource type
-        let bindings = T::bindings();
-
-        // If no bindings, return early
-        if bindings.is_empty() {
-            return Ok(issues);
-        }
-
-        // Serialize resource to JSON for FHIRPath navigation
-        let json_value = serde_json::to_value(resource)
-            .map_err(|e| ValidatorError::Other(format!("Failed to serialize resource: {e}")))?;
-
-        // For each binding, extract the coded value and validate
-        for binding in bindings {
-            // Extract the element path (e.g., "Patient.gender" -> "gender")
-            let element_path = binding.path.split('.').next_back().unwrap_or(&binding.path);
-
-            // Try to get the value from the JSON
-            if let Some(value) = json_value.get(element_path) {
-                // Handle different coding types
-                match value {
-                    // Simple code value (e.g., Patient.gender = "male")
-                    serde_json::Value::String(code) => {
-                        if !self.validate_code(&binding.value_set_url, None, code) {
-                            issues.push(ValidationIssue {
-                                severity: Severity::Error,
-                                code: IssueCode::CodeInvalid,
-                                details: format!(
-                                    "Invalid code '{}' for element '{}'. Must be from ValueSet: {}",
-                                    code, binding.path, binding.value_set_url
-                                ),
-                                location: Some(binding.path.clone()),
-                                expression: None,
-                                invariant_key: None,
-                            });
-                        }
-                    }
-                    // Could also be a Coding object with system and code
-                    serde_json::Value::Object(obj) => {
-                        if let Some(serde_json::Value::String(code)) = obj.get("code") {
-                            let system = obj.get("system").and_then(|v| v.as_str());
-
-                            if !self.validate_code(&binding.value_set_url, system, code) {
-                                issues.push(ValidationIssue {
-                                    severity: Severity::Error,
-                                    code: IssueCode::CodeInvalid,
-                                    details: format!(
-                                        "Invalid code '{}' for element '{}'. Must be from ValueSet: {}",
-                                        code, binding.path, binding.value_set_url
-                                    ),
-                                    location: Some(binding.path.clone()),
-                                    expression: None,
-                                    invariant_key: None,
-                                });
-                            }
-                        }
-                    }
-                    _ => {
-                        // Ignore other value types (arrays, nulls, etc.)
-                    }
-                }
-            }
-        }
-
-        Ok(issues)
-    }
-
-    /// Helper method to validate a code against a ValueSet
-    ///
-    /// Returns true if the code is valid, false otherwise
-    fn validate_code(&self, value_set_url: &str, system: Option<&str>, code: &str) -> bool {
-        // Look up the ValueSet in the registry
-        if let Some(expansion) = self.config.valueset_registry.get(value_set_url) {
-            expansion.contains_code(system, code)
+    pub fn new(packages_dir: Option<&str>) -> Result<Self> {
+        let package_dirs = if let Some(dir) = packages_dir {
+            vec![PathBuf::from(dir)]
         } else {
-            // If ValueSet not found, we can't validate - treat as valid
-            // (Could also be treated as an error depending on strictness)
-            true
-        }
+            vec![]
+        };
+
+        Ok(Self {
+            profile_registry: ProfileRegistry::new(packages_dir)?,
+            rule_compiler: RuleCompiler::default(),
+            valueset_loader: ValueSetLoader::new(package_dirs, 100),
+            fhirpath_parser: FhirPathParser::new(),
+            fhirpath_evaluator: FhirPathEvaluator::new(),
+        })
     }
 
-    /// Validate cardinality constraints for a resource
-    ///
-    /// This method checks that elements in the resource conform to their
-    /// cardinality constraints (min..max). It validates:
-    /// - Required elements (min > 0) are present
-    /// - Array elements do not exceed max cardinality (if max is not unbounded)
-    ///
-    /// # Arguments
-    ///
-    /// * `resource` - The resource instance to validate
-    ///
-    /// # Returns
-    ///
-    /// A vector of validation issues for any cardinality violations found
-    pub fn validate_cardinality<T>(
-        &self,
-        resource: &T,
-    ) -> Result<Vec<ValidationIssue>, ValidatorError>
-    where
-        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        let mut issues = Vec::new();
+    pub fn validate(&self, resource: &Value) -> Result<ValidationResult> {
+        let mut result = ValidationResult::valid();
 
-        // Get cardinalities for this resource type
-        let cardinalities = T::cardinalities();
-
-        // If no cardinalities defined, return early
-        if cardinalities.is_empty() {
-            return Ok(issues);
+        if !resource.is_object() {
+            return Ok(ValidationResult::invalid(vec![ValidationIssue::error(
+                IssueCode::Structure,
+                "Resource must be a JSON object",
+            )]));
         }
 
-        // Serialize resource to JSON for element navigation
-        let json_value = serde_json::to_value(resource)
-            .map_err(|e| ValidatorError::Other(format!("Failed to serialize resource: {e}")))?;
+        let resource_type = resource.get("resourceType").and_then(|v| v.as_str());
+        if resource_type.is_none() {
+            result = result.with_issue(ValidationIssue::error(
+                IssueCode::Required,
+                "Missing required field 'resourceType'",
+            ));
+        }
 
-        // For each cardinality constraint, check the element
-        for cardinality in cardinalities {
-            // Extract the element path (e.g., "Patient.gender" -> "gender")
-            // For now, we only validate top-level fields
-            let parts: Vec<&str> = cardinality.path.split('.').collect();
-            if parts.len() != 2 {
+        Ok(result)
+    }
+
+    pub fn validate_with_profile(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+    ) -> Result<ValidationResult> {
+        let mut result = self.validate(resource)?;
+
+        let snapshot = self
+            .profile_registry
+            .get_snapshot(profile_url)
+            .context("Failed to get snapshot from registry")?;
+
+        let snapshot = match snapshot {
+            Some(s) => s,
+            None => {
+                return Ok(result.with_issue(ValidationIssue::error(
+                    IssueCode::NotFound,
+                    format!("Profile not found: {profile_url}"),
+                )));
+            }
+        };
+
+        let rules = self
+            .rule_compiler
+            .compile(&snapshot)
+            .context("Failed to compile validation rules")?;
+
+        for rule in &rules.cardinality_rules {
+            if !should_validate_path(&rule.path, resource) {
                 continue;
             }
-            let element_name = parts[1];
 
-            // Get the value from JSON
-            let value = json_value.get(element_name);
+            let violations =
+                validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max);
 
-            // Check minimum cardinality (required elements)
-            if cardinality.is_required() {
-                match value {
-                    None => {
-                        issues.push(ValidationIssue {
-                            severity: Severity::Error,
-                            code: IssueCode::Required,
-                            details: format!(
-                                "Required element '{}' is missing (cardinality: {})",
-                                cardinality.path,
-                                cardinality.to_fhir_notation()
-                            ),
-                            location: Some(cardinality.path.clone()),
-                            expression: None,
-                            invariant_key: None,
-                        });
-                    }
-                    Some(serde_json::Value::Null) => {
-                        issues.push(ValidationIssue {
-                            severity: Severity::Error,
-                            code: IssueCode::Required,
-                            details: format!(
-                                "Required element '{}' is null (cardinality: {})",
-                                cardinality.path,
-                                cardinality.to_fhir_notation()
-                            ),
-                            location: Some(cardinality.path.clone()),
-                            expression: None,
-                            invariant_key: None,
-                        });
-                    }
-                    Some(_) => {}
-                }
-            }
-
-            // Check maximum cardinality for arrays
-            if let Some(serde_json::Value::Array(arr)) = value {
-                if let Some(max) = cardinality.max {
-                    if arr.len() > max {
-                        issues.push(ValidationIssue {
-                            severity: Severity::Error,
-                            code: IssueCode::Cardinality,
-                            details: format!(
-                                "Element '{}' has {} items but maximum is {} (cardinality: {})",
-                                cardinality.path,
-                                arr.len(),
-                                max,
-                                cardinality.to_fhir_notation()
-                            ),
-                            location: Some(cardinality.path.clone()),
-                            expression: None,
-                            invariant_key: None,
-                        });
-                    }
-                }
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
             }
         }
 
-        Ok(issues)
-    }
+        // Type validation
+        for rule in &rules.type_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
+            }
 
-    /// Validate both structure and invariants for a resource
-    ///
-    /// This performs comprehensive validation including:
-    /// 1. Structural validation via deserialization
-    /// 2. Invariant validation via FHIRPath expressions
-    /// 3. Binding validation for required ValueSet bindings
-    /// 4. Cardinality validation for min/max constraints
-    ///
-    /// Returns a ValidationResult with all issues found.
-    pub fn validate_full<T>(&self, json: &str) -> Result<ValidationResult, ValidatorError>
-    where
-        T: DeserializeOwned + Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        // First perform structural validation
-        let mut result = self.validate_json::<T>(json)?;
+            let violations = validate_type_at_path(resource, &rule.path, &rule.types);
 
-        // If structural validation failed with errors and we should skip all other validation, return early
-        if !result.is_valid()
-            && self.config.skip_invariants
-            && self.config.skip_bindings
-            && self.config.skip_cardinality
-        {
-            return Ok(result);
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
         }
 
-        // Parse the resource once for all validation types
-        if let Ok(resource) = serde_json::from_str::<T>(json) {
-            // Validate invariants
-            if !self.config.skip_invariants {
-                let invariant_issues = self.validate_invariants(&resource)?;
-                result.add_issues(invariant_issues);
+        // Binding validation
+        for rule in &rules.binding_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
             }
 
-            // Validate bindings
-            if !self.config.skip_bindings {
-                let binding_issues = self.validate_bindings(&resource)?;
-                result.add_issues(binding_issues);
-            }
+            let violations = self.validate_binding_at_path(resource, rule)?;
 
-            // Validate cardinality
-            if !self.config.skip_cardinality {
-                let cardinality_issues = self.validate_cardinality(&resource)?;
-                result.add_issues(cardinality_issues);
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
+        // Invariant validation
+        for rule in &rules.invariant_rules {
+            let violations = self.validate_invariant(resource, rule)?;
+
+            for violation in violations {
+                result = result.with_issue(violation);
             }
         }
 
         Ok(result)
     }
 
-    /// Validate a resource instance directly without JSON round-trip
-    ///
-    /// This validates invariants, bindings, and cardinality on an already-instantiated resource struct.
-    /// More efficient than `validate_full()` for programmatically-built resources
-    /// since it avoids the serialize → deserialize → serialize round-trip.
-    ///
-    /// Note: This assumes the resource is structurally valid (via Rust's type system).
-    /// It validates invariants and bindings. For JSON validation, use `validate_full()`.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// use rh_validator::FhirValidator;
-    /// use hl7_fhir_r4_core::resources::patient::Patient;
-    ///
-    /// let validator = FhirValidator::new()?;
-    /// let mut patient = Patient::default();
-    /// patient.base.base.id = Some("example".to_string());
-    ///
-    /// let result = validator.validate_resource(&patient)?;
-    /// assert!(result.is_valid());
-    /// # Ok::<(), rh_validator::ValidatorError>(())
-    /// ```
-    pub fn validate_resource<T>(&self, resource: &T) -> Result<ValidationResult, ValidatorError>
-    where
-        T: Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        // Create a ValidationResult with the correct resource type
-        let resource_type = resource.resource_type();
-        let mut result = ValidationResult::new(resource_type);
-
-        // Validate invariants unless skipped
-        if !self.config.skip_invariants {
-            let invariant_issues = self.validate_invariants(resource)?;
-            result.add_issues(invariant_issues);
-        }
-
-        // Validate bindings unless skipped
-        if !self.config.skip_bindings {
-            let binding_issues = self.validate_bindings(resource)?;
-            result.add_issues(binding_issues);
-        }
-
-        // Validate cardinality unless skipped
-        if !self.config.skip_cardinality {
-            let cardinality_issues = self.validate_cardinality(resource)?;
-            result.add_issues(cardinality_issues);
-        }
-
-        Ok(result)
+    pub fn list_profiles(&self) -> Vec<String> {
+        self.profile_registry.list_profiles()
     }
 
-    /// Validate a batch of FHIR resources in parallel
-    ///
-    /// Uses Rayon to validate multiple JSON resources concurrently.
-    /// This provides significant performance improvements for large batches.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// use rh_validator::FhirValidator;
-    ///
-    /// let validator = FhirValidator::new()?;
-    /// let resources = vec![
-    ///     r#"{"resourceType": "Patient", "id": "1"}"#,
-    ///     r#"{"resourceType": "Patient", "id": "2"}"#,
-    /// ];
-    ///
-    /// let results = validator.validate_batch::<Patient>(&resources)?;
-    /// assert_eq!(results.len(), 2);
-    /// # Ok::<(), rh_validator::ValidatorError>(())
-    /// ```
-    pub fn validate_batch<T>(
-        &self,
-        resources: &[&str],
-    ) -> Result<Vec<ValidationResult>, ValidatorError>
-    where
-        T: DeserializeOwned + Serialize + hl7_fhir_r4_core::validation::ValidatableResource,
-    {
-        use rayon::prelude::*;
-
-        // Clone config for thread-safe access
-        let config = self.config.clone();
-
-        // Validate all resources in parallel
-        resources
-            .par_iter()
-            .map(|json| {
-                // Create a validator instance for this thread
-                let validator = FhirValidator::with_config(config.clone())?;
-                validator.validate_full::<T>(json)
-            })
-            .collect()
+    pub fn search_profiles(&self, query: &str) -> Vec<String> {
+        self.profile_registry.search_profiles(query)
     }
 
-    /// Validate NDJSON (newline-delimited JSON) in parallel
-    ///
-    /// Processes a string containing multiple JSON objects separated by newlines.
-    /// Empty lines and lines starting with # (comments) are skipped.
-    /// Returns results with their line numbers for error reporting.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// use rh_validator::FhirValidator;
-    ///
-    /// let validator = FhirValidator::new()?;
-    /// let ndjson = r#"{"resourceType": "Patient", "id": "1"}
-    /// {"resourceType": "Patient", "id": "2"}
-    /// {"resourceType": "Patient", "id": "3"}"#;
-    ///
-    /// let results = validator.validate_ndjson::<Patient>(ndjson)?;
-    /// assert_eq!(results.len(), 3);
-    /// # Ok::<(), rh_validator::ValidatorError>(())
-    /// ```
-    pub fn validate_ndjson<T>(
-        &self,
-        ndjson: &str,
-    ) -> Result<Vec<(usize, ValidationResult)>, ValidatorError>
-    where
-        T: DeserializeOwned
-            + Serialize
-            + hl7_fhir_r4_core::validation::ValidatableResource
-            + Send
-            + Sync,
-    {
-        use rayon::prelude::*;
-
-        // Clone config for thread-safe access
-        let config = self.config.clone();
-
-        // Parse lines with their line numbers
-        let lines: Vec<(usize, &str)> = ndjson
-            .lines()
-            .enumerate()
-            .filter_map(|(idx, line)| {
-                let trimmed = line.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') {
-                    None
-                } else {
-                    Some((idx + 1, trimmed))
-                }
-            })
-            .collect();
-
-        // Validate all lines in parallel
-        lines
-            .par_iter()
-            .map(|(line_num, json)| {
-                // Create a validator instance for this thread
-                let validator = FhirValidator::with_config(config.clone())?;
-                let result = validator.validate_full::<T>(json)?;
-                Ok((*line_num, result))
-            })
-            .collect()
-    }
-
-    /// Validate with specific FHIR version (compatibility method)
-    pub fn validate_with_version(
-        &self,
-        json: &str,
-        _version: &str,
-    ) -> Result<ValidationResult, ValidatorError> {
-        // For now, use serde_json::Value as generic type
-        self.validate_json::<serde_json::Value>(json)
-    }
-
-    /// Validate a FHIR resource from JSON with explicit resource type
-    pub fn validate_resource_json(
-        &self,
-        _resource_type: &str,
-        json: &str,
-    ) -> Result<ValidationResult, ValidatorError> {
-        self.validate_json::<serde_json::Value>(json)
-    }
-
-    /// Validate multiple FHIR resources (NDJSON format)
-    pub fn validate_multiple(
-        &self,
-        json: &str,
-        _version: Option<&str>,
-    ) -> Result<Vec<(usize, ValidationResult)>, ValidatorError> {
-        let mut results = Vec::new();
-
-        for (line_number, line) in json.lines().enumerate() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-
-            let result = self.validate_json::<serde_json::Value>(line)?;
-            results.push((line_number + 1, result));
-        }
-
-        Ok(results)
-    }
-}
-
-/// Convert a serde JSON error to a ValidationIssue
-fn convert_serde_error(error: &serde_json::Error, resource_type: &str) -> ValidationIssue {
-    let error_msg = error.to_string();
-
-    // Determine issue code based on error message patterns
-    let (code, severity) = if error_msg.contains("missing field") {
-        (IssueCode::Required, Severity::Error)
-    } else if error_msg.contains("invalid type") {
-        (IssueCode::ValueType, Severity::Error)
-    } else if error_msg.contains("unknown field") {
-        (IssueCode::Unknown, Severity::Warning)
-    } else {
-        (IssueCode::Structure, Severity::Error)
-    };
-
-    // Extract location information from error
-    let location = extract_location_from_error(&error_msg, resource_type);
-
-    // Build detailed error message with line/column if available
-    let details = if error.line() > 0 {
-        format!(
-            "{} at line {}, column {}",
-            error_msg,
-            error.line(),
-            error.column()
+    pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
+        (
+            self.profile_registry.cache_stats(),
+            self.rule_compiler.cache_stats(),
         )
-    } else {
-        error_msg
-    };
-
-    let mut issue = ValidationIssue::new(severity, code, details);
-
-    if let Some(loc) = location {
-        issue = issue.with_location(loc);
     }
-
-    issue
 }
 
-/// Extract location path from serde error message
-fn extract_location_from_error(error_msg: &str, resource_type: &str) -> Option<String> {
-    // Try to extract field names from error messages
-    if let Some(field_start) = error_msg.find("field `") {
-        if let Some(field_end) = error_msg[field_start + 7..].find('`') {
-            let field_name = &error_msg[field_start + 7..field_start + 7 + field_end];
-            return Some(format!("{resource_type}.{field_name}"));
+fn validate_cardinality_at_path(
+    resource: &Value,
+    path: &str,
+    min: Option<u32>,
+    max: &Option<String>,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.is_empty() {
+        return issues;
+    }
+
+    let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
+        return issues;
+    };
+
+    if parts[0] != resource_type {
+        return issues;
+    }
+
+    // Find if there's an array in the path before the final element
+    let array_index = find_array_in_path(resource, &parts);
+
+    if let Some(arr_idx) = array_index {
+        // Path crosses an array boundary - validate per-item
+        validate_per_array_item(resource, &parts, arr_idx, min, max.as_deref(), &mut issues);
+    } else {
+        // Simple path - validate directly
+        let count = count_simple_path(resource, &parts);
+        check_cardinality(path, count, min, max.as_deref(), &mut issues);
+    }
+
+    issues
+}
+
+fn find_array_in_path(resource: &Value, parts: &[&str]) -> Option<usize> {
+    if parts.len() <= 2 {
+        // No intermediate path to check (e.g., "Patient.identifier")
+        return None;
+    }
+
+    let mut current = resource;
+
+    for (i, part) in parts[1..parts.len() - 1].iter().enumerate() {
+        match current.get(part) {
+            Some(Value::Array(_)) => return Some(i + 1), // +1 because we skipped resource type
+            Some(other) => current = other,
+            None => return None,
         }
     }
 
-    // Default to just resource type
-    Some(resource_type.to_string())
+    None
 }
 
-/// JSON syntax validator
-///
-/// Validates JSON syntax without requiring typed resources.
-#[derive(Debug, Clone)]
-pub struct JsonValidator {
-    max_depth: usize,
-}
-
-impl JsonValidator {
-    /// Create a validator with custom max depth
-    pub fn with_max_depth(max_depth: usize) -> Self {
-        Self { max_depth }
+fn validate_per_array_item(
+    resource: &Value,
+    parts: &[&str],
+    array_index: usize,
+    min: Option<u32>,
+    max: Option<&str>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    // Navigate to the array
+    let mut current = resource;
+    for part in &parts[1..array_index] {
+        match current.get(part) {
+            Some(value) => current = value,
+            None => return,
+        }
     }
 
-    /// Validate JSON syntax
-    pub fn validate(&self, json: &str) -> ValidationResult {
-        let mut result = ValidationResult::new("JSON");
+    // Get the array
+    let Some(array) = current.get(parts[array_index]).and_then(|v| v.as_array()) else {
+        return;
+    };
 
-        match serde_json::from_str::<serde_json::Value>(json) {
-            Ok(value) => {
-                // Check nesting depth
-                let depth = calculate_depth(&value);
-                if depth > self.max_depth {
-                    result.add_issue(ValidationIssue::new(
-                        Severity::Error,
-                        IssueCode::Structure,
+    // Validate cardinality for each array item
+    for item in array.iter() {
+        let remaining_path = &parts[array_index + 1..];
+        let count = count_in_item(item, remaining_path);
+
+        let full_path = parts.join(".");
+
+        check_cardinality(&full_path, count, min, max, issues);
+    }
+}
+
+fn count_in_item(item: &Value, remaining_path: &[&str]) -> usize {
+    if remaining_path.is_empty() {
+        return 1;
+    }
+
+    let mut current = item;
+    for (i, part) in remaining_path.iter().enumerate() {
+        match current.get(part) {
+            Some(Value::Array(arr)) => {
+                if i == remaining_path.len() - 1 {
+                    return arr.len();
+                }
+                return arr.len(); // Count items in nested arrays
+            }
+            Some(other) => {
+                if i == remaining_path.len() - 1 {
+                    return 1;
+                }
+                current = other;
+            }
+            None => return 0,
+        }
+    }
+
+    0
+}
+
+fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
+    let mut current = resource;
+
+    for (i, part) in parts[1..].iter().enumerate() {
+        match current.get(part) {
+            Some(Value::Array(arr)) => {
+                if i == parts.len() - 2 {
+                    return arr.len();
+                }
+                if arr.is_empty() {
+                    return 0;
+                }
+                return arr.len();
+            }
+            Some(other) => {
+                if i == parts.len() - 2 {
+                    return 1;
+                }
+                current = other;
+            }
+            None => return 0,
+        }
+    }
+
+    1
+}
+
+fn check_cardinality(
+    path: &str,
+    count: usize,
+    min: Option<u32>,
+    max: Option<&str>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    if let Some(min_val) = min {
+        if count < min_val as usize {
+            issues.push(ValidationIssue::error(
+                IssueCode::Required,
+                format!(
+                    "Cardinality violation at '{path}': expected at least {min_val} but found {count}"
+                ),
+            ));
+        }
+    }
+
+    if let Some(max_str) = max {
+        if max_str != "*" {
+            if let Ok(max_num) = max_str.parse::<usize>() {
+                if count > max_num {
+                    issues.push(ValidationIssue::error(
+                        IssueCode::Value,
                         format!(
-                            "JSON nesting depth {} exceeds maximum {}",
-                            depth, self.max_depth
+                            "Cardinality violation at '{path}': expected at most {max_num} but found {count}"
                         ),
                     ));
                 }
             }
-            Err(e) => {
-                let details = if e.line() > 0 {
-                    format!(
-                        "JSON syntax error at line {}, column {}: {}",
-                        e.line(),
-                        e.column(),
-                        e
-                    )
-                } else {
-                    e.to_string()
-                };
+        }
+    }
+}
 
-                result.add_issue(ValidationIssue::new(
-                    Severity::Error,
-                    IssueCode::Structure,
-                    details,
-                ));
+fn validate_type_at_path(
+    resource: &Value,
+    path: &str,
+    expected_types: &[String],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if expected_types.is_empty() {
+        return issues;
+    }
+
+    let values = get_values_at_path(resource, path);
+
+    for value in values {
+        if !matches_any_type(value, expected_types) {
+            let actual_type = get_json_type_name(value);
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Type mismatch at '{path}': expected one of [{}] but found {actual_type}",
+                    expected_types.join(", ")
+                ),
+            ));
+        }
+    }
+
+    issues
+}
+
+fn get_values_at_path<'a>(resource: &'a Value, path: &str) -> Vec<&'a Value> {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.is_empty() {
+        return vec![];
+    }
+
+    let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
+        return vec![];
+    };
+
+    if parts[0] != resource_type {
+        return vec![];
+    }
+
+    if parts.len() == 1 {
+        return vec![resource];
+    }
+
+    let mut current = vec![resource];
+
+    for part in &parts[1..] {
+        let mut next = Vec::new();
+
+        for value in current {
+            match value.get(part) {
+                Some(Value::Array(arr)) => {
+                    for item in arr {
+                        next.push(item);
+                    }
+                }
+                Some(other) => {
+                    next.push(other);
+                }
+                None => {}
             }
         }
 
-        result
+        if next.is_empty() {
+            return vec![];
+        }
+
+        current = next;
     }
 
-    /// Validate multiple JSON documents (NDJSON format)
-    pub fn validate_multiple(&self, json: &str) -> Vec<(usize, ValidationResult)> {
-        json.lines()
-            .enumerate()
-            .filter(|(_, line)| !line.trim().is_empty())
-            .map(|(idx, line)| (idx + 1, self.validate(line)))
-            .collect()
+    current
+}
+
+fn matches_any_type(value: &Value, expected_types: &[String]) -> bool {
+    for expected_type in expected_types {
+        if matches_fhir_type(value, expected_type) {
+            return true;
+        }
+    }
+    false
+}
+
+fn matches_fhir_type(value: &Value, fhir_type: &str) -> bool {
+    match fhir_type {
+        // Primitive types
+        "string" | "code" | "id" | "markdown" | "uri" | "url" | "canonical" | "oid" | "uuid" => {
+            value.is_string()
+        }
+        "boolean" => value.is_boolean(),
+        "integer" | "unsignedInt" | "positiveInt" => value.is_i64() || value.is_u64(),
+        "decimal" => value.is_f64() || value.is_i64() || value.is_u64(),
+        "date" | "dateTime" | "instant" | "time" => value.is_string(),
+        "base64Binary" => value.is_string(),
+
+        // Complex types - must be objects
+        "HumanName"
+        | "Address"
+        | "ContactPoint"
+        | "Identifier"
+        | "CodeableConcept"
+        | "Coding"
+        | "Reference"
+        | "Period"
+        | "Quantity"
+        | "Range"
+        | "Ratio"
+        | "Attachment"
+        | "Annotation"
+        | "Signature"
+        | "SampledData"
+        | "Age"
+        | "Distance"
+        | "Duration"
+        | "Count"
+        | "Money"
+        | "MoneyQuantity"
+        | "SimpleQuantity"
+        | "Meta"
+        | "Dosage"
+        | "Extension"
+        | "Narrative"
+        | "ContactDetail"
+        | "Contributor"
+        | "DataRequirement"
+        | "ParameterDefinition"
+        | "RelatedArtifact"
+        | "TriggerDefinition"
+        | "UsageContext"
+        | "Expression"
+        | "Timing" => value.is_object(),
+
+        // BackboneElement and other structured types
+        "BackboneElement" | "Element" => value.is_object(),
+
+        // Resource types (all should be objects)
+        _ if fhir_type.chars().next().unwrap_or('a').is_uppercase() => value.is_object(),
+
+        // Unknown type - be lenient
+        _ => true,
     }
 }
 
-impl Default for JsonValidator {
-    fn default() -> Self {
-        Self { max_depth: 100 }
-    }
-}
-
-/// Calculate the maximum nesting depth of a JSON value
-fn calculate_depth(value: &serde_json::Value) -> usize {
+fn get_json_type_name(value: &Value) -> &str {
     match value {
-        serde_json::Value::Object(map) => 1 + map.values().map(calculate_depth).max().unwrap_or(0),
-        serde_json::Value::Array(arr) => 1 + arr.iter().map(calculate_depth).max().unwrap_or(0),
-        _ => 0,
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(n) if n.is_i64() || n.is_u64() => "integer",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+fn should_validate_path(path: &str, resource: &Value) -> bool {
+    let parts: Vec<&str> = path.split('.').collect();
 
-    #[test]
-    fn test_validator_config_builder() {
-        let config = ValidatorConfig::new()
-            .with_max_depth(50)
-            .with_warn_on_unknown_fields(false)
-            .with_fhir_version("4.0.1");
-
-        assert_eq!(config.max_depth, 50);
-        assert!(!config.warn_on_unknown_fields);
-        assert_eq!(config.fhir_version, "4.0.1");
+    if parts.len() <= 1 {
+        return true;
     }
 
-    #[test]
-    fn test_fhir_validator_creation() {
-        let validator = FhirValidator::new().unwrap();
-        assert_eq!(validator.config().max_depth, 100);
+    let parent_path = parts[..parts.len() - 1].join(".");
+    let parent_value = get_value_at_path(resource, &parent_path);
 
-        let validator =
-            FhirValidator::with_config(ValidatorConfig::new().with_max_depth(50)).unwrap();
-        assert_eq!(validator.config().max_depth, 50);
+    match parent_value {
+        Some(Value::Array(arr)) => !arr.is_empty(),
+        Some(Value::Object(_)) => true,
+        Some(_) => false,
+        None => parts.len() == 2,
+    }
+}
+
+fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.is_empty() {
+        return None;
     }
 
-    #[test]
-    fn test_json_validator_valid_json() {
-        let validator = JsonValidator::default();
-        let result = validator.validate(r#"{"resourceType": "Patient", "id": "123"}"#);
-        assert!(result.is_valid());
-        assert_eq!(result.error_count(), 0);
+    let resource_type = resource.get("resourceType").and_then(|v| v.as_str())?;
+
+    if parts[0] != resource_type {
+        return None;
     }
 
-    #[test]
-    fn test_json_validator_invalid_json() {
-        let validator = JsonValidator::default();
-        let result = validator.validate(r#"{"resourceType": "Patient", "id": 123"#);
-        assert!(!result.is_valid());
-        assert_eq!(result.error_count(), 1);
+    if parts.len() == 1 {
+        return Some(resource);
     }
 
-    #[test]
-    fn test_json_validator_depth_limit() {
-        let validator = JsonValidator::with_max_depth(2);
-        let deep_json = r#"{"a": {"b": {"c": {"d": 1}}}}"#;
-        let result = validator.validate(deep_json);
-        assert!(!result.is_valid());
-        assert!(result.errors().any(|e| e.details.contains("nesting depth")));
+    let mut current = resource;
+    for part in &parts[1..] {
+        current = current.get(part)?;
     }
 
-    #[test]
-    fn test_calculate_depth() {
-        let shallow = serde_json::json!({"a": 1, "b": 2});
-        assert_eq!(calculate_depth(&shallow), 1);
+    Some(current)
+}
 
-        let nested = serde_json::json!({"a": {"b": {"c": 1}}});
-        assert_eq!(calculate_depth(&nested), 3);
+impl FhirValidator {
+    fn validate_binding_at_path(
+        &self,
+        resource: &Value,
+        rule: &crate::rules::BindingRule,
+    ) -> Result<Vec<ValidationIssue>> {
+        let mut issues = Vec::new();
 
-        let array = serde_json::json!([1, 2, [3, 4, [5]]]);
-        assert_eq!(calculate_depth(&array), 3);
+        // Skip preferred and example bindings
+        if rule.strength == "preferred" || rule.strength == "example" {
+            return Ok(issues);
+        }
+
+        // Check if ValueSet is extensional
+        let is_extensional = self
+            .valueset_loader
+            .is_extensional(&rule.value_set_url)
+            .unwrap_or(false);
+
+        if !is_extensional {
+            // Skip intensional ValueSets (deferred to Phase 3.5)
+            return Ok(issues);
+        }
+
+        // Get values at path
+        let values = get_values_at_path(resource, &rule.path);
+
+        for value in values {
+            // Extract codes based on type
+            let codes = extract_codes_from_value(value);
+
+            for (system, code) in codes {
+                let is_valid =
+                    self.valueset_loader
+                        .contains_code(&rule.value_set_url, &system, &code)?;
+
+                if !is_valid {
+                    let message = format!(
+                        "Code '{}' from system '{}' is not in {} ValueSet '{}'",
+                        code,
+                        if system.is_empty() {
+                            "(no system)"
+                        } else {
+                            &system
+                        },
+                        rule.strength,
+                        rule.value_set_url
+                    );
+
+                    let issue = if rule.strength == "required" {
+                        ValidationIssue::error(IssueCode::CodeInvalid, message)
+                    } else {
+                        ValidationIssue::warning(IssueCode::CodeInvalid, message)
+                    };
+
+                    issues.push(issue);
+                }
+            }
+        }
+
+        Ok(issues)
     }
 
-    #[test]
-    fn test_convert_serde_error() {
-        let json = r#"{"resourceType": "Patient"}"#;
-        let error: serde_json::Error = serde_json::from_str::<serde_json::Value>(json)
-            .err()
-            .unwrap_or_else(|| {
-                // Force an error for testing
-                serde_json::from_str::<()>(json).unwrap_err()
-            });
+    fn validate_invariant(
+        &self,
+        resource: &Value,
+        rule: &crate::rules::InvariantRule,
+    ) -> Result<Vec<ValidationIssue>> {
+        let mut issues = Vec::new();
 
-        // This test just ensures the function doesn't panic
-        let _issue = convert_serde_error(&error, "Patient");
+        // Parse the FHIRPath expression
+        let expression = match self.fhirpath_parser.parse(&rule.expression) {
+            Ok(expr) => expr,
+            Err(e) => {
+                // Handle parse errors gracefully - skip validation but log
+                return Ok(vec![ValidationIssue::warning(
+                    IssueCode::Invariant,
+                    format!("Failed to parse invariant {}: {}", rule.key, e),
+                )]);
+            }
+        };
+
+        // Create evaluation context with the resource
+        // For resource-level invariants (path is resource type), use resource as context
+        // For element-level invariants, use the specific element as context
+        let parts: Vec<&str> = rule.path.split('.').collect();
+        let is_resource_level = parts.len() == 1;
+
+        let context = if is_resource_level {
+            // Resource-level invariant: both root and current are the resource
+            EvaluationContext::new(resource.clone())
+        } else {
+            // Element-level invariant: set current to the element
+            // For element-level invariants, we would ideally validate against each instance
+            // For now, use resource as root and current (simplified approach)
+            // Full implementation would:
+            // 1. Get all values at the element path: get_values_at_path(resource, &rule.path)
+            // 2. Create context for each element value
+            // 3. Validate each instance separately
+            EvaluationContext::new(resource.clone())
+        };
+
+        // Evaluate the expression
+        let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
+            Ok(value) => value,
+            Err(e) => {
+                // Handle evaluation errors gracefully
+                return Ok(vec![ValidationIssue::warning(
+                    IssueCode::Invariant,
+                    format!("Failed to evaluate invariant {}: {}", rule.key, e),
+                )]);
+            }
+        };
+
+        // Convert result to boolean
+        let is_valid = match result {
+            FhirPathValue::Boolean(b) => b,
+            FhirPathValue::Empty => true, // Empty is treated as true (constraint not applicable)
+            FhirPathValue::Collection(ref items) if items.is_empty() => true, // Empty collection = true
+            FhirPathValue::Collection(ref items) if items.len() == 1 => {
+                // Single item collection - check if it's a boolean
+                match &items[0] {
+                    FhirPathValue::Boolean(b) => *b,
+                    _ => true, // Non-empty non-boolean collection = true
+                }
+            }
+            _ => true, // Any other non-empty result = true (constraint satisfied)
+        };
+
+        if !is_valid {
+            let issue = if rule.severity == "error" {
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    format!("{}: {}", rule.key, rule.human),
+                )
+            } else {
+                ValidationIssue::warning(
+                    IssueCode::Invariant,
+                    format!("{}: {}", rule.key, rule.human),
+                )
+            };
+            issues.push(issue);
+        }
+
+        Ok(issues)
+    }
+}
+
+fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
+    let mut codes = Vec::new();
+
+    match value {
+        // Simple code (string)
+        Value::String(code) => {
+            codes.push((String::new(), code.clone()));
+        }
+        // Coding
+        Value::Object(obj) if obj.contains_key("code") => {
+            if let Some(code) = obj.get("code").and_then(|v| v.as_str()) {
+                let system = obj
+                    .get("system")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                codes.push((system, code.to_string()));
+            }
+        }
+        // CodeableConcept
+        Value::Object(obj) if obj.contains_key("coding") => {
+            if let Some(Value::Array(codings)) = obj.get("coding") {
+                for coding in codings {
+                    if let Value::Object(coding_obj) = coding {
+                        if let Some(code) = coding_obj.get("code").and_then(|v| v.as_str()) {
+                            let system = coding_obj
+                                .get("system")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            codes.push((system, code.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
     }
 
-    #[test]
-    fn test_validate_resource_direct() {
-        use hl7_fhir_r4_core::resources::patient::Patient;
+    codes
+}
 
-        let validator = FhirValidator::new().unwrap();
-        let mut patient = Patient::default();
-        patient.base.base.id = Some("test-direct".to_string());
-
-        // Should validate successfully (minimal valid patient)
-        let result = validator.validate_resource(&patient).unwrap();
-        // Just verify the method works and returns a result
-        let _ = result.error_count();
-    }
-
-    #[test]
-    fn test_validate_resource_vs_full_equivalent() {
-        use hl7_fhir_r4_core::resources::patient::Patient;
-
-        let validator = FhirValidator::new().unwrap();
-        let mut patient = Patient::default();
-        patient.base.base.id = Some("test-equiv".to_string());
-
-        // Validate directly
-        let direct_result = validator.validate_resource(&patient).unwrap();
-
-        // Validate via JSON
-        let json = serde_json::to_string(&patient).unwrap();
-        let json_result = validator.validate_full::<Patient>(&json).unwrap();
-
-        // Should have same validation outcome
-        assert_eq!(direct_result.is_valid(), json_result.is_valid());
-        assert_eq!(direct_result.error_count(), json_result.error_count());
-    }
-
-    #[test]
-    fn test_validate_resource_skip_invariants() {
-        use hl7_fhir_r4_core::resources::patient::Patient;
-
-        let config = ValidatorConfig::new().with_skip_invariants(true);
-        let validator = FhirValidator::with_config(config).unwrap();
-        let patient = Patient::default();
-
-        // Should skip invariants and return empty result
-        let result = validator.validate_resource(&patient).unwrap();
-        assert_eq!(result.error_count(), 0);
-        assert_eq!(result.warning_count(), 0);
+impl Default for FhirValidator {
+    fn default() -> Self {
+        Self::new(None).expect("Failed to initialize FhirValidator")
     }
 }
