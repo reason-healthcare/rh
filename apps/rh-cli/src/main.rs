@@ -5,6 +5,7 @@ use tracing::error;
 mod codegen;
 mod download;
 mod fhirpath;
+mod snapshot;
 mod validator;
 mod vcl;
 
@@ -42,6 +43,10 @@ enum Commands {
     /// Parse and translate VCL (ValueSet Compose Language) expressions
     #[clap(subcommand)]
     Vcl(vcl::VclCommands),
+
+    /// Generate and manage StructureDefinition snapshots
+    #[clap(subcommand)]
+    Snapshot(snapshot::SnapshotCommands),
 
     /// Validate FHIR resources
     #[clap(subcommand)]
@@ -86,6 +91,12 @@ async fn main() -> Result<()> {
         Commands::Vcl(cmd) => {
             if let Err(e) = vcl::handle_command(cmd).await {
                 error!("VCL error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Snapshot(cmd) => {
+            if let Err(e) = snapshot::handle_command(cmd).await {
+                error!("Snapshot error: {}", e);
                 std::process::exit(1);
             }
         }
