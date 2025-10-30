@@ -22,15 +22,9 @@ test-fast:
 test-examples:
     @echo "Building all examples..."
     cargo build --examples --workspace
-    @echo "Running validator examples..."
-    cargo run -p rh-validator --example basic_validation > /dev/null
-    cargo run -p rh-validator --example structural_validation > /dev/null
-    cargo run -p rh-validator --example invariant_validation > /dev/null
-    cargo run -p rh-validator --example custom_config > /dev/null
-    cargo run -p rh-validator --example error_handling > /dev/null
-    cargo run -p rh-validator --example patient_validation > /dev/null
-    cargo run -p rh-validator --example resource_builder > /dev/null
-    @echo "✅ All examples compiled and ran successfully!"
+    # Validator examples not yet created (Phase 8 - TODO)
+    # cargo run -p rh-validator --example basic_validation > /dev/null
+    @echo "✅ All examples compiled successfully!"
 
 # Build all packages
 build:

@@ -44,3 +44,7 @@ dirs = "5.0"
 
 # Benchmarking (to be added in Phase 8)
 criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "validation"
+harness = false

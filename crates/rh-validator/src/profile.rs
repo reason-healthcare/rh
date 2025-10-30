@@ -1,15 +1,17 @@
 use anyhow::{Context, Result};
 use lru::LruCache;
 use rh_snapshot::{SnapshotGenerator, StructureDefinition, StructureDefinitionLoader};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use std::sync::RwLock;
 
 pub struct ProfileRegistry {
     generator: SnapshotGenerator,
     profiles: HashMap<String, StructureDefinition>,
-    snapshot_cache: RefCell<LruCache<String, StructureDefinition>>,
+    snapshot_cache: RwLock<LruCache<String, StructureDefinition>>,
+    cache_hits: RwLock<usize>,
+    cache_misses: RwLock<usize>,
 }
 
 impl ProfileRegistry {
@@ -35,14 +37,19 @@ impl ProfileRegistry {
         Ok(Self {
             generator,
             profiles,
-            snapshot_cache: RefCell::new(LruCache::new(capacity)),
+            snapshot_cache: RwLock::new(LruCache::new(capacity)),
+            cache_hits: RwLock::new(0),
+            cache_misses: RwLock::new(0),
         })
     }
 
     pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<StructureDefinition>> {
-        if let Some(cached) = self.snapshot_cache.borrow_mut().get(profile_url) {
+        if let Some(cached) = self.snapshot_cache.write().unwrap().get(profile_url) {
+            *self.cache_hits.write().unwrap() += 1;
             return Ok(Some(cached.clone()));
         }
+
+        *self.cache_misses.write().unwrap() += 1;
 
         if !self.profiles.contains_key(profile_url) {
             return Ok(None);
@@ -58,7 +65,8 @@ impl ProfileRegistry {
         profile_with_snapshot.snapshot = Some(snapshot);
 
         self.snapshot_cache
-            .borrow_mut()
+            .write()
+            .unwrap()
             .put(profile_url.to_string(), profile_with_snapshot.clone());
 
         Ok(Some(profile_with_snapshot))
@@ -102,8 +110,25 @@ impl ProfileRegistry {
     }
 
     pub fn cache_stats(&self) -> (usize, usize) {
-        let cache = self.snapshot_cache.borrow();
+        let cache = self.snapshot_cache.read().unwrap();
         (cache.len(), cache.cap().get())
+    }
+
+    pub fn cache_metrics(&self) -> (usize, usize, f64) {
+        let hits = *self.cache_hits.read().unwrap();
+        let misses = *self.cache_misses.read().unwrap();
+        let total = hits + misses;
+        let hit_rate = if total > 0 {
+            hits as f64 / total as f64
+        } else {
+            0.0
+        };
+        (hits, misses, hit_rate)
+    }
+
+    pub fn reset_cache_metrics(&self) {
+        *self.cache_hits.write().unwrap() = 0;
+        *self.cache_misses.write().unwrap() = 0;
     }
 
     pub fn extract_profile_urls(resource: &serde_json::Value) -> Vec<String> {
