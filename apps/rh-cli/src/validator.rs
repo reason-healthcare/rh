@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use rh_foundation::cli;
-use rh_validator::{extract_resource_type, FhirValidator, Severity, ValidatorConfig};
+use rh_validator::{FhirValidator, Severity};
 use std::path::PathBuf;
 use tracing::{info, warn};
 
@@ -100,10 +100,15 @@ pub async fn handle_command(cmd: ValidatorCommands) -> Result<()> {
 }
 
 async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
-    let config = ValidatorConfig::new()
-        .with_skip_invariants(args.skip_invariants)
-        .with_skip_bindings(args.skip_bindings);
-    let validator = FhirValidator::with_config(config)?;
+    // Note: skip_invariants and skip_bindings are not yet supported in the new API
+    if args.skip_invariants {
+        warn!("--skip-invariants flag is not yet implemented");
+    }
+    if args.skip_bindings {
+        warn!("--skip-bindings flag is not yet implemented");
+    }
+
+    let validator = FhirValidator::new(None)?;
 
     let content = read_input(&args.input).context("Failed to read input")?;
 
@@ -115,16 +120,19 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
         return Ok(());
     }
 
+    let resource: serde_json::Value =
+        serde_json::from_str(&content).context("Failed to parse JSON")?;
+
     let result = validator
-        .validate_any_resource(&content)
+        .validate_auto(&resource)
         .context("Failed to validate FHIR resource")?;
 
     match args.format {
-        OutputFormat::Text => print_single_result_text(&result, &content),
-        OutputFormat::Json => print_single_result_json(&result, &content)?,
+        OutputFormat::Text => print_single_result_text(&result, &resource),
+        OutputFormat::Json => print_single_result_json(&result, &resource)?,
     }
 
-    let has_errors = result.has_errors();
+    let has_errors = !result.valid;
     let has_issues = args.strict && !result.issues.is_empty();
 
     if has_errors || has_issues {
@@ -135,10 +143,15 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
 }
 
 async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
-    let config = ValidatorConfig::new()
-        .with_skip_invariants(args.skip_invariants)
-        .with_skip_bindings(args.skip_bindings);
-    let validator = FhirValidator::with_config(config)?;
+    // Note: skip_invariants and skip_bindings are not yet supported in the new API
+    if args.skip_invariants {
+        warn!("--skip-invariants flag is not yet implemented");
+    }
+    if args.skip_bindings {
+        warn!("--skip-bindings flag is not yet implemented");
+    }
+
+    let validator = FhirValidator::new(None)?;
 
     let content = read_input(&args.input).context("Failed to read input")?;
 
@@ -150,17 +163,26 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
         return Ok(());
     }
 
-    let results = validator
-        .validate_ndjson_any(&content)
-        .context("Failed to validate NDJSON")?;
+    let mut results = Vec::new();
+    for (line_num, line) in content.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let resource: serde_json::Value = serde_json::from_str(line)
+            .with_context(|| format!("Failed to parse JSON at line {}", line_num + 1))?;
+        let result = validator
+            .validate_auto(&resource)
+            .with_context(|| format!("Failed to validate resource at line {}", line_num + 1))?;
+        results.push((line_num, resource, result));
+    }
 
     match args.format {
         OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
         OutputFormat::Json => print_batch_results_json(&results)?,
     }
 
-    let has_errors = results.iter().any(|(_, r)| r.has_errors());
-    let has_issues = args.strict && results.iter().any(|(_, r)| !r.issues.is_empty());
+    let has_errors = results.iter().any(|(_, _, r)| !r.valid);
+    let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
 
     if has_errors || has_issues {
         std::process::exit(1);
@@ -178,18 +200,17 @@ fn read_input(path: &Option<PathBuf>) -> Result<String> {
     cli::read_input_from_path(path).map_err(Into::into)
 }
 
-fn print_single_result_text(result: &rh_validator::ValidationResult, json: &str) {
-    let errors = result.errors().count();
-    let warnings = result.warnings().count();
-    let info_count = result
-        .issues
-        .iter()
-        .filter(|i| i.severity == Severity::Information)
-        .count();
+fn print_single_result_text(result: &rh_validator::ValidationResult, resource: &serde_json::Value) {
+    let errors = result.error_count();
+    let warnings = result.warning_count();
+    let info_count = result.info_count();
 
-    let resource_type = extract_resource_type(json).unwrap_or_else(|_| "Unknown".to_string());
+    let resource_type = resource
+        .get("resourceType")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown");
 
-    if result.is_valid() {
+    if result.valid {
         println!("✅ FHIR resource is valid ({resource_type})");
         if warnings > 0 {
             println!("⚠️  {warnings} warning(s)");
@@ -217,31 +238,41 @@ fn print_single_result_text(result: &rh_validator::ValidationResult, json: &str)
                 Severity::Warning => "⚠️ ",
                 Severity::Information => "ℹ️ ",
             };
-            println!("  {}. {} {}", i + 1, icon, issue.details);
-            if let Some(location) = &issue.location {
-                println!("     Location: {location}");
+            println!("  {}. {} {}", i + 1, icon, issue.message);
+            if let Some(path) = &issue.path {
+                println!("     Path: {path}");
             }
-            if let Some(key) = &issue.invariant_key {
-                println!("     Invariant: {key}");
+            if let Some(location) = &issue.location {
+                println!(
+                    "     Location: line {}, column {}",
+                    location.line, location.column
+                );
             }
         }
     }
 }
 
-fn print_single_result_json(result: &rh_validator::ValidationResult, json: &str) -> Result<()> {
-    let resource_type = extract_resource_type(json).unwrap_or_else(|_| "Unknown".to_string());
+fn print_single_result_json(
+    result: &rh_validator::ValidationResult,
+    resource: &serde_json::Value,
+) -> Result<()> {
+    let resource_type = resource
+        .get("resourceType")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown");
 
     let output = serde_json::json!({
         "resourceType": resource_type,
-        "valid": result.is_valid(),
+        "valid": result.valid,
+        "errors": result.error_count(),
+        "warnings": result.warning_count(),
         "issues": result.issues.iter().map(|issue| {
             serde_json::json!({
-                "severity": format!("{:?}", issue.severity).to_lowercase(),
-                "code": format!("{:?}", issue.code),
-                "details": issue.details,
+                "severity": issue.severity.to_string(),
+                "code": issue.code.to_string(),
+                "message": issue.message,
+                "path": issue.path,
                 "location": issue.location,
-                "expression": issue.expression,
-                "invariant": issue.invariant_key,
             })
         }).collect::<Vec<_>>()
     });
@@ -251,14 +282,14 @@ fn print_single_result_json(result: &rh_validator::ValidationResult, json: &str)
 }
 
 fn print_batch_results_text(
-    results: &[(usize, rh_validator::ValidationResult)],
+    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
     summary_only: bool,
 ) {
     let total = results.len();
-    let valid_count = results.iter().filter(|(_, r)| r.is_valid()).count();
+    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
     let invalid_count = total - valid_count;
-    let total_errors: usize = results.iter().map(|(_, r)| r.errors().count()).sum();
-    let total_warnings: usize = results.iter().map(|(_, r)| r.warnings().count()).sum();
+    let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
+    let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
 
     println!("📋 Batch Validation Summary:");
     println!("  Total resources: {total}");
@@ -270,22 +301,26 @@ fn print_batch_results_text(
 
     if !summary_only && invalid_count > 0 {
         println!("❌ Invalid resources:");
-        for (line_num, result) in results.iter() {
-            if !result.is_valid() {
-                let errors = result.errors().count();
-                let warnings = result.warnings().count();
+        for (line_num, resource, result) in results.iter() {
+            if !result.valid {
+                let resource_type = resource
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let errors = result.error_count();
+                let warnings = result.warning_count();
                 println!(
                     "  Line {} ({}): {} error(s), {} warning(s)",
                     line_num + 1,
-                    result.resource_type,
+                    resource_type,
                     errors,
                     warnings
                 );
                 for issue in &result.issues {
                     if issue.severity == Severity::Error {
-                        println!("    ❌ {}", issue.details);
-                        if let Some(location) = &issue.location {
-                            println!("       at {location}");
+                        println!("    ❌ {}", issue.message);
+                        if let Some(path) = &issue.path {
+                            println!("       at {path}");
                         }
                     }
                 }
@@ -294,27 +329,32 @@ fn print_batch_results_text(
     }
 }
 
-fn print_batch_results_json(results: &[(usize, rh_validator::ValidationResult)]) -> Result<()> {
+fn print_batch_results_json(
+    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
+) -> Result<()> {
     let total = results.len();
-    let valid_count = results.iter().filter(|(_, r)| r.is_valid()).count();
+    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
 
     let json_results: Vec<_> = results
         .iter()
-        .map(|(line_num, result)| {
+        .map(|(line_num, resource, result)| {
+            let resource_type = resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
             serde_json::json!({
                 "line": line_num + 1,
-                "resourceType": result.resource_type,
-                "valid": result.is_valid(),
-                "errors": result.errors().count(),
-                "warnings": result.warnings().count(),
+                "resourceType": resource_type,
+                "valid": result.valid,
+                "errors": result.error_count(),
+                "warnings": result.warning_count(),
                 "issues": result.issues.iter().map(|issue| {
                     serde_json::json!({
-                        "severity": format!("{:?}", issue.severity).to_lowercase(),
-                        "code": format!("{:?}", issue.code),
-                        "details": issue.details,
+                        "severity": issue.severity.to_string(),
+                        "code": issue.code.to_string(),
+                        "message": issue.message,
+                        "path": issue.path,
                         "location": issue.location,
-                        "expression": issue.expression,
-                        "invariant": issue.invariant_key,
                     })
                 }).collect::<Vec<_>>()
             })

@@ -147,6 +147,53 @@ impl FhirValidator {
             self.rule_compiler.cache_stats(),
         )
     }
+
+    /// Validate a resource with automatic profile detection from meta.profile.
+    /// If no profiles are specified, validates against the base resource profile.
+    /// If multiple profiles are specified, validates against all and merges results.
+    pub fn validate_auto(&self, resource: &Value) -> Result<ValidationResult> {
+        let profile_urls = ProfileRegistry::extract_profile_urls(resource);
+
+        if profile_urls.is_empty() {
+            // No profiles specified - use base resource profile
+            if let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) {
+                let base_profile_url =
+                    format!("http://hl7.org/fhir/StructureDefinition/{resource_type}");
+                return self.validate_with_profile(resource, &base_profile_url);
+            } else {
+                // No resourceType - just do basic validation
+                return self.validate(resource);
+            }
+        }
+
+        // Validate against all specified profiles and merge results
+        self.validate_with_profiles(resource, &profile_urls)
+    }
+
+    /// Validate a resource against multiple profiles and merge results.
+    /// Each profile's validation issues are tracked with the profile URL.
+    pub fn validate_with_profiles(
+        &self,
+        resource: &Value,
+        profile_urls: &[String],
+    ) -> Result<ValidationResult> {
+        let mut merged_result = self.validate(resource)?;
+
+        for profile_url in profile_urls {
+            let profile_result = self.validate_with_profile(resource, profile_url)?;
+
+            // Add all issues from this profile, annotated with which profile they came from
+            for mut issue in profile_result.issues {
+                // Add profile context to the message
+                if !issue.message.contains("Profile:") {
+                    issue.message = format!("[Profile: {profile_url}] {}", issue.message);
+                }
+                merged_result = merged_result.with_issue(issue);
+            }
+        }
+
+        Ok(merged_result)
+    }
 }
 
 fn validate_cardinality_at_path(
