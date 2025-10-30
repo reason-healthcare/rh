@@ -31,3 +31,8 @@ rh-loader = { path = "../../crates/rh-loader" }
 rh-snapshot = { path = "../../crates/rh-snapshot" }
 rh-vcl = { path = "../../crates/rh-vcl" }
 hl7_fhir_r4_core = { path = "../../crates/rh-hl7_fhir_r4_core" }
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.13"

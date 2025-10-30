@@ -55,6 +55,24 @@ impl FhirValidator {
         Ok(result)
     }
 
+    pub fn cache_metrics(&self) -> (usize, usize, f64, usize, usize, f64) {
+        let (prof_hits, prof_misses, prof_rate) = self.profile_registry.cache_metrics();
+        let (rule_hits, rule_misses, rule_rate) = self.rule_compiler.cache_metrics();
+        (
+            prof_hits,
+            prof_misses,
+            prof_rate,
+            rule_hits,
+            rule_misses,
+            rule_rate,
+        )
+    }
+
+    pub fn reset_cache_metrics(&self) {
+        self.profile_registry.reset_cache_metrics();
+        self.rule_compiler.reset_cache_metrics();
+    }
+
     pub fn validate_with_profile(
         &self,
         resource: &Value,
@@ -127,6 +145,36 @@ impl FhirValidator {
 
             for violation in violations {
                 result = result.with_issue(violation);
+            }
+        }
+
+        // Extension validation
+        for rule in &rules.extension_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
+            }
+
+            let violations = validate_extension_at_path(resource, rule);
+
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
+        // Slicing validation
+        for rule in &rules.slicing_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
+            }
+
+            if rule.path.ends_with(".extension") || rule.path.ends_with(".modifierExtension") {
+                continue;
+            }
+
+            let violations = validate_slicing_at_path(resource, rule);
+
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
             }
         }
 
@@ -761,6 +809,269 @@ fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
     }
 
     codes
+}
+
+fn validate_extension_at_path(
+    resource: &Value,
+    rule: &crate::rules::ExtensionRule,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let parts: Vec<&str> = rule.path.split('.').collect();
+
+    if parts.is_empty() {
+        return issues;
+    }
+
+    let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
+        return issues;
+    };
+
+    if parts[0] != resource_type {
+        return issues;
+    }
+
+    let extension_array = navigate_to_extensions(resource, &parts);
+
+    let Some(extensions) = extension_array else {
+        if rule.min > 0 {
+            issues.push(ValidationIssue::error(
+                IssueCode::Extension,
+                format!(
+                    "Extension '{}' (slice: {}) is required (min: {}) but not present",
+                    rule.url, rule.slice_name, rule.min
+                ),
+            ));
+        }
+        return issues;
+    };
+
+    let matching_extensions: Vec<_> = extensions
+        .iter()
+        .filter_map(|ext| {
+            if let Value::Object(ext_obj) = ext {
+                if let Some(url) = ext_obj.get("url").and_then(|v| v.as_str()) {
+                    if url == rule.url {
+                        return Some(ext_obj);
+                    }
+                }
+            }
+            None
+        })
+        .collect();
+
+    let count = matching_extensions.len();
+
+    if (count as u32) < rule.min {
+        issues.push(ValidationIssue::error(
+            IssueCode::Extension,
+            format!(
+                "Extension '{}' (slice: {}) cardinality violation: found {}, expected at least {}",
+                rule.url, rule.slice_name, count, rule.min
+            ),
+        ));
+    }
+
+    if rule.max != "*" {
+        if let Ok(max_val) = rule.max.parse::<usize>() {
+            if count > max_val {
+                issues.push(ValidationIssue::error(
+                    IssueCode::Extension,
+                    format!(
+                        "Extension '{}' (slice: {}) cardinality violation: found {}, expected at most {}",
+                        rule.url, rule.slice_name, count, max_val
+                    ),
+                ));
+            }
+        }
+    }
+
+    for ext_obj in matching_extensions {
+        if !ext_obj.contains_key("url") {
+            issues.push(ValidationIssue::error(
+                IssueCode::Extension,
+                format!(
+                    "Extension '{}' (slice: {}) must have a url",
+                    rule.url, rule.slice_name
+                ),
+            ));
+        }
+
+        let has_value = ext_obj.keys().any(|k| k.starts_with("value"));
+        let has_nested = ext_obj
+            .get("extension")
+            .and_then(|v| v.as_array())
+            .map(|arr| !arr.is_empty())
+            .unwrap_or(false);
+
+        if !has_value && !has_nested {
+            issues.push(ValidationIssue::error(
+                IssueCode::Extension,
+                format!(
+                    "Extension '{}' (slice: {}) must have either a value[x] or nested extensions",
+                    rule.url, rule.slice_name
+                ),
+            ));
+        }
+    }
+
+    issues
+}
+
+fn navigate_to_extensions<'a>(resource: &'a Value, parts: &[&str]) -> Option<&'a Vec<Value>> {
+    let mut current = resource;
+
+    for part in &parts[1..] {
+        match current.get(part) {
+            Some(value) => current = value,
+            None => return None,
+        }
+    }
+
+    current.as_array()
+}
+
+fn validate_slicing_at_path(
+    resource: &Value,
+    rule: &crate::rules::SlicingRule,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let parts: Vec<&str> = rule.path.split('.').collect();
+
+    if parts.is_empty() {
+        return issues;
+    }
+
+    let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
+        return issues;
+    };
+
+    if parts[0] != resource_type {
+        return issues;
+    }
+
+    let array = navigate_to_array(resource, &parts);
+
+    let Some(elements) = array else {
+        for slice in &rule.slices {
+            if slice.min > 0 {
+                issues.push(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!(
+                        "Slice '{}' requires at least {} element(s) but array is missing",
+                        slice.name, slice.min
+                    ),
+                ));
+            }
+        }
+        return issues;
+    };
+
+    if rule.discriminators.is_empty() {
+        return issues;
+    }
+
+    let mut slice_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    for slice in &rule.slices {
+        slice_counts.insert(slice.name.clone(), 0);
+    }
+
+    for (idx, element) in elements.iter().enumerate() {
+        let mut matched = false;
+
+        for slice in &rule.slices {
+            if matches_slice(element, slice, &rule.discriminators) {
+                *slice_counts.get_mut(&slice.name).unwrap() += 1;
+                matched = true;
+                break;
+            }
+        }
+
+        if !matched && rule.rules == "closed" {
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!("Element at index {idx} does not match any slice and slicing is closed"),
+            ));
+        }
+    }
+
+    for slice in &rule.slices {
+        let count = slice_counts.get(&slice.name).copied().unwrap_or(0);
+
+        if (count as u32) < slice.min {
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Slice '{}' cardinality violation: found {}, expected at least {}",
+                    slice.name, count, slice.min
+                ),
+            ));
+        }
+
+        if slice.max != "*" {
+            if let Ok(max_val) = slice.max.parse::<usize>() {
+                if count > max_val {
+                    issues.push(ValidationIssue::error(
+                        IssueCode::Value,
+                        format!(
+                            "Slice '{}' cardinality violation: found {}, expected at most {}",
+                            slice.name, count, max_val
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn navigate_to_array<'a>(resource: &'a Value, parts: &[&str]) -> Option<&'a Vec<Value>> {
+    let mut current = resource;
+
+    for part in &parts[1..] {
+        match current.get(part) {
+            Some(value) => current = value,
+            None => return None,
+        }
+    }
+
+    current.as_array()
+}
+
+fn matches_slice(
+    element: &Value,
+    _slice: &crate::rules::SliceDefinition,
+    discriminators: &[crate::rules::Discriminator],
+) -> bool {
+    if discriminators.is_empty() {
+        return true;
+    }
+
+    discriminators
+        .iter()
+        .all(|discriminator| match discriminator.type_.as_str() {
+            "value" => navigate_to_discriminator_value(element, &discriminator.path)
+                .is_some_and(|v| v.is_string() || v.is_number() || v.is_boolean()),
+            "exists" => navigate_to_discriminator_value(element, &discriminator.path).is_some(),
+            "type" => navigate_to_discriminator_value(element, &discriminator.path)
+                .is_some_and(|v| v.is_object()),
+            _ => false,
+        })
+}
+
+fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option<&'a Value> {
+    let parts: Vec<&str> = path.split('.').collect();
+    let mut current = element;
+
+    for part in parts {
+        match current.get(part) {
+            Some(value) => current = value,
+            None => return None,
+        }
+    }
+
+    Some(current)
 }
 
 impl Default for FhirValidator {
