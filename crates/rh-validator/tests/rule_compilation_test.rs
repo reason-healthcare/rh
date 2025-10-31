@@ -11,7 +11,11 @@ fn test_load_us_core_patient_profile() {
         return;
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).unwrap();
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .unwrap();
     let profiles = registry.list_profiles();
 
     assert!(!profiles.is_empty(), "Should load profiles from US Core");
@@ -35,7 +39,11 @@ fn test_compile_us_core_patient_rules() {
         return;
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).unwrap();
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .unwrap();
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
     let snapshot = registry
@@ -83,7 +91,11 @@ fn test_rule_compilation_caching() {
         return;
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).unwrap();
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .unwrap();
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
 
     let compiler = RuleCompiler::new(100);
@@ -120,7 +132,11 @@ fn test_snapshot_caching() {
         return;
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).unwrap();
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .unwrap();
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
 
     let (before_len, capacity) = registry.cache_stats();
@@ -154,7 +170,11 @@ fn test_profile_search() {
         return;
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).unwrap();
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .unwrap();
 
     let patient_profiles = registry.search_profiles("patient");
     assert!(
@@ -181,14 +201,24 @@ fn test_load_profile_from_file() {
         return;
     }
 
-    let mut registry = ProfileRegistry::new(None).unwrap();
+    let mut registry = ProfileRegistry::new(rh_validator::FhirVersion::R4, None).unwrap();
+    let profiles_before = registry.list_profiles().len();
+
     let result = registry.load_from_file(patient_file.to_str().unwrap());
     assert!(result.is_ok(), "Should load profile from file");
 
     let profiles = registry.list_profiles();
-    assert_eq!(profiles.len(), 1, "Should have exactly 1 profile loaded");
+    assert_eq!(
+        profiles.len(),
+        profiles_before + 1,
+        "Should have exactly 1 additional profile loaded (got {} total, expected {})",
+        profiles.len(),
+        profiles_before + 1
+    );
+
+    let us_core_patient_found = profiles.iter().any(|p| p.contains("us-core-patient"));
     assert!(
-        profiles[0].contains("us-core-patient"),
-        "Should be the US Core Patient profile"
+        us_core_patient_found,
+        "Should contain the US Core Patient profile"
     );
 }

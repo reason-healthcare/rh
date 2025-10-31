@@ -1,10 +1,29 @@
+//! Core types for FHIR validation.
+//!
+//! This module provides the fundamental types used throughout the validation process:
+//!
+//! - [`ValidationResult`] - Result of validating a FHIR resource
+//! - [`ValidationIssue`] - Individual validation issue
+//! - [`Severity`] - Issue severity levels
+//! - [`IssueCode`] - FHIR IssueType codes
+//! - [`OperationOutcome`] - FHIR OperationOutcome resource representation
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Severity level of a validation issue.
+///
+/// Maps to FHIR IssueSeverity codes (subset):
+/// - `Error` - Issue prevents the resource from being accepted
+/// - `Warning` - Issue may cause problems but doesn't prevent acceptance
+/// - `Information` - Informational note about the resource
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Severity {
+    /// Critical error that prevents resource acceptance
     Error,
+    /// Warning that may cause issues
     Warning,
+    /// Informational message
     Information,
 }
 
@@ -18,6 +37,19 @@ impl fmt::Display for Severity {
     }
 }
 
+/// FHIR IssueType code classification.
+///
+/// Maps to FHIR IssueType ValueSet codes. Used to categorize validation issues
+/// according to FHIR standards.
+///
+/// # Examples
+///
+/// ```
+/// use rh_validator::IssueCode;
+///
+/// let code = IssueCode::Required;
+/// assert_eq!(code.to_string(), "required");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IssueCode {
     Structure,
@@ -179,5 +211,84 @@ impl ValidationResult {
 impl Default for ValidationResult {
     fn default() -> Self {
         Self::valid()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationOutcome {
+    pub resource_type: String,
+    pub issue: Vec<OperationOutcomeIssue>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationOutcomeIssue {
+    pub severity: String,
+    pub code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostics: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expression: Option<Vec<String>>,
+}
+
+impl ValidationResult {
+    pub fn to_operation_outcome(&self) -> OperationOutcome {
+        let issues = self
+            .issues
+            .iter()
+            .map(|issue| {
+                let severity = match issue.severity {
+                    Severity::Error => "error",
+                    Severity::Warning => "warning",
+                    Severity::Information => "information",
+                };
+
+                let code = map_issue_code_to_fhir(&issue.code);
+
+                let location = issue.path.as_ref().map(|p| vec![p.clone()]);
+                let expression = issue.path.as_ref().map(|p| vec![p.clone()]);
+
+                OperationOutcomeIssue {
+                    severity: severity.to_string(),
+                    code: code.to_string(),
+                    diagnostics: Some(issue.message.clone()),
+                    location,
+                    expression,
+                }
+            })
+            .collect();
+
+        OperationOutcome {
+            resource_type: "OperationOutcome".to_string(),
+            issue: issues,
+        }
+    }
+}
+
+fn map_issue_code_to_fhir(code: &IssueCode) -> &'static str {
+    match code {
+        IssueCode::Structure => "structure",
+        IssueCode::Required => "required",
+        IssueCode::Value => "value",
+        IssueCode::Invariant => "invariant",
+        IssueCode::Invalid => "invalid",
+        IssueCode::CodeInvalid => "code-invalid",
+        IssueCode::Extension => "extension",
+        IssueCode::Forbidden => "security",
+        IssueCode::Incomplete => "incomplete",
+        IssueCode::TooCostly => "too-costly",
+        IssueCode::BusinessRule => "business-rule",
+        IssueCode::Conflict => "conflict",
+        IssueCode::NotSupported => "not-supported",
+        IssueCode::Duplicate => "duplicate",
+        IssueCode::NotFound => "not-found",
+        IssueCode::TooLong => "too-long",
+        IssueCode::CodeInvalidInValueSet => "code-invalid",
+        IssueCode::InvalidDisplay => "invalid",
+        IssueCode::Processing => "processing",
+        IssueCode::NotAllowed => "business-rule",
+        IssueCode::Informational => "informational",
     }
 }

@@ -26,6 +26,69 @@ test-examples:
     # cargo run -p rh-validator --example basic_validation > /dev/null
     @echo "✅ All examples compiled successfully!"
 
+# Run FHIR validation test cases with summary and comparison table
+# Usage: just test-fhir-validator        (runs default 5 tests)
+#        just test-fhir-validator 10     (runs 10 tests) 
+#        just test-fhir-validator all    (runs all R4 tests)
+# Output includes: test results, pass/fail summary, cross-validator comparison table
+test-fhir-validator max_tests="5":
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite                                        ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "Running test suite with max_tests={{max_tests}}..."
+    echo "Note: Test config is hardcoded to 5 tests in test_runner_basic."
+    echo "      To test more, modify TestRunConfig.max_tests in the test."
+    echo ""
+    
+    # Run with nocapture to see full output including comparison table
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_basic -- --nocapture
+
+# Run FHIR validation tests for a specific module
+# Usage: just test-fhir-module general
+#        just test-fhir-module profile
+#        just test-fhir-module questionnaire
+# Available modules: profile, questionnaire, matchtype, tx, general, and others
+test-fhir-module module:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - Module Filter                        ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "Running tests for module: {{module}}"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_with_module_filter -- --nocapture
+
+# Run FHIR validation test suite with 50 tests
+test-fhir-50:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - 50 Tests                             ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_extended_50 -- --nocapture --ignored
+
+# Run FHIR validation test suite with 100 tests
+test-fhir-100:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - 100 Tests                            ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_extended_100 -- --nocapture --ignored
+
+# Run ALL FHIR validation test cases (570 R4 tests - takes several minutes)
+test-fhir-all:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - ALL TESTS (~570 R4 tests)            ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "⚠️  This will run ALL R4 test cases and may take several minutes..."
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_all -- --nocapture --ignored
+
 # Build all packages
 build:
     cargo build --workspace --all-targets --all-features

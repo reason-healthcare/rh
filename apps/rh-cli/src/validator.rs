@@ -75,6 +75,7 @@ pub struct BatchArgs {
 enum OutputFormat {
     Text,
     Json,
+    OperationOutcome,
 }
 
 impl std::str::FromStr for OutputFormat {
@@ -84,8 +85,9 @@ impl std::str::FromStr for OutputFormat {
         match s.to_lowercase().as_str() {
             "text" => Ok(OutputFormat::Text),
             "json" => Ok(OutputFormat::Json),
+            "operationoutcome" => Ok(OutputFormat::OperationOutcome),
             _ => Err(format!(
-                "Invalid output format: {s}. Valid options: text, json"
+                "Invalid output format: {s}. Valid options: text, json, operationoutcome"
             )),
         }
     }
@@ -108,7 +110,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
         warn!("--skip-bindings flag is not yet implemented");
     }
 
-    let validator = FhirValidator::new(None)?;
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
 
     let content = read_input(&args.input).context("Failed to read input")?;
 
@@ -130,6 +132,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
     match args.format {
         OutputFormat::Text => print_single_result_text(&result, &resource),
         OutputFormat::Json => print_single_result_json(&result, &resource)?,
+        OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
     }
 
     let has_errors = !result.valid;
@@ -151,7 +154,7 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
         warn!("--skip-bindings flag is not yet implemented");
     }
 
-    let validator = FhirValidator::new(None)?;
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
 
     let content = read_input(&args.input).context("Failed to read input")?;
 
@@ -179,6 +182,7 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
     match args.format {
         OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
         OutputFormat::Json => print_batch_results_json(&results)?,
+        OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
     }
 
     let has_errors = results.iter().any(|(_, _, r)| !r.valid);
@@ -374,6 +378,22 @@ fn print_batch_results_json(
     Ok(())
 }
 
+fn print_operation_outcome(result: &rh_validator::ValidationResult) -> Result<()> {
+    let operation_outcome = result.to_operation_outcome();
+    println!("{}", serde_json::to_string_pretty(&operation_outcome)?);
+    Ok(())
+}
+
+fn print_batch_operation_outcomes(
+    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
+) -> Result<()> {
+    for (_, _, result) in results {
+        let operation_outcome = result.to_operation_outcome();
+        println!("{}", serde_json::to_string(&operation_outcome)?);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,12 +409,20 @@ mod tests {
             OutputFormat::Json
         ));
         assert!(matches!(
+            "operationoutcome".parse::<OutputFormat>().unwrap(),
+            OutputFormat::OperationOutcome
+        ));
+        assert!(matches!(
             "TEXT".parse::<OutputFormat>().unwrap(),
             OutputFormat::Text
         ));
         assert!(matches!(
             "JSON".parse::<OutputFormat>().unwrap(),
             OutputFormat::Json
+        ));
+        assert!(matches!(
+            "OPERATIONOUTCOME".parse::<OutputFormat>().unwrap(),
+            OutputFormat::OperationOutcome
         ));
         assert!("invalid".parse::<OutputFormat>().is_err());
     }

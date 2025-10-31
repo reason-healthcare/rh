@@ -12,8 +12,11 @@ fn test_required_binding_valid_code() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     // Create a simple resource with a valid code from yesnodontknow ValueSet
     let resource = json!({
@@ -53,8 +56,11 @@ fn test_required_binding_invalid_code() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     let resource = json!({
         "resourceType": "Observation",
@@ -82,8 +88,11 @@ fn test_extensible_binding_generates_warning() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     let resource = json!({
         "resourceType": "Patient",
@@ -105,8 +114,11 @@ fn test_preferred_binding_skipped() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     let resource = json!({
         "resourceType": "Patient",
@@ -129,8 +141,11 @@ fn test_extract_code_from_string() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     // Simple string code
     let resource = json!({
@@ -153,8 +168,11 @@ fn test_extract_code_from_coding() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     // Coding with system and code
     let resource = json!({
@@ -181,8 +199,11 @@ fn test_extract_codes_from_codeable_concept() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     // CodeableConcept with multiple codings
     let resource = json!({
@@ -217,8 +238,11 @@ fn test_intensional_valueset_skipped() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     // administrative-gender is intensional (no expansion)
     let resource = json!({
@@ -243,8 +267,11 @@ fn test_missing_valueset_handled_gracefully() {
         return;
     }
 
-    let validator =
-        FhirValidator::new(Some(packages_dir.to_str().unwrap())).expect("Should create validator");
+    let validator = FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create validator");
 
     let resource = json!({
         "resourceType": "Patient",

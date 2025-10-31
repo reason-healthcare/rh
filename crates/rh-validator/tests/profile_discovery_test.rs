@@ -11,7 +11,11 @@ fn setup_validator() -> Option<FhirValidator> {
         return None;
     }
 
-    FhirValidator::new(Some(packages_dir.to_str().unwrap())).ok()
+    FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .ok()
 }
 
 fn setup_validator_with_us_core() -> Option<FhirValidator> {
@@ -23,7 +27,11 @@ fn setup_validator_with_us_core() -> Option<FhirValidator> {
         return None;
     }
 
-    FhirValidator::new(Some(packages_dir.to_str().unwrap())).ok()
+    FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .ok()
 }
 
 #[test]

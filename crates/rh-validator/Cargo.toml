@@ -16,6 +16,10 @@ keywords = [
 ]
 categories = ["parsing", "data-structures", "healthcare"]
 
+[features]
+default = []
+fhir-test-cases = ["reqwest", "zip"]
+
 [dependencies]
 # Workspace dependencies
 serde = { workspace = true, features = ["derive"] }
@@ -34,6 +38,10 @@ lru = "0.12"
 
 # Parallelism (for future batch validation)
 rayon = "1.10"
+
+# Optional dependencies for FHIR test cases
+reqwest = { workspace = true, optional = true, features = ["blocking"] }
+zip = { version = "0.6", optional = true }
 
 [dev-dependencies]
 # Testing with generated FHIR types

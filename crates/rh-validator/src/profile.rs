@@ -1,10 +1,13 @@
 use anyhow::{Context, Result};
 use lru::LruCache;
+use rh_loader::PackageLoader;
 use rh_snapshot::{SnapshotGenerator, StructureDefinition, StructureDefinitionLoader};
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::RwLock;
+
+use crate::fhir_version::FhirVersion;
 
 pub struct ProfileRegistry {
     generator: SnapshotGenerator,
@@ -12,15 +15,51 @@ pub struct ProfileRegistry {
     snapshot_cache: RwLock<LruCache<String, StructureDefinition>>,
     cache_hits: RwLock<usize>,
     cache_misses: RwLock<usize>,
+    #[allow(dead_code)]
+    fhir_version: FhirVersion,
 }
 
 impl ProfileRegistry {
-    pub fn new(packages_dir: Option<&str>) -> Result<Self> {
+    pub fn new(fhir_version: FhirVersion, packages_dir: Option<&str>) -> Result<Self> {
         let mut generator = SnapshotGenerator::new();
         let mut profiles = HashMap::new();
 
-        let packages_path = packages_dir.map(PathBuf::from);
+        // Try to load core FHIR package from default packages directory
+        // Package directory format: ~/.fhir/packages/hl7.fhir.r4.core#4.0.1/package
+        if let Ok(default_dir) = PackageLoader::get_default_packages_dir() {
+            let package_name_with_version = format!(
+                "{}#{}",
+                fhir_version.package_id(),
+                fhir_version.version_string()
+            );
+            let core_package_dir = default_dir.join(&package_name_with_version).join("package");
 
+            if core_package_dir.exists() {
+                match StructureDefinitionLoader::load_from_directory(&core_package_dir) {
+                    Ok(loaded_profiles) => {
+                        for profile in loaded_profiles {
+                            profiles.insert(profile.url.clone(), profile.clone());
+                            generator.load_structure_definition(profile);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: Failed to load core FHIR package from {}: {}",
+                            core_package_dir.display(),
+                            e
+                        );
+                    }
+                }
+            } else {
+                eprintln!(
+                    "Warning: Core FHIR package not found at {}. Some validations may fail.",
+                    core_package_dir.display()
+                );
+            }
+        }
+
+        // Load additional profiles from packages directory if provided
+        let packages_path = packages_dir.map(PathBuf::from);
         if let Some(ref dir) = packages_path {
             if dir.exists() {
                 let loaded_profiles = StructureDefinitionLoader::load_from_directory(dir)
@@ -40,6 +79,7 @@ impl ProfileRegistry {
             snapshot_cache: RwLock::new(LruCache::new(capacity)),
             cache_hits: RwLock::new(0),
             cache_misses: RwLock::new(0),
+            fhir_version,
         })
     }
 
@@ -152,6 +192,6 @@ impl ProfileRegistry {
 
 impl Default for ProfileRegistry {
     fn default() -> Self {
-        Self::new(None).expect("Failed to initialize ProfileRegistry")
+        Self::new(FhirVersion::default(), None).expect("Failed to initialize ProfileRegistry")
     }
 }
