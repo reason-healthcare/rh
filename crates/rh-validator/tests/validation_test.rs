@@ -10,12 +10,16 @@ fn setup_validator_with_us_core() -> Option<FhirValidator> {
         return None;
     }
 
-    FhirValidator::new(Some(packages_dir.to_str().unwrap())).ok()
+    FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .ok()
 }
 
 #[test]
 fn test_validate_with_profile_not_found() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let resource = json!({
         "resourceType": "Patient",
         "id": "example"
@@ -252,7 +256,7 @@ fn test_cardinality_validation_array() {
 
 #[test]
 fn test_path_traversal_nested() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
 
     let resource = json!({
         "resourceType": "Patient",

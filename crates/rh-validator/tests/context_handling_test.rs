@@ -11,7 +11,11 @@ fn setup_validator() -> Option<FhirValidator> {
         return None;
     }
 
-    FhirValidator::new(Some(packages_dir.to_str().unwrap())).ok()
+    FhirValidator::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .ok()
 }
 
 #[test]
@@ -201,7 +205,10 @@ fn test_invariant_path_information() -> Result<()> {
         return Ok(());
     }
 
-    let registry = ProfileRegistry::new(Some(packages_dir.to_str().unwrap()))?;
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )?;
     let compiler = RuleCompiler::default();
 
     let snapshot = registry

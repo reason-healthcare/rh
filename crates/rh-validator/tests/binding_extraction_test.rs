@@ -11,8 +11,11 @@ fn test_binding_rule_extraction_us_core_patient() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -65,8 +68,11 @@ fn test_binding_rule_extraction_from_base_patient() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/StructureDefinition/Patient";
@@ -103,8 +109,11 @@ fn test_binding_strengths() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/StructureDefinition/Patient";
@@ -151,8 +160,11 @@ fn test_binding_rule_structure() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/StructureDefinition/Patient";

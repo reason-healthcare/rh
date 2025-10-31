@@ -11,8 +11,11 @@ fn test_invariant_extraction_us_core_patient() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -51,8 +54,11 @@ fn test_invariant_structure_validation() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -95,8 +101,11 @@ fn test_invariant_severities() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -140,8 +149,11 @@ fn test_invariant_keys_unique() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -182,8 +194,11 @@ fn test_base_patient_invariants() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/StructureDefinition/Patient";
@@ -221,8 +236,11 @@ fn test_fhirpath_expression_format() {
         return;
     }
 
-    let registry =
-        ProfileRegistry::new(Some(packages_dir.to_str().unwrap())).expect("Should create registry");
+    let registry = ProfileRegistry::new(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+    )
+    .expect("Should create registry");
     let compiler = RuleCompiler::new(100);
 
     let profile_url = "http://hl7.org/fhir/StructureDefinition/Patient";

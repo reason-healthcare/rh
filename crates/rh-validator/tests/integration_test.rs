@@ -3,19 +3,19 @@ use serde_json::json;
 
 #[test]
 fn test_profile_registry_creation() {
-    let registry = ProfileRegistry::new(None);
+    let registry = ProfileRegistry::new(rh_validator::FhirVersion::R4, None);
     assert!(registry.is_ok());
 }
 
 #[test]
 fn test_validator_creation() {
-    let validator = FhirValidator::new(None);
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None);
     assert!(validator.is_ok());
 }
 
 #[test]
 fn test_basic_validation_missing_resource_type() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let resource = json!({
         "id": "test"
     });
@@ -28,7 +28,7 @@ fn test_basic_validation_missing_resource_type() {
 
 #[test]
 fn test_basic_validation_valid_structure() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let resource = json!({
         "resourceType": "Patient",
         "id": "example"
@@ -41,7 +41,7 @@ fn test_basic_validation_valid_structure() {
 
 #[test]
 fn test_basic_validation_not_json_object() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let resource = json!("not an object");
 
     let result = validator.validate(&resource).unwrap();
@@ -132,7 +132,7 @@ fn test_validation_issue_builder() {
 
 #[test]
 fn test_cache_stats() {
-    let validator = FhirValidator::new(None).unwrap();
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let (profile_cache, rule_cache) = validator.cache_stats();
 
     assert_eq!(profile_cache.0, 0);
