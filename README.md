@@ -1,4 +1,3 @@
-<p>
   <img src="assets/rust-health-logo-full-color-rgb.svg" alt="Rust Health Logo" height="30px">
 </p>
 
@@ -201,3 +200,16 @@ This project is licensed under either of
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+## Supported By
+
+This project is proudly supported by [Vermonster](https://vermonster.com) / [ReasonHealth](https://reason.health).
+
+<p align="center">
+  <a href="https://vermonster.com">
+    <img src="https://www.vermonster.com/images/vermonster-logo.svg" alt="Vermonster Logo" height="20px" style="margin: 0 20px;">
+  </a>
+  <a href="https://reason.health">
+    <img src="https://www.vermonster.com/images/reasonhub-logo-full-color-rgb.svg" alt="ReasonHealth Logo" height="20px" style="margin: 0 20px;">
+  </a>
+</p>
