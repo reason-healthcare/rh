@@ -205,11 +205,12 @@ at your option.
 
 This project is proudly supported by [Vermonster](https://vermonster.com) / [ReasonHealth](https://reason.health).
 
-<p align="center">
-  <a href="https://vermonster.com" style="margin: 0 20px;">
-    <img src="https://www.vermonster.com/images/vermonster-logo.svg" alt="Vermonster Logo" height="20px">
-  </a>
-  <a href="https://reason.health" style="margin: 0 20px;">
-    <img src="https://www.vermonster.com/images/reasonhub-logo-full-color-rgb.svg" alt="ReasonHealth Logo" height="20px">
-  </a>
+<p>
+  <span style="padding: 0 20px; display: inline-block;">
+    <a href="https://vermonster.com"><img src="https://www.vermonster.com/images/vermonster-logo.svg" alt="Vermonster Logo" height="20px"></a>
+  </span>
+  <span>&nbsp;&nbsp;&nbsp;</span>
+  <span style="padding: 0 20px; display: inline-block;">
+    <a href="https://reason.health"><img src="https://www.vermonster.com/images/reasonhub-logo-full-color-rgb.svg" alt="ReasonHealth Logo" height="20px"></a>
+  </span>
 </p>
