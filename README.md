@@ -1,4 +1,5 @@
-# RH - Rust Healthcare Toolkit
+
+![RH Logo](assets/rust-health-logo-full-color-rgb.svg)
 
 [![CI](https://github.com/reason-healthcare/rh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reason-healthcare/rh/actions)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
