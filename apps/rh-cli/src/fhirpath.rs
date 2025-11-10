@@ -232,13 +232,6 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
-    // Initialize rustyline editor with history
-    let mut rl = DefaultEditor::new()?;
-
-    // Try to load history from file
-    let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
-    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
-
     // Load data if provided
     let mut data = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
@@ -247,6 +240,13 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
     } else {
         Value::Null
     };
+
+    // Initialize rustyline editor with history
+    let mut rl = DefaultEditor::new()?;
+
+    // Try to load history from file
+    let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
+    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
 
     loop {
         let readline = rl.readline("fhirpath> ");
@@ -341,8 +341,7 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
         }
     }
 
-    // Save history to file
-    let _ = rl.save_history(&history_file); // Ignore errors
+    let _ = rl.save_history(&history_file);
 
     Ok(())
 }

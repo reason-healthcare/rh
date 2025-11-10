@@ -1,0 +1,7 @@
+.data
+.load examples/patient.json
+.data
+name.family
+'hello'.upper()
+.help
+.quit

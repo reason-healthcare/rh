@@ -1,0 +1,125 @@
+#!/usr/bin/env expect -f
+
+# Configurable timing - shorter, more realistic pauses
+set default_char_delay 80
+set default_line_pause 800
+set default_after_pause 1200
+set default_jitter_ms 40
+set default_space_pause_ms 120
+if {[info exists ::env(EXPECT_CHAR_DELAY_MS)]} { set default_char_delay $::env(EXPECT_CHAR_DELAY_MS) }
+if {[info exists ::env(EXPECT_LINE_PAUSE_MS)]} { set default_line_pause $::env(EXPECT_LINE_PAUSE_MS) }
+if {[info exists ::env(EXPECT_AFTER_CMD_MS)]} { set default_after_pause $::env(EXPECT_AFTER_CMD_MS) }
+if {[info exists ::env(EXPECT_JITTER_MS)]} { set default_jitter_ms $::env(EXPECT_JITTER_MS) }
+if {[info exists ::env(EXPECT_SPACE_PAUSE_MS)]} { set default_space_pause_ms $::env(EXPECT_SPACE_PAUSE_MS) }
+
+set timeout 30
+
+# Simplified approach: thinking pause + send command
+proc slow_send {text} {
+  global default_char_delay default_jitter_ms default_space_pause_ms
+  
+  # Realistic thinking time based on command complexity
+  set base_think [expr {[string length $text] * 40}]
+  set think_time [expr {300 + $base_think + int(500 * rand())}]
+  after $think_time
+  
+  # Send the complete text (terminals buffer input anyway)
+  send -- $text
+}
+
+proc pause_line {} {
+  global default_line_pause
+  after $default_line_pause
+}
+
+proc after_cmd {} {
+  global default_after_pause
+  after $default_after_pause
+}
+
+proc expect_prompt {} {
+  expect -re {fhirpath> }
+}
+
+expect_after {
+  timeout {
+    send_user "(expect timeout, sending .quit)\n"
+    send -- ".quit\r"
+  }
+}
+
+spawn cargo run -p rh -- fhirpath repl
+
+expect -re {FHIRPath Interactive REPL}
+expect_prompt
+
+# Show empty state
+slow_send ".data"
+pause_line
+send -- "\r"
+expect -re {No data loaded\. Use \.load <file> to load FHIR data\.}
+after_cmd
+expect_prompt
+
+# Load sample data
+slow_send ".load examples/patient.json"
+pause_line
+send -- "\r"
+expect -re {Loaded data from: .*examples/patient\.json}
+after_cmd
+expect_prompt
+
+# Show loaded data (pretty JSON)
+slow_send ".data"
+pause_line
+send -- "\r"
+expect -re {Data:}
+after_cmd
+expect_prompt
+
+# Evaluate simple expressions
+slow_send "name.family"
+pause_line
+send -- "\r"
+expect -re {=> }
+after_cmd
+expect_prompt
+
+slow_send "'hello'.upper()"
+pause_line
+send -- "\r"
+expect -re {=> }
+after_cmd
+expect_prompt
+
+# Units and time math examples
+slow_send "1.0'kg' - 250.0'g'"
+pause_line
+send -- "\r"
+expect -re {=> }
+after_cmd
+expect_prompt
+
+
+slow_send "@2025 + 365'd'"
+pause_line
+send -- "\r"
+expect -re {=> }
+after_cmd
+expect_prompt
+
+# Brief help
+slow_send ".help"
+pause_line
+send -- "\r"
+expect -re {FHIRPath REPL Commands:}
+after_cmd
+expect_prompt
+
+# Exit
+slow_send ".quit"
+pause_line
+send -- "\r"
+expect -re {Goodbye!}
+
+exit 0
