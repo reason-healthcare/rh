@@ -1,6 +1,6 @@
 
 <p>
-  <img src="assets/rust-health-logo-full-color-rgb.svg" alt="RH Logo" height="50px">
+  <img src="assets/rust-health-logo-full-color-rgb.svg" alt="RH Logo" height="30px">
 </p>
 
 [![CI](https://github.com/reason-healthcare/rh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reason-healthcare/rh/actions)
@@ -8,7 +8,7 @@
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 
 
-**RH** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extendable. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: superior UX, small, composable, and ideal for scripting and automation.
+**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extendable. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: superior UX, small, composable, and ideal for scripting and automation.
 
 Cross-platform and lightning-fast, and running nativelly cross platform, RH eliminates the overhead of heavy virtual machines like the JVM or .NET. RH can even be compiled to **WebAssembly** for seamless integration into web applications and embedded environments.
 
