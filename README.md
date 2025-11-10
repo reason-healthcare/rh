@@ -1,6 +1,5 @@
-
 <p>
-  <img src="assets/rust-health-logo-full-color-rgb.svg" alt="RH Logo" height="30px">
+  <img src="assets/rust-health-logo-full-color-rgb.svg" alt="Rust Health Logo" height="30px">
 </p>
 
 [![CI](https://github.com/reason-healthcare/rh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reason-healthcare/rh/actions)
