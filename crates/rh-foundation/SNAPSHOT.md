@@ -73,14 +73,14 @@ The generator is designed for high-performance scenarios:
 
 The generator implements the complete FHIR snapshot algorithm:
 
-✅ **Element Inheritance:** Properly inherits all base elements
-✅ **Differential Merging:** Correctly merges differential constraints
-✅ **Cardinality Rules:** Validates min/max constraints
-✅ **Type Constraints:** Enforces type narrowing rules
-✅ **Slicing Support:** Full slicing and reslicing support
-✅ **Extension Handling:** Proper extension element generation
-✅ **Binding Merging:** Correct ValueSet binding inheritance
-✅ **Constraint Propagation:** Invariant and constraint handling
+* **Element Inheritance:** Properly inherits all base elements
+* **Differential Merging:** Correctly merges differential constraints
+* **Cardinality Rules:** Validates min/max constraints
+* **Type Constraints:** Enforces type narrowing rules
+* **Slicing Support:** Full slicing and reslicing support
+* **Extension Handling:** Proper extension element generation
+* **Binding Merging:** Correct ValueSet binding inheritance
+* **Constraint Propagation:** Invariant and constraint handling
 
 ## Architecture
 
