@@ -10,8 +10,8 @@ Foundation crate providing common utilities, error handling, and shared function
 - **Configuration**: Traits and utilities for configuration management
 - **I/O Operations**: File reading/writing with JSON support
 - **HTTP Client**: Optional HTTP utilities with async support (feature: `http`)
-- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`)
-- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging
+- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`) - [📖 Documentation](LOADER.md)
+- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging - [📖 Documentation](SNAPSHOT.md)
 - **JSON Utilities**: Convenient JSON parsing and serialization
 - **CLI Utilities**: Common CLI patterns for input/output and formatting
 - **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
@@ -165,7 +165,9 @@ cli::exit_if(has_errors && strict, 1);
 
 ### Package Loader (with `http` feature)
 
-Download and manage FHIR packages from npm-style registries:
+Download and manage FHIR packages from npm-style registries.
+
+📖 **[Full Documentation: LOADER.md](LOADER.md)** - Complete guide including HL7 tooling compatibility, private registries, caching strategies, and performance optimization.
 
 ```rust
 use rh_foundation::loader::{PackageLoader, LoaderConfig};
@@ -216,7 +218,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Snapshot Generator
 
-Generate complete snapshots from FHIR StructureDefinitions with differential elements:
+Generate complete snapshots from FHIR StructureDefinitions with differential elements.
+
+📖 **[Full Documentation: SNAPSHOT.md](SNAPSHOT.md)** - Complete guide including design philosophy, architecture, performance optimization, and advanced usage patterns.
 
 ```rust
 use rh_foundation::snapshot::{
