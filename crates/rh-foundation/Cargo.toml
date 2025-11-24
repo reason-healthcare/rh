@@ -13,12 +13,20 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 reqwest = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+
 [features]
 default = []
-http = ["reqwest", "tokio"]
+http = ["reqwest", "tokio", "url", "tar", "flate2"]
 wasm = ["wasm-bindgen", "console_error_panic_hook"]

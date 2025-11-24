@@ -1,6 +1,6 @@
 //! FHIR Package Loading and Downloading Library
 //!
-//! This library provides functionality for downloading and loading FHIR packages from
+//! This module provides functionality for downloading and loading FHIR packages from
 //! npm-style registries such as packages.fhir.org. It supports authentication,
 //! package extraction, and metadata management.
 //!
@@ -15,7 +15,7 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use rh_loader::{PackageLoader, LoaderConfig};
+//! use rh_foundation::loader::{PackageLoader, LoaderConfig};
 //! use std::path::Path;
 //!
 //! #[tokio::main]
@@ -47,7 +47,7 @@ use thiserror::Error;
 
 use url::Url;
 
-use rh_foundation::FoundationError;
+use crate::FoundationError;
 
 /// Errors that can occur during package loading operations.
 ///
@@ -86,7 +86,6 @@ pub enum LoaderError {
     UrlParse(#[from] url::ParseError),
 }
 
-// Implement From for common types that should go through FoundationError
 impl From<std::io::Error> for LoaderError {
     fn from(err: std::io::Error) -> Self {
         LoaderError::Foundation(FoundationError::Io(err))
@@ -155,7 +154,7 @@ impl Default for LoaderConfig {
             auth_token: None,
             timeout_seconds: 30,
             max_retries: 3,
-            verify_checksums: false, // Disabled by default for now
+            verify_checksums: false,
             overwrite_existing: false,
         }
     }
@@ -163,18 +162,17 @@ impl Default for LoaderConfig {
 
 /// FHIR package loader for downloading from npm-style registries
 pub struct PackageLoader {
-    http_client: rh_foundation::http::HttpClient,
+    http_client: crate::http::HttpClient,
     config: LoaderConfig,
 }
 
 impl PackageLoader {
     /// Create a new package loader with the given configuration
     pub fn new(config: LoaderConfig) -> LoaderResult<Self> {
-        let mut builder = rh_foundation::http::HttpClient::builder()
+        let mut builder = crate::http::HttpClient::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_seconds))
             .user_agent("rh-loader/0.1.0")?;
 
-        // Add authentication header if token is provided
         if let Some(token) = &config.auth_token {
             builder = builder.bearer_auth(token)?;
         }
@@ -204,10 +202,8 @@ impl PackageLoader {
         version: &str,
         extract_to: &Path,
     ) -> LoaderResult<PackageManifest> {
-        // Create package-specific directory
         let package_dir = self.get_package_directory(extract_to, package_name, version);
 
-        // Check if package already exists
         if package_dir.exists() && !self.config.overwrite_existing {
             return Err(LoaderError::PackageExists {
                 package: package_name.to_string(),
@@ -218,18 +214,14 @@ impl PackageLoader {
 
         tracing::info!("Downloading FHIR package {}@{}", package_name, version);
 
-        // Get package manifest
         let manifest = self.get_package_manifest(package_name, version).await?;
 
-        // Download tarball
         let tarball_data = self.download_tarball(&manifest.dist.tarball).await?;
 
-        // Verify checksum if available and enabled
         if self.config.verify_checksums {
             self.verify_tarball_checksum(&tarball_data, &manifest.dist)?;
         }
 
-        // Extract tarball to package-specific directory
         self.extract_tarball(&tarball_data, &package_dir)?;
 
         tracing::info!(
@@ -256,7 +248,6 @@ impl PackageLoader {
         Ok(PathBuf::from(home_dir).join(".fhir").join("packages"))
     }
 
-    /// Get the package-specific directory path
     fn get_package_directory(
         &self,
         base_path: &Path,
@@ -278,14 +269,12 @@ impl PackageLoader {
     pub async fn get_latest_version(&self, package_name: &str) -> LoaderResult<String> {
         let registry_response = self.get_registry_response(package_name).await?;
 
-        // Try to get latest from dist-tags first
         if let Some(dist_tags) = &registry_response.dist_tags {
             if let Some(latest) = dist_tags.get("latest") {
                 return Ok(latest.clone());
             }
         }
 
-        // Fall back to highest version number
         let versions = self.list_versions(package_name).await?;
         versions
             .last()
@@ -296,7 +285,6 @@ impl PackageLoader {
             })
     }
 
-    /// Get full registry response for a package
     async fn get_registry_response(&self, package_name: &str) -> LoaderResult<RegistryResponse> {
         let registry_url = Url::parse(&self.config.registry_url)?;
         let package_url = registry_url.join(package_name)?;
@@ -315,7 +303,6 @@ impl PackageLoader {
         Ok(registry_response)
     }
 
-    /// Get package manifest from registry
     async fn get_package_manifest(
         &self,
         package_name: &str,
@@ -323,7 +310,6 @@ impl PackageLoader {
     ) -> LoaderResult<PackageManifest> {
         let registry_response = self.get_registry_response(package_name).await?;
 
-        // Find the requested version
         let version_manifest = registry_response.versions.get(version).ok_or_else(|| {
             LoaderError::PackageNotFound {
                 package: package_name.to_string(),
@@ -334,7 +320,6 @@ impl PackageLoader {
         Ok(version_manifest.clone())
     }
 
-    /// Download tarball from URL with retry logic
     async fn download_tarball(&self, tarball_url: &str) -> LoaderResult<Vec<u8>> {
         tracing::debug!("Downloading tarball from: {}", tarball_url);
 
@@ -361,31 +346,23 @@ impl PackageLoader {
         }
     }
 
-    /// Verify tarball checksum if available
     fn verify_tarball_checksum(
         &self,
         _tarball_data: &[u8],
         _dist: &PackageDist,
     ) -> LoaderResult<()> {
-        // TODO: Implement checksum verification
-        // This would involve computing SHA1/SHA512 hashes and comparing
-        // with dist.shasum or dist.integrity
         tracing::debug!("Checksum verification not yet implemented");
         Ok(())
     }
 
-    /// Extract gzipped tarball to directory
     fn extract_tarball(&self, tarball_data: &[u8], extract_to: &Path) -> LoaderResult<()> {
         tracing::debug!("Extracting tarball to: {}", extract_to.display());
 
-        // Create extraction directory
         fs::create_dir_all(extract_to)?;
 
-        // Decompress gzip
         let tar_decoder = GzDecoder::new(tarball_data);
         let mut archive = Archive::new(tar_decoder);
 
-        // Extract all files
         archive
             .unpack(extract_to)
             .map_err(|e| LoaderError::ArchiveError {
@@ -401,7 +378,6 @@ mod tests {
     use super::*;
     use std::fs;
 
-    /// Helper function to create a temporary directory for testing
     fn create_temp_test_dir(test_name: &str) -> PathBuf {
         let temp_dir = std::env::temp_dir().join(format!(
             "rh_loader_test_{}_{}",
@@ -412,10 +388,9 @@ mod tests {
         temp_dir
     }
 
-    /// Helper function to clean up a test directory
     fn cleanup_test_dir(dir: &Path) {
         if dir.exists() {
-            fs::remove_dir_all(dir).ok(); // Ignore errors during cleanup
+            fs::remove_dir_all(dir).ok();
         }
     }
 
@@ -516,7 +491,6 @@ mod tests {
         assert!(dir_path.to_string_lossy().contains(".fhir"));
         assert!(dir_path.to_string_lossy().contains("packages"));
 
-        // Verify the directory structure is ~/.fhir/packages
         let path_str = dir_path.to_string_lossy();
         assert!(path_str.ends_with(".fhir/packages") || path_str.ends_with(".fhir\\packages"));
     }
@@ -541,24 +515,20 @@ mod tests {
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
 
-        // Test package directory creation
         let package_dir = loader.get_package_directory(&temp_dir, "test.package", "1.0.0");
         let expected_dir = temp_dir.join("test.package#1.0.0");
 
         assert_eq!(package_dir, expected_dir);
         assert!(temp_dir.exists());
 
-        // Create the directory to test it exists
         fs::create_dir_all(&package_dir).unwrap();
         assert!(package_dir.exists());
 
-        // Test is_package_downloaded
         let is_downloaded = loader
             .is_package_downloaded("test.package", "1.0.0", &temp_dir)
             .unwrap();
         assert!(is_downloaded);
 
-        // Clean up the temporary directory
         cleanup_test_dir(&temp_dir);
         assert!(!temp_dir.exists());
     }
@@ -568,13 +538,10 @@ mod tests {
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
 
-        // Get default packages directory
         let default_dir = PackageLoader::get_default_packages_dir().unwrap();
 
-        // Test package directory creation within default directory
         let package_dir = loader.get_package_directory(&default_dir, "hl7.fhir.r4.core", "4.0.1");
 
-        // Verify the full path structure
         let expected_suffix = if cfg!(windows) {
             ".fhir\\packages\\hl7.fhir.r4.core#4.0.1"
         } else {
@@ -590,26 +557,17 @@ mod tests {
         let config = LoaderConfig::default();
         let loader = PackageLoader::new(config).unwrap();
 
-        // Create a simple test "tarball" (empty gzipped tar for testing)
         let tar_data = create_test_tarball();
 
-        // Test extraction
         let result = loader.extract_tarball(&tar_data, &temp_dir);
 
-        // The extraction should succeed (even with empty data)
-        // Note: This might fail with actual gzipped data, but that's expected for this test
-        // We're mainly testing the directory creation and cleanup
-        let _ = result; // Ignore the result for this test
+        let _ = result;
 
-        // Clean up regardless of extraction result
         cleanup_test_dir(&temp_dir);
         assert!(!temp_dir.exists());
     }
 
-    /// Create a minimal test tarball for testing
     fn create_test_tarball() -> Vec<u8> {
-        // Return a simple byte array that represents minimal test data
-        // This is just for testing the cleanup functionality
-        vec![0x1f, 0x8b, 0x08, 0x00] // Minimal gzip header
+        vec![0x1f, 0x8b, 0x08, 0x00]
     }
 }

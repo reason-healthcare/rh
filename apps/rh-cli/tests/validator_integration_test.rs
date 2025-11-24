@@ -148,7 +148,7 @@ fn test_batch_validation_with_errors() {
 
 #[test]
 fn test_resource_validation_operationoutcome_format() {
-    let patient = r#"{"resourceType": "Patient", "id": "test123"}"#;
+    let patient = r#"{"resourceType": "Patient", "id": "test123", "contact": [{}]}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -166,7 +166,7 @@ fn test_resource_validation_operationoutcome_format() {
 
 #[test]
 fn test_operationoutcome_has_severity() {
-    let patient = r#"{"resourceType": "Patient", "id": "test"}"#;
+    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -188,7 +188,7 @@ fn test_operationoutcome_has_severity() {
 
 #[test]
 fn test_operationoutcome_has_code() {
-    let patient = r#"{"resourceType": "Patient", "id": "test"}"#;
+    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -205,7 +205,7 @@ fn test_operationoutcome_has_code() {
 
 #[test]
 fn test_operationoutcome_has_diagnostics() {
-    let patient = r#"{"resourceType": "Patient", "id": "test"}"#;
+    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -271,7 +271,7 @@ fn test_batch_validation_operationoutcome_format() {
 
 #[test]
 fn test_operationoutcome_uppercase_format() {
-    let patient = r#"{"resourceType": "Patient", "id": "test"}"#;
+    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
 
     let output = rh_cmd()
         .arg("validate")

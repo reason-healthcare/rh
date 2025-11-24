@@ -28,9 +28,7 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation" }
-rh-snapshot = { path = "../rh-snapshot" }  # NEW: Snapshot-based validation
-rh-loader = { path = "../rh-loader" }      # NEW: FHIR package loading
+rh-foundation = { path = "../rh-foundation", features = ["http"] }
 rh-fhirpath = { path = "../rh-fhirpath" }  # FHIRPath invariant validation
 
 # Caching

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Subcommand;
-use rh_loader::{LoaderConfig, PackageLoader};
+use rh_foundation::loader::{LoaderConfig, PackageLoader};
 use std::path::{Path, PathBuf};
 use tracing::info;
 

@@ -38,7 +38,7 @@ mod type_mapper;
 pub mod value_sets;
 
 // Re-export loader types for convenience
-pub use rh_loader::{
+pub use rh_foundation::loader::{
     LoaderConfig as PackageDownloadConfig, LoaderError, LoaderResult, PackageDist,
     PackageLoader as PackageDownloader, PackageManifest,
 };
@@ -79,7 +79,7 @@ pub enum CodegenError {
 
     /// Package loader error
     #[error(transparent)]
-    Loader(#[from] rh_loader::LoaderError),
+    Loader(#[from] rh_foundation::loader::LoaderError),
 
     /// Foundation error (covers IO, JSON, etc.)
     #[error(transparent)]

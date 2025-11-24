@@ -7,6 +7,8 @@
 //! - HTTP utilities (`http` module, with `http` feature)
 //! - JSON helpers (`json` module)
 //! - WASM utilities (`wasm` module, with `wasm` feature)
+//! - Package loading (`loader` module, with `http` feature)
+//! - Snapshot generation (`snapshot` module)
 //!
 //! # Features
 //! - `http`: Enables HTTP client utilities (requires `reqwest` and `tokio`)
@@ -17,10 +19,14 @@ pub mod config;
 pub mod error;
 pub mod io;
 pub mod json;
+pub mod snapshot;
 pub mod validation;
 
 #[cfg(feature = "http")]
 pub mod http;
+
+#[cfg(feature = "http")]
+pub mod loader;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;

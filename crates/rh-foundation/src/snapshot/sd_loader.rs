@@ -1,5 +1,5 @@
-use crate::error::{SnapshotError, SnapshotResult};
-use crate::types::StructureDefinition;
+use crate::snapshot::error::{SnapshotError, SnapshotResult};
+use crate::snapshot::types::StructureDefinition;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use lru::LruCache;
-use rh_loader::PackageLoader;
-use rh_snapshot::{SnapshotGenerator, StructureDefinition, StructureDefinitionLoader};
+use rh_foundation::loader::PackageLoader;
+use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinition, StructureDefinitionLoader};
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;

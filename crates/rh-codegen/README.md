@@ -340,7 +340,7 @@ The library supports downloading FHIR packages from npm-style registries:
 
 ```rust
 use rh_codegen::{CodeGenerator, CodegenConfig};
-use rh_loader::{PackageLoader, LoaderConfig};
+use rh_foundation::loader::{PackageLoader, LoaderConfig};
 use std::path::Path;
 
 async fn process_fhir_package() -> Result<(), Box<dyn std::error::Error>> {

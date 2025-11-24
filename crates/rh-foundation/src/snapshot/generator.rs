@@ -1,6 +1,6 @@
-use crate::error::{SnapshotError, SnapshotResult};
-use crate::merger::ElementMerger;
-use crate::types::{Snapshot, StructureDefinition};
+use crate::snapshot::error::{SnapshotError, SnapshotResult};
+use crate::snapshot::merger::ElementMerger;
+use crate::snapshot::types::{Snapshot, StructureDefinition};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, info};

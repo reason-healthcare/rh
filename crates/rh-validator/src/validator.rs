@@ -44,7 +44,7 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 use std::path::PathBuf;
 
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
 use crate::rules::RuleCompiler;
@@ -644,6 +644,55 @@ fn validate_type_at_path(
     issues
 }
 
+fn path_exists_in_resource(resource: &Value, path: &str) -> bool {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.is_empty() {
+        return false;
+    }
+
+    let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
+        return false;
+    };
+
+    if parts[0] != resource_type {
+        return false;
+    }
+
+    if parts.len() == 1 {
+        return true;
+    }
+
+    // For element paths like "Patient.extension", just check if the field exists
+    // We don't need to navigate deeply - just check the immediate field
+    if parts.len() == 2 {
+        return resource.get(parts[1]).is_some();
+    }
+
+    // For nested paths like "Patient.name.extension", navigate step by step
+    let mut current = resource;
+    for part in &parts[1..] {
+        match current.get(part) {
+            Some(Value::Array(arr)) if !arr.is_empty() => {
+                // Navigate into first array element for further navigation
+                current = &arr[0];
+            }
+            Some(Value::Object(_)) => {
+                current = current.get(part).unwrap();
+            }
+            Some(_) => {
+                // Primitive value - path exists
+                return true;
+            }
+            None => {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
 fn get_values_at_path<'a>(resource: &'a Value, path: &str) -> Vec<&'a Value> {
     let parts: Vec<&str> = path.split('.').collect();
 
@@ -898,31 +947,23 @@ impl FhirValidator {
             }
         };
 
-        // Create evaluation context with the resource
-        // For resource-level invariants (path is resource type), use resource as context
-        // For element-level invariants, use the specific element as context
+        // Determine if this is a resource-level or element-level invariant
         let parts: Vec<&str> = rule.path.split('.').collect();
         let is_resource_level = parts.len() == 1;
 
-        let context = if is_resource_level {
-            // Resource-level invariant: both root and current are the resource
-            EvaluationContext::new(resource.clone())
-        } else {
-            // Element-level invariant: set current to the element
-            // For element-level invariants, we would ideally validate against each instance
-            // For now, use resource as root and current (simplified approach)
-            // Full implementation would:
-            // 1. Get all values at the element path: get_values_at_path(resource, &rule.path)
-            // 2. Create context for each element value
-            // 3. Validate each instance separately
-            EvaluationContext::new(resource.clone())
-        };
+        // For element-level invariants, check if the field exists in the resource
+        // If it doesn't exist, skip validation (constraint doesn't apply)
+        if !is_resource_level && !path_exists_in_resource(resource, &rule.path) {
+            // Field doesn't exist - constraint doesn't apply
+            return Ok(issues);
+        }
 
-        // Evaluate the expression
+        // Evaluate invariant with resource as context
+        // The FHIRPath expression will navigate to the appropriate elements
+        let context = EvaluationContext::new(resource.clone());
         let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
             Ok(value) => value,
             Err(e) => {
-                // Handle evaluation errors gracefully
                 return Ok(vec![ValidationIssue::warning(
                     IssueCode::Invariant,
                     format!("Failed to evaluate invariant {}: {}", rule.key, e),
@@ -930,37 +971,40 @@ impl FhirValidator {
             }
         };
 
-        // Convert result to boolean
-        let is_valid = match result {
-            FhirPathValue::Boolean(b) => b,
-            FhirPathValue::Empty => true, // Empty is treated as true (constraint not applicable)
-            FhirPathValue::Collection(ref items) if items.is_empty() => true, // Empty collection = true
-            FhirPathValue::Collection(ref items) if items.len() == 1 => {
-                // Single item collection - check if it's a boolean
-                match &items[0] {
-                    FhirPathValue::Boolean(b) => *b,
-                    _ => true, // Non-empty non-boolean collection = true
-                }
-            }
-            _ => true, // Any other non-empty result = true (constraint satisfied)
-        };
-
+        let is_valid = self.evaluate_invariant_result(&result);
         if !is_valid {
-            let issue = if rule.severity == "error" {
-                ValidationIssue::error(
-                    IssueCode::Invariant,
-                    format!("{}: {}", rule.key, rule.human),
-                )
-            } else {
-                ValidationIssue::warning(
-                    IssueCode::Invariant,
-                    format!("{}: {}", rule.key, rule.human),
-                )
-            };
-            issues.push(issue);
+            issues.push(self.create_invariant_issue(rule));
         }
 
         Ok(issues)
+    }
+
+    fn evaluate_invariant_result(&self, result: &rh_fhirpath::FhirPathValue) -> bool {
+        use rh_fhirpath::FhirPathValue;
+        match result {
+            FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::Empty => true,
+            FhirPathValue::Collection(ref items) if items.is_empty() => true,
+            FhirPathValue::Collection(ref items) if items.len() == 1 => match &items[0] {
+                FhirPathValue::Boolean(b) => *b,
+                _ => true,
+            },
+            _ => true,
+        }
+    }
+
+    fn create_invariant_issue(&self, rule: &crate::rules::InvariantRule) -> ValidationIssue {
+        if rule.severity == "error" {
+            ValidationIssue::error(
+                IssueCode::Invariant,
+                format!("{}: {}", rule.key, rule.human),
+            )
+        } else {
+            ValidationIssue::warning(
+                IssueCode::Invariant,
+                format!("{}: {}", rule.key, rule.human),
+            )
+        }
     }
 }
 

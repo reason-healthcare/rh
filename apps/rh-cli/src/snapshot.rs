@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use rh_snapshot::{SnapshotGenerator, StructureDefinitionLoader};
+use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 

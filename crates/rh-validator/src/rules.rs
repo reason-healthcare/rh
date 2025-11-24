@@ -1,6 +1,6 @@
 use anyhow::Result;
 use lru::LruCache;
-use rh_snapshot::StructureDefinition;
+use rh_foundation::snapshot::StructureDefinition;
 use std::num::NonZeroUsize;
 use std::sync::Mutex;
 

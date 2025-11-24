@@ -10,14 +10,16 @@ Foundation crate providing common utilities, error handling, and shared function
 - **Configuration**: Traits and utilities for configuration management
 - **I/O Operations**: File reading/writing with JSON support
 - **HTTP Client**: Optional HTTP utilities with async support (feature: `http`)
+- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`)
+- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging
 - **JSON Utilities**: Convenient JSON parsing and serialization
-- **CLI Utilities**: Common CLI patterns for input/output and formatting (new!)
+- **CLI Utilities**: Common CLI patterns for input/output and formatting
 - **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
 
 ## Features
 
-- **Default**: Core functionality (error handling, config, I/O, JSON, CLI)
-- **http**: Enables HTTP client utilities (requires `reqwest` and `tokio`)
+- **Default**: Core functionality (error handling, config, I/O, JSON, CLI, snapshot generation)
+- **http**: Enables HTTP client, FHIR package loader, and enhanced snapshot loading (requires `reqwest`, `tokio`, `url`, `tar`, `flate2`)
 - **wasm**: Enables WebAssembly utilities (requires `wasm-bindgen`)
 
 ## Usage
@@ -161,6 +163,139 @@ let success = cli::print_result(some_result);
 cli::exit_if(has_errors && strict, 1);
 ```
 
+### Package Loader (with `http` feature)
+
+Download and manage FHIR packages from npm-style registries:
+
+```rust
+use rh_foundation::loader::{PackageLoader, LoaderConfig};
+use std::path::Path;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Configure the loader
+    let config = LoaderConfig {
+        registry_url: "https://packages.fhir.org".to_string(),
+        auth_token: None,
+        timeout_seconds: 30,
+        max_retries: 3,
+        verify_checksums: false,
+        overwrite_existing: false,
+    };
+    
+    let loader = PackageLoader::new(config)?;
+    
+    // Get default packages directory (~/.fhir/packages)
+    let packages_dir = PackageLoader::get_default_packages_dir()?;
+    
+    // Download a FHIR package
+    let manifest = loader.download_package(
+        "hl7.fhir.r4.core",
+        "4.0.1",
+        &packages_dir
+    ).await?;
+    
+    println!("Downloaded: {} v{}", manifest.name, manifest.version);
+    
+    // Check if package is already downloaded
+    let is_downloaded = loader.is_package_downloaded(
+        "hl7.fhir.r4.core",
+        "4.0.1",
+        &packages_dir
+    )?;
+    
+    // List available versions
+    let versions = loader.list_versions("hl7.fhir.r4.core").await?;
+    
+    // Get latest version
+    let latest = loader.get_latest_version("hl7.fhir.r4.core").await?;
+    
+    Ok(())
+}
+```
+
+### Snapshot Generator
+
+Generate complete snapshots from FHIR StructureDefinitions with differential elements:
+
+```rust
+use rh_foundation::snapshot::{
+    SnapshotGenerator, StructureDefinitionLoader, StructureDefinition
+};
+use std::path::Path;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut generator = SnapshotGenerator::new();
+    
+    // Load base FHIR definitions
+    let base_definitions = StructureDefinitionLoader::load_from_package(
+        "hl7.fhir.r4.core",
+        "4.0.1",
+        &PackageLoader::get_default_packages_dir()?
+    )?;
+    
+    generator.load_structure_definitions(base_definitions);
+    
+    // Load your custom profile
+    let my_profile = StructureDefinitionLoader::load_from_file(
+        Path::new("MyPatientProfile.json")
+    )?;
+    
+    generator.load_structure_definition(my_profile);
+    
+    // Generate snapshot with full element tree
+    let snapshot = generator.generate_snapshot(
+        "http://example.org/StructureDefinition/MyPatient"
+    )?;
+    
+    println!("Generated snapshot with {} elements", snapshot.element.len());
+    
+    // Cache management
+    println!("Cache size: {}", generator.cache_size());
+    generator.clear_cache();
+    
+    Ok(())
+}
+```
+
+**Snapshot Generation Features:**
+
+- **Differential Merging**: Automatically merges base and differential elements
+- **Cardinality Validation**: Ensures differential constraints are stricter than base
+- **Type Restriction**: Validates differential types are subsets of base types
+- **Binding Validation**: Verifies binding strength hierarchy
+- **Slice Support**: Handles slicing and reslicing with proper element expansion
+- **Circular Dependency Detection**: Prevents infinite loops in inheritance chains
+- **Caching**: Caches generated snapshots for performance
+
+### Snapshot Loader
+
+Load StructureDefinitions from various sources:
+
+```rust
+use rh_foundation::snapshot::StructureDefinitionLoader;
+use std::path::Path;
+
+// Load from a single file
+let sd = StructureDefinitionLoader::load_from_file(
+    Path::new("MyProfile.json")
+)?;
+
+// Load all StructureDefinitions from a directory
+let definitions = StructureDefinitionLoader::load_from_directory(
+    Path::new("profiles/")
+)?;
+
+// Load from a FHIR package
+let package_definitions = StructureDefinitionLoader::load_from_package(
+    "hl7.fhir.us.core",
+    "5.0.1",
+    &PackageLoader::get_default_packages_dir()?
+)?;
+
+println!("Loaded {} StructureDefinitions", definitions.len());
+```
+
 ## Module Structure
 
 ```
@@ -169,9 +304,18 @@ rh-foundation/
 ├── config.rs      - Configuration traits
 ├── io.rs          - File I/O operations
 ├── json.rs        - JSON utilities
-├── cli.rs         - CLI utilities (NEW!)
+├── cli.rs         - CLI utilities
+├── validation.rs  - FHIR validation types
 ├── http.rs        - HTTP client (feature: http)
-└── wasm.rs        - WASM utilities (feature: wasm)
+├── loader.rs      - FHIR package loader (feature: http)
+├── wasm.rs        - WASM utilities (feature: wasm)
+└── snapshot/      - Snapshot generation
+    ├── error.rs         - Snapshot-specific errors
+    ├── generator.rs     - Snapshot generator
+    ├── sd_loader.rs     - StructureDefinition loader
+    ├── merger.rs        - Element merging logic
+    ├── path.rs          - ElementPath utilities
+    └── types.rs         - FHIR types
 ```
 
 ## Migration from rh-common

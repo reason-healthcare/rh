@@ -10,7 +10,7 @@ use rh_codegen::{
     generate_crate_structure, generate_module_files, parse_package_metadata, CodeGenerator,
     CodegenConfig, CrateGenerationParams, QualityConfig,
 };
-use rh_loader::{LoaderConfig, PackageLoader};
+use rh_foundation::loader::{LoaderConfig, PackageLoader};
 
 /// Check if a directory exists and is not empty
 fn is_directory_non_empty(path: &Path) -> Result<bool> {
