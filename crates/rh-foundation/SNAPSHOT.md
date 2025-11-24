@@ -88,10 +88,10 @@ The generator implements the complete FHIR snapshot algorithm:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                 SnapshotGenerator                        │
-│  - Orchestrates snapshot generation                      │
-│  - Manages caching and dependencies                      │
-│  - Detects circular references                           │
+│                 SnapshotGenerator                       │
+│  - Orchestrates snapshot generation                     │
+│  - Manages caching and dependencies                     │
+│  - Detects circular references                          │
 └─────────────┬───────────────────────────────────────────┘
               │
               ├──► StructureDefinitionLoader
