@@ -55,11 +55,26 @@ README, examples (basic, batch, auto-detect, profiles, output), and API docs.
 - ✅ 12.1: Downloaded and organized 570 R4 test cases
 - ✅ 12.2: Implemented test case parser
 - ✅ 12.3: Built test runner with batch execution
-- 🚧 12.4: Analyze results after ext-1 fix (54% → 80-90% expected)
-- ⏳ 12.5: Document known limitations vs FHIR spec
-- ⏳ 12.6: Set up automated test runs in CI
+- ✅ 12.4: Array structure validation for max>1 elements
+- ✅ 12.5: Profile-not-found as warning (Java compatibility)
+- ✅ 12.6: Base64Binary format validation
+- 🚧 12.7: 100-test suite: 53/100 (53%) agreement with Java
+- ⏳ 12.8: Document known limitations vs FHIR spec
+- ⏳ 12.9: Set up automated test runs in CI
 
-**Next Action:** Re-run full 570 test suite after ext-1 fix, analyze remaining failures, categorize by type (false positives, missing features, spec edge cases).
+**Current Test Status (Nov 26, 2025):**
+- Agreement with Java: 53/100 (53%)
+- False Positives: 1 (contained - FHIRPath descendants() bug)
+- False Negatives: 46 (mostly missing validations)
+
+**Remaining False Negatives Categories:**
+1. **External profiles:** Tests require profiles we don't have
+2. **Bundle validation:** Reference resolution, duplicate IDs
+3. **XHTML/narrative:** txt-1 invariant, security checks
+4. **Terminology:** SNOMED/LOINC validation requires terminology server
+5. **Attachment size:** Validate data length matches size field
+
+**Next Action:** Fix FHIRPath descendants() bug in rh-fhirpath to resolve last false positive.
 
 ## High Priority (v0.3.0)
 
