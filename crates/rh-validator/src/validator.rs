@@ -219,9 +219,10 @@ impl FhirValidator {
             ));
         }
 
+        let resource_type_name = resource_type.unwrap_or("Resource");
+
         // Validate Resource.id format if present (FHIR id regex: [A-Za-z0-9\-\.]{1,64})
         if let Some(id) = resource.get("id").and_then(|v| v.as_str()) {
-            let resource_type_name = resource_type.unwrap_or("Resource");
             if let Some(issue) = validate_id_format(id, &format!("{resource_type_name}.id")) {
                 result = result.with_issue(issue);
             }
@@ -231,13 +232,18 @@ impl FhirValidator {
         if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
             for (idx, contained_resource) in contained.iter().enumerate() {
                 if let Some(id) = contained_resource.get("id").and_then(|v| v.as_str()) {
-                    let resource_type_name = resource_type.unwrap_or("Resource");
                     let path = format!("{resource_type_name}.contained[{idx}].id");
                     if let Some(issue) = validate_id_format(id, &path) {
                         result = result.with_issue(issue);
                     }
                 }
             }
+        }
+
+        // Validate JSON structure (empty arrays are invalid in FHIR)
+        let empty_array_issues = validate_json_structure(resource, resource_type_name);
+        for issue in empty_array_issues {
+            result = result.with_issue(issue);
         }
 
         Ok(result)
@@ -739,6 +745,40 @@ fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
         }
     }
     None
+}
+
+fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            for (key, v) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                issues.extend(validate_json_structure(v, &child_path));
+            }
+        }
+        Value::Array(arr) => {
+            // Empty arrays are invalid in FHIR JSON
+            if arr.is_empty() {
+                issues.push(ValidationIssue::error(
+                    IssueCode::Structure,
+                    format!("Empty array at '{current_path}' is not allowed in FHIR"),
+                ));
+            } else {
+                for (idx, item) in arr.iter().enumerate() {
+                    let child_path = format!("{current_path}[{idx}]");
+                    issues.extend(validate_json_structure(item, &child_path));
+                }
+            }
+        }
+        _ => {}
+    }
+
+    issues
 }
 
 fn validate_primitive_format(
