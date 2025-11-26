@@ -719,17 +719,28 @@ impl CollectionEvaluator {
                 if let Some(object_map) = obj.as_object() {
                     for value in object_map.values() {
                         let child = FhirPathValue::from_json(value);
-                        descendants.push(child.clone());
-                        // Recursively collect descendants of this child
-                        Self::collect_descendants(&child, descendants)?;
+                        // In FHIR's logical model, arrays don't exist as nodes -
+                        // their elements are the direct children. So if a field
+                        // value is an array, add each element as a separate child.
+                        match &child {
+                            FhirPathValue::Collection(items) => {
+                                for item in items {
+                                    descendants.push(item.clone());
+                                    Self::collect_descendants(item, descendants)?;
+                                }
+                            }
+                            _ => {
+                                descendants.push(child.clone());
+                                Self::collect_descendants(&child, descendants)?;
+                            }
+                        }
                     }
                 }
             }
             FhirPathValue::Collection(items) => {
-                // For collections (like arrays), add individual items as descendants
-                // and then recursively process each item
+                // For collections passed directly to descendants() (the input collection),
+                // process each item - they're already at the right level.
                 for item in items {
-                    descendants.push(item.clone());
                     Self::collect_descendants(item, descendants)?;
                 }
             }
