@@ -246,6 +246,12 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        // Validate base64Binary fields
+        let base64_issues = validate_base64_fields(resource, resource_type_name);
+        for issue in base64_issues {
+            result = result.with_issue(issue);
+        }
+
         Ok(result)
     }
 
@@ -847,6 +853,66 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
     issues
 }
 
+fn validate_base64_fields(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_base64_fields_recursive(value, current_path, &mut issues);
+    issues
+}
+
+fn validate_base64_fields_recursive(
+    value: &Value,
+    current_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            for (key, v) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+
+                // Known base64Binary field names in FHIR:
+                // - Attachment.data
+                // - Binary.content / Binary.data
+                // - Signature.data
+                // - Attachment.hash (SHA-1 hash)
+                if is_base64_field_name(key) {
+                    if let Some(s) = v.as_str() {
+                        if !is_valid_base64(s) {
+                            issues.push(
+                                ValidationIssue::error(
+                                    IssueCode::Value,
+                                    format!("The value '{s}' is not a valid Base64 value"),
+                                )
+                                .with_path(&child_path),
+                            );
+                        }
+                    } else {
+                        // Not a string, recurse into it
+                        validate_base64_fields_recursive(v, &child_path, issues);
+                    }
+                } else {
+                    validate_base64_fields_recursive(v, &child_path, issues);
+                }
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_base64_fields_recursive(item, &child_path, issues);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_base64_field_name(name: &str) -> bool {
+    // Known base64Binary field names in FHIR R4
+    matches!(name, "data" | "hash")
+}
+
 // Note: HTML security checking is disabled because the Java validator uses an option
 // ("security-checks": true/false) to control whether HTML in strings is an error or info.
 // Without proper option support, enabling this breaks tests.
@@ -1004,10 +1070,36 @@ fn validate_primitive_format(
                 }
             }
         }
+        "base64Binary" => {
+            if !is_valid_base64(s) {
+                return Some(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!("The value '{s}' is not a valid Base64 value"),
+                ));
+            }
+        }
         _ => {}
     }
 
     None
+}
+
+fn is_valid_base64(s: &str) -> bool {
+    // Base64 alphabet: A-Z, a-z, 0-9, +, / and = for padding
+    // Also allow whitespace (per RFC 2045)
+    let mut char_count = 0;
+    for c in s.chars() {
+        if c.is_ascii_whitespace() {
+            continue;
+        }
+        if !c.is_ascii_alphanumeric() && c != '+' && c != '/' && c != '=' {
+            return false;
+        }
+        char_count += 1;
+    }
+    // Valid base64 length (without whitespace) must be divisible by 4
+    // Empty string is valid
+    char_count == 0 || char_count % 4 == 0
 }
 
 #[allow(dead_code)]
