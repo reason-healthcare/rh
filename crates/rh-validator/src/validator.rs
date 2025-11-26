@@ -219,6 +219,27 @@ impl FhirValidator {
             ));
         }
 
+        // Validate Resource.id format if present (FHIR id regex: [A-Za-z0-9\-\.]{1,64})
+        if let Some(id) = resource.get("id").and_then(|v| v.as_str()) {
+            let resource_type_name = resource_type.unwrap_or("Resource");
+            if let Some(issue) = validate_id_format(id, &format!("{resource_type_name}.id")) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        // Validate contained resource IDs
+        if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+            for (idx, contained_resource) in contained.iter().enumerate() {
+                if let Some(id) = contained_resource.get("id").and_then(|v| v.as_str()) {
+                    let resource_type_name = resource_type.unwrap_or("Resource");
+                    let path = format!("{resource_type_name}.contained[{idx}].id");
+                    if let Some(issue) = validate_id_format(id, &path) {
+                        result = result.with_issue(issue);
+                    }
+                }
+            }
+        }
+
         Ok(result)
     }
 
@@ -559,20 +580,19 @@ fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
 
     for (i, part) in parts[1..].iter().enumerate() {
         // Handle choice types (e.g., value[x] matches valueString, valueInteger, etc.)
-        if part.ends_with("[x]") {
-            let prefix = &part[..part.len() - 3];
+        if let Some(prefix) = part.strip_suffix("[x]") {
             let obj = current.as_object();
-            
+
             if let Some(obj) = obj {
                 let matching_fields: Vec<_> = obj
                     .keys()
                     .filter(|k| k.starts_with(prefix) && k.len() > prefix.len())
                     .collect();
-                
+
                 if i == parts.len() - 2 {
                     return matching_fields.len();
                 }
-                
+
                 if let Some(first_match) = matching_fields.first() {
                     match obj.get(*first_match) {
                         Some(Value::Array(arr)) => {
@@ -598,7 +618,7 @@ fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
                 }
             }
         }
-        
+
         match current.get(part) {
             Some(Value::Array(arr)) => {
                 if i == parts.len() - 2 {
@@ -679,12 +699,127 @@ fn validate_type_at_path(
                     expected_types.join(", ")
                 ),
             ));
+        } else {
+            // Type matches, now validate primitive format if applicable
+            for type_name in expected_types {
+                if let Some(format_error) = validate_primitive_format(value, type_name, path) {
+                    issues.push(format_error);
+                    break;
+                }
+            }
         }
     }
 
     issues
 }
 
+fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
+    // FHIR id regex: [A-Za-z0-9\-\.]{1,64}
+    if id.len() > 64 {
+        return Some(ValidationIssue::error(
+            IssueCode::Value,
+            format!(
+                "Invalid id at '{path}': value exceeds 64 characters (length: {})",
+                id.len()
+            ),
+        ));
+    }
+    if id.is_empty() {
+        return Some(ValidationIssue::error(
+            IssueCode::Value,
+            format!("Invalid id at '{path}': value cannot be empty"),
+        ));
+    }
+    for c in id.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '.' {
+            return Some(ValidationIssue::error(
+                IssueCode::Value,
+                format!("Invalid id at '{path}': contains invalid character '{c}' (allowed: A-Za-z0-9, -, .)"),
+            ));
+        }
+    }
+    None
+}
+
+fn validate_primitive_format(
+    value: &Value,
+    type_name: &str,
+    path: &str,
+) -> Option<ValidationIssue> {
+    let s = value.as_str()?;
+
+    match type_name {
+        "id" => {
+            // FHIR id: [A-Za-z0-9\-\.]{1,64}
+            if s.len() > 64 {
+                return Some(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!(
+                        "Invalid id at '{path}': value exceeds 64 characters (length: {})",
+                        s.len()
+                    ),
+                ));
+            }
+            if s.is_empty() {
+                return Some(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!("Invalid id at '{path}': value cannot be empty"),
+                ));
+            }
+            for c in s.chars() {
+                if !c.is_ascii_alphanumeric() && c != '-' && c != '.' {
+                    return Some(ValidationIssue::error(
+                        IssueCode::Value,
+                        format!("Invalid id at '{path}': contains invalid character '{c}' (allowed: A-Za-z0-9, -, .)"),
+                    ));
+                }
+            }
+        }
+        "oid" => {
+            // FHIR oid: urn:oid:[0-2](\.(0|[1-9][0-9]*))+
+            if !s.starts_with("urn:oid:") {
+                return Some(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!("Invalid oid at '{path}': must start with 'urn:oid:'"),
+                ));
+            }
+        }
+        "uuid" => {
+            // FHIR uuid: urn:uuid:[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}
+            if !s.starts_with("urn:uuid:") {
+                return Some(ValidationIssue::error(
+                    IssueCode::Value,
+                    format!("Invalid uuid at '{path}': must start with 'urn:uuid:'"),
+                ));
+            }
+        }
+        "positiveInt" => {
+            if let Some(n) = value.as_i64() {
+                if n < 1 {
+                    return Some(ValidationIssue::error(
+                        IssueCode::Value,
+                        format!("Invalid positiveInt at '{path}': value must be >= 1, got {n}"),
+                    ));
+                }
+            }
+        }
+        "unsignedInt" => {
+            if let Some(n) = value.as_i64() {
+                if n < 0 {
+                    return Some(ValidationIssue::error(
+                        IssueCode::Value,
+                        format!("Invalid unsignedInt at '{path}': value must be >= 0, got {n}"),
+                    ));
+                }
+            }
+        }
+        _ => {}
+    }
+
+    None
+}
+
+#[allow(dead_code)]
 fn path_exists_in_resource(resource: &Value, path: &str) -> bool {
     let parts: Vec<&str> = path.split('.').collect();
 
@@ -926,7 +1061,9 @@ impl FhirValidator {
         // This validation doesn't depend on ValueSet being extensional - just checks if value exists
         // E.g., _category exists but category doesn't - this is invalid for required/extensible bindings
         if values.is_empty() && (rule.strength == "required" || rule.strength == "extensible") {
-            if let Some(extension_count) = check_primitive_extension_without_value(resource, &rule.path) {
+            if let Some(extension_count) =
+                check_primitive_extension_without_value(resource, &rule.path)
+            {
                 // There are extension-only elements that should have values per the binding
                 for i in 0..extension_count {
                     issues.push(ValidationIssue::error(
@@ -1031,7 +1168,7 @@ impl FhirValidator {
         } else {
             // Element-level invariant - get elements at path and evaluate against each
             let elements = get_values_at_path(resource, &rule.path);
-            
+
             // If no elements at path, skip validation (constraint doesn't apply)
             if elements.is_empty() {
                 return Ok(issues);
@@ -1152,7 +1289,7 @@ fn check_primitive_extension_without_value(resource: &Value, path: &str) -> Opti
     }
 
     let field_name = parts[parts.len() - 1];
-    let extension_field_name = format!("_{}", field_name);
+    let extension_field_name = format!("_{field_name}");
 
     // Check if the extension field exists and the value field doesn't (or is smaller)
     let has_value_field = current.get(field_name).is_some();
