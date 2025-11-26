@@ -842,6 +842,91 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
     issues
 }
 
+// Note: HTML security checking is disabled because the Java validator uses an option
+// ("security-checks": true/false) to control whether HTML in strings is an error or info.
+// Without proper option support, enabling this breaks tests.
+#[allow(dead_code)]
+fn validate_no_embedded_html(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_no_embedded_html_recursive(value, current_path, &mut issues);
+    issues
+}
+
+#[allow(dead_code)]
+fn validate_no_embedded_html_recursive(
+    value: &Value,
+    current_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            for (key, v) in obj {
+                // Skip the "div" field which is expected to contain XHTML
+                if key == "div" {
+                    continue;
+                }
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_no_embedded_html_recursive(v, &child_path, issues);
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_no_embedded_html_recursive(item, &child_path, issues);
+            }
+        }
+        Value::String(s) => {
+            // Check for embedded HTML tags (security risk)
+            // Look for patterns like <tag> or </tag> or <tag />
+            // This is reported as a warning (informational) to match Java validator behavior
+            if contains_html_tags(s) {
+                issues.push(ValidationIssue::warning(
+                    IssueCode::Invalid,
+                    "The string value contains text that looks like embedded HTML tags. If this content is rendered to HTML without appropriate post-processing, it may be a security risk".to_string(),
+                ).with_path(current_path));
+            }
+        }
+        _ => {}
+    }
+}
+
+#[allow(dead_code)]
+fn contains_html_tags(s: &str) -> bool {
+    // Look for HTML-like tags: <tag>, </tag>, <tag/>, <tag attr="value">
+    // We look for patterns where < is followed by a letter or /letter
+    let bytes = s.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes[i] == b'<' {
+            // Check what follows
+            if i + 1 < bytes.len() {
+                let next = bytes[i + 1];
+                // Opening tag: <letter
+                // Closing tag: </letter
+                if next.is_ascii_alphabetic() || (next == b'/' && i + 2 < bytes.len() && bytes[i + 2].is_ascii_alphabetic()) {
+                    // Scan forward for >
+                    let mut j = i + 1;
+                    while j < bytes.len() {
+                        if bytes[j] == b'>' {
+                            // Found what looks like an HTML tag
+                            return true;
+                        }
+                        j += 1;
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+
+    false
+}
+
 fn validate_primitive_format(
     value: &Value,
     type_name: &str,
