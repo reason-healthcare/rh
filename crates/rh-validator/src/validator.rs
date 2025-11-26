@@ -310,9 +310,14 @@ impl FhirValidator {
         let snapshot = match snapshot {
             Some(s) => s,
             None => {
-                return Ok(result.with_issue(ValidationIssue::error(
+                // Profile not found - add warning and return base validation result
+                // This matches Java validator behavior which reports this as warning severity
+                return Ok(result.with_issue(ValidationIssue::warning(
                     IssueCode::NotFound,
-                    format!("[Profile: {profile_url}] Profile not found: {profile_url}"),
+                    format!(
+                        "[Profile: {profile_url}] Profile reference has not been checked because \
+                        it could not be found"
+                    ),
                 )));
             }
         };

@@ -32,9 +32,15 @@ fn test_validate_with_profile_not_found() {
         )
         .unwrap();
 
-    assert!(!result.valid);
-    assert_eq!(result.error_count(), 1);
-    assert!(result.issues[0].message.contains("Profile not found"));
+    // Profile not found should be a warning, not an error (matching Java behavior)
+    // Base validation is still performed and can pass
+    assert!(result.valid);
+    assert_eq!(result.warning_count(), 1);
+    assert!(
+        result.issues[0]
+            .message
+            .contains("Profile reference has not been checked")
+    );
 }
 
 #[test]

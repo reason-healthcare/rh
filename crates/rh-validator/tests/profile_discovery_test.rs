@@ -210,15 +210,20 @@ fn test_validate_with_unknown_profile() -> Result<()> {
 
     println!("\n=== Unknown Profile ===");
     println!("Valid: {}", result.valid);
-    println!("Errors: {}", result.error_count());
+    println!("Warnings: {}", result.warning_count());
 
-    // Should have error for profile not found
-    assert!(!result.valid, "Should be invalid");
-    let has_not_found = result
-        .issues
-        .iter()
-        .any(|i| i.message.contains("Profile not found") || i.message.contains("unknown-profile"));
-    assert!(has_not_found, "Should have error for unknown profile");
+    // Unknown profiles should generate a warning, not an error
+    // This matches Java validator behavior - base validation is still performed
+    // and the resource can be valid if it passes base validation
+    assert!(result.valid, "Should be valid (only warning for unknown profile)");
+    let has_not_found = result.issues.iter().any(|i| {
+        i.message.contains("Profile reference has not been checked")
+            || i.message.contains("could not be found")
+    });
+    assert!(
+        has_not_found,
+        "Should have warning for unknown profile"
+    );
 
     Ok(())
 }
