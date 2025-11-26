@@ -5,7 +5,7 @@
 **Tests:** 1,287 passing (132 validator-specific)  
 **Performance:** 3-4ms/resource, ~200 resources/sec batch  
 **Cache Hit Rate:** 100% in benchmarks  
-**Last Major Fix:** ext-1 invariant scoping (Nov 24, 2025)
+**Last Major Fix:** FHIRPath descendants() array handling (Nov 26, 2025)
 
 ## Completed Phases (v0.1.0 → v0.2.0)
 
@@ -58,6 +58,7 @@ README, examples (basic, batch, auto-detect, profiles, output), and API docs.
 - ✅ 12.4: Array structure validation for max>1 elements
 - ✅ 12.5: Profile-not-found as warning (Java compatibility)
 - ✅ 12.6: Base64Binary format validation
+- ✅ 12.7: FHIRPath descendants() fix (array handling)
 - 🚧 12.7: 100-test suite: 53/100 (53%) agreement with Java
 - ⏳ 12.8: Document known limitations vs FHIR spec
 - ⏳ 12.9: Set up automated test runs in CI
