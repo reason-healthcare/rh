@@ -145,7 +145,7 @@ impl FhirPathEvaluator {
         match term {
             Term::Literal(literal) => self.evaluate_literal(literal),
             Term::Invocation(invocation) => {
-                let current_value = FhirPathValue::Object(context.current.clone());
+                let current_value = FhirPathValue::from_json(&context.current);
                 self.evaluate_invocation(&current_value, invocation, context)
             }
             Term::ExternalConstant(name) => {
@@ -153,8 +153,8 @@ impl FhirPathEvaluator {
                     Ok(value.clone())
                 } else {
                     match name.as_str() {
-                        "context" => Ok(FhirPathValue::Object(context.current.clone())),
-                        "resource" => Ok(FhirPathValue::Object(context.root.clone())),
+                        "context" => Ok(FhirPathValue::from_json(&context.current)),
+                        "resource" => Ok(FhirPathValue::from_json(&context.root)),
                         _ => {
                             // Try extension variables
                             let extension_registry = crate::extensions::ExtensionRegistry::new();

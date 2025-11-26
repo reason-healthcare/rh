@@ -196,6 +196,86 @@ Test all examples:
 just test-examples
 ```
 
+## FHIR Test Cases Integration
+
+The validator includes integration with the official FHIR R4 test suite (~570 test cases) to ensure spec compliance. Test cases are automatically downloaded and cached on first run.
+
+### Running FHIR Test Cases
+
+**Quick test (5 cases):**
+```bash
+# Using cargo
+cargo test --features fhir-test-cases -p rh-validator -- --nocapture
+
+# Using just (from workspace root)
+just test-fhir
+
+# Using just (from validator directory)
+cd crates/rh-validator
+just test-fhir
+```
+
+**Extended test suites:**
+```bash
+# 50 test cases
+just test-fhir-50
+
+# 100 test cases
+just test-fhir-100
+
+# ALL R4 test cases (~570 tests, takes several minutes)
+just test-fhir-all
+```
+
+**Filter by module:**
+```bash
+# Test specific modules
+just test-fhir-module profile
+just test-fhir-module general
+just test-fhir-module questionnaire
+```
+
+### Test Output
+
+Tests produce detailed results including:
+- Individual test pass/fail status
+- Error diagnostics for failed validations
+- Summary statistics (pass rate, error categories)
+- Comparison table vs other validators (Java RI, Hapi, .NET)
+
+Example output:
+```
+╔════════════════════════════════════════════════════════════════════╗
+║ FHIR Validation Test Suite - 5 Tests                              ║
+╚════════════════════════════════════════════════════════════════════╝
+
+✓ test-case-1: Patient resource validation passed
+✗ test-case-2: Missing required identifier field
+✓ test-case-3: Observation with valid coding
+...
+
+Summary: 4/5 passed (80.0%)
+```
+
+### Test Case Features
+
+- **Auto-download:** Test cases downloaded from hl7.org on first run
+- **Caching:** Downloaded files cached in `target/fhir-test-cases/`
+- **570 R4 tests:** Comprehensive coverage of FHIR validation scenarios
+- **Module filtering:** Run specific test modules (profile, general, etc.)
+- **Configurable:** Adjust test count via `TestRunConfig`
+
+### Implementation Status
+
+- ✅ Test case download and parsing
+- ✅ Test runner with batch execution
+- ✅ Module filtering and configuration
+- ✅ Detailed result reporting
+- 🚧 CI integration (planned)
+- 🚧 Performance benchmarking (planned)
+
+See [TODO.md](TODO.md) Phase 12 for detailed progress.
+
 ## Command Line Interface
 
 The validator integrates with the `rh` CLI tool:

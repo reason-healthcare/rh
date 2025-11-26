@@ -285,7 +285,7 @@ impl FhirValidator {
             None => {
                 return Ok(result.with_issue(ValidationIssue::error(
                     IssueCode::NotFound,
-                    format!("Profile not found: {profile_url}"),
+                    format!("[Profile: {profile_url}] Profile not found: {profile_url}"),
                 )));
             }
         };
@@ -558,6 +558,47 @@ fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
     let mut current = resource;
 
     for (i, part) in parts[1..].iter().enumerate() {
+        // Handle choice types (e.g., value[x] matches valueString, valueInteger, etc.)
+        if part.ends_with("[x]") {
+            let prefix = &part[..part.len() - 3];
+            let obj = current.as_object();
+            
+            if let Some(obj) = obj {
+                let matching_fields: Vec<_> = obj
+                    .keys()
+                    .filter(|k| k.starts_with(prefix) && k.len() > prefix.len())
+                    .collect();
+                
+                if i == parts.len() - 2 {
+                    return matching_fields.len();
+                }
+                
+                if let Some(first_match) = matching_fields.first() {
+                    match obj.get(*first_match) {
+                        Some(Value::Array(arr)) => {
+                            if i == parts.len() - 2 {
+                                return arr.len();
+                            }
+                            if arr.is_empty() {
+                                return 0;
+                            }
+                            return arr.len();
+                        }
+                        Some(other) => {
+                            if i == parts.len() - 2 {
+                                return 1;
+                            }
+                            current = other;
+                            continue;
+                        }
+                        None => return 0,
+                    }
+                } else {
+                    return 0;
+                }
+            }
+        }
+        
         match current.get(part) {
             Some(Value::Array(arr)) => {
                 if i == parts.len() - 2 {
@@ -878,6 +919,28 @@ impl FhirValidator {
             return Ok(issues);
         }
 
+        // Get values at path
+        let values = get_values_at_path(resource, &rule.path);
+
+        // Check for primitive extension arrays without corresponding values FIRST
+        // This validation doesn't depend on ValueSet being extensional - just checks if value exists
+        // E.g., _category exists but category doesn't - this is invalid for required/extensible bindings
+        if values.is_empty() && (rule.strength == "required" || rule.strength == "extensible") {
+            if let Some(extension_count) = check_primitive_extension_without_value(resource, &rule.path) {
+                // There are extension-only elements that should have values per the binding
+                for i in 0..extension_count {
+                    issues.push(ValidationIssue::error(
+                        IssueCode::Required,
+                        format!(
+                            "No code provided for {}[{}], and a code is required from the value set '{}'",
+                            rule.path, i, rule.value_set_url
+                        ),
+                    ));
+                }
+                return Ok(issues);
+            }
+        }
+
         // Check if ValueSet is extensional
         let is_extensional = self
             .valueset_loader
@@ -888,9 +951,6 @@ impl FhirValidator {
             // Skip intensional ValueSets (deferred to Phase 3.5)
             return Ok(issues);
         }
-
-        // Get values at path
-        let values = get_values_at_path(resource, &rule.path);
 
         for value in values {
             // Extract codes based on type
@@ -951,29 +1011,50 @@ impl FhirValidator {
         let parts: Vec<&str> = rule.path.split('.').collect();
         let is_resource_level = parts.len() == 1;
 
-        // For element-level invariants, check if the field exists in the resource
-        // If it doesn't exist, skip validation (constraint doesn't apply)
-        if !is_resource_level && !path_exists_in_resource(resource, &rule.path) {
-            // Field doesn't exist - constraint doesn't apply
-            return Ok(issues);
-        }
+        if is_resource_level {
+            // Resource-level invariant - evaluate against whole resource
+            let context = EvaluationContext::new(resource.clone());
+            let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
+                Ok(value) => value,
+                Err(e) => {
+                    return Ok(vec![ValidationIssue::warning(
+                        IssueCode::Invariant,
+                        format!("Failed to evaluate invariant {}: {}", rule.key, e),
+                    )]);
+                }
+            };
 
-        // Evaluate invariant with resource as context
-        // The FHIRPath expression will navigate to the appropriate elements
-        let context = EvaluationContext::new(resource.clone());
-        let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
-            Ok(value) => value,
-            Err(e) => {
-                return Ok(vec![ValidationIssue::warning(
-                    IssueCode::Invariant,
-                    format!("Failed to evaluate invariant {}: {}", rule.key, e),
-                )]);
+            let is_valid = self.evaluate_invariant_result(&result);
+            if !is_valid {
+                issues.push(self.create_invariant_issue(rule));
             }
-        };
+        } else {
+            // Element-level invariant - get elements at path and evaluate against each
+            let elements = get_values_at_path(resource, &rule.path);
+            
+            // If no elements at path, skip validation (constraint doesn't apply)
+            if elements.is_empty() {
+                return Ok(issues);
+            }
 
-        let is_valid = self.evaluate_invariant_result(&result);
-        if !is_valid {
-            issues.push(self.create_invariant_issue(rule));
+            for element in elements {
+                let context = EvaluationContext::new(element.clone());
+                let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        return Ok(vec![ValidationIssue::warning(
+                            IssueCode::Invariant,
+                            format!("Failed to evaluate invariant {}: {}", rule.key, e),
+                        )]);
+                    }
+                };
+
+                let is_valid = self.evaluate_invariant_result(&result);
+                if !is_valid {
+                    issues.push(self.create_invariant_issue(rule));
+                    // Continue to check all elements, but we already have at least one failure
+                }
+            }
         }
 
         Ok(issues)
@@ -997,12 +1078,12 @@ impl FhirValidator {
         if rule.severity == "error" {
             ValidationIssue::error(
                 IssueCode::Invariant,
-                format!("{}: {}", rule.key, rule.human),
+                format!("{}: {} (at {})", rule.key, rule.human, rule.path),
             )
         } else {
             ValidationIssue::warning(
                 IssueCode::Invariant,
-                format!("{}: {}", rule.key, rule.human),
+                format!("{}: {} (at {})", rule.key, rule.human, rule.path),
             )
         }
     }
@@ -1048,6 +1129,44 @@ fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
     }
 
     codes
+}
+
+/// Check if a primitive field has extension elements (_field) without corresponding values (field).
+/// Returns Some(count) if there are extension-only elements, None otherwise.
+fn check_primitive_extension_without_value(resource: &Value, path: &str) -> Option<usize> {
+    let parts: Vec<&str> = path.split('.').collect();
+
+    if parts.len() < 2 {
+        return None;
+    }
+
+    let resource_type = resource.get("resourceType").and_then(|v| v.as_str())?;
+    if parts[0] != resource_type {
+        return None;
+    }
+
+    // Navigate to the parent object
+    let mut current = resource;
+    for part in &parts[1..parts.len() - 1] {
+        current = current.get(part)?;
+    }
+
+    let field_name = parts[parts.len() - 1];
+    let extension_field_name = format!("_{}", field_name);
+
+    // Check if the extension field exists and the value field doesn't (or is smaller)
+    let has_value_field = current.get(field_name).is_some();
+    let extension_array = current
+        .get(&extension_field_name)
+        .and_then(|v| v.as_array())?;
+
+    if !extension_array.is_empty() && !has_value_field {
+        // Extension elements exist but no value array - these are phantom elements
+        return Some(extension_array.len());
+    }
+
+    // Could also check for length mismatch, but the allergy case is absence entirely
+    None
 }
 
 fn validate_extension_at_path(

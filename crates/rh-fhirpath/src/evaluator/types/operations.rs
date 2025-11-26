@@ -37,11 +37,28 @@ impl TypeEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         let type_name = Self::get_type_name(type_specifier);
 
-        // If the value matches the type, return it; otherwise return empty
-        if Self::value_matches_type(value, &type_name)? {
-            Ok(value.clone())
-        } else {
-            Ok(FhirPathValue::Empty)
+        match value {
+            FhirPathValue::Collection(items) => {
+                let mut filtered_items = Vec::new();
+                for item in items {
+                    if Self::value_matches_type(item, &type_name)? {
+                        filtered_items.push(item.clone());
+                    }
+                }
+
+                if filtered_items.is_empty() {
+                    Ok(FhirPathValue::Empty)
+                } else {
+                    Ok(FhirPathValue::Collection(filtered_items))
+                }
+            }
+            _ => {
+                if Self::value_matches_type(value, &type_name)? {
+                    Ok(value.clone())
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
         }
     }
 
@@ -96,6 +113,11 @@ impl TypeEvaluator {
             "datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
             "time" => Ok(matches!(value, FhirPathValue::Time(_))),
             "quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
+
+            // FHIR primitive string-based types - all represented as strings
+            "canonical" | "uri" | "url" | "oid" | "uuid" | "id" | "markdown" | "code" => {
+                Ok(matches!(value, FhirPathValue::String(_)))
+            }
 
             // Collection types
             "collection" => Ok(matches!(value, FhirPathValue::Collection(_))),

@@ -1,0 +1,104 @@
+# Justfile for rh-validator development tasks
+# Run from crates/rh-validator/ directory or use workspace justfile
+
+# Default recipe - show available commands
+default:
+    @just --list
+
+# Run all validator tests
+test:
+    cargo test -p rh-validator --lib --bins --tests
+
+# Run FHIR test cases (quick - 5 tests)
+test-fhir:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - Quick Test (5 cases)                 ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_basic -- --nocapture
+
+# Run FHIR test cases with 50 tests
+test-fhir-50:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - Extended (50 tests)                  ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_extended_50 -- --nocapture --ignored
+
+# Run FHIR test cases with 100 tests
+test-fhir-100:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - Extended (100 tests)                 ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_extended_100 -- --nocapture --ignored
+
+# Run ALL FHIR validation test cases (~570 R4 tests - takes several minutes)
+test-fhir-all:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - ALL R4 TESTS (~570 tests)            ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "⚠️  This will run ALL R4 test cases and may take several minutes..."
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_all -- --nocapture --ignored
+
+# Run FHIR validation tests filtered by module
+# Usage: just test-fhir-module general
+#        just test-fhir-module profile
+#        just test-fhir-module questionnaire
+test-fhir-module module:
+    #!/usr/bin/env bash
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║ FHIR Validation Test Suite - Module: {{module}}                   ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_with_module_filter -- --nocapture
+
+# Download/update FHIR test cases
+fhir-download:
+    #!/usr/bin/env bash
+    echo "Downloading FHIR R4 test cases..."
+    cargo test --features fhir-test-cases -p rh-validator test_fhir_test_cases_setup -- --nocapture
+
+# Clean FHIR test case cache
+fhir-clean:
+    #!/usr/bin/env bash
+    echo "Cleaning FHIR test case cache..."
+    rm -rf ../../target/fhir-test-cases/
+    echo "✓ Cache cleaned"
+
+# Run benchmarks
+bench:
+    cargo bench -p rh-validator
+
+# Run examples
+examples:
+    @echo "Running validator examples..."
+    cargo run -p rh-validator --example basic_validation
+    @echo ""
+    cargo run -p rh-validator --example profile_validation
+    @echo ""
+    cargo run -p rh-validator --example batch_validation
+    @echo ""
+    cargo run -p rh-validator --example operation_outcome
+
+# Check code with clippy
+lint:
+    cargo clippy -p rh-validator --all-targets --all-features -- -D warnings
+
+# Format code
+fmt:
+    cargo fmt -p rh-validator
+
+# Check formatting
+fmt-check:
+    cargo fmt -p rh-validator -- --check
+
+# Full check (format, lint, test)
+check: fmt-check lint test
+    @echo "✓ All checks passed"

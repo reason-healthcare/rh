@@ -651,8 +651,10 @@ impl CollectionEvaluator {
                 let mut children = Vec::new();
 
                 // Iterate through all properties of the object
-                for value in obj.as_object().unwrap().values() {
-                    children.push(FhirPathValue::from_json(value));
+                if let Some(object_map) = obj.as_object() {
+                    for value in object_map.values() {
+                        children.push(FhirPathValue::from_json(value));
+                    }
                 }
 
                 if children.is_empty() {
@@ -714,11 +716,13 @@ impl CollectionEvaluator {
         match target {
             FhirPathValue::Object(obj) => {
                 // Get immediate children first
-                for value in obj.as_object().unwrap().values() {
-                    let child = FhirPathValue::from_json(value);
-                    descendants.push(child.clone());
-                    // Recursively collect descendants of this child
-                    Self::collect_descendants(&child, descendants)?;
+                if let Some(object_map) = obj.as_object() {
+                    for value in object_map.values() {
+                        let child = FhirPathValue::from_json(value);
+                        descendants.push(child.clone());
+                        // Recursively collect descendants of this child
+                        Self::collect_descendants(&child, descendants)?;
+                    }
                 }
             }
             FhirPathValue::Collection(items) => {
