@@ -487,6 +487,17 @@ fn validate_cardinality_at_path(
         return issues;
     }
 
+    // Check if element with max > 1 is incorrectly an object instead of an array
+    // In FHIR JSON, elements with max > 1 MUST be arrays
+    if let Some(max_str) = max {
+        if max_str != "1" {
+            if let Some(issue) = check_must_be_array(resource, &parts) {
+                issues.push(issue);
+                return issues;
+            }
+        }
+    }
+
     // Find if there's an array in the path before the final element
     let array_index = find_array_in_path(resource, &parts);
 
@@ -500,6 +511,56 @@ fn validate_cardinality_at_path(
     }
 
     issues
+}
+
+fn check_must_be_array(resource: &Value, parts: &[&str]) -> Option<ValidationIssue> {
+    if parts.len() < 2 {
+        return None;
+    }
+
+    let mut current = resource;
+
+    // Navigate to the parent of the final element
+    for part in &parts[1..parts.len() - 1] {
+        match current.get(part) {
+            Some(Value::Array(arr)) => {
+                // Check each item in the array for the final element
+                let final_part = parts.last().unwrap();
+                for item in arr {
+                    if let Some(value) = item.get(final_part) {
+                        if value.is_object() && !value.is_null() {
+                            return Some(ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "The property {} must be a JSON Array, not an Object (at {})",
+                                    final_part, parts[0]
+                                ),
+                            ));
+                        }
+                    }
+                }
+                return None;
+            }
+            Some(other) => current = other,
+            None => return None,
+        }
+    }
+
+    // Check the final element at the current level
+    let final_part = parts.last().unwrap();
+    if let Some(value) = current.get(final_part) {
+        if value.is_object() && !value.is_null() {
+            return Some(ValidationIssue::error(
+                IssueCode::Structure,
+                format!(
+                    "The property {} must be a JSON Array, not an Object (at {})",
+                    final_part, parts[0]
+                ),
+            ));
+        }
+    }
+
+    None
 }
 
 fn find_array_in_path(resource: &Value, parts: &[&str]) -> Option<usize> {
