@@ -193,6 +193,21 @@ impl TestRunner {
             anyhow::bail!("Test file not found: {}", test_file_path.display());
         }
 
+        for supporting_file in &test.supporting {
+            let supporting_path = validator_dir.join(supporting_file);
+            if supporting_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&supporting_path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        if json.get("resourceType").and_then(|v| v.as_str())
+                            == Some("Questionnaire")
+                        {
+                            self.validator.register_questionnaire(&json);
+                        }
+                    }
+                }
+            }
+        }
+
         let resource_json = std::fs::read_to_string(&test_file_path)
             .with_context(|| format!("Failed to read test file: {}", test_file_path.display()))?;
 

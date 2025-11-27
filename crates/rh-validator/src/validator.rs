@@ -109,6 +109,7 @@ pub struct FhirValidator {
     profile_registry: ProfileRegistry,
     rule_compiler: RuleCompiler,
     valueset_loader: ValueSetLoader,
+    questionnaire_loader: crate::questionnaire::QuestionnaireLoader,
     fhirpath_parser: FhirPathParser,
     fhirpath_evaluator: FhirPathEvaluator,
     #[allow(dead_code)]
@@ -155,7 +156,8 @@ impl FhirValidator {
         Ok(Self {
             profile_registry: ProfileRegistry::new(fhir_version, packages_dir)?,
             rule_compiler: RuleCompiler::default(),
-            valueset_loader: ValueSetLoader::new(package_dirs, 100),
+            valueset_loader: ValueSetLoader::new(package_dirs.clone(), 100),
+            questionnaire_loader: crate::questionnaire::QuestionnaireLoader::new(package_dirs, 50),
             fhirpath_parser: FhirPathParser::new(),
             fhirpath_evaluator: FhirPathEvaluator::new(),
             fhir_version,
@@ -421,7 +423,59 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        // QuestionnaireResponse validation against linked Questionnaire
+        if resource_type_name == "QuestionnaireResponse" {
+            let qr_issues = self.validate_questionnaire_response(resource)?;
+            for issue in qr_issues {
+                result = result.with_issue(issue);
+            }
+        }
+
         Ok(result)
+    }
+
+    fn validate_questionnaire_response(&self, resource: &Value) -> Result<Vec<ValidationIssue>> {
+        let mut issues = Vec::new();
+
+        let questionnaire_url = match resource.get("questionnaire").and_then(|v| v.as_str()) {
+            Some(url) => url,
+            None => return Ok(issues),
+        };
+
+        let base_url = questionnaire_url
+            .split('|')
+            .next()
+            .unwrap_or(questionnaire_url);
+
+        if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+            for contained_resource in contained {
+                if contained_resource
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    == Some("Questionnaire")
+                {
+                    if let Some(q) = self.questionnaire_loader.load_from_json(contained_resource) {
+                        if q.url.as_deref() == Some(base_url) {
+                            let validator =
+                                crate::questionnaire::QuestionnaireResponseValidator::new(&q);
+                            return validator.validate(resource);
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(q) = self.questionnaire_loader.load(base_url) {
+            let validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q);
+            return validator.validate(resource);
+        }
+
+        issues.push(ValidationIssue::warning(
+            IssueCode::NotFound,
+            format!("Questionnaire '{questionnaire_url}' could not be resolved"),
+        ));
+
+        Ok(issues)
     }
 
     fn validate_unknown_extensions(
@@ -474,6 +528,12 @@ impl FhirValidator {
 
     pub fn search_profiles(&self, query: &str) -> Vec<String> {
         self.profile_registry.search_profiles(query)
+    }
+
+    pub fn register_questionnaire(&self, questionnaire: &Value) {
+        if let Some(q) = self.questionnaire_loader.load_from_json(questionnaire) {
+            self.questionnaire_loader.register(q);
+        }
     }
 
     pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
