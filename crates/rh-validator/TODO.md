@@ -5,7 +5,7 @@
 **Tests:** 1,287 passing (132 validator-specific)  
 **Performance:** 3-4ms/resource, ~200 resources/sec batch  
 **Cache Hit Rate:** 100% in benchmarks  
-**Last Major Fix:** FHIRPath descendants() array handling (Nov 26, 2025)
+**Last Major Fix:** Unknown extension validation (Nov 27, 2025)
 
 ## Completed Phases (v0.1.0 → v0.2.0)
 
@@ -59,23 +59,27 @@ README, examples (basic, batch, auto-detect, profiles, output), and API docs.
 - ✅ 12.5: Profile-not-found as warning (Java compatibility)
 - ✅ 12.6: Base64Binary format validation
 - ✅ 12.7: FHIRPath descendants() fix (array handling)
-- 🚧 12.7: 100-test suite: 53/100 (53%) agreement with Java
-- ⏳ 12.8: Document known limitations vs FHIR spec
-- ⏳ 12.9: Set up automated test runs in CI
+- ✅ 12.8: Unknown extension definitions as errors (Java compatibility)
+- 🚧 12.9: 100-test suite: 55/100 (55%) agreement with Java
+- ⏳ 12.10: Document known limitations vs FHIR spec
+- ⏳ 12.11: Set up automated test runs in CI
 
-**Current Test Status (Nov 26, 2025):**
-- Agreement with Java: 53/100 (53%)
-- False Positives: 1 (contained - FHIRPath descendants() bug)
-- False Negatives: 46 (mostly missing validations)
+**Current Test Status (Nov 27, 2025):**
+- Agreement with Java: 55/100 (55%)
+- Full suite: 200/386 (51.8%)
 
 **Remaining False Negatives Categories:**
-1. **External profiles:** Tests require profiles we don't have
-2. **Bundle validation:** Reference resolution, duplicate IDs
-3. **XHTML/narrative:** txt-1 invariant, security checks
-4. **Terminology:** SNOMED/LOINC validation requires terminology server
+1. **Questionnaire validation:** QR validation requires Questionnaire resolution (83 tests)
+2. **Bundle validation:** Reference resolution, fullUrl, duplicate IDs (23 tests)
+3. **Terminology:** SNOMED/LOINC validation requires terminology server (41 tests)
+4. **Profile constraints:** Profile-specific invariants (50 tests)
 5. **Attachment size:** Validate data length matches size field
 
-**Next Action:** Fix FHIRPath descendants() bug in rh-fhirpath to resolve last false positive.
+**Java Severity Patterns Learned:**
+- Missing CodeSystem definitions → **warning** (not-found)
+- Missing Extension definitions → **error** (structure: "not allowed here") ✅ Implemented
+- Missing Profile definitions → **warning** (not checked)
+- Actual validation failures → **error**
 
 ## High Priority (v0.3.0)
 
