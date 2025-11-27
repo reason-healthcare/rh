@@ -38,6 +38,11 @@ pub struct QuestionnaireItem {
     pub answer_option: Vec<AnswerOption>,
     #[serde(default)]
     pub extension: Vec<Extension>,
+    #[serde(rename = "enableWhen")]
+    #[serde(default)]
+    pub enable_when: Vec<EnableWhenCondition>,
+    #[serde(rename = "enableBehavior")]
+    pub enable_behavior: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -52,6 +57,34 @@ pub struct AnswerOption {
     pub value_date: Option<String>,
     #[serde(rename = "valueReference")]
     pub value_reference: Option<Value>,
+    #[serde(default)]
+    pub extension: Vec<Extension>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EnableWhenCondition {
+    pub question: String,
+    pub operator: String,
+    #[serde(rename = "answerBoolean")]
+    pub answer_boolean: Option<bool>,
+    #[serde(rename = "answerDecimal")]
+    pub answer_decimal: Option<f64>,
+    #[serde(rename = "answerInteger")]
+    pub answer_integer: Option<i64>,
+    #[serde(rename = "answerDate")]
+    pub answer_date: Option<String>,
+    #[serde(rename = "answerDateTime")]
+    pub answer_date_time: Option<String>,
+    #[serde(rename = "answerTime")]
+    pub answer_time: Option<String>,
+    #[serde(rename = "answerString")]
+    pub answer_string: Option<String>,
+    #[serde(rename = "answerCoding")]
+    pub answer_coding: Option<Coding>,
+    #[serde(rename = "answerQuantity")]
+    pub answer_quantity: Option<Value>,
+    #[serde(rename = "answerReference")]
+    pub answer_reference: Option<Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -76,6 +109,8 @@ pub struct Extension {
     pub value_date_time: Option<String>,
     #[serde(rename = "valueBoolean")]
     pub value_boolean: Option<bool>,
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<String>,
 }
 
 pub struct QuestionnaireLoader {
@@ -191,6 +226,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         Self::check_required_items(
             &self.questionnaire.item,
             items,
+            items, // all_response_items for enableWhen evaluation
             "QuestionnaireResponse",
             &mut issues,
         )?;
@@ -246,6 +282,16 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 );
             }
 
+            if item_type == "question" && item.get("answer").is_some() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Items of type question should not have answers".to_string(),
+                    )
+                    .with_path(&item_path),
+                );
+            }
+
             let answers = item
                 .get("answer")
                 .and_then(|v| v.as_array())
@@ -253,6 +299,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 .unwrap_or(&[]);
 
             self.validate_answer_cardinality(answers, q_item, &item_path, issues);
+            self.validate_exclusive_options(answers, q_item, &item_path, issues);
 
             for (ans_idx, answer) in answers.iter().enumerate() {
                 let ans_path = format!("{item_path}.answer[{ans_idx}]");
@@ -334,6 +381,12 @@ impl<'a> QuestionnaireResponseValidator<'a> {
 
         if expected_type == "date" || expected_type == "dateTime" {
             self.validate_date_constraints(answer, q_item, expected_type, path, issues);
+        }
+
+        if expected_type == "attachment" {
+            if let Some(attachment) = answer.get("valueAttachment") {
+                self.validate_attachment_constraints(attachment, q_item, path, issues);
+            }
         }
     }
 
@@ -478,6 +531,70 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         }
     }
 
+    fn validate_attachment_constraints(
+        &self,
+        attachment: &Value,
+        q_item: &QuestionnaireItem,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let actual_size = attachment.get("size").and_then(|v| v.as_i64());
+        let content_type = attachment
+            .get("contentType")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        if let Some(data) = attachment.get("data").and_then(|v| v.as_str()) {
+            let decoded_size = (data.len() * 3) / 4;
+            if let Some(stated_size) = actual_size {
+                if (stated_size as usize) != decoded_size
+                    && ((stated_size as usize).abs_diff(decoded_size) > 2)
+                {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!(
+                                "Stated Attachment Size {stated_size} does not match actual attachment size {decoded_size}"
+                            ),
+                        )
+                        .with_path(path),
+                    );
+                }
+            }
+        }
+
+        for ext in &q_item.extension {
+            if ext.url == "http://hl7.org/fhir/StructureDefinition/maxSize" {
+                if let Some(max_size) = ext.value_decimal {
+                    let size = actual_size.unwrap_or(0);
+                    let allowed = max_size as i64;
+                    if size > allowed {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Required,
+                                format!("The attachment is too large (allowed = {allowed}, found = {size})"),
+                            )
+                            .with_path(path),
+                        );
+                    }
+                }
+            }
+            if ext.url == "http://hl7.org/fhir/StructureDefinition/mimeType" {
+                if let Some(allowed_type) = &ext.value_code {
+                    if !content_type.is_empty() && content_type != allowed_type {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Required,
+                                format!("The mime type {content_type} is not valid for this answer (allowed = {allowed_type})"),
+                            )
+                            .with_path(path),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     fn validate_string_constraints(
         &self,
         value: &str,
@@ -571,6 +688,91 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 )
                 .with_path(path),
             );
+        }
+    }
+
+    fn validate_exclusive_options(
+        &self,
+        answers: &[Value],
+        q_item: &QuestionnaireItem,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        if answers.len() <= 1 || q_item.answer_option.is_empty() {
+            return;
+        }
+
+        for (ans_idx, answer) in answers.iter().enumerate() {
+            let is_exclusive = self.is_exclusive_option(answer, q_item);
+            if is_exclusive {
+                let answer_display = self.format_answer_display(answer);
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        format!(
+                            "Selected answer {answer_display} is an exclusive option - can't select anything else at the same time"
+                        ),
+                    )
+                    .with_path(format!("{path}.answer[{ans_idx}]")),
+                );
+                return;
+            }
+        }
+    }
+
+    fn is_exclusive_option(&self, answer: &Value, q_item: &QuestionnaireItem) -> bool {
+        for opt in &q_item.answer_option {
+            let is_exclusive = opt.extension.iter().any(|ext| {
+                ext.url == "http://hl7.org/fhir/StructureDefinition/questionnaire-optionExclusive"
+                    && ext.value_boolean == Some(true)
+            });
+
+            if !is_exclusive {
+                continue;
+            }
+
+            if let Some(coding) = answer.get("valueCoding") {
+                if let Some(opt_coding) = &opt.value_coding {
+                    let sys_match = coding
+                        .get("system")
+                        .and_then(|v| v.as_str())
+                        .zip(opt_coding.system.as_deref())
+                        .map_or(true, |(a, b)| a == b);
+                    let code_match = coding
+                        .get("code")
+                        .and_then(|v| v.as_str())
+                        .zip(opt_coding.code.as_deref())
+                        .map_or(true, |(a, b)| a == b);
+                    if sys_match && code_match {
+                        return true;
+                    }
+                }
+            }
+            if let Some(str_val) = answer.get("valueString").and_then(|v| v.as_str()) {
+                if opt.value_string.as_deref() == Some(str_val) {
+                    return true;
+                }
+            }
+            if let Some(int_val) = answer.get("valueInteger").and_then(|v| v.as_i64()) {
+                if opt.value_integer == Some(int_val) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn format_answer_display(&self, answer: &Value) -> String {
+        if let Some(coding) = answer.get("valueCoding") {
+            let sys = coding.get("system").and_then(|v| v.as_str()).unwrap_or("");
+            let code = coding.get("code").and_then(|v| v.as_str()).unwrap_or("");
+            format!("{sys}#{code}")
+        } else if let Some(s) = answer.get("valueString").and_then(|v| v.as_str()) {
+            s.to_string()
+        } else if let Some(i) = answer.get("valueInteger").and_then(|v| v.as_i64()) {
+            i.to_string()
+        } else {
+            "unknown".to_string()
         }
     }
 
@@ -717,6 +919,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
     fn check_required_items(
         q_items: &[QuestionnaireItem],
         response_items: &[Value],
+        all_response_items: &[Value],
         path: &str,
         issues: &mut Vec<ValidationIssue>,
     ) -> Result<()> {
@@ -726,6 +929,14 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                     .and_then(|v| v.as_str())
                     .is_some_and(|lid| lid == q_item.link_id)
             });
+
+            // Check if enableWhen conditions are met before checking required
+            if !q_item.enable_when.is_empty()
+                && !Self::evaluate_enable_when(q_item, all_response_items)
+            {
+                // EnableWhen conditions not met - skip required validation for this item
+                continue;
+            }
 
             if q_item.required {
                 if found.is_none() {
@@ -810,12 +1021,224 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                         .position(|x| std::ptr::eq(x, ri))
                         .unwrap_or(0);
                     let item_path = format!("{path}.item[{item_idx}]");
-                    Self::check_required_items(&q_item.item, sub_items, &item_path, issues)?;
+                    Self::check_required_items(
+                        &q_item.item,
+                        sub_items,
+                        all_response_items,
+                        &item_path,
+                        issues,
+                    )?;
                 }
             }
         }
 
         Ok(())
+    }
+
+    fn evaluate_enable_when(q_item: &QuestionnaireItem, all_response_items: &[Value]) -> bool {
+        if q_item.enable_when.is_empty() {
+            return true;
+        }
+
+        let behavior = q_item.enable_behavior.as_deref().unwrap_or("any");
+
+        let condition_results: Vec<bool> = q_item
+            .enable_when
+            .iter()
+            .map(|cond| Self::evaluate_single_condition(cond, all_response_items))
+            .collect();
+
+        match behavior {
+            "all" => condition_results.iter().all(|&r| r),
+            _ => condition_results.iter().any(|&r| r),
+        }
+    }
+
+    fn evaluate_single_condition(cond: &EnableWhenCondition, all_response_items: &[Value]) -> bool {
+        let answer = Self::find_answer_for_question(&cond.question, all_response_items);
+
+        match cond.operator.as_str() {
+            "exists" => {
+                let expected_exists = cond.answer_boolean.unwrap_or(true);
+                answer.is_some() == expected_exists
+            }
+            "=" => Self::compare_answer_equals(cond, answer),
+            "!=" => !Self::compare_answer_equals(cond, answer),
+            ">" => Self::compare_answer_greater(cond, answer),
+            "<" => Self::compare_answer_less(cond, answer),
+            ">=" => {
+                Self::compare_answer_greater(cond, answer)
+                    || Self::compare_answer_equals(cond, answer)
+            }
+            "<=" => {
+                Self::compare_answer_less(cond, answer) || Self::compare_answer_equals(cond, answer)
+            }
+            _ => false,
+        }
+    }
+
+    fn find_answer_for_question<'b>(
+        question_link_id: &str,
+        items: &'b [Value],
+    ) -> Option<&'b Value> {
+        for item in items {
+            let link_id = item.get("linkId").and_then(|v| v.as_str()).unwrap_or("");
+            if link_id == question_link_id {
+                // Return the first answer if present
+                if let Some(answers) = item.get("answer").and_then(|v| v.as_array()) {
+                    return answers.first();
+                }
+                return None;
+            }
+
+            // Recursively search sub-items
+            if let Some(sub_items) = item.get("item").and_then(|v| v.as_array()) {
+                if let Some(found) = Self::find_answer_for_question(question_link_id, sub_items) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+
+    fn compare_answer_equals(cond: &EnableWhenCondition, answer: Option<&Value>) -> bool {
+        let answer = match answer {
+            Some(a) => a,
+            None => return false,
+        };
+
+        if let Some(expected) = cond.answer_integer {
+            if let Some(actual) = answer.get("valueInteger").and_then(|v| v.as_i64()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(expected) = cond.answer_decimal {
+            if let Some(actual) = answer.get("valueDecimal").and_then(|v| v.as_f64()) {
+                return (actual - expected).abs() < f64::EPSILON;
+            }
+        }
+
+        if let Some(expected) = cond.answer_boolean {
+            if let Some(actual) = answer.get("valueBoolean").and_then(|v| v.as_bool()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_string {
+            if let Some(actual) = answer.get("valueString").and_then(|v| v.as_str()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date {
+            if let Some(actual) = answer.get("valueDate").and_then(|v| v.as_str()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date_time {
+            if let Some(actual) = answer.get("valueDateTime").and_then(|v| v.as_str()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_time {
+            if let Some(actual) = answer.get("valueTime").and_then(|v| v.as_str()) {
+                return actual == expected;
+            }
+        }
+
+        if let Some(ref expected_coding) = cond.answer_coding {
+            if let Some(actual_coding) = answer.get("valueCoding") {
+                let code_match = expected_coding.code.as_deref()
+                    == actual_coding.get("code").and_then(|v| v.as_str());
+                let system_match = expected_coding.system.is_none()
+                    || expected_coding.system.as_deref()
+                        == actual_coding.get("system").and_then(|v| v.as_str());
+                return code_match && system_match;
+            }
+        }
+
+        false
+    }
+
+    fn compare_answer_greater(cond: &EnableWhenCondition, answer: Option<&Value>) -> bool {
+        let answer = match answer {
+            Some(a) => a,
+            None => return false,
+        };
+
+        if let Some(expected) = cond.answer_integer {
+            if let Some(actual) = answer.get("valueInteger").and_then(|v| v.as_i64()) {
+                return actual > expected;
+            }
+        }
+
+        if let Some(expected) = cond.answer_decimal {
+            if let Some(actual) = answer.get("valueDecimal").and_then(|v| v.as_f64()) {
+                return actual > expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date {
+            if let Some(actual) = answer.get("valueDate").and_then(|v| v.as_str()) {
+                return actual > expected.as_str();
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date_time {
+            if let Some(actual) = answer.get("valueDateTime").and_then(|v| v.as_str()) {
+                return actual > expected.as_str();
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_time {
+            if let Some(actual) = answer.get("valueTime").and_then(|v| v.as_str()) {
+                return actual > expected.as_str();
+            }
+        }
+
+        false
+    }
+
+    fn compare_answer_less(cond: &EnableWhenCondition, answer: Option<&Value>) -> bool {
+        let answer = match answer {
+            Some(a) => a,
+            None => return false,
+        };
+
+        if let Some(expected) = cond.answer_integer {
+            if let Some(actual) = answer.get("valueInteger").and_then(|v| v.as_i64()) {
+                return actual < expected;
+            }
+        }
+
+        if let Some(expected) = cond.answer_decimal {
+            if let Some(actual) = answer.get("valueDecimal").and_then(|v| v.as_f64()) {
+                return actual < expected;
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date {
+            if let Some(actual) = answer.get("valueDate").and_then(|v| v.as_str()) {
+                return actual < expected.as_str();
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_date_time {
+            if let Some(actual) = answer.get("valueDateTime").and_then(|v| v.as_str()) {
+                return actual < expected.as_str();
+            }
+        }
+
+        if let Some(ref expected) = cond.answer_time {
+            if let Some(actual) = answer.get("valueTime").and_then(|v| v.as_str()) {
+                return actual < expected.as_str();
+            }
+        }
+
+        false
     }
 }
 
