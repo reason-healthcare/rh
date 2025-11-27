@@ -95,6 +95,14 @@ pub struct Coding {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct Quantity {
+    pub value: Option<f64>,
+    pub unit: Option<String>,
+    pub system: Option<String>,
+    pub code: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Extension {
     pub url: String,
     #[serde(rename = "valueDecimal")]
@@ -111,6 +119,10 @@ pub struct Extension {
     pub value_boolean: Option<bool>,
     #[serde(rename = "valueCode")]
     pub value_code: Option<String>,
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Option<Coding>,
 }
 
 pub struct QuestionnaireLoader {
@@ -388,6 +400,12 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 self.validate_attachment_constraints(attachment, q_item, path, issues);
             }
         }
+
+        if expected_type == "quantity" {
+            if let Some(quantity) = answer.get("valueQuantity") {
+                self.validate_quantity_constraints(quantity, q_item, path, issues);
+            }
+        }
     }
 
     fn get_answer_type(&self, answer: &Value) -> Option<&'static str> {
@@ -595,6 +613,214 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         }
     }
 
+    fn validate_quantity_constraints(
+        &self,
+        quantity: &Value,
+        q_item: &QuestionnaireItem,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        use rh_fhirpath::UnitConverter;
+
+        let answer_value = quantity.get("value").and_then(|v| v.as_f64());
+        let answer_unit = quantity.get("unit").and_then(|v| v.as_str());
+        let answer_code = quantity.get("code").and_then(|v| v.as_str());
+
+        let Some(answer_val) = answer_value else {
+            return; // No value to validate
+        };
+
+        let unit_converter = UnitConverter::new();
+
+        for ext in &q_item.extension {
+            if ext.url
+                == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-minQuantity"
+            {
+                if let Some(ref min_qty) = ext.value_quantity {
+                    self.validate_quantity_comparison(
+                        answer_val,
+                        answer_code,
+                        answer_unit,
+                        min_qty,
+                        "minimum",
+                        true, // is_min
+                        &unit_converter,
+                        path,
+                        issues,
+                    );
+                }
+            }
+            if ext.url
+                == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-maxQuantity"
+            {
+                if let Some(ref max_qty) = ext.value_quantity {
+                    self.validate_quantity_comparison(
+                        answer_val,
+                        answer_code,
+                        answer_unit,
+                        max_qty,
+                        "maximum",
+                        false, // is_min
+                        &unit_converter,
+                        path,
+                        issues,
+                    );
+                }
+            }
+        }
+
+        // Validate unitOption constraints
+        let unit_options: Vec<&Coding> = q_item
+            .extension
+            .iter()
+            .filter(|ext| {
+                ext.url == "http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption"
+            })
+            .filter_map(|ext| ext.value_coding.as_ref())
+            .collect();
+
+        if !unit_options.is_empty() {
+            let answer_unit_code = answer_code.or(answer_unit);
+
+            if let Some(unit_code) = answer_unit_code {
+                let is_valid_unit = unit_options
+                    .iter()
+                    .any(|opt| opt.code.as_deref() == Some(unit_code));
+
+                if !is_valid_unit {
+                    let allowed_units: Vec<String> = unit_options
+                        .iter()
+                        .filter_map(|opt| {
+                            opt.code.as_ref().map(|c| {
+                                if let Some(ref display) = opt.display {
+                                    format!("{display} ({c})")
+                                } else {
+                                    c.clone()
+                                }
+                            })
+                        })
+                        .collect();
+
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!(
+                                "Unit '{}' is not in the list of allowed units: {}",
+                                unit_code,
+                                allowed_units.join(", ")
+                            ),
+                        )
+                        .with_path(path.to_string()),
+                    );
+                }
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn validate_quantity_comparison(
+        &self,
+        answer_value: f64,
+        answer_code: Option<&str>,
+        answer_unit: Option<&str>,
+        constraint: &Quantity,
+        constraint_name: &str,
+        is_min: bool,
+        unit_converter: &rh_fhirpath::UnitConverter,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let constraint_value = match constraint.value {
+            Some(v) => v,
+            None => return,
+        };
+
+        let constraint_code = constraint.code.as_deref();
+        let answer_unit_display = answer_unit.unwrap_or("(no unit)");
+        let constraint_unit_display = constraint.unit.as_deref().unwrap_or("(no unit)");
+
+        // Only use actual UCUM codes for comparison, not just unit display strings
+        // A formal UCUM code must be in the "code" field
+        let has_ucum_codes = answer_code.is_some() && constraint_code.is_some();
+
+        if !has_ucum_codes {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    format!(
+                        "The quantity {answer_value} {answer_unit_display} cannot be compared to the allowed {constraint_name} of {constraint_value} {constraint_unit_display} because no formal units are specified"
+                    ),
+                )
+                .with_path(path),
+            );
+            return;
+        }
+
+        let answer_code_str = answer_code.unwrap();
+        let constraint_code_str = constraint_code.unwrap();
+
+        // Check if units are compatible
+        let answer_opt = Some(answer_code_str.to_string());
+        let constraint_opt = Some(constraint_code_str.to_string());
+
+        if !unit_converter.are_units_compatible(&answer_opt, &constraint_opt) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    format!(
+                        "The quantity {answer_value} {answer_unit_display} cannot be compared to the allowed {constraint_name} of {constraint_value} {constraint_unit_display} because the units are not comparable"
+                    ),
+                )
+                .with_path(path),
+            );
+            return;
+        }
+
+        // Compare using unit conversion
+        let comparison = unit_converter.compare_quantities(
+            answer_value,
+            &answer_opt,
+            constraint_value,
+            &constraint_opt,
+        );
+
+        match comparison {
+            Ok(cmp) => {
+                if is_min && cmp < 0 {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invariant,
+                            format!(
+                                "The quantity {answer_value} {answer_unit_display} (UCUM#{answer_code_str}) is less than the allowed minimum of {constraint_value} {constraint_unit_display} (UCUM#{constraint_code_str})"
+                            ),
+                        )
+                        .with_path(path),
+                    );
+                } else if !is_min && cmp > 0 {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invariant,
+                            format!(
+                                "The quantity {answer_value} {answer_unit_display} (UCUM#{answer_code_str}) is greater than the allowed maximum of {constraint_value} {constraint_unit_display} (UCUM#{constraint_code_str})"
+                            ),
+                        )
+                        .with_path(path),
+                    );
+                }
+            }
+            Err(_) => {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        format!(
+                            "The quantity {answer_value} {answer_unit_display} cannot be compared to the allowed {constraint_name} of {constraint_value} {constraint_unit_display} because the units are not comparable"
+                        ),
+                    )
+                    .with_path(path),
+                );
+            }
+        }
+    }
     fn validate_string_constraints(
         &self,
         value: &str,

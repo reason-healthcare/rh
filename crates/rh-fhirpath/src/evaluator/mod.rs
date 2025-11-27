@@ -21,6 +21,6 @@ pub use types::FhirPathValue;
 // Re-export the operation evaluators for testing and advanced usage
 pub use operations::{
     ArithmeticEvaluator, CollectionEvaluator, ComparisonEvaluator, DateTimeEvaluator,
-    MathEvaluator, StringEvaluator, UnitEvaluator,
+    MathEvaluator, StringEvaluator, UnitConverter, UnitEvaluator,
 };
 pub use types::operations::TypeEvaluator;

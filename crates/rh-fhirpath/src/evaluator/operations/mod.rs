@@ -24,4 +24,4 @@ pub use comparison::ComparisonEvaluator;
 pub use datetime::DateTimeEvaluator;
 pub use math::MathEvaluator;
 pub use strings::StringEvaluator;
-pub use units::UnitEvaluator;
+pub use units::{UnitConverter, UnitEvaluator};
