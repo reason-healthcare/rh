@@ -36,11 +36,9 @@ fn test_validate_with_profile_not_found() {
     // Base validation is still performed and can pass
     assert!(result.valid);
     assert_eq!(result.warning_count(), 1);
-    assert!(
-        result.issues[0]
-            .message
-            .contains("Profile reference has not been checked")
-    );
+    assert!(result.issues[0]
+        .message
+        .contains("Profile reference has not been checked"));
 }
 
 #[test]

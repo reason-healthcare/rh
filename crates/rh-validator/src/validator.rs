@@ -411,7 +411,61 @@ impl FhirValidator {
             }
         }
 
+        // Unknown extension validation - extensions must have known definitions
+        let resource_type_name = resource
+            .get("resourceType")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Resource");
+        let unknown_ext_issues = self.validate_unknown_extensions(resource, resource_type_name)?;
+        for issue in unknown_ext_issues {
+            result = result.with_issue(issue);
+        }
+
         Ok(result)
+    }
+
+    fn validate_unknown_extensions(
+        &self,
+        resource: &Value,
+        resource_type: &str,
+    ) -> Result<Vec<ValidationIssue>> {
+        let mut issues = Vec::new();
+        let mut extensions = Vec::new();
+        collect_extension_urls(resource, resource_type, &mut extensions);
+
+        for (url, path) in extensions {
+            if url.starts_with("http://hl7.org/fhir/") {
+                continue;
+            }
+
+            match self.profile_registry.get_snapshot(&url) {
+                Ok(Some(_)) => {}
+                Ok(None) => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!(
+                                "Extension definition '{url}' could not be found, so is not allowed here"
+                            ),
+                        )
+                        .with_path(&path),
+                    );
+                }
+                Err(_) => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!(
+                                "Extension definition '{url}' could not be resolved, so is not allowed here"
+                            ),
+                        )
+                        .with_path(&path),
+                    );
+                }
+            }
+        }
+
+        Ok(issues)
     }
 
     pub fn list_profiles(&self) -> Vec<String> {
@@ -979,7 +1033,9 @@ fn contains_html_tags(s: &str) -> bool {
                 let next = bytes[i + 1];
                 // Opening tag: <letter
                 // Closing tag: </letter
-                if next.is_ascii_alphabetic() || (next == b'/' && i + 2 < bytes.len() && bytes[i + 2].is_ascii_alphabetic()) {
+                if next.is_ascii_alphabetic()
+                    || (next == b'/' && i + 2 < bytes.len() && bytes[i + 2].is_ascii_alphabetic())
+                {
                     // Scan forward for >
                     let mut j = i + 1;
                     while j < bytes.len() {
@@ -1850,6 +1906,57 @@ fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option
     }
 
     Some(current)
+}
+
+fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<(String, String)>) {
+    match value {
+        Value::Object(obj) => {
+            if let Some(ext_array) = obj.get("extension").and_then(|v| v.as_array()) {
+                for (idx, ext) in ext_array.iter().enumerate() {
+                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
+                        let ext_path = format!("{path}.extension[{idx}]");
+                        extensions.push((url.to_string(), ext_path.clone()));
+                        collect_extension_urls(ext, &ext_path, extensions);
+                    }
+                }
+            }
+            if let Some(ext_array) = obj.get("modifierExtension").and_then(|v| v.as_array()) {
+                for (idx, ext) in ext_array.iter().enumerate() {
+                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
+                        let ext_path = format!("{path}.modifierExtension[{idx}]");
+                        extensions.push((url.to_string(), ext_path.clone()));
+                        collect_extension_urls(ext, &ext_path, extensions);
+                    }
+                }
+            }
+            for (key, val) in obj {
+                if key == "extension" || key == "modifierExtension" {
+                    continue;
+                }
+                if let Some(base_field) = key.strip_prefix('_') {
+                    if let Some(prim_ext_array) = val.get("extension").and_then(|v| v.as_array()) {
+                        for (idx, ext) in prim_ext_array.iter().enumerate() {
+                            if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
+                                let ext_path = format!("{path}.{base_field}.extension[{idx}]");
+                                extensions.push((url.to_string(), ext_path.clone()));
+                                collect_extension_urls(ext, &ext_path, extensions);
+                            }
+                        }
+                    }
+                    continue;
+                }
+                let child_path = format!("{path}.{key}");
+                collect_extension_urls(val, &child_path, extensions);
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let item_path = format!("{path}[{idx}]");
+                collect_extension_urls(item, &item_path, extensions);
+            }
+        }
+        _ => {}
+    }
 }
 
 impl Default for FhirValidator {
