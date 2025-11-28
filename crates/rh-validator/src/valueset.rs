@@ -95,6 +95,40 @@ impl ValueSetLoader {
         }
     }
 
+    pub fn is_valueset_url(&self, url: &str) -> bool {
+        let clean_url = Self::strip_version(url);
+        for package_dir in &self.package_dirs {
+            if self.find_valueset_in_directory(package_dir, clean_url) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn find_valueset_in_directory(&self, dir: &Path, url: &str) -> bool {
+        let entries = match fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => return false,
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(valueset) = serde_json::from_str::<ValueSet>(&content) {
+                        if valueset.resource_type == "ValueSet"
+                            && Self::urls_match(&valueset.url, url)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     fn load_from_directory(&self, dir: &Path, url: &str) -> Result<Option<ValueSet>> {
         let entries = fs::read_dir(dir)
             .with_context(|| format!("Failed to read directory: {}", dir.display()))?;
@@ -102,14 +136,12 @@ impl ValueSetLoader {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                    if filename.starts_with("ValueSet-") {
-                        if let Ok(content) = fs::read_to_string(&path) {
-                            if let Ok(valueset) = serde_json::from_str::<ValueSet>(&content) {
-                                if Self::urls_match(&valueset.url, url) {
-                                    return Ok(Some(valueset));
-                                }
-                            }
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(valueset) = serde_json::from_str::<ValueSet>(&content) {
+                        if valueset.resource_type == "ValueSet"
+                            && Self::urls_match(&valueset.url, url)
+                        {
+                            return Ok(Some(valueset));
                         }
                     }
                 }

@@ -166,6 +166,40 @@ impl QuestionnaireLoader {
         }
     }
 
+    pub fn find_resource_type_for_url(&self, url: &str) -> Option<String> {
+        for dir in &self.package_dirs {
+            if let Some(resource_type) = self.find_resource_type_in_directory(url, dir) {
+                return Some(resource_type);
+            }
+        }
+        None
+    }
+
+    fn find_resource_type_in_directory(&self, url: &str, dir: &PathBuf) -> Option<String> {
+        let entries = std::fs::read_dir(dir).ok()?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.extension().is_some_and(|ext| ext == "json") {
+                continue;
+            }
+            let Ok(content) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(value) = serde_json::from_str::<Value>(&content) else {
+                continue;
+            };
+            if value.get("url").and_then(|v| v.as_str()) == Some(url) {
+                return value
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+            }
+        }
+
+        None
+    }
+
     fn load_from_directory(&self, url: &str, dir: &PathBuf) -> Option<Questionnaire> {
         let entries = std::fs::read_dir(dir).ok()?;
 
@@ -404,6 +438,18 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         if expected_type == "quantity" {
             if let Some(quantity) = answer.get("valueQuantity") {
                 self.validate_quantity_constraints(quantity, q_item, path, issues);
+            }
+        }
+
+        if expected_type == "reference" {
+            if let Some(reference) = answer.get("valueReference") {
+                self.validate_reference_constraints(reference, q_item, path, issues);
+            }
+        }
+
+        if expected_type == "url" {
+            if let Some(uri) = answer.get("valueUri").and_then(|v| v.as_str()) {
+                self.validate_uri_value(uri, path, issues);
             }
         }
     }
@@ -821,6 +867,309 @@ impl<'a> QuestionnaireResponseValidator<'a> {
             }
         }
     }
+
+    fn validate_reference_constraints(
+        &self,
+        reference: &Value,
+        q_item: &QuestionnaireItem,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let reference_str = match reference.get("reference").and_then(|v| v.as_str()) {
+            Some(r) => r,
+            None => return,
+        };
+
+        if !self.is_valid_reference(reference_str) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("The reference '{reference_str}' is not a valid reference"),
+                )
+                .with_path(path),
+            );
+        }
+
+        if let Some(resource_type) = self.extract_resource_type(reference_str) {
+            if !self.is_valid_resource_type(&resource_type) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        format!(
+                            "The resource type {resource_type} in the reference {reference_str} is not valid"
+                        ),
+                    )
+                    .with_path(path),
+                );
+            }
+
+            let allowed_types: Vec<&str> = q_item
+                .extension
+                .iter()
+                .filter(|ext| {
+                    ext.url
+                        == "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource"
+                })
+                .filter_map(|ext| ext.value_code.as_deref())
+                .collect();
+
+            if !allowed_types.is_empty() && !allowed_types.contains(&resource_type.as_str()) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        format!(
+                            "The resource type '{}' in the reference {} is not allowed (allowed = {})",
+                            resource_type,
+                            reference_str,
+                            allowed_types.join(",")
+                        ),
+                    )
+                    .with_path(path),
+                );
+            }
+        }
+    }
+
+    fn is_valid_reference(&self, reference: &str) -> bool {
+        if reference.is_empty() {
+            return false;
+        }
+
+        if reference.contains(' ') {
+            return false;
+        }
+
+        if reference.starts_with("urn:uuid:") || reference.starts_with("urn:oid:") {
+            return true;
+        }
+
+        if reference.starts_with('#') {
+            return true;
+        }
+
+        if reference.starts_with("http://") || reference.starts_with("https://") {
+            return true;
+        }
+
+        if reference.contains('/') {
+            return true;
+        }
+
+        false
+    }
+
+    fn extract_resource_type(&self, reference: &str) -> Option<String> {
+        if reference.starts_with("urn:") || reference.starts_with('#') {
+            return None;
+        }
+
+        let path = if reference.starts_with("http://") || reference.starts_with("https://") {
+            reference.split('/').rev().nth(1).map(|s| s.to_string())
+        } else {
+            reference.split('/').next().map(|s| s.to_string())
+        };
+
+        path.filter(|p| !p.is_empty() && p.chars().next().is_some_and(|c| c.is_uppercase()))
+    }
+
+    fn is_valid_resource_type(&self, resource_type: &str) -> bool {
+        const VALID_RESOURCE_TYPES: &[&str] = &[
+            "Account",
+            "ActivityDefinition",
+            "AdverseEvent",
+            "AllergyIntolerance",
+            "Appointment",
+            "AppointmentResponse",
+            "AuditEvent",
+            "Basic",
+            "Binary",
+            "BiologicallyDerivedProduct",
+            "BodyStructure",
+            "Bundle",
+            "CapabilityStatement",
+            "CarePlan",
+            "CareTeam",
+            "CatalogEntry",
+            "ChargeItem",
+            "ChargeItemDefinition",
+            "Claim",
+            "ClaimResponse",
+            "ClinicalImpression",
+            "CodeSystem",
+            "Communication",
+            "CommunicationRequest",
+            "CompartmentDefinition",
+            "Composition",
+            "ConceptMap",
+            "Condition",
+            "Consent",
+            "Contract",
+            "Coverage",
+            "CoverageEligibilityRequest",
+            "CoverageEligibilityResponse",
+            "DetectedIssue",
+            "Device",
+            "DeviceDefinition",
+            "DeviceMetric",
+            "DeviceRequest",
+            "DeviceUseStatement",
+            "DiagnosticReport",
+            "DocumentManifest",
+            "DocumentReference",
+            "EffectEvidenceSynthesis",
+            "Encounter",
+            "Endpoint",
+            "EnrollmentRequest",
+            "EnrollmentResponse",
+            "EpisodeOfCare",
+            "EventDefinition",
+            "Evidence",
+            "EvidenceVariable",
+            "ExampleScenario",
+            "ExplanationOfBenefit",
+            "FamilyMemberHistory",
+            "Flag",
+            "Goal",
+            "GraphDefinition",
+            "Group",
+            "GuidanceResponse",
+            "HealthcareService",
+            "ImagingStudy",
+            "Immunization",
+            "ImmunizationEvaluation",
+            "ImmunizationRecommendation",
+            "ImplementationGuide",
+            "InsurancePlan",
+            "Invoice",
+            "Library",
+            "Linkage",
+            "List",
+            "Location",
+            "Measure",
+            "MeasureReport",
+            "Media",
+            "Medication",
+            "MedicationAdministration",
+            "MedicationDispense",
+            "MedicationKnowledge",
+            "MedicationRequest",
+            "MedicationStatement",
+            "MedicinalProduct",
+            "MedicinalProductAuthorization",
+            "MedicinalProductContraindication",
+            "MedicinalProductIndication",
+            "MedicinalProductIngredient",
+            "MedicinalProductInteraction",
+            "MedicinalProductManufactured",
+            "MedicinalProductPackaged",
+            "MedicinalProductPharmaceutical",
+            "MedicinalProductUndesirableEffect",
+            "MessageDefinition",
+            "MessageHeader",
+            "MolecularSequence",
+            "NamingSystem",
+            "NutritionOrder",
+            "Observation",
+            "ObservationDefinition",
+            "OperationDefinition",
+            "OperationOutcome",
+            "Organization",
+            "OrganizationAffiliation",
+            "Parameters",
+            "Patient",
+            "PaymentNotice",
+            "PaymentReconciliation",
+            "Person",
+            "PlanDefinition",
+            "Practitioner",
+            "PractitionerRole",
+            "Procedure",
+            "Provenance",
+            "Questionnaire",
+            "QuestionnaireResponse",
+            "RelatedPerson",
+            "RequestGroup",
+            "ResearchDefinition",
+            "ResearchElementDefinition",
+            "ResearchStudy",
+            "ResearchSubject",
+            "RiskAssessment",
+            "RiskEvidenceSynthesis",
+            "Schedule",
+            "SearchParameter",
+            "ServiceRequest",
+            "Slot",
+            "Specimen",
+            "SpecimenDefinition",
+            "StructureDefinition",
+            "StructureMap",
+            "Subscription",
+            "Substance",
+            "SubstanceNucleicAcid",
+            "SubstancePolymer",
+            "SubstanceProtein",
+            "SubstanceReferenceInformation",
+            "SubstanceSourceMaterial",
+            "SubstanceSpecification",
+            "SupplyDelivery",
+            "SupplyRequest",
+            "Task",
+            "TerminologyCapabilities",
+            "TestReport",
+            "TestScript",
+            "ValueSet",
+            "VerificationResult",
+            "VisionPrescription",
+        ];
+
+        VALID_RESOURCE_TYPES.contains(&resource_type)
+    }
+
+    fn validate_uri_value(&self, uri: &str, path: &str, issues: &mut Vec<ValidationIssue>) {
+        if let Some(uuid_part) = uri.strip_prefix("urn:uuid:") {
+            if !self.is_valid_uuid(uuid_part) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!("UUIDs must be valid and lowercase ({uuid_part})"),
+                    )
+                    .with_path(path),
+                );
+            }
+        }
+    }
+
+    fn is_valid_uuid(&self, uuid: &str) -> bool {
+        if uuid.len() != 36 {
+            return false;
+        }
+
+        let parts: Vec<&str> = uuid.split('-').collect();
+        if parts.len() != 5 {
+            return false;
+        }
+
+        if parts[0].len() != 8
+            || parts[1].len() != 4
+            || parts[2].len() != 4
+            || parts[3].len() != 4
+            || parts[4].len() != 12
+        {
+            return false;
+        }
+
+        for part in parts {
+            if !part
+                .chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+            {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn validate_string_constraints(
         &self,
         value: &str,

@@ -147,11 +147,23 @@ impl FhirValidator {
         fhir_version: crate::fhir_version::FhirVersion,
         packages_dir: Option<&str>,
     ) -> Result<Self> {
-        let package_dirs = if let Some(dir) = packages_dir {
+        let mut package_dirs = if let Some(dir) = packages_dir {
             vec![PathBuf::from(dir)]
         } else {
             vec![]
         };
+
+        if let Ok(default_dir) = rh_foundation::loader::PackageLoader::get_default_packages_dir() {
+            let package_name_with_version = format!(
+                "{}#{}",
+                fhir_version.package_id(),
+                fhir_version.version_string()
+            );
+            let core_package_dir = default_dir.join(&package_name_with_version).join("package");
+            if core_package_dir.exists() {
+                package_dirs.push(core_package_dir);
+            }
+        }
 
         Ok(Self {
             profile_registry: ProfileRegistry::new(fhir_version, packages_dir)?,
@@ -463,6 +475,39 @@ impl FhirValidator {
                     }
                 }
             }
+
+            for contained_resource in contained {
+                if let Some(url) = contained_resource.get("url").and_then(|v| v.as_str()) {
+                    if url == base_url {
+                        if let Some(resource_type) = contained_resource
+                            .get("resourceType")
+                            .and_then(|v| v.as_str())
+                        {
+                            if resource_type != "Questionnaire" {
+                                issues.push(
+                                    ValidationIssue::error(
+                                        IssueCode::Invalid,
+                                        format!(
+                                            "Canonical URL '{questionnaire_url}' refers to a resource that has the wrong type. Found {resource_type} expecting one of [Questionnaire]"
+                                        ),
+                                    )
+                                    .with_path("QuestionnaireResponse.questionnaire"),
+                                );
+                                issues.push(
+                                    ValidationIssue::warning(
+                                        IssueCode::Required,
+                                        format!(
+                                            "The questionnaire '{questionnaire_url}' could not be resolved, so no validation can be performed against the base questionnaire"
+                                        ),
+                                    )
+                                    .with_path("QuestionnaireResponse"),
+                                );
+                                return Ok(issues);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if let Some(q) = self.questionnaire_loader.load(base_url) {
@@ -470,10 +515,42 @@ impl FhirValidator {
             return validator.validate(resource);
         }
 
-        issues.push(ValidationIssue::warning(
-            IssueCode::NotFound,
-            format!("Questionnaire '{questionnaire_url}' could not be resolved"),
-        ));
+        if let Some(found_type) = self
+            .questionnaire_loader
+            .find_resource_type_for_url(base_url)
+        {
+            if found_type != "Questionnaire" {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!(
+                            "Canonical URL '{questionnaire_url}' refers to a resource that has the wrong type. Found {found_type} expecting one of [Questionnaire]"
+                        ),
+                    )
+                    .with_path("QuestionnaireResponse.questionnaire"),
+                );
+            }
+        } else if self.valueset_loader.is_valueset_url(base_url) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "Canonical URL '{questionnaire_url}' refers to a resource that has the wrong type. Found ValueSet expecting one of [Questionnaire]"
+                    ),
+                )
+                .with_path("QuestionnaireResponse.questionnaire"),
+            );
+        }
+
+        issues.push(
+            ValidationIssue::warning(
+                IssueCode::Required,
+                format!(
+                    "The questionnaire '{questionnaire_url}' could not be resolved, so no validation can be performed against the base questionnaire"
+                ),
+            )
+            .with_path("QuestionnaireResponse"),
+        );
 
         Ok(issues)
     }
