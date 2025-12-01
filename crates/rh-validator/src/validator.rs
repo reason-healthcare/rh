@@ -602,26 +602,30 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for (url, path) in extensions {
-            // Skip HL7 FHIR extensions (core and IGs)
-            // We skip all HL7 FHIR extensions because we may not have IG packages loaded
-            // This includes core (http://hl7.org/fhir/StructureDefinition/) and
-            // IG extensions (http://hl7.org/fhir/uv/, http://hl7.org/fhir/us/, etc.)
-            if url.starts_with("http://hl7.org/fhir/") {
-                continue;
-            }
-
+            // First try to resolve the extension
             match self.profile_registry.get_snapshot(&url) {
-                Ok(Some(_)) => {}
+                Ok(Some(_)) => {
+                    // Extension found - valid
+                }
                 Ok(None) => {
-                    issues.push(
-                        ValidationIssue::error(
-                            IssueCode::Structure,
-                            format!(
-                                "Extension definition '{url}' could not be found, so is not allowed here"
-                            ),
-                        )
-                        .with_path(&path),
-                    );
+                    // Extension not found - check if it's from an IG we might not have
+                    // Skip HL7 FHIR IG extensions (but not core) since we may not have
+                    // the IG packages loaded. Core extensions start with
+                    // http://hl7.org/fhir/StructureDefinition/ and should be loaded.
+                    let is_hl7_ig_extension = url.starts_with("http://hl7.org/fhir/")
+                        && !url.starts_with("http://hl7.org/fhir/StructureDefinition/");
+
+                    if !is_hl7_ig_extension {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "Extension definition '{url}' could not be found, so is not allowed here"
+                                ),
+                            )
+                            .with_path(&path),
+                        );
+                    }
                 }
                 Err(_) => {
                     issues.push(
@@ -1619,30 +1623,37 @@ impl FhirValidator {
             let codes = extract_codes_from_value(value);
 
             for (system, code) in codes {
-                let is_valid =
+                use crate::valueset::CodeInValueSetResult;
+                let result =
                     self.valueset_loader
                         .contains_code(&rule.value_set_url, &system, &code)?;
 
-                if !is_valid {
-                    let message = format!(
-                        "Code '{}' from system '{}' is not in {} ValueSet '{}'",
-                        code,
-                        if system.is_empty() {
-                            "(no system)"
+                match result {
+                    CodeInValueSetResult::Found => {}
+                    CodeInValueSetResult::NotFound => {
+                        let message = format!(
+                            "Code '{}' from system '{}' is not in {} ValueSet '{}'",
+                            code,
+                            if system.is_empty() {
+                                "(no system)"
+                            } else {
+                                &system
+                            },
+                            rule.strength,
+                            rule.value_set_url
+                        );
+
+                        let issue = if rule.strength == "required" {
+                            ValidationIssue::error(IssueCode::CodeInvalid, message)
                         } else {
-                            &system
-                        },
-                        rule.strength,
-                        rule.value_set_url
-                    );
+                            ValidationIssue::warning(IssueCode::CodeInvalid, message)
+                        };
 
-                    let issue = if rule.strength == "required" {
-                        ValidationIssue::error(IssueCode::CodeInvalid, message)
-                    } else {
-                        ValidationIssue::warning(IssueCode::CodeInvalid, message)
-                    };
-
-                    issues.push(issue);
+                        issues.push(issue);
+                    }
+                    CodeInValueSetResult::ValueSetNotFound => {
+                        // ValueSet couldn't be found - skip validation
+                    }
                 }
             }
         }

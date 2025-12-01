@@ -51,6 +51,17 @@ pub struct ValueSetConcept {
     pub display: Option<String>,
 }
 
+/// Result of checking if a code is in a ValueSet
+#[derive(Debug, Clone, PartialEq)]
+pub enum CodeInValueSetResult {
+    /// Code is in the ValueSet
+    Found,
+    /// Code is not in the ValueSet
+    NotFound,
+    /// ValueSet could not be loaded/resolved
+    ValueSetNotFound,
+}
+
 pub struct ValueSetLoader {
     package_dirs: Vec<PathBuf>,
     cache: Mutex<LruCache<String, ValueSet>>,
@@ -93,7 +104,7 @@ impl ValueSetLoader {
         Ok(None)
     }
 
-    pub fn contains_code(&self, url: &str, system: &str, code: &str) -> Result<bool> {
+    pub fn contains_code(&self, url: &str, system: &str, code: &str) -> Result<CodeInValueSetResult> {
         if let Some(valueset) = self.load_valueset(url)? {
             // First check expansion (pre-expanded codes)
             if let Some(expansion) = &valueset.expansion {
@@ -102,10 +113,10 @@ impl ValueSetLoader {
                         if concept.code == code {
                             if let Some(concept_system) = &concept.system {
                                 if concept_system == system {
-                                    return Ok(true);
+                                    return Ok(CodeInValueSetResult::Found);
                                 }
                             } else if system.is_empty() {
-                                return Ok(true);
+                                return Ok(CodeInValueSetResult::Found);
                             }
                         }
                     }
@@ -128,7 +139,7 @@ impl ValueSetLoader {
                                 if concept.code == code {
                                     // If system matches (or either is empty), it's a match
                                     if system.is_empty() || include_system.is_empty() || include_system == system {
-                                        return Ok(true);
+                                        return Ok(CodeInValueSetResult::Found);
                                     }
                                 }
                             }
@@ -136,8 +147,10 @@ impl ValueSetLoader {
                     }
                 }
             }
+            Ok(CodeInValueSetResult::NotFound)
+        } else {
+            Ok(CodeInValueSetResult::ValueSetNotFound)
         }
-        Ok(false)
     }
 
     pub fn contains_string_value(&self, url: &str, value: &str) -> Result<bool> {

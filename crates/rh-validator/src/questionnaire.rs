@@ -1475,9 +1475,10 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 return;
             }
 
+            use crate::valueset::CodeInValueSetResult;
             match loader.contains_code(valueset_url, system, code) {
-                Ok(true) => {}
-                Ok(false) => {
+                Ok(CodeInValueSetResult::Found) => {}
+                Ok(CodeInValueSetResult::NotFound) => {
                     let valueset_name = valueset_url.rsplit('/').next().unwrap_or(valueset_url);
                     issues.push(
                         ValidationIssue::error(
@@ -1485,6 +1486,16 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                             format!(
                                 "The code '{code}' in the system '{system}' is not in the options value set ({valueset_name}) specified by the questionnaire"
                             ),
+                        )
+                        .with_path(path),
+                    );
+                }
+                Ok(CodeInValueSetResult::ValueSetNotFound) => {
+                    // ValueSet couldn't be found - emit warning like Java does
+                    issues.push(
+                        ValidationIssue::warning(
+                            IssueCode::CodeInvalid,
+                            format!("ValueSet '{valueset_url}' not found"),
                         )
                         .with_path(path),
                     );
