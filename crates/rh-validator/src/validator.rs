@@ -485,7 +485,8 @@ impl FhirValidator {
 
                         if matches {
                             let validator =
-                                crate::questionnaire::QuestionnaireResponseValidator::new(&q);
+                                crate::questionnaire::QuestionnaireResponseValidator::new(&q)
+                                    .with_valueset_loader(&self.valueset_loader);
                             return validator.validate(resource);
                         }
                     }
@@ -546,7 +547,8 @@ impl FhirValidator {
         }
 
         if let Some(q) = self.questionnaire_loader.load(base_url) {
-            let validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q);
+            let validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q)
+                .with_valueset_loader(&self.valueset_loader);
             return validator.validate(resource);
         }
 

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::RwLock;
 
 use crate::types::{IssueCode, ValidationIssue};
+use crate::valueset::ValueSetLoader;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Questionnaire {
@@ -36,6 +37,8 @@ pub struct QuestionnaireItem {
     #[serde(rename = "answerOption")]
     #[serde(default)]
     pub answer_option: Vec<AnswerOption>,
+    #[serde(rename = "answerValueSet")]
+    pub answer_value_set: Option<String>,
     #[serde(default)]
     pub extension: Vec<Extension>,
     #[serde(rename = "enableWhen")]
@@ -231,6 +234,7 @@ impl QuestionnaireLoader {
 pub struct QuestionnaireResponseValidator<'a> {
     questionnaire: &'a Questionnaire,
     item_map: HashMap<String, &'a QuestionnaireItem>,
+    valueset_loader: Option<&'a ValueSetLoader>,
 }
 
 impl<'a> QuestionnaireResponseValidator<'a> {
@@ -240,7 +244,13 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         Self {
             questionnaire,
             item_map,
+            valueset_loader: None,
         }
+    }
+
+    pub fn with_valueset_loader(mut self, loader: &'a ValueSetLoader) -> Self {
+        self.valueset_loader = Some(loader);
+        self
     }
 
     fn build_item_map(
@@ -351,6 +361,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 let ans_path = format!("{item_path}.answer[{ans_idx}]");
                 self.validate_answer_type(answer, item_type, q_item, &ans_path, issues);
                 self.validate_answer_option(answer, q_item, item_type, &ans_path, issues);
+                self.validate_answer_value_set(answer, q_item, item_type, &ans_path, issues);
             }
 
             if let Some(sub_items) = item.get("item").and_then(|v| v.as_array()) {
@@ -1426,6 +1437,74 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 )
                 .with_path(path),
             );
+        }
+    }
+
+    fn validate_answer_value_set(
+        &self,
+        answer: &Value,
+        q_item: &QuestionnaireItem,
+        item_type: &str,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let valueset_url = match &q_item.answer_value_set {
+            Some(url) => url,
+            None => return,
+        };
+
+        let loader = match self.valueset_loader {
+            Some(l) => l,
+            None => return,
+        };
+
+        if item_type == "open-choice" && answer.get("valueString").is_some() {
+            return;
+        }
+
+        if let Some(coding) = answer.get("valueCoding") {
+            let system = coding.get("system").and_then(|v| v.as_str()).unwrap_or("");
+            let code = coding.get("code").and_then(|v| v.as_str()).unwrap_or("");
+
+            if code.is_empty() {
+                return;
+            }
+
+            match loader.contains_code(valueset_url, system, code) {
+                Ok(true) => {}
+                Ok(false) => {
+                    let valueset_name = valueset_url.rsplit('/').next().unwrap_or(valueset_url);
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!(
+                                "The code '{code}' in the system '{system}' is not in the options value set ({valueset_name}) specified by the questionnaire"
+                            ),
+                        )
+                        .with_path(path),
+                    );
+                }
+                Err(_) => {}
+            }
+            return;
+        }
+
+        if let Some(value_string) = answer.get("valueString").and_then(|v| v.as_str()) {
+            match loader.contains_string_value(valueset_url, value_string) {
+                Ok(true) => {}
+                Ok(false) => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invariant,
+                            format!(
+                                "The value '{value_string}' is not in the list of allowed values (value set '{valueset_url}')"
+                            ),
+                        )
+                        .with_path(format!("{path}.value.ofType(string)")),
+                    );
+                }
+                Err(_) => {}
+            }
         }
     }
 

@@ -87,6 +87,21 @@ impl ValueSetLoader {
         Ok(false)
     }
 
+    pub fn contains_string_value(&self, url: &str, value: &str) -> Result<bool> {
+        if let Some(valueset) = self.load_valueset(url)? {
+            if let Some(expansion) = &valueset.expansion {
+                if let Some(contains) = &expansion.contains {
+                    for concept in contains {
+                        if concept.code == value {
+                            return Ok(true);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
+
     pub fn is_extensional(&self, url: &str) -> Result<bool> {
         if let Some(valueset) = self.load_valueset(url)? {
             Ok(valueset.expansion.is_some())
