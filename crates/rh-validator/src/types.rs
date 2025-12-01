@@ -134,6 +134,14 @@ impl ValidationIssue {
         self
     }
 
+    pub fn with_path_prefix(mut self, prefix: &str) -> Self {
+        self.path = Some(match &self.path {
+            Some(existing) => format!("{prefix}{existing}"),
+            None => prefix.to_string(),
+        });
+        self
+    }
+
     pub fn with_location(mut self, line: usize, column: usize) -> Self {
         self.location = Some(Location { line, column });
         self

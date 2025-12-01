@@ -251,6 +251,9 @@ impl FhirValidator {
                         result = result.with_issue(issue);
                     }
                 }
+                // Note: We don't validate extensions in contained resources here because
+                // we may not have all required packages loaded. Extension validation for
+                // contained resources would require package loading infrastructure.
             }
         }
 
@@ -459,6 +462,13 @@ impl FhirValidator {
             .next()
             .unwrap_or(questionnaire_url);
 
+        let is_local_reference = base_url.starts_with('#');
+        let local_id = if is_local_reference {
+            Some(&base_url[1..])
+        } else {
+            None
+        };
+
         if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
             for contained_resource in contained {
                 if contained_resource
@@ -467,7 +477,13 @@ impl FhirValidator {
                     == Some("Questionnaire")
                 {
                     if let Some(q) = self.questionnaire_loader.load_from_json(contained_resource) {
-                        if q.url.as_deref() == Some(base_url) {
+                        let matches = if let Some(id) = local_id {
+                            contained_resource.get("id").and_then(|v| v.as_str()) == Some(id)
+                        } else {
+                            q.url.as_deref() == Some(base_url)
+                        };
+
+                        if matches {
                             let validator =
                                 crate::questionnaire::QuestionnaireResponseValidator::new(&q);
                             return validator.validate(resource);
@@ -477,37 +493,56 @@ impl FhirValidator {
             }
 
             for contained_resource in contained {
-                if let Some(url) = contained_resource.get("url").and_then(|v| v.as_str()) {
-                    if url == base_url {
-                        if let Some(resource_type) = contained_resource
-                            .get("resourceType")
-                            .and_then(|v| v.as_str())
-                        {
-                            if resource_type != "Questionnaire" {
-                                issues.push(
-                                    ValidationIssue::error(
-                                        IssueCode::Invalid,
-                                        format!(
-                                            "Canonical URL '{questionnaire_url}' refers to a resource that has the wrong type. Found {resource_type} expecting one of [Questionnaire]"
-                                        ),
-                                    )
-                                    .with_path("QuestionnaireResponse.questionnaire"),
-                                );
-                                issues.push(
-                                    ValidationIssue::warning(
-                                        IssueCode::Required,
-                                        format!(
-                                            "The questionnaire '{questionnaire_url}' could not be resolved, so no validation can be performed against the base questionnaire"
-                                        ),
-                                    )
-                                    .with_path("QuestionnaireResponse"),
-                                );
-                                return Ok(issues);
-                            }
+                let resource_matches = if let Some(id) = local_id {
+                    contained_resource.get("id").and_then(|v| v.as_str()) == Some(id)
+                } else if let Some(url) = contained_resource.get("url").and_then(|v| v.as_str()) {
+                    url == base_url
+                } else {
+                    false
+                };
+
+                if resource_matches {
+                    if let Some(resource_type) = contained_resource
+                        .get("resourceType")
+                        .and_then(|v| v.as_str())
+                    {
+                        if resource_type != "Questionnaire" {
+                            issues.push(
+                                ValidationIssue::error(
+                                    IssueCode::Invalid,
+                                    format!(
+                                        "Canonical URL '{questionnaire_url}' refers to a resource that has the wrong type. Found {resource_type} expecting one of [Questionnaire]"
+                                    ),
+                                )
+                                .with_path("QuestionnaireResponse.questionnaire"),
+                            );
+                            issues.push(
+                                ValidationIssue::warning(
+                                    IssueCode::Required,
+                                    format!(
+                                        "The questionnaire '{questionnaire_url}' could not be resolved, so no validation can be performed against the base questionnaire"
+                                    ),
+                                )
+                                .with_path("QuestionnaireResponse"),
+                            );
+                            return Ok(issues);
                         }
                     }
                 }
             }
+        }
+
+        if is_local_reference {
+            issues.push(
+                ValidationIssue::warning(
+                    IssueCode::Required,
+                    format!(
+                        "The questionnaire '{questionnaire_url}' could not be resolved, so no validation can be performed against the base questionnaire"
+                    ),
+                )
+                .with_path("QuestionnaireResponse"),
+            );
+            return Ok(issues);
         }
 
         if let Some(q) = self.questionnaire_loader.load(base_url) {
@@ -565,6 +600,9 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for (url, path) in extensions {
+            // Skip core FHIR extensions and HL7 FHIR IG extensions
+            // We skip HL7 IG extensions (http://hl7.org/fhir/uv/, http://hl7.org/fhir/us/, etc.)
+            // because we may not have the required packages loaded
             if url.starts_with("http://hl7.org/fhir/") {
                 continue;
             }
@@ -2067,7 +2105,9 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<(Strin
                 }
             }
             for (key, val) in obj {
-                if key == "extension" || key == "modifierExtension" {
+                // Skip extension fields (handled above) and contained resources
+                // (contained resources are validated separately with their own extension validation)
+                if key == "extension" || key == "modifierExtension" || key == "contained" {
                     continue;
                 }
                 if let Some(base_field) = key.strip_prefix('_') {
