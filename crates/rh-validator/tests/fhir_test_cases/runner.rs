@@ -194,11 +194,7 @@ impl TestRunner {
         }
 
         // Register supporting files from both `supporting` and `profiles` fields
-        let all_supporting: Vec<_> = test
-            .supporting
-            .iter()
-            .chain(test.profiles.iter())
-            .collect();
+        let all_supporting: Vec<_> = test.supporting.iter().chain(test.profiles.iter()).collect();
 
         for supporting_file in all_supporting {
             let supporting_path = validator_dir.join(supporting_file);

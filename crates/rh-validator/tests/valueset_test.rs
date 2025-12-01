@@ -66,7 +66,11 @@ fn test_contains_code_valid() {
         )
         .expect("Should check code");
 
-    assert_eq!(result, rh_validator::valueset::CodeInValueSetResult::Found, "Code 'Y' should be in yesnodontknow ValueSet");
+    assert_eq!(
+        result,
+        rh_validator::valueset::CodeInValueSetResult::Found,
+        "Code 'Y' should be in yesnodontknow ValueSet"
+    );
 }
 
 #[test]

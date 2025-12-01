@@ -104,7 +104,12 @@ impl ValueSetLoader {
         Ok(None)
     }
 
-    pub fn contains_code(&self, url: &str, system: &str, code: &str) -> Result<CodeInValueSetResult> {
+    pub fn contains_code(
+        &self,
+        url: &str,
+        system: &str,
+        code: &str,
+    ) -> Result<CodeInValueSetResult> {
         if let Some(valueset) = self.load_valueset(url)? {
             // First check expansion (pre-expanded codes)
             if let Some(expansion) = &valueset.expansion {
@@ -129,7 +134,10 @@ impl ValueSetLoader {
                     for include in includes {
                         // Check if this include matches the system
                         let include_system = include.system.as_deref().unwrap_or("");
-                        if !system.is_empty() && !include_system.is_empty() && include_system != system {
+                        if !system.is_empty()
+                            && !include_system.is_empty()
+                            && include_system != system
+                        {
                             continue;
                         }
 
@@ -138,7 +146,10 @@ impl ValueSetLoader {
                             for concept in concepts {
                                 if concept.code == code {
                                     // If system matches (or either is empty), it's a match
-                                    if system.is_empty() || include_system.is_empty() || include_system == system {
+                                    if system.is_empty()
+                                        || include_system.is_empty()
+                                        || include_system == system
+                                    {
                                         return Ok(CodeInValueSetResult::Found);
                                     }
                                 }
