@@ -601,7 +601,10 @@ impl FhirValidator {
         let mut extensions = Vec::new();
         collect_extension_urls(resource, resource_type, &mut extensions);
 
-        for (url, path) in extensions {
+        for ext_info in extensions {
+            let url = &ext_info.url;
+            let path = &ext_info.path;
+
             // Skip sub-extension URLs within complex extensions (they don't start with http(s)://)
             // These are just identifiers like "code", "value", etc. within the parent extension
             if !url.starts_with("http://") && !url.starts_with("https://") {
@@ -609,9 +612,40 @@ impl FhirValidator {
             }
 
             // First try to resolve the extension
-            match self.profile_registry.get_snapshot(&url) {
-                Ok(Some(_)) => {
-                    // Extension found - valid
+            match self.profile_registry.get_snapshot(url) {
+                Ok(Some(snapshot)) => {
+                    // Extension found - check if isModifier matches usage
+                    // Get the first element in the differential which contains the extension definition
+                    let def_is_modifier = snapshot
+                        .differential
+                        .as_ref()
+                        .and_then(|d| d.element.first())
+                        .and_then(|first| first.is_modifier)
+                        .unwrap_or(false);
+
+                    if ext_info.is_modifier && !def_is_modifier {
+                        // Using a regular extension as modifierExtension
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "The extension {url} must not be used as a modifier extension"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    } else if !ext_info.is_modifier && def_is_modifier {
+                        // Using a modifier extension as regular extension
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "The extension {url} must be used as a modifierExtension"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    }
                 }
                 Ok(None) => {
                     // Extension not found - check if it's from an IG we might not have
@@ -629,7 +663,7 @@ impl FhirValidator {
                                     "Extension definition '{url}' could not be found, so is not allowed here"
                                 ),
                             )
-                            .with_path(&path),
+                            .with_path(path),
                         );
                     }
                 }
@@ -641,7 +675,7 @@ impl FhirValidator {
                                 "Extension definition '{url}' could not be resolved, so is not allowed here"
                             ),
                         )
-                        .with_path(&path),
+                        .with_path(path),
                     );
                 }
             }
@@ -2111,14 +2145,25 @@ fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option
     Some(current)
 }
 
-fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<(String, String)>) {
+/// Information about a collected extension
+struct ExtensionInfo {
+    url: String,
+    path: String,
+    is_modifier: bool,
+}
+
+fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<ExtensionInfo>) {
     match value {
         Value::Object(obj) => {
             if let Some(ext_array) = obj.get("extension").and_then(|v| v.as_array()) {
                 for (idx, ext) in ext_array.iter().enumerate() {
                     if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
                         let ext_path = format!("{path}.extension[{idx}]");
-                        extensions.push((url.to_string(), ext_path.clone()));
+                        extensions.push(ExtensionInfo {
+                            url: url.to_string(),
+                            path: ext_path.clone(),
+                            is_modifier: false,
+                        });
                         collect_extension_urls(ext, &ext_path, extensions);
                     }
                 }
@@ -2127,7 +2172,11 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<(Strin
                 for (idx, ext) in ext_array.iter().enumerate() {
                     if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
                         let ext_path = format!("{path}.modifierExtension[{idx}]");
-                        extensions.push((url.to_string(), ext_path.clone()));
+                        extensions.push(ExtensionInfo {
+                            url: url.to_string(),
+                            path: ext_path.clone(),
+                            is_modifier: true,
+                        });
                         collect_extension_urls(ext, &ext_path, extensions);
                     }
                 }
@@ -2143,7 +2192,11 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<(Strin
                         for (idx, ext) in prim_ext_array.iter().enumerate() {
                             if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
                                 let ext_path = format!("{path}.{base_field}.extension[{idx}]");
-                                extensions.push((url.to_string(), ext_path.clone()));
+                                extensions.push(ExtensionInfo {
+                                    url: url.to_string(),
+                                    path: ext_path.clone(),
+                                    is_modifier: false,
+                                });
                                 collect_extension_urls(ext, &ext_path, extensions);
                             }
                         }
