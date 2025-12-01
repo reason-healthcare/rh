@@ -1453,6 +1453,11 @@ impl<'a> QuestionnaireResponseValidator<'a> {
             None => return,
         };
 
+        // Skip local references (contained ValueSets) - we can't resolve them yet
+        if valueset_url.starts_with('#') {
+            return;
+        }
+
         let loader = match self.valueset_loader {
             Some(l) => l,
             None => return,

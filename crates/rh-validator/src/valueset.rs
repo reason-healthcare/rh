@@ -13,6 +13,7 @@ pub struct ValueSet {
     pub url: String,
     pub status: Option<String>,
     pub expansion: Option<ValueSetExpansion>,
+    pub compose: Option<ValueSetCompose>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +27,26 @@ pub struct ValueSetExpansion {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueSetContains {
     pub system: Option<String>,
+    pub code: String,
+    pub display: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetCompose {
+    pub include: Option<Vec<ValueSetInclude>>,
+    pub exclude: Option<Vec<ValueSetInclude>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetInclude {
+    pub system: Option<String>,
+    pub concept: Option<Vec<ValueSetConcept>>,
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetConcept {
     pub code: String,
     pub display: Option<String>,
 }
@@ -44,6 +65,11 @@ impl ValueSetLoader {
         }
     }
 
+    pub fn register_valueset(&self, valueset: ValueSet) {
+        let url = valueset.url.clone();
+        self.cache.lock().unwrap().put(url, valueset);
+    }
+
     pub fn load_valueset(&self, url: &str) -> Result<Option<ValueSet>> {
         let clean_url = Self::strip_version(url);
 
@@ -53,7 +79,8 @@ impl ValueSetLoader {
 
         for package_dir in &self.package_dirs {
             if let Some(valueset) = self.load_from_directory(package_dir, clean_url)? {
-                if valueset.expansion.is_some() {
+                // Cache ValueSets that have either expansion or compose (can be validated)
+                if valueset.expansion.is_some() || valueset.compose.is_some() {
                     self.cache
                         .lock()
                         .unwrap()
@@ -68,6 +95,7 @@ impl ValueSetLoader {
 
     pub fn contains_code(&self, url: &str, system: &str, code: &str) -> Result<bool> {
         if let Some(valueset) = self.load_valueset(url)? {
+            // First check expansion (pre-expanded codes)
             if let Some(expansion) = &valueset.expansion {
                 if let Some(contains) = &expansion.contains {
                     for concept in contains {
@@ -83,17 +111,58 @@ impl ValueSetLoader {
                     }
                 }
             }
+
+            // Then check compose (intensional definition with enumerated codes)
+            if let Some(compose) = &valueset.compose {
+                if let Some(includes) = &compose.include {
+                    for include in includes {
+                        // Check if this include matches the system
+                        let include_system = include.system.as_deref().unwrap_or("");
+                        if !system.is_empty() && !include_system.is_empty() && include_system != system {
+                            continue;
+                        }
+
+                        // Check enumerated concepts
+                        if let Some(concepts) = &include.concept {
+                            for concept in concepts {
+                                if concept.code == code {
+                                    // If system matches (or either is empty), it's a match
+                                    if system.is_empty() || include_system.is_empty() || include_system == system {
+                                        return Ok(true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         Ok(false)
     }
 
     pub fn contains_string_value(&self, url: &str, value: &str) -> Result<bool> {
         if let Some(valueset) = self.load_valueset(url)? {
+            // Check expansion
             if let Some(expansion) = &valueset.expansion {
                 if let Some(contains) = &expansion.contains {
                     for concept in contains {
                         if concept.code == value {
                             return Ok(true);
+                        }
+                    }
+                }
+            }
+
+            // Check compose
+            if let Some(compose) = &valueset.compose {
+                if let Some(includes) = &compose.include {
+                    for include in includes {
+                        if let Some(concepts) = &include.concept {
+                            for concept in concepts {
+                                if concept.code == value {
+                                    return Ok(true);
+                                }
+                            }
                         }
                     }
                 }

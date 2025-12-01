@@ -198,10 +198,14 @@ impl TestRunner {
             if supporting_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&supporting_path) {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                        if json.get("resourceType").and_then(|v| v.as_str())
-                            == Some("Questionnaire")
-                        {
-                            self.validator.register_questionnaire(&json);
+                        match json.get("resourceType").and_then(|v| v.as_str()) {
+                            Some("Questionnaire") => {
+                                self.validator.register_questionnaire(&json);
+                            }
+                            Some("ValueSet") => {
+                                self.validator.register_valueset(&json);
+                            }
+                            _ => {}
                         }
                     }
                 }

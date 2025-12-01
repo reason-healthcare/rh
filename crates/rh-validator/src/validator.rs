@@ -251,9 +251,9 @@ impl FhirValidator {
                         result = result.with_issue(issue);
                     }
                 }
-                // Note: We don't validate extensions in contained resources here because
-                // we may not have all required packages loaded. Extension validation for
-                // contained resources would require package loading infrastructure.
+                // Note: Extension validation for contained resources is skipped because
+                // we may not have all required IG packages loaded. Extensions from HL7
+                // FHIR IGs (like SDC) require their respective packages.
             }
         }
 
@@ -602,9 +602,10 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for (url, path) in extensions {
-            // Skip core FHIR extensions and HL7 FHIR IG extensions
-            // We skip HL7 IG extensions (http://hl7.org/fhir/uv/, http://hl7.org/fhir/us/, etc.)
-            // because we may not have the required packages loaded
+            // Skip HL7 FHIR extensions (core and IGs)
+            // We skip all HL7 FHIR extensions because we may not have IG packages loaded
+            // This includes core (http://hl7.org/fhir/StructureDefinition/) and
+            // IG extensions (http://hl7.org/fhir/uv/, http://hl7.org/fhir/us/, etc.)
             if url.starts_with("http://hl7.org/fhir/") {
                 continue;
             }
@@ -650,6 +651,14 @@ impl FhirValidator {
     pub fn register_questionnaire(&self, questionnaire: &Value) {
         if let Some(q) = self.questionnaire_loader.load_from_json(questionnaire) {
             self.questionnaire_loader.register(q);
+        }
+    }
+
+    pub fn register_valueset(&self, valueset: &Value) {
+        if let Ok(vs) = serde_json::from_value::<crate::valueset::ValueSet>(valueset.clone()) {
+            if vs.resource_type == "ValueSet" {
+                self.valueset_loader.register_valueset(vs);
+            }
         }
     }
 
