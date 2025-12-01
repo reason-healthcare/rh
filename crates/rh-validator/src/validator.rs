@@ -602,6 +602,12 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for (url, path) in extensions {
+            // Skip sub-extension URLs within complex extensions (they don't start with http(s)://)
+            // These are just identifiers like "code", "value", etc. within the parent extension
+            if !url.starts_with("http://") && !url.starts_with("https://") {
+                continue;
+            }
+
             // First try to resolve the extension
             match self.profile_registry.get_snapshot(&url) {
                 Ok(Some(_)) => {
