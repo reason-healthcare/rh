@@ -193,7 +193,14 @@ impl TestRunner {
             anyhow::bail!("Test file not found: {}", test_file_path.display());
         }
 
-        for supporting_file in &test.supporting {
+        // Register supporting files from both `supporting` and `profiles` fields
+        let all_supporting: Vec<_> = test
+            .supporting
+            .iter()
+            .chain(test.profiles.iter())
+            .collect();
+
+        for supporting_file in all_supporting {
             let supporting_path = validator_dir.join(supporting_file);
             if supporting_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&supporting_path) {
@@ -204,6 +211,9 @@ impl TestRunner {
                             }
                             Some("ValueSet") => {
                                 self.validator.register_valueset(&json);
+                            }
+                            Some("StructureDefinition") => {
+                                self.validator.register_profile(&json);
                             }
                             _ => {}
                         }

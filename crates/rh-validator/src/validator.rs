@@ -706,6 +706,14 @@ impl FhirValidator {
         }
     }
 
+    pub fn register_profile(&self, profile: &Value) {
+        if let Ok(sd) = serde_json::from_value::<rh_foundation::snapshot::StructureDefinition>(
+            profile.clone(),
+        ) {
+            self.profile_registry.register_profile(sd);
+        }
+    }
+
     pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
         (
             self.profile_registry.cache_stats(),

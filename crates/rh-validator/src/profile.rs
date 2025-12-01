@@ -12,6 +12,8 @@ use crate::fhir_version::FhirVersion;
 pub struct ProfileRegistry {
     generator: SnapshotGenerator,
     profiles: HashMap<String, StructureDefinition>,
+    /// Dynamically registered profiles (can be added at runtime with &self)
+    dynamic_profiles: RwLock<HashMap<String, StructureDefinition>>,
     snapshot_cache: RwLock<LruCache<String, StructureDefinition>>,
     cache_hits: RwLock<usize>,
     cache_misses: RwLock<usize>,
@@ -76,6 +78,7 @@ impl ProfileRegistry {
         Ok(Self {
             generator,
             profiles,
+            dynamic_profiles: RwLock::new(HashMap::new()),
             snapshot_cache: RwLock::new(LruCache::new(capacity)),
             cache_hits: RwLock::new(0),
             cache_misses: RwLock::new(0),
@@ -91,6 +94,22 @@ impl ProfileRegistry {
 
         *self.cache_misses.write().unwrap() += 1;
 
+        // First check dynamically registered profiles
+        if let Some(profile) = self
+            .dynamic_profiles
+            .read()
+            .unwrap()
+            .get(profile_url)
+            .cloned()
+        {
+            self.snapshot_cache
+                .write()
+                .unwrap()
+                .put(profile_url.to_string(), profile.clone());
+            return Ok(Some(profile));
+        }
+
+        // Then check statically loaded profiles
         if !self.profiles.contains_key(profile_url) {
             return Ok(None);
         }
@@ -126,6 +145,17 @@ impl ProfileRegistry {
             })
             .map(|(url, _)| url.clone())
             .collect()
+    }
+
+    /// Register a profile dynamically (can be called with &self)
+    /// Note: Dynamically registered profiles don't support snapshot generation
+    /// since the SnapshotGenerator isn't thread-safe. The profile is stored
+    /// as-is, which is sufficient for checking extension isModifier flags.
+    pub fn register_profile(&self, profile: StructureDefinition) {
+        self.dynamic_profiles
+            .write()
+            .unwrap()
+            .insert(profile.url.clone(), profile);
     }
 
     pub fn load_profile(&mut self, profile: StructureDefinition) -> Result<()> {
