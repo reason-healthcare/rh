@@ -269,6 +269,34 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        // Validate Attachment size consistency
+        let attachment_issues = validate_attachment_size(resource, resource_type_name);
+        for issue in attachment_issues {
+            result = result.with_issue(issue);
+        }
+
+        // Bundle-specific validation
+        if resource_type_name == "Bundle" {
+            let bundle_issues = validate_bundle(resource);
+            for issue in bundle_issues {
+                result = result.with_issue(issue);
+            }
+        }
+
+        // Parameters-specific validation (reference resolution)
+        if resource_type_name == "Parameters" {
+            let params_issues = validate_parameters_references(resource);
+            for issue in params_issues {
+                result = result.with_issue(issue);
+            }
+        }
+
+        // Validate strings for HTML-like content (security check)
+        let string_security_issues = validate_string_security(resource, resource_type_name);
+        for issue in string_security_issues {
+            result = result.with_issue(issue);
+        }
+
         Ok(result)
     }
 
@@ -333,15 +361,28 @@ impl FhirValidator {
         let snapshot = match snapshot {
             Some(s) => s,
             None => {
-                // Profile not found - add warning and return base validation result
-                // This matches Java validator behavior which reports this as warning severity
-                return Ok(result.with_issue(ValidationIssue::warning(
+                // Profile not found - add warning but still validate extensions against base profile
+                // Extensions from unknown sources should still be flagged as errors
+                result = result.with_issue(ValidationIssue::warning(
                     IssueCode::NotFound,
                     format!(
                         "[Profile: {profile_url}] Profile reference has not been checked because \
                         it could not be found"
                     ),
-                )));
+                ));
+
+                // Still validate unknown extensions even if profile not found
+                let resource_type_name = resource
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Resource");
+                let unknown_ext_issues =
+                    self.validate_unknown_extensions(resource, resource_type_name)?;
+                for issue in unknown_ext_issues {
+                    result = result.with_issue(issue);
+                }
+
+                return Ok(result);
             }
         };
 
@@ -1143,6 +1184,499 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
     issues
 }
 
+fn validate_string_security(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            for (key, v) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+
+                // Special handling for the "div" field - validate XHTML content
+                if key == "div" {
+                    if let Value::String(div_content) = v {
+                        issues.extend(validate_xhtml_narrative(div_content, &child_path));
+                    }
+                    continue;
+                }
+
+                issues.extend(validate_string_security(v, &child_path));
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                issues.extend(validate_string_security(item, &child_path));
+            }
+        }
+        Value::String(s) => {
+            // Check for HTML-like content in strings
+            // Look for patterns like <script>, <style>, <iframe>, etc.
+            if contains_html_tags(s) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
+                    )
+                    .with_path(current_path.to_string()),
+                );
+            }
+        }
+        _ => {}
+    }
+
+    issues
+}
+
+fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    // List of disallowed HTML elements in FHIR narrative (per txt-1 invariant)
+    // The narrative SHALL contain only the basic html formatting elements and attributes
+    // described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard
+    let disallowed_elements = [
+        "script", "style", "iframe", "object", "embed", "form", "input", "button", "select",
+        "textarea", "applet", "frame", "frameset", "link", "meta", "base", "body", "head", "html",
+        "noscript", "audio", "video", "canvas", "svg", "math",
+    ];
+
+    let lower = div_content.to_lowercase();
+
+    for element in &disallowed_elements {
+        // Check for opening tag: <element or <element>
+        let open_tag = format!("<{element}");
+        if lower.contains(&open_tag) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Invalid element name in the XHTML ('{element}')"),
+                )
+                .with_path(path.to_string()),
+            );
+            break; // Only report one error per div to avoid spamming
+        }
+    }
+
+    issues
+}
+
+fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let bundle_type = bundle.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+    // Validate Bundle.link for duplicate relationship types
+    issues.extend(validate_bundle_links(bundle));
+
+    let entries = match bundle.get("entry").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return issues,
+    };
+
+    // Collect all resource references for resolution checking
+    let mut available_resources: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
+
+    // First pass: collect all fullUrls and resource type/id combinations
+    // Track resource counts for detecting multiple matches
+    let mut resource_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+
+    for entry in entries {
+        if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
+            available_resources.insert(full_url.to_string());
+
+            // Also add relative form: Type/id
+            if let Some(resource) = entry.get("resource") {
+                if let (Some(res_type), Some(res_id)) = (
+                    resource.get("resourceType").and_then(|v| v.as_str()),
+                    resource.get("id").and_then(|v| v.as_str()),
+                ) {
+                    let relative_ref = format!("{res_type}/{res_id}");
+                    available_resources.insert(relative_ref.clone());
+                    *resource_counts.entry(relative_ref).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Also track contained resources by #id
+        if let Some(resource) = entry.get("resource") {
+            if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+                for c in contained {
+                    if let Some(id) = c.get("id").and_then(|v| v.as_str()) {
+                        available_resources.insert(format!("#{id}"));
+                    }
+                }
+            }
+        }
+    }
+
+    // Second pass: validate each entry
+    for (idx, entry) in entries.iter().enumerate() {
+        let entry_path = format!("Bundle.entry[{idx}]");
+
+        // Validate fullUrl
+        if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
+            // Note: We don't check for duplicate fullUrls because in FHIR,
+            // duplicate fullUrls are allowed in some cases (e.g., document bundles
+            // can contain multiple versions of the same resource)
+
+            // fullUrl must be absolute for most bundle types
+            // Exception: transaction/batch bundles can have relative URLs
+            let requires_absolute = !matches!(bundle_type, "transaction" | "batch");
+
+            if requires_absolute && !is_absolute_url(full_url) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!("The fullUrl must be an absolute URL (not '{full_url}')"),
+                    )
+                    .with_path(&entry_path),
+                );
+            }
+
+            // Validate that RESTful URLs match the resource type and id
+            if let Some(resource) = entry.get("resource") {
+                issues.extend(validate_fullurl_consistency(
+                    full_url,
+                    resource,
+                    &entry_path,
+                ));
+            }
+        }
+
+        // Validate references within entry resources
+        // Only require resolution for document bundles
+        if let Some(resource) = entry.get("resource") {
+            let resource_type = resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Resource");
+            let resource_path = format!("{entry_path}.resource/*{resource_type}*/");
+            validate_bundle_references(
+                resource,
+                &resource_path,
+                &available_resources,
+                &resource_counts,
+                bundle_type,
+                &mut issues,
+            );
+        }
+    }
+
+    issues
+}
+
+fn validate_bundle_links(bundle: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let links = match bundle.get("link").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return issues,
+    };
+
+    // Track which relationship types we've seen
+    let mut seen_relations: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+
+    // Relationships that can only occur once per bundle
+    // Based on FHIR spec and Java validator behavior
+    let unique_relations = ["self", "first", "last", "next", "previous"];
+
+    for (idx, link) in links.iter().enumerate() {
+        if let Some(relation) = link.get("relation").and_then(|v| v.as_str()) {
+            if unique_relations.contains(&relation) {
+                if seen_relations.contains_key(relation) {
+                    // We've seen this relation before - error on the duplicate
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!("The link relationship type '{relation}' can only occur once"),
+                        )
+                        .with_path(format!("Bundle.link[{idx}]")),
+                    );
+                } else {
+                    seen_relations.insert(relation.to_string(), idx);
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_fullurl_consistency(
+    full_url: &str,
+    resource: &Value,
+    entry_path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    // Only validate RESTful URLs (http:// or https://)
+    // URN, OID, UUID don't need to match resource type/id
+    if !full_url.starts_with("http://") && !full_url.starts_with("https://") {
+        return issues;
+    }
+
+    let resource_type = match resource.get("resourceType").and_then(|v| v.as_str()) {
+        Some(rt) => rt,
+        None => return issues,
+    };
+
+    let resource_id = match resource.get("id").and_then(|v| v.as_str()) {
+        Some(id) => id,
+        None => return issues, // No id to validate against
+    };
+
+    // Expected suffix: /ResourceType/id
+    let expected_suffix = format!("/{resource_type}/{resource_id}");
+
+    // The fullUrl should end with /ResourceType/id
+    // But we need to handle versioned URLs like /ResourceType/id/_history/version
+    let url_without_history = if let Some(pos) = full_url.find("/_history/") {
+        &full_url[..pos]
+    } else {
+        full_url
+    };
+
+    if !url_without_history.ends_with(&expected_suffix) {
+        // Check what the URL actually ends with
+        let url_parts: Vec<&str> = url_without_history.split('/').collect();
+        if url_parts.len() >= 2 {
+            let actual_type = url_parts[url_parts.len() - 2];
+            let actual_id = url_parts[url_parts.len() - 1];
+
+            // If it looks like a RESTful URL pattern (ends with Type/id)
+            // and the type matches but id doesn't, report an error
+            if actual_type == resource_type && actual_id != resource_id {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!(
+                            "The fullUrl '{full_url}' looks like a RESTful server URL, so it must end with the correct type and id (/{resource_type}/{resource_id})"
+                        ),
+                    )
+                    .with_path(entry_path.to_string()),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn is_absolute_url(url: &str) -> bool {
+    // Absolute URLs start with a scheme (http:, https:, urn:, etc.)
+    // The resource: scheme is used in Smart Health Cards (SHC)
+    url.starts_with("http://")
+        || url.starts_with("https://")
+        || url.starts_with("urn:")
+        || url.starts_with("oid:")
+        || url.starts_with("uuid:")
+        || url.starts_with("resource:")
+}
+
+fn validate_bundle_references(
+    value: &Value,
+    current_path: &str,
+    available_resources: &std::collections::HashSet<String>,
+    resource_counts: &std::collections::HashMap<String, usize>,
+    _bundle_type: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            // Check if this is a Reference with a "reference" field
+            if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
+                // Skip contained references (start with #) - they're validated separately
+                if !ref_value.starts_with('#')
+                    && !ref_value.starts_with("http://")
+                    && !ref_value.starts_with("https://")
+                {
+                    // This is a relative reference like "Patient/123"
+                    // Check if this is a versioned reference like "Type/id/_history/N"
+                    let has_version = ref_value.contains("/_history/");
+
+                    // Strip version history suffix for matching
+                    let ref_without_history =
+                        ref_value.split("/_history/").next().unwrap_or(ref_value);
+
+                    // Check for multiple matches - only if NOT a versioned reference
+                    // Versioned references are specific and don't have ambiguity
+                    if !has_version {
+                        if let Some(&count) = resource_counts.get(ref_without_history) {
+                            if count > 1 {
+                                issues.push(
+                                    ValidationIssue::error(
+                                        IssueCode::Forbidden,
+                                        format!(
+                                            "Multiple matches in bundle for reference {ref_without_history}"
+                                        ),
+                                    )
+                                    .with_path(current_path.to_string()),
+                                );
+                            }
+                        }
+                    }
+
+                    // Check if reference can be resolved within the bundle
+                    if !available_resources.contains(ref_value)
+                        && !available_resources.contains(ref_without_history)
+                    {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Unable to resolve resource with reference '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
+                    }
+                }
+            }
+
+            // Recurse into child objects
+            for (key, v) in obj {
+                let child_path = format!("{current_path}.{key}");
+                validate_bundle_references(
+                    v,
+                    &child_path,
+                    available_resources,
+                    resource_counts,
+                    _bundle_type,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_bundle_references(
+                    item,
+                    &child_path,
+                    available_resources,
+                    resource_counts,
+                    _bundle_type,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn validate_parameters_references(params: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let parameters = match params.get("parameter").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return issues,
+    };
+
+    // Collect all resources from parameters
+    let mut available_resources: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
+
+    // First pass: collect all resources and their ids
+    for param in parameters {
+        if let Some(resource) = param.get("resource") {
+            if let (Some(res_type), Some(res_id)) = (
+                resource.get("resourceType").and_then(|v| v.as_str()),
+                resource.get("id").and_then(|v| v.as_str()),
+            ) {
+                available_resources.insert(format!("{res_type}/{res_id}"));
+            }
+
+            // Also track contained resources
+            if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+                for c in contained {
+                    if let Some(id) = c.get("id").and_then(|v| v.as_str()) {
+                        available_resources.insert(format!("#{id}"));
+                    }
+                }
+            }
+        }
+    }
+
+    // Second pass: validate references
+    for (idx, param) in parameters.iter().enumerate() {
+        if let Some(resource) = param.get("resource") {
+            let resource_type = resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Resource");
+            let resource_id = resource.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let path =
+                format!("Parameters.parameter[{idx}].resource/*{resource_type}/{resource_id}*/");
+            validate_parameters_resource_references(
+                resource,
+                &path,
+                &available_resources,
+                &mut issues,
+            );
+        }
+    }
+
+    issues
+}
+
+fn validate_parameters_resource_references(
+    value: &Value,
+    current_path: &str,
+    available_resources: &std::collections::HashSet<String>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            // Check if this is a Reference
+            if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
+                // Skip contained references and absolute URLs
+                if !ref_value.starts_with('#')
+                    && !ref_value.starts_with("http://")
+                    && !ref_value.starts_with("https://")
+                {
+                    // This is a relative reference - check if resolvable
+                    if !available_resources.contains(ref_value) {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Unable to resolve resource with reference '{ref_value}'"),
+                            )
+                            .with_path(current_path),
+                        );
+                    }
+                }
+            }
+
+            // Recurse
+            for (key, v) in obj {
+                let child_path = format!("{current_path}.{key}");
+                validate_parameters_resource_references(
+                    v,
+                    &child_path,
+                    available_resources,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_parameters_resource_references(
+                    item,
+                    &child_path,
+                    available_resources,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
 fn validate_base64_fields(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
     validate_base64_fields_recursive(value, current_path, &mut issues);
@@ -1203,6 +1737,71 @@ fn is_base64_field_name(name: &str) -> bool {
     matches!(name, "data" | "hash")
 }
 
+fn validate_attachment_size(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_attachment_size_recursive(value, current_path, &mut issues);
+    issues
+}
+
+fn validate_attachment_size_recursive(
+    value: &Value,
+    current_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            // Check if this looks like an Attachment with both data and size
+            if obj.contains_key("data") && obj.contains_key("size") {
+                if let (Some(data_str), Some(size_val)) = (
+                    obj.get("data").and_then(|v| v.as_str()),
+                    obj.get("size").and_then(|v| v.as_i64()),
+                ) {
+                    // Calculate decoded size from base64 data
+                    // Base64 encodes 3 bytes into 4 characters, with possible padding
+                    let trimmed = data_str.trim();
+                    if !trimmed.is_empty() {
+                        // Count non-whitespace characters and subtract padding
+                        let non_ws_chars: usize =
+                            trimmed.chars().filter(|c| !c.is_whitespace()).count();
+                        let padding = trimmed.chars().rev().take_while(|c| *c == '=').count();
+                        // Decoded size = (non_ws_chars * 3 / 4) - padding
+                        let decoded_size = ((non_ws_chars * 3) / 4) - padding;
+
+                        if size_val as usize != decoded_size {
+                            issues.push(
+                                ValidationIssue::error(
+                                    IssueCode::Structure,
+                                    format!(
+                                        "Stated Attachment Size {size_val} does not match actual attachment size {decoded_size}"
+                                    ),
+                                )
+                                .with_path(current_path),
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Recurse into children
+            for (key, v) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_attachment_size_recursive(v, &child_path, issues);
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_attachment_size_recursive(item, &child_path, issues);
+            }
+        }
+        _ => {}
+    }
+}
+
 // Note: HTML security checking is disabled because the Java validator uses an option
 // ("security-checks": true/false) to control whether HTML in strings is an error or info.
 // Without proper option support, enabling this breaks tests.
@@ -1257,34 +1856,33 @@ fn validate_no_embedded_html_recursive(
 
 #[allow(dead_code)]
 fn contains_html_tags(s: &str) -> bool {
-    // Look for HTML-like tags: <tag>, </tag>, <tag/>, <tag attr="value">
-    // We look for patterns where < is followed by a letter or /letter
-    let bytes = s.as_bytes();
-    let mut i = 0;
+    // Check for specific dangerous HTML tags that pose security risks
+    // These are tags that can execute scripts, embed content, or change page behavior
+    let dangerous_tags = [
+        "script", "style", "iframe", "object", "embed", "form", "input", "button", "select",
+        "textarea", "applet", "frame", "frameset", "link", "meta", "base", "noscript", "audio",
+        "video", "canvas", "svg", "math", "event", "onload", "onerror", "onclick",
+    ];
 
-    while i < bytes.len() {
-        if bytes[i] == b'<' {
-            // Check what follows
-            if i + 1 < bytes.len() {
-                let next = bytes[i + 1];
-                // Opening tag: <letter
-                // Closing tag: </letter
-                if next.is_ascii_alphabetic()
-                    || (next == b'/' && i + 2 < bytes.len() && bytes[i + 2].is_ascii_alphabetic())
+    let lower = s.to_lowercase();
+
+    for tag in &dangerous_tags {
+        // Check for opening tag: <tag or <tag> or <tag
+        let open_pattern = format!("<{tag}");
+        if lower.contains(&open_pattern) {
+            // Make sure it's actually a tag by checking for > or whitespace/attributes after
+            if let Some(pos) = lower.find(&open_pattern) {
+                let remaining = &lower[pos + open_pattern.len()..];
+                if remaining.starts_with('>')
+                    || remaining.starts_with(' ')
+                    || remaining.starts_with('\t')
+                    || remaining.starts_with('\n')
+                    || remaining.starts_with('/')
                 {
-                    // Scan forward for >
-                    let mut j = i + 1;
-                    while j < bytes.len() {
-                        if bytes[j] == b'>' {
-                            // Found what looks like an HTML tag
-                            return true;
-                        }
-                        j += 1;
-                    }
+                    return true;
                 }
             }
         }
-        i += 1;
     }
 
     false

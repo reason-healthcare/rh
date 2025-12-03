@@ -630,3 +630,113 @@ fn test_extension_with_invalid_nested_structure() {
         "Expected error for extension with empty nested extensions array"
     );
 }
+
+#[test]
+fn test_unknown_extension_generates_error() {
+    // Use default validator (no additional profiles)
+    let validator = FhirValidator::default();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "extension": [
+            {
+                "url": "http://fkcfhir.org/fhir/StructureDefinition/unknown-ext",
+                "valueString": "test"
+            }
+        ]
+    });
+
+    let result = validator
+        .validate_auto(&patient)
+        .expect("Validation should succeed");
+
+    println!("Valid: {}", result.valid);
+    println!("Error count: {}", result.error_count());
+    for issue in &result.issues {
+        println!(
+            "  - {} {:?}: {}",
+            if issue.severity == Severity::Error {
+                "Error"
+            } else {
+                "Warning"
+            },
+            issue.code,
+            issue.message
+        );
+    }
+
+    // Should have an error for the unknown extension
+    let unknown_ext_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|i| i.severity == Severity::Error)
+        .filter(|i| {
+            i.message.contains("could not be found") || i.message.contains("not allowed here")
+        })
+        .collect();
+
+    assert!(
+        !unknown_ext_errors.is_empty(),
+        "Expected error for unknown extension from non-HL7 source"
+    );
+}
+
+#[test]
+fn test_unknown_extension_on_medication_request() {
+    // Use default validator (no additional profiles)
+    let validator = FhirValidator::default();
+
+    // MedicationRequest with unknown extensions (from target-ref-profile-empty test)
+    let med_request = json!({
+        "resourceType": "MedicationRequest",
+        "status": "active",
+        "intent": "plan",
+        "subject": { "reference": "Patient/1" },
+        "medicationCodeableConcept": {
+            "text": "Test medication"
+        },
+        "extension": [
+            {
+                "url": "http://fkcfhir.org/fhir/StructureDefinition/medEpisodeOfCare",
+                "valueReference": {
+                    "reference": "EpisodeOfCare/123"
+                }
+            }
+        ]
+    });
+
+    let result = validator
+        .validate_auto(&med_request)
+        .expect("Validation should succeed");
+
+    println!("Valid: {}", result.valid);
+    println!("Error count: {}", result.error_count());
+    for issue in &result.issues {
+        println!(
+            "  - {} {:?}: {} @ {}",
+            if issue.severity == Severity::Error {
+                "Error"
+            } else {
+                "Warning"
+            },
+            issue.code,
+            issue.message,
+            issue.path.as_deref().unwrap_or("(no path)")
+        );
+    }
+
+    // Should have an error for the unknown extension
+    let unknown_ext_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|i| i.severity == Severity::Error)
+        .filter(|i| {
+            i.message.contains("could not be found") || i.message.contains("not allowed here")
+        })
+        .collect();
+
+    assert!(
+        !unknown_ext_errors.is_empty(),
+        "Expected error for unknown extension from non-HL7 source on MedicationRequest"
+    );
+}
