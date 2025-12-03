@@ -297,6 +297,12 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        // Validate canonical URLs for conformance resources
+        let canonical_issues = validate_canonical_urls(resource, resource_type_name);
+        for issue in canonical_issues {
+            result = result.with_issue(issue);
+        }
+
         Ok(result)
     }
 
@@ -1216,6 +1222,9 @@ fn validate_string_security(value: &Value, current_path: &str) -> Vec<Validation
         Value::String(s) => {
             // Check for HTML-like content in strings
             // Look for patterns like <script>, <style>, <iframe>, etc.
+            // Note: Java validator has a "security-checks" option that controls
+            // whether this is an error (true) or information (false/default).
+            // Without that option, we default to error to be conservative.
             if contains_html_tags(s) {
                 issues.push(
                     ValidationIssue::error(
@@ -1886,6 +1895,214 @@ fn contains_html_tags(s: &str) -> bool {
     }
 
     false
+}
+
+fn validate_canonical_urls(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match resource_type {
+        "ValueSet" => {
+            issues.extend(validate_valueset_canonical_urls(resource));
+        }
+        "CodeSystem" => {
+            issues.extend(validate_codesystem_canonical_urls(resource));
+        }
+        "StructureDefinition"
+        | "CapabilityStatement"
+        | "OperationDefinition"
+        | "SearchParameter"
+        | "CompartmentDefinition"
+        | "ImplementationGuide"
+        | "GraphDefinition"
+        | "NamingSystem"
+        | "TerminologyCapabilities"
+        | "Questionnaire"
+        | "MessageDefinition"
+        | "ConceptMap"
+        | "ExampleScenario" => {
+            if let Some(url) = resource.get("url").and_then(|v| v.as_str()) {
+                if !is_canonical_url(url) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!(
+                                "Canonical URLs must be absolute URLs if they are not fragment references ({url})"
+                            ),
+                        )
+                        .with_path(format!("{resource_type}.url")),
+                    );
+                }
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+        for (idx, contained_resource) in contained.iter().enumerate() {
+            let contained_type = contained_resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Resource");
+
+            if let Some(url) = contained_resource.get("url").and_then(|v| v.as_str()) {
+                let requires_absolute = matches!(
+                    contained_type,
+                    "ValueSet"
+                        | "CodeSystem"
+                        | "StructureDefinition"
+                        | "CapabilityStatement"
+                        | "OperationDefinition"
+                        | "SearchParameter"
+                        | "CompartmentDefinition"
+                        | "ImplementationGuide"
+                        | "Questionnaire"
+                        | "MessageDefinition"
+                        | "ConceptMap"
+                );
+
+                let contained_path =
+                    format!("{resource_type}.contained[{idx}]/*{contained_type}*/.url");
+
+                if requires_absolute && !is_canonical_url(url) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!("Canonical URLs in contained resources must be absolute URLs if present ({url})"),
+                        )
+                        .with_path(contained_path.clone()),
+                    );
+                }
+
+                if let Some(uuid_issue) = validate_urn_uuid_format(url, &contained_path) {
+                    issues.push(uuid_issue);
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_valueset_canonical_urls(valueset: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(url) = valueset.get("url").and_then(|v| v.as_str()) {
+        if !is_canonical_url(url) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "Canonical URLs must be absolute URLs if they are not fragment references ({url})"
+                    ),
+                )
+                .with_path("ValueSet.url".to_string()),
+            );
+        }
+        if let Some(uuid_issue) = validate_urn_uuid_format(url, "ValueSet.url") {
+            issues.push(uuid_issue);
+        }
+    }
+
+    if let Some(compose) = valueset.get("compose") {
+        if let Some(includes) = compose.get("include").and_then(|v| v.as_array()) {
+            for (idx, include) in includes.iter().enumerate() {
+                if let Some(system) = include.get("system").and_then(|v| v.as_str()) {
+                    if system.starts_with('#') {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                "URI values in ValueSet.compose.include.system must be absolute. To reference a contained code system, use the full CodeSystem URL and reference it using the http://hl7.org/fhir/StructureDefinition/valueset-system extension".to_string(),
+                            )
+                            .with_path(format!("ValueSet.compose.include[{idx}]")),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_codesystem_canonical_urls(codesystem: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(url) = codesystem.get("url").and_then(|v| v.as_str()) {
+        if !is_canonical_url(url) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "Canonical URLs must be absolute URLs if they are not fragment references ({url})"
+                    ),
+                )
+                .with_path("CodeSystem.url".to_string()),
+            );
+        }
+        if let Some(uuid_issue) = validate_urn_uuid_format(url, "CodeSystem.url") {
+            issues.push(uuid_issue);
+        }
+    }
+
+    issues
+}
+
+fn is_canonical_url(url: &str) -> bool {
+    if url.is_empty() {
+        return false;
+    }
+    url.starts_with("http://") || url.starts_with("https://") || url.starts_with("urn:")
+}
+
+fn validate_urn_uuid_format(url: &str, path: &str) -> Option<ValidationIssue> {
+    if !url.starts_with("urn:uuid:") {
+        return None;
+    }
+
+    let uuid_part = &url[9..]; // Skip "urn:uuid:"
+
+    // UUID format: 8-4-4-4-12 hex chars with hyphens, all lowercase
+    // Pattern: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    if !is_valid_uuid(uuid_part) {
+        return Some(
+            ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("UUIDs must be valid and lowercase ({uuid_part})"),
+            )
+            .with_path(path.to_string()),
+        );
+    }
+
+    None
+}
+
+fn is_valid_uuid(s: &str) -> bool {
+    // UUID format: 8-4-4-4-12 (36 chars total including hyphens)
+    if s.len() != 36 {
+        return false;
+    }
+
+    let parts: Vec<&str> = s.split('-').collect();
+    if parts.len() != 5 {
+        return false;
+    }
+
+    // Expected lengths: 8-4-4-4-12
+    let expected_lengths = [8, 4, 4, 4, 12];
+    for (part, expected_len) in parts.iter().zip(expected_lengths.iter()) {
+        if part.len() != *expected_len {
+            return false;
+        }
+        // All characters must be lowercase hex
+        if !part
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        {
+            return false;
+        }
+    }
+
+    true
 }
 
 fn validate_primitive_format(
