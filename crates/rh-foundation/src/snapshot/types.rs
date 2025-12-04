@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinition {
     pub url: String,
+    #[serde(default)]
     pub name: String,
     #[serde(rename = "type")]
     pub type_: String,

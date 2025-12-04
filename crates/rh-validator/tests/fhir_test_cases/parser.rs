@@ -62,6 +62,9 @@ pub struct InlineOutcome {
     pub info_count: Option<usize>,
     #[serde(default)]
     pub output: Vec<serde_json::Value>,
+    /// Some inline outcomes use a nested "outcome" field with an OperationOutcome
+    #[serde(default)]
+    pub outcome: Option<serde_json::Value>,
 }
 
 fn default_true() -> bool {
@@ -328,7 +331,29 @@ impl ExpectedOutcome {
 impl InlineOutcome {
     /// Returns true if the inline outcome indicates validity (no errors).
     pub fn is_valid(&self) -> bool {
-        self.error_count.unwrap_or(0) == 0
+        // If error_count is explicitly set, use it
+        if let Some(ec) = self.error_count {
+            return ec == 0;
+        }
+
+        // Check if there's a nested outcome with issues
+        if let Some(outcome) = &self.outcome {
+            if let Some(issues) = outcome.get("issue").and_then(|i| i.as_array()) {
+                // Check if any issues are errors or fatal
+                let has_errors = issues.iter().any(|issue| {
+                    matches!(
+                        issue.get("severity").and_then(|s| s.as_str()),
+                        Some("error") | Some("fatal")
+                    )
+                });
+                return !has_errors;
+            }
+            // Outcome exists but no issues = valid
+            return true;
+        }
+
+        // Default: no error_count and no outcome = valid
+        true
     }
 }
 

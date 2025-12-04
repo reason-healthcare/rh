@@ -204,11 +204,14 @@ impl TestRunner {
             anyhow::bail!("Test file not found: {}", test_file_path.display());
         }
 
-        // Register supporting files from both `supporting` and `profiles` fields
-        let all_supporting: Vec<_> = test.supporting.iter().chain(test.profiles.iter()).collect();
+        // Register supporting files from `supporting`, `profiles`, and `profile.supporting` fields
+        // Also include the profile source if present
+        let all_supporting = test.get_supporting_files(validator_dir);
 
-        for supporting_file in all_supporting {
-            let supporting_path = validator_dir.join(supporting_file);
+        // Also add the profile source itself if present
+        let profile_source = test.get_profile_source_path(validator_dir);
+
+        for supporting_path in all_supporting.into_iter().chain(profile_source.into_iter()) {
             if supporting_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&supporting_path) {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
@@ -220,6 +223,11 @@ impl TestRunner {
                                 self.validator.register_valueset(&json);
                             }
                             Some("StructureDefinition") => {
+                                if self.config.verbose {
+                                    if let Some(url) = json.get("url").and_then(|u| u.as_str()) {
+                                        println!("    Registering profile: {url}");
+                                    }
+                                }
                                 self.validator.register_profile(&json);
                             }
                             Some("CodeSystem") => {
