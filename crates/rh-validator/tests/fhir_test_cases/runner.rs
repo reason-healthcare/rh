@@ -3,13 +3,14 @@ use std::path::Path;
 use std::time::Instant;
 
 use super::parser::{ExpectedOutcome, Manifest, TestCase};
-use rh_validator::{FhirValidator, ValidationResult};
+use rh_validator::{FhirValidator, TerminologyConfig, ValidationResult};
 
 #[derive(Debug, Clone, Default)]
 pub struct TestRunConfig {
     pub max_tests: Option<usize>,
     pub module_filter: Option<String>,
     pub verbose: bool,
+    pub use_terminology: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -101,8 +102,18 @@ pub struct TestRunner {
 
 impl TestRunner {
     pub fn new(profiles_dir: Option<&str>, config: TestRunConfig) -> Result<Self> {
-        let validator = FhirValidator::new(rh_validator::FhirVersion::R4, profiles_dir)
-            .context("Failed to create FhirValidator")?;
+        let terminology_config = if config.use_terminology {
+            Some(TerminologyConfig::mock())
+        } else {
+            None
+        };
+
+        let validator = FhirValidator::with_terminology(
+            rh_validator::FhirVersion::R4,
+            profiles_dir,
+            terminology_config,
+        )
+        .context("Failed to create FhirValidator")?;
 
         Ok(Self { validator, config })
     }
@@ -497,6 +508,7 @@ mod tests {
             max_tests: Some(5),
             verbose: true,
             module_filter: None,
+            use_terminology: false,
         };
 
         let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
@@ -526,6 +538,7 @@ mod tests {
             max_tests: Some(3),
             module_filter: Some("general".to_string()),
             verbose: true,
+            use_terminology: false,
         };
 
         let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
@@ -555,6 +568,7 @@ mod tests {
             max_tests: Some(50),
             verbose: true,
             module_filter: None,
+            use_terminology: false,
         };
 
         let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
@@ -585,6 +599,7 @@ mod tests {
             max_tests: Some(100),
             verbose: false, // Less verbose for larger runs
             module_filter: None,
+            use_terminology: false,
         };
 
         let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
@@ -615,6 +630,7 @@ mod tests {
             max_tests: None, // Run ALL tests
             verbose: false,
             module_filter: None,
+            use_terminology: false,
         };
 
         let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
@@ -628,5 +644,39 @@ mod tests {
 
         assert!(summary.total > 0, "Should have run some tests");
         println!("\nRan {} tests, {} passed", summary.total, summary.passed);
+    }
+
+    #[test]
+    #[cfg(feature = "fhir-test-cases")]
+    #[ignore] // Use --ignored to run this - will take several minutes
+    fn test_runner_all_with_terminology() {
+        use crate::fhir_test_cases::{ensure_test_cases, load_manifest};
+
+        let cache_dir = ensure_test_cases().expect("Failed to get test cases");
+        let validator_dir = cache_dir.join("validator");
+
+        let manifest = load_manifest(&validator_dir).expect("Failed to load manifest");
+
+        let config = TestRunConfig {
+            max_tests: None, // Run ALL tests
+            verbose: false,
+            module_filter: None,
+            use_terminology: true, // Enable mock terminology service
+        };
+
+        let mut runner = TestRunner::new(None, config).expect("Failed to create runner");
+
+        let summary = runner
+            .run_all(&manifest, &validator_dir)
+            .expect("Failed to run tests");
+
+        runner.print_summary(&summary);
+        runner.print_validator_comparison(&summary);
+
+        assert!(summary.total > 0, "Should have run some tests");
+        println!(
+            "\nRan {} tests with terminology, {} passed",
+            summary.total, summary.passed
+        );
     }
 }
