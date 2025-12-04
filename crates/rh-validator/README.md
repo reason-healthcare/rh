@@ -186,6 +186,52 @@ let validator = FhirValidator::with_terminology(
 
 **Note:** Without a terminology service configured, display name validation is skipped. This is the default behavior to avoid slow external API calls during basic validation.
 
+#### Postponed Terminology Features
+
+The following terminology validation features are **not currently implemented** and are deferred to a future phase:
+
+| Feature | Description | Why Postponed |
+|---------|-------------|---------------|
+| **ValueSet code validation** | Validating that codes in `ValueSet.compose.include.concept` exist in the referenced CodeSystem | Requires full CodeSystem lookups (e.g., validating SNOMED codes exist) |
+| **Code existence validation** | Validating that Coding.code values exist in their declared CodeSystem | Requires terminology server integration for external CodeSystems |
+| **ECL expression parsing** | Validating SNOMED CT Expression Constraint Language in ValueSet filters | Requires implementing full ECL parser and SNOMED CT integration |
+| **Profile auto-selection** | Automatically selecting profiles based on code patterns (e.g., vital signs codes triggering bodytemp profile) | Requires complex code-to-profile mapping rules |
+
+**Example: Profile Auto-Selection**
+
+The FHIR specification requires that certain observations automatically validate against specific profiles based on their codes. For example, the `obs-temp-bad` test case illustrates this:
+
+```json
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs"}]}],
+  "code": {
+    "coding": [{"system": "http://snomed.info/sct", "code": "276885007"}]  // Core body temperature SNOMED code
+  },
+  "valueQuantity": {"value": 36.0, "unit": "Cel", "system": "http://unitsofmeasure.org", "code": "Cel"}
+}
+```
+
+The Java validator recognizes SNOMED code `276885007` (Core body temperature) and automatically validates against the [Body Temperature profile](http://hl7.org/fhir/StructureDefinition/bodytemp). This profile **requires** LOINC code `8310-5` ("Body temperature") in addition to any SNOMED codes. The resource above is invalid because it lacks this "magic LOINC code".
+
+A valid body temperature observation must include both:
+```json
+"code": {
+  "coding": [
+    {"system": "http://loinc.org", "code": "8310-5"},           // Required magic code
+    {"system": "http://snomed.info/sct", "code": "276885007"}   // Additional code
+  ]
+}
+```
+
+Implementing this requires:
+1. A mapping from codes to auto-selected profiles
+2. Loading and parsing the target profiles (bodytemp, heartrate, etc.)
+3. Validating "magic code" requirements from those profiles
+
+These features will be addressed when full terminology server integration is implemented.
+
 ### OperationOutcome Output
 
 ```rust
