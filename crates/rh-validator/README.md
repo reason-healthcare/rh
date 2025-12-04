@@ -627,3 +627,17 @@ Licensed under either of Apache License, Version 2.0 or MIT license at your opti
 - [ ] Parallel processing
 - [ ] Integration APIs
 - [ ] Monitoring and metrics
+
+
+---
+
+TODO: to close the gap with the java implementation we have the following areas to focus on:
+
+* Terminology (many tests) - vs-bad-code, supplement tests, display-check tests
+* Measure/MeasureReport (8 FN) - mr-covid-*, measure-report-ihe
+* Profile/Extensions (6 FN) - ext-derived, hakan-se-*, patient-ig-bad
+* Additional Bindings (4 FN) - ai3, ai4, ai5, ai6
+* Slicing (4 FN) - sdoh-type-slice, ab-list-slicing
+* Questionnaire (4 FN) - q-enablewhen tests, quantity-qr tests
+* Reference Policy (2 FP) - needs fullUrl validation
+* Security (1 FP) - needs security-checks config option
