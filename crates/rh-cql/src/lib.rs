@@ -12,5 +12,6 @@
 
 pub mod elm;
 pub mod error;
+pub mod modelinfo;
 
 pub use error::{CqlError, Result};
