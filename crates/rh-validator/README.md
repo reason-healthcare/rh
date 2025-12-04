@@ -20,6 +20,13 @@ A high-performance FHIR (Fast Healthcare Interoperability Resources) validation 
 - **Slicing validation** - Discriminator-based slice matching
 - **Auto-detection** - Profiles from `meta.profile` or resource type
 
+#### Terminology Service Integration (Phase 11)
+- **Display name validation** - Validates Coding.display against CodeSystems
+- **Multiple backends** - Mock service for testing, HTTP client for production
+- **Persistent caching** - Disk-based cache to minimize API calls
+- **Configurable servers** - Support for tx.fhir.org or custom terminology servers
+- **Designation support** - Handles alternate displays and language variants
+
 #### CLI Integration (Phase 9)
 - **Command-line tool** - `rh validate resource` and `rh validate batch`
 - **Multiple formats** - text, json, operationoutcome
@@ -141,6 +148,44 @@ let (p_hits, p_misses, p_rate, r_hits, r_misses, r_rate) = validator.cache_metri
 println!("Cache hit rate: {:.1}%", p_rate * 100.0);
 ```
 
+### Terminology Service
+
+Configure a terminology server for display name and code validation:
+
+```rust
+use rh_validator::{FhirValidator, FhirVersion, TerminologyConfig};
+
+// Without terminology service (default) - display names not validated
+let validator = FhirValidator::new(FhirVersion::R4, None)?;
+
+// With mock terminology service (for testing)
+let validator = FhirValidator::with_terminology(
+    FhirVersion::R4,
+    None,
+    Some(TerminologyConfig::mock())
+)?;
+
+// With real terminology server and persistent cache
+let validator = FhirValidator::with_terminology(
+    FhirVersion::R4,
+    Some("~/.fhir/packages"),
+    Some(TerminologyConfig::fhir_tx().with_default_cache())
+)?;
+
+// With custom terminology server
+use std::path::PathBuf;
+let validator = FhirValidator::with_terminology(
+    FhirVersion::R4,
+    None,
+    Some(TerminologyConfig::with_server("https://my-tx.example.com/r4")
+        .with_cache_path(PathBuf::from("/tmp/terminology-cache")))
+)?;
+```
+
+**Cache location:** By default, `with_default_cache()` stores cache files in `~/.fhir/terminology-cache/`.
+
+**Note:** Without a terminology service configured, display name validation is skipped. This is the default behavior to avoid slow external API calls during basic validation.
+
 ### OperationOutcome Output
 
 ```rust
@@ -169,13 +214,14 @@ println!("{}", json);
 
 ## Examples
 
-The crate includes 5 comprehensive examples in the [`examples/`](examples/) directory:
+The crate includes 6 comprehensive examples in the [`examples/`](examples/) directory:
 
 - **`basic_validation.rs`** - Simple validation with minimal Patient resources
 - **`profile_validation.rs`** - US Core Patient profile validation
 - **`batch_validation.rs`** - Efficient multi-resource validation with caching
 - **`operation_outcome.rs`** - FHIR OperationOutcome output formats
 - **`custom_workflow.rs`** - Custom validation workflows with filtering and reporting
+- **`terminology_validation.rs`** - Terminology server integration and display validation
 
 Run examples:
 

@@ -44,15 +44,15 @@ urlencoding = "2.1"
 # HTTP client for terminology service
 reqwest = { workspace = true, features = ["blocking", "json"] }
 
+# Home directory for cache path
+dirs = "5.0"
+
 # Optional dependencies for FHIR test cases
 zip = { version = "0.6", optional = true }
 
 [dev-dependencies]
 # Testing with generated FHIR types
 hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }
-
-# Test utilities
-dirs = "5.0"
 
 # Benchmarking (to be added in Phase 8)
 criterion = { version = "0.5", features = ["html_reports"] }

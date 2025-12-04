@@ -8,10 +8,13 @@
 //! The trait can be implemented by:
 //! - `HttpTerminologyService` - Real HTTP client for production use
 //! - `MockTerminologyService` - Mock implementation for testing
+//! - `CachedTerminologyService` - Persistent disk cache wrapper for any service
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
 /// Result of a code validation operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -835,6 +838,8 @@ pub struct TerminologyConfig {
     pub server_url: Option<String>,
     /// Whether to use the mock service for testing
     pub use_mock: bool,
+    /// Path for persistent cache storage (None for in-memory only)
+    pub cache_path: Option<PathBuf>,
 }
 
 impl TerminologyConfig {
@@ -843,6 +848,7 @@ impl TerminologyConfig {
         Self {
             server_url: None,
             use_mock: true,
+            cache_path: None,
         }
     }
 
@@ -851,6 +857,7 @@ impl TerminologyConfig {
         Self {
             server_url: Some(url.to_string()),
             use_mock: false,
+            cache_path: None,
         }
     }
 
@@ -859,15 +866,287 @@ impl TerminologyConfig {
         Self::with_server("https://tx.fhir.org/r4")
     }
 
+    /// Set the cache path for persistent storage
+    pub fn with_cache_path(mut self, path: PathBuf) -> Self {
+        self.cache_path = Some(path);
+        self
+    }
+
+    /// Use the default cache path (~/.fhir/terminology-cache)
+    pub fn with_default_cache(mut self) -> Self {
+        if let Some(home) = dirs::home_dir() {
+            self.cache_path = Some(home.join(".fhir").join("terminology-cache"));
+        }
+        self
+    }
+
     /// Build the terminology service from this config
     pub fn build(&self) -> Option<Arc<dyn TerminologyService>> {
-        if self.use_mock {
-            Some(Arc::new(MockTerminologyService::with_common_codes()))
+        let base_service: Arc<dyn TerminologyService> = if self.use_mock {
+            Arc::new(MockTerminologyService::with_common_codes())
         } else if let Some(ref url) = self.server_url {
-            Some(Arc::new(HttpTerminologyService::new(url)))
+            Arc::new(HttpTerminologyService::new(url))
         } else {
-            None
+            return None;
+        };
+
+        // Wrap with cache if path is configured
+        if let Some(ref cache_path) = self.cache_path {
+            Some(Arc::new(CachedTerminologyService::new(
+                base_service,
+                cache_path.clone(),
+            )))
+        } else {
+            // Use in-memory cache even without disk persistence
+            Some(Arc::new(CachedTerminologyService::new_memory_only(
+                base_service,
+            )))
         }
+    }
+}
+
+/// Cache entry for terminology lookups
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CacheEntry<T> {
+    value: T,
+    #[allow(dead_code)]
+    timestamp: u64,
+}
+
+/// Persistent disk cache for terminology service results
+///
+/// This service wraps any `TerminologyService` and caches results to disk,
+/// significantly reducing API calls to external terminology servers.
+pub struct CachedTerminologyService {
+    inner: Arc<dyn TerminologyService>,
+    cache_path: Option<PathBuf>,
+    codesystem_cache: RwLock<HashMap<String, ValidateCodeResult>>,
+    valueset_cache: RwLock<HashMap<String, ValidateCodeResult>>,
+    lookup_cache: RwLock<HashMap<String, LookupResult>>,
+    hits: RwLock<usize>,
+    misses: RwLock<usize>,
+}
+
+impl CachedTerminologyService {
+    /// Create a new cached terminology service with disk persistence
+    pub fn new(inner: Arc<dyn TerminologyService>, cache_path: PathBuf) -> Self {
+        let service = Self {
+            inner,
+            cache_path: Some(cache_path.clone()),
+            codesystem_cache: RwLock::new(HashMap::new()),
+            valueset_cache: RwLock::new(HashMap::new()),
+            lookup_cache: RwLock::new(HashMap::new()),
+            hits: RwLock::new(0),
+            misses: RwLock::new(0),
+        };
+        service.load_from_disk();
+        service
+    }
+
+    /// Create a new cached terminology service with in-memory only caching
+    pub fn new_memory_only(inner: Arc<dyn TerminologyService>) -> Self {
+        Self {
+            inner,
+            cache_path: None,
+            codesystem_cache: RwLock::new(HashMap::new()),
+            valueset_cache: RwLock::new(HashMap::new()),
+            lookup_cache: RwLock::new(HashMap::new()),
+            hits: RwLock::new(0),
+            misses: RwLock::new(0),
+        }
+    }
+
+    /// Get cache metrics (hits, misses, hit_rate)
+    pub fn cache_metrics(&self) -> (usize, usize, f64) {
+        let hits = *self.hits.read().unwrap();
+        let misses = *self.misses.read().unwrap();
+        let total = hits + misses;
+        let rate = if total > 0 {
+            hits as f64 / total as f64
+        } else {
+            0.0
+        };
+        (hits, misses, rate)
+    }
+
+    fn cache_key_codesystem(system: &str, code: &str, display: Option<&str>) -> String {
+        format!("cs:{}#{}:{}", system, code, display.unwrap_or(""))
+    }
+
+    fn cache_key_valueset(
+        valueset_url: &str,
+        system: &str,
+        code: &str,
+        display: Option<&str>,
+    ) -> String {
+        format!(
+            "vs:{}|{}#{}:{}",
+            valueset_url,
+            system,
+            code,
+            display.unwrap_or("")
+        )
+    }
+
+    fn cache_key_lookup(system: &str, code: &str) -> String {
+        format!("lookup:{system}#{code}")
+    }
+
+    fn load_from_disk(&self) {
+        let Some(ref cache_path) = self.cache_path else {
+            return;
+        };
+
+        // Load codesystem cache
+        let cs_path = cache_path.join("codesystem_cache.json");
+        if let Ok(data) = fs::read_to_string(&cs_path) {
+            if let Ok(cache) = serde_json::from_str::<HashMap<String, ValidateCodeResult>>(&data) {
+                *self.codesystem_cache.write().unwrap() = cache;
+            }
+        }
+
+        // Load valueset cache
+        let vs_path = cache_path.join("valueset_cache.json");
+        if let Ok(data) = fs::read_to_string(&vs_path) {
+            if let Ok(cache) = serde_json::from_str::<HashMap<String, ValidateCodeResult>>(&data) {
+                *self.valueset_cache.write().unwrap() = cache;
+            }
+        }
+
+        // Load lookup cache
+        let lookup_path = cache_path.join("lookup_cache.json");
+        if let Ok(data) = fs::read_to_string(&lookup_path) {
+            if let Ok(cache) = serde_json::from_str::<HashMap<String, LookupResult>>(&data) {
+                *self.lookup_cache.write().unwrap() = cache;
+            }
+        }
+    }
+
+    fn save_to_disk(&self) {
+        let Some(ref cache_path) = self.cache_path else {
+            return;
+        };
+
+        // Ensure directory exists
+        if let Err(e) = fs::create_dir_all(cache_path) {
+            eprintln!("Failed to create cache directory: {e}");
+            return;
+        }
+
+        // Save codesystem cache
+        let cs_path = cache_path.join("codesystem_cache.json");
+        if let Ok(data) = serde_json::to_string(&*self.codesystem_cache.read().unwrap()) {
+            let _ = fs::write(&cs_path, data);
+        }
+
+        // Save valueset cache
+        let vs_path = cache_path.join("valueset_cache.json");
+        if let Ok(data) = serde_json::to_string(&*self.valueset_cache.read().unwrap()) {
+            let _ = fs::write(&vs_path, data);
+        }
+
+        // Save lookup cache
+        let lookup_path = cache_path.join("lookup_cache.json");
+        if let Ok(data) = serde_json::to_string(&*self.lookup_cache.read().unwrap()) {
+            let _ = fs::write(&lookup_path, data);
+        }
+    }
+}
+
+impl Drop for CachedTerminologyService {
+    fn drop(&mut self) {
+        self.save_to_disk();
+    }
+}
+
+impl TerminologyService for CachedTerminologyService {
+    fn validate_code_in_codesystem(
+        &self,
+        system: &str,
+        code: &str,
+        display: Option<&str>,
+    ) -> Result<ValidateCodeResult, TerminologyError> {
+        let key = Self::cache_key_codesystem(system, code, display);
+
+        // Check cache
+        if let Some(result) = self.codesystem_cache.read().unwrap().get(&key) {
+            *self.hits.write().unwrap() += 1;
+            return Ok(result.clone());
+        }
+
+        // Cache miss - call underlying service
+        *self.misses.write().unwrap() += 1;
+        let result = self
+            .inner
+            .validate_code_in_codesystem(system, code, display)?;
+
+        // Store in cache
+        self.codesystem_cache
+            .write()
+            .unwrap()
+            .insert(key, result.clone());
+
+        Ok(result)
+    }
+
+    fn validate_code_in_valueset(
+        &self,
+        valueset_url: &str,
+        system: &str,
+        code: &str,
+        display: Option<&str>,
+    ) -> Result<ValidateCodeResult, TerminologyError> {
+        let key = Self::cache_key_valueset(valueset_url, system, code, display);
+
+        // Check cache
+        if let Some(result) = self.valueset_cache.read().unwrap().get(&key) {
+            *self.hits.write().unwrap() += 1;
+            return Ok(result.clone());
+        }
+
+        // Cache miss - call underlying service
+        *self.misses.write().unwrap() += 1;
+        let result = self
+            .inner
+            .validate_code_in_valueset(valueset_url, system, code, display)?;
+
+        // Store in cache
+        self.valueset_cache
+            .write()
+            .unwrap()
+            .insert(key, result.clone());
+
+        Ok(result)
+    }
+
+    fn lookup_code(&self, system: &str, code: &str) -> Result<LookupResult, TerminologyError> {
+        let key = Self::cache_key_lookup(system, code);
+
+        // Check cache
+        if let Some(result) = self.lookup_cache.read().unwrap().get(&key) {
+            *self.hits.write().unwrap() += 1;
+            return Ok(result.clone());
+        }
+
+        // Cache miss - call underlying service
+        *self.misses.write().unwrap() += 1;
+        let result = self.inner.lookup_code(system, code)?;
+
+        // Store in cache
+        self.lookup_cache
+            .write()
+            .unwrap()
+            .insert(key, result.clone());
+
+        Ok(result)
+    }
+
+    fn supports_code_system(&self, system: &str) -> bool {
+        self.inner.supports_code_system(system)
+    }
+
+    fn supports_value_set(&self, valueset_url: &str) -> bool {
+        self.inner.supports_value_set(valueset_url)
     }
 }
 

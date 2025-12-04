@@ -43,11 +43,13 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
 use crate::rules::RuleCompiler;
+use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
 
@@ -112,6 +114,7 @@ pub struct FhirValidator {
     questionnaire_loader: crate::questionnaire::QuestionnaireLoader,
     fhirpath_parser: FhirPathParser,
     fhirpath_evaluator: FhirPathEvaluator,
+    terminology_service: Option<Arc<dyn TerminologyService>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -147,6 +150,45 @@ impl FhirValidator {
         fhir_version: crate::fhir_version::FhirVersion,
         packages_dir: Option<&str>,
     ) -> Result<Self> {
+        Self::with_terminology(fhir_version, packages_dir, None)
+    }
+
+    /// Creates a new FHIR validator with terminology service configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `fhir_version` - FHIR version to validate against (e.g., `FhirVersion::R4`)
+    /// * `packages_dir` - Optional path to FHIR packages directory
+    /// * `terminology_config` - Optional terminology service configuration. If `None`,
+    ///   terminology validation (display names, code membership) is skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use rh_validator::{FhirValidator, FhirVersion, TerminologyConfig};
+    ///
+    /// # fn main() -> anyhow::Result<()> {
+    /// // With mock terminology service (for testing)
+    /// let validator = FhirValidator::with_terminology(
+    ///     FhirVersion::R4,
+    ///     None,
+    ///     Some(TerminologyConfig::mock())
+    /// )?;
+    ///
+    /// // With real terminology server and persistent cache
+    /// let validator = FhirValidator::with_terminology(
+    ///     FhirVersion::R4,
+    ///     Some("~/.fhir/packages"),
+    ///     Some(TerminologyConfig::fhir_tx().with_default_cache())
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_terminology(
+        fhir_version: crate::fhir_version::FhirVersion,
+        packages_dir: Option<&str>,
+        terminology_config: Option<TerminologyConfig>,
+    ) -> Result<Self> {
         let mut package_dirs = if let Some(dir) = packages_dir {
             vec![PathBuf::from(dir)]
         } else {
@@ -165,6 +207,8 @@ impl FhirValidator {
             }
         }
 
+        let terminology_service = terminology_config.and_then(|config| config.build());
+
         Ok(Self {
             profile_registry: ProfileRegistry::new(fhir_version, packages_dir)?,
             rule_compiler: RuleCompiler::default(),
@@ -172,6 +216,7 @@ impl FhirValidator {
             questionnaire_loader: crate::questionnaire::QuestionnaireLoader::new(package_dirs, 50),
             fhirpath_parser: FhirPathParser::new(),
             fhirpath_evaluator: FhirPathEvaluator::new(),
+            terminology_service,
             fhir_version,
         })
     }
@@ -301,6 +346,15 @@ impl FhirValidator {
         let canonical_issues = validate_canonical_urls(resource, resource_type_name);
         for issue in canonical_issues {
             result = result.with_issue(issue);
+        }
+
+        // Terminology validation (display names) - only if terminology service is configured
+        if self.terminology_service.is_some() {
+            let terminology_issues =
+                self.validate_coding_displays(resource, resource_type_name, "");
+            for issue in terminology_issues {
+                result = result.with_issue(issue);
+            }
         }
 
         Ok(result)
@@ -2465,6 +2519,82 @@ fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
 }
 
 impl FhirValidator {
+    /// Validate display names for all Coding elements in the resource
+    fn validate_coding_displays(
+        &self,
+        value: &Value,
+        resource_type: &str,
+        path: &str,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        let Some(ref terminology_service) = self.terminology_service else {
+            return issues;
+        };
+
+        match value {
+            Value::Object(obj) => {
+                // Check if this is a Coding element
+                if let (Some(system), Some(code)) = (
+                    obj.get("system").and_then(|v| v.as_str()),
+                    obj.get("code").and_then(|v| v.as_str()),
+                ) {
+                    // If display is present, validate it
+                    if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
+                        if terminology_service.supports_code_system(system) {
+                            match terminology_service.validate_code_in_codesystem(
+                                system,
+                                code,
+                                Some(display),
+                            ) {
+                                Ok(result) => {
+                                    if !result.result {
+                                        if let Some(message) = result.message {
+                                            let current_path = if path.is_empty() {
+                                                format!("{resource_type}.display")
+                                            } else {
+                                                format!("{path}.display")
+                                            };
+                                            issues.push(
+                                                ValidationIssue::error(
+                                                    IssueCode::CodeInvalid,
+                                                    message,
+                                                )
+                                                .with_path(&current_path),
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    // Terminology service error - skip validation
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Recurse into object properties
+                for (key, child) in obj {
+                    let child_path = if path.is_empty() {
+                        format!("{resource_type}.{key}")
+                    } else {
+                        format!("{path}.{key}")
+                    };
+                    issues.extend(self.validate_coding_displays(child, resource_type, &child_path));
+                }
+            }
+            Value::Array(arr) => {
+                for (idx, item) in arr.iter().enumerate() {
+                    let item_path = format!("{path}[{idx}]");
+                    issues.extend(self.validate_coding_displays(item, resource_type, &item_path));
+                }
+            }
+            _ => {}
+        }
+
+        issues
+    }
+
     fn validate_binding_at_path(
         &self,
         resource: &Value,

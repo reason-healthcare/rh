@@ -14,8 +14,8 @@ pub use rules::{
     BindingRule, CardinalityRule, CompiledValidationRules, InvariantRule, RuleCompiler, TypeRule,
 };
 pub use terminology::{
-    MockTerminologyService, TerminologyConfig, TerminologyError, TerminologyService,
-    ValidateCodeResult,
+    CachedTerminologyService, MockTerminologyService, TerminologyConfig, TerminologyError,
+    TerminologyService, ValidateCodeResult,
 };
 pub use types::{IssueCode, Location, Severity, ValidationIssue, ValidationResult};
 pub use validator::FhirValidator;
