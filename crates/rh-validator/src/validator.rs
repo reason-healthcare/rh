@@ -115,6 +115,8 @@ pub struct FhirValidator {
     fhirpath_parser: FhirPathParser,
     fhirpath_evaluator: FhirPathEvaluator,
     terminology_service: Option<Arc<dyn TerminologyService>>,
+    /// CodeSystem supplements: supplement_url -> base_codesystem_url
+    supplements: std::sync::RwLock<std::collections::HashMap<String, String>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -217,6 +219,7 @@ impl FhirValidator {
             fhirpath_parser: FhirPathParser::new(),
             fhirpath_evaluator: FhirPathEvaluator::new(),
             terminology_service,
+            supplements: std::sync::RwLock::new(std::collections::HashMap::new()),
             fhir_version,
         })
     }
@@ -810,6 +813,25 @@ impl FhirValidator {
             serde_json::from_value::<rh_foundation::snapshot::StructureDefinition>(profile.clone())
         {
             self.profile_registry.register_profile(sd);
+        }
+    }
+
+    /// Register a CodeSystem resource, extracting supplement information if present.
+    ///
+    /// If the CodeSystem has a `supplements` property, it will be tracked so that
+    /// validation can detect when a supplement URL is incorrectly used in Coding.system.
+    pub fn register_codesystem(&self, codesystem: &Value) {
+        if codesystem.get("resourceType").and_then(|v| v.as_str()) == Some("CodeSystem") {
+            // Check if this CodeSystem is a supplement
+            if let (Some(url), Some(supplements)) = (
+                codesystem.get("url").and_then(|v| v.as_str()),
+                codesystem.get("supplements").and_then(|v| v.as_str()),
+            ) {
+                self.supplements
+                    .write()
+                    .unwrap()
+                    .insert(url.to_string(), supplements.to_string());
+            }
         }
     }
 
@@ -2528,9 +2550,9 @@ impl FhirValidator {
     ) -> Vec<ValidationIssue> {
         let mut issues = Vec::new();
 
-        let Some(ref terminology_service) = self.terminology_service else {
-            return issues;
-        };
+        // We need terminology service for display validation, but supplement checking
+        // can work without it using the local supplements map
+        let terminology_service = self.terminology_service.as_ref();
 
         match value {
             Value::Object(obj) => {
@@ -2539,34 +2561,71 @@ impl FhirValidator {
                     obj.get("system").and_then(|v| v.as_str()),
                     obj.get("code").and_then(|v| v.as_str()),
                 ) {
-                    // If display is present, validate it
-                    if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
-                        if terminology_service.supports_code_system(system) {
-                            match terminology_service.validate_code_in_codesystem(
-                                system,
-                                code,
-                                Some(display),
-                            ) {
-                                Ok(result) => {
-                                    if !result.result {
-                                        if let Some(message) = result.message {
-                                            let current_path = if path.is_empty() {
-                                                format!("{resource_type}.display")
-                                            } else {
-                                                format!("{path}.display")
-                                            };
-                                            issues.push(
-                                                ValidationIssue::error(
-                                                    IssueCode::CodeInvalid,
-                                                    message,
-                                                )
-                                                .with_path(&current_path),
-                                            );
+                    // Check if the system is a CodeSystem supplement (local tracking)
+                    if let Some(_base_cs) = self.supplements.read().unwrap().get(system).cloned() {
+                        let current_path = if path.is_empty() {
+                            format!("{resource_type}.system")
+                        } else {
+                            format!("{path}.system")
+                        };
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::NotFound,
+                                format!(
+                                    "CodeSystem {system} is a supplement, so can't be used as a value in Coding.system"
+                                ),
+                            )
+                            .with_path(&current_path),
+                        );
+                        // Don't continue checking this Coding since the system itself is invalid
+                    } else if let Some(ts) = terminology_service {
+                        // Also check terminology service for supplements
+                        if let Some(_base_cs) = ts.is_supplement(system) {
+                            let current_path = if path.is_empty() {
+                                format!("{resource_type}.system")
+                            } else {
+                                format!("{path}.system")
+                            };
+                            issues.push(
+                                ValidationIssue::error(
+                                    IssueCode::NotFound,
+                                    format!(
+                                        "CodeSystem {system} is a supplement, so can't be used as a value in Coding.system"
+                                    ),
+                                )
+                                .with_path(&current_path),
+                            );
+                        } else {
+                            // If display is present, validate it
+                            if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
+                                if ts.supports_code_system(system) {
+                                    match ts.validate_code_in_codesystem(
+                                        system,
+                                        code,
+                                        Some(display),
+                                    ) {
+                                        Ok(result) => {
+                                            if !result.result {
+                                                if let Some(message) = result.message {
+                                                    let current_path = if path.is_empty() {
+                                                        format!("{resource_type}.display")
+                                                    } else {
+                                                        format!("{path}.display")
+                                                    };
+                                                    issues.push(
+                                                        ValidationIssue::error(
+                                                            IssueCode::CodeInvalid,
+                                                            message,
+                                                        )
+                                                        .with_path(&current_path),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(_) => {
+                                            // Terminology service error - skip validation
                                         }
                                     }
-                                }
-                                Err(_) => {
-                                    // Terminology service error - skip validation
                                 }
                             }
                         }

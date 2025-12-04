@@ -128,6 +128,23 @@ pub trait TerminologyService: Send + Sync {
 
     /// Check if this service supports a given value set
     fn supports_value_set(&self, valueset_url: &str) -> bool;
+
+    /// Check if a CodeSystem URL is a supplement (cannot be used directly in Coding.system)
+    ///
+    /// # Arguments
+    /// * `system` - The CodeSystem URL to check
+    ///
+    /// # Returns
+    /// Some(base_url) if this is a supplement (with the URL of the base CodeSystem),
+    /// None if it's not a supplement or unknown
+    fn is_supplement(&self, system: &str) -> Option<String>;
+
+    /// Register a CodeSystem as a supplement
+    ///
+    /// # Arguments
+    /// * `system` - The CodeSystem URL
+    /// * `supplements` - The URL of the CodeSystem this supplements
+    fn register_supplement(&mut self, system: &str, supplements: &str);
 }
 
 /// A mock terminology service for testing
@@ -140,6 +157,8 @@ pub struct MockTerminologyService {
     codes: HashMap<String, HashMap<String, CodeInfo>>,
     /// Known value sets: valueset_url -> set of (system, code)
     value_sets: HashMap<String, Vec<(String, String)>>,
+    /// CodeSystem supplements: supplement_url -> base_codesystem_url
+    supplements: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -539,6 +558,15 @@ impl TerminologyService for MockTerminologyService {
     fn supports_value_set(&self, valueset_url: &str) -> bool {
         self.value_sets.contains_key(valueset_url)
     }
+
+    fn is_supplement(&self, system: &str) -> Option<String> {
+        self.supplements.get(system).cloned()
+    }
+
+    fn register_supplement(&mut self, system: &str, supplements: &str) {
+        self.supplements
+            .insert(system.to_string(), supplements.to_string());
+    }
 }
 
 /// HTTP-based terminology service client
@@ -683,6 +711,17 @@ impl TerminologyService for HttpTerminologyService {
     fn supports_value_set(&self, _valueset_url: &str) -> bool {
         // HTTP service potentially supports all value sets
         true
+    }
+
+    fn is_supplement(&self, _system: &str) -> Option<String> {
+        // HTTP service doesn't track supplements locally
+        // Would need to query the server to find out
+        None
+    }
+
+    fn register_supplement(&mut self, _system: &str, _supplements: &str) {
+        // HTTP service doesn't store supplements locally
+        // This would require server-side tracking
     }
 }
 
@@ -1147,6 +1186,20 @@ impl TerminologyService for CachedTerminologyService {
 
     fn supports_value_set(&self, valueset_url: &str) -> bool {
         self.inner.supports_value_set(valueset_url)
+    }
+
+    fn is_supplement(&self, system: &str) -> Option<String> {
+        self.inner.is_supplement(system)
+    }
+
+    fn register_supplement(&mut self, system: &str, supplements: &str) {
+        // CachedTerminologyService wraps the inner service
+        // For supplements, we need to delegate but the inner service is behind Arc
+        // Since supplements are typically registered during setup, we can't modify
+        // the inner service. This is a limitation of the current design.
+        // For now, we'll skip this - supplements should be registered on the inner
+        // service before wrapping with cache.
+        let _ = (system, supplements);
     }
 }
 

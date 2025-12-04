@@ -222,6 +222,9 @@ impl TestRunner {
                             Some("StructureDefinition") => {
                                 self.validator.register_profile(&json);
                             }
+                            Some("CodeSystem") => {
+                                self.validator.register_codesystem(&json);
+                            }
                             _ => {}
                         }
                     }
