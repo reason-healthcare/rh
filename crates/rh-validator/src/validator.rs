@@ -1365,7 +1365,35 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
                 .get("resourceType")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Resource");
+            let resource_id = resource.get("id").and_then(|v| v.as_str());
             let resource_path = format!("{entry_path}.resource/*{resource_type}*/");
+
+            // Searchset bundles: resources must have ids
+            // Exception: OperationOutcome resources don't need ids when used as outcome entries
+            // (either explicitly marked with search.mode=outcome, or implicitly when no search mode is specified)
+            if bundle_type == "searchset" {
+                let search = entry.get("search");
+                let search_mode = search.and_then(|s| s.get("mode")).and_then(|m| m.as_str());
+
+                let is_operation_outcome = resource_type == "OperationOutcome";
+
+                // OperationOutcome doesn't need an id if:
+                // 1. search.mode is explicitly "outcome", OR
+                // 2. no search element exists (implicit outcome)
+                let exempt_from_id =
+                    is_operation_outcome && (search_mode == Some("outcome") || search.is_none());
+
+                if resource_id.is_none() && !exempt_from_id {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            "Search results must have ids".to_string(),
+                        )
+                        .with_path(format!("{entry_path}.resource")),
+                    );
+                }
+            }
+
             validate_bundle_references(
                 resource,
                 &resource_path,
@@ -1494,7 +1522,7 @@ fn validate_bundle_references(
     current_path: &str,
     available_resources: &std::collections::HashSet<String>,
     resource_counts: &std::collections::HashMap<String, usize>,
-    _bundle_type: &str,
+    bundle_type: &str,
     issues: &mut Vec<ValidationIssue>,
 ) {
     match value {
@@ -1532,8 +1560,13 @@ fn validate_bundle_references(
                         }
                     }
 
-                    // Check if reference can be resolved within the bundle
-                    if !available_resources.contains(ref_value)
+                    // Only require reference resolution for document bundles
+                    // Other bundle types (transaction, batch, searchset, collection, etc.)
+                    // may reference resources that exist on the server but aren't in the bundle
+                    let requires_resolution = bundle_type == "document";
+
+                    if requires_resolution
+                        && !available_resources.contains(ref_value)
                         && !available_resources.contains(ref_without_history)
                     {
                         issues.push(
@@ -1555,7 +1588,7 @@ fn validate_bundle_references(
                     &child_path,
                     available_resources,
                     resource_counts,
-                    _bundle_type,
+                    bundle_type,
                     issues,
                 );
             }
@@ -1568,7 +1601,7 @@ fn validate_bundle_references(
                     &child_path,
                     available_resources,
                     resource_counts,
-                    _bundle_type,
+                    bundle_type,
                     issues,
                 );
             }
