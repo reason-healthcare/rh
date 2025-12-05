@@ -28,10 +28,12 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Type resolution by name (resolve_type, resolve_class)
   - *Note: Memory provider pattern in rh-foundation for WASM compatibility and reuse across crates*
 
-- [ ] **1.4 DataType System**
-  - Internal DataType enum
-  - Type compatibility checking
-  - Implicit conversion map
+- [x] **1.4 DataType System**
+  - Internal DataType enum (System, Model, List, Interval, Tuple, Choice, TypeParameter)
+  - SystemType enum with all CQL primitives (Any, Boolean, Integer, Long, Decimal, String, Date, DateTime, Time, Quantity, Ratio, Code, Concept, Vocabulary)
+  - Type compatibility checking (is_subtype_of, can_convert_to)
+  - Common type resolution (common_type)
+  - Implicit conversion map (Integer→Long→Decimal, Date→DateTime, Code→Concept)
 
 ### Phase 2: CQL Parser
 **Goal**: Parse CQL source into AST using `nom` (consistent with rh-fhirpath)
