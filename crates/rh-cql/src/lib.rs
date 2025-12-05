@@ -21,6 +21,7 @@
 //! - [`parser`]: CQL parser using nom combinators
 //! - [`preprocessor`]: Preprocessor for extracting library info from AST
 //! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
+//! - [`types`]: Type resolution for CQL semantic analysis
 
 pub mod builder;
 pub mod datatype;
@@ -31,6 +32,7 @@ pub mod modelinfo;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
+pub mod types;
 
 pub use builder::{
     BuilderError, BuilderResult, FunctionSignature, LibraryBuilder, ResolvedIdentifier, Scope,
@@ -51,3 +53,4 @@ pub use preprocessor::{
 pub use provider::{
     fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
 };
+pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
