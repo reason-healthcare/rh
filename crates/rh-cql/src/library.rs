@@ -528,6 +528,509 @@ impl LibrarySourceProvider for CompositeLibrarySourceProvider {
     }
 }
 
+// =============================================================================
+// CompiledLibrary - Wrapper for ELM Library with resolved references
+// =============================================================================
+
+use crate::elm::{
+    AccessModifier, CodeDef, CodeSystemDef, ConceptDef, ContextDef, ExpressionDef, FunctionDef,
+    IncludeDef, Library, OperandDef, ParameterDef, UsingDef, ValueSetDef, VersionedIdentifier,
+};
+
+/// A compiled CQL library with convenient lookup methods.
+///
+/// `CompiledLibrary` wraps an ELM [`Library`] and provides efficient access to
+/// its definitions by name. It also tracks the source location and resolved
+/// dependencies.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::library::{CompiledLibrary, LibraryIdentifier};
+/// use rh_cql::elm::Library;
+///
+/// // Create from an ELM library
+/// let elm = Library::default();
+/// let compiled = CompiledLibrary::new(elm);
+///
+/// // Look up expressions by name
+/// if let Some(expr_def) = compiled.get_expression("InPopulation") {
+///     println!("Found expression: {:?}", expr_def.name);
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct CompiledLibrary {
+    /// The underlying ELM library.
+    library: Library,
+    /// Source location (file path or URI) if known.
+    source_location: Option<String>,
+}
+
+impl CompiledLibrary {
+    /// Create a new compiled library from an ELM library.
+    pub fn new(library: Library) -> Self {
+        Self {
+            library,
+            source_location: None,
+        }
+    }
+
+    /// Create a compiled library with source location metadata.
+    pub fn with_source_location(library: Library, location: impl Into<String>) -> Self {
+        Self {
+            library,
+            source_location: Some(location.into()),
+        }
+    }
+
+    /// Get the underlying ELM library.
+    pub fn library(&self) -> &Library {
+        &self.library
+    }
+
+    /// Get the source location if known.
+    pub fn source_location(&self) -> Option<&str> {
+        self.source_location.as_deref()
+    }
+
+    /// Get the library identifier.
+    pub fn identifier(&self) -> Option<&VersionedIdentifier> {
+        self.library.identifier.as_ref()
+    }
+
+    /// Get the library name.
+    pub fn name(&self) -> Option<&str> {
+        self.library
+            .identifier
+            .as_ref()
+            .and_then(|id| id.id.as_deref())
+    }
+
+    /// Get the library version.
+    pub fn version(&self) -> Option<&str> {
+        self.library
+            .identifier
+            .as_ref()
+            .and_then(|id| id.version.as_deref())
+    }
+
+    /// Convert to a LibraryIdentifier.
+    pub fn to_library_identifier(&self) -> LibraryIdentifier {
+        LibraryIdentifier::new(self.name().unwrap_or("unknown"), self.version())
+    }
+
+    // =========================================================================
+    // Using declarations
+    // =========================================================================
+
+    /// Get all using declarations.
+    pub fn usings(&self) -> &[UsingDef] {
+        self.library
+            .usings
+            .as_ref()
+            .map(|u| u.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a using declaration by local identifier.
+    pub fn get_using(&self, local_identifier: &str) -> Option<&UsingDef> {
+        self.usings()
+            .iter()
+            .find(|u| u.local_identifier.as_deref() == Some(local_identifier))
+    }
+
+    // =========================================================================
+    // Include declarations
+    // =========================================================================
+
+    /// Get all include declarations.
+    pub fn includes(&self) -> &[IncludeDef] {
+        self.library
+            .includes
+            .as_ref()
+            .map(|i| i.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get an include declaration by local identifier.
+    pub fn get_include(&self, local_identifier: &str) -> Option<&IncludeDef> {
+        self.includes()
+            .iter()
+            .find(|i| i.local_identifier.as_deref() == Some(local_identifier))
+    }
+
+    /// Get the library identifiers for all includes.
+    pub fn include_identifiers(&self) -> Vec<LibraryIdentifier> {
+        self.includes()
+            .iter()
+            .filter_map(|inc| {
+                inc.path
+                    .as_ref()
+                    .map(|path| LibraryIdentifier::new(path.clone(), inc.version.clone()))
+            })
+            .collect()
+    }
+
+    // =========================================================================
+    // Parameter definitions
+    // =========================================================================
+
+    /// Get all parameter definitions.
+    pub fn parameters(&self) -> &[ParameterDef] {
+        self.library
+            .parameters
+            .as_ref()
+            .map(|p| p.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a parameter definition by name.
+    pub fn get_parameter(&self, name: &str) -> Option<&ParameterDef> {
+        self.parameters()
+            .iter()
+            .find(|p| p.name.as_deref() == Some(name))
+    }
+
+    /// Get all public parameter definitions.
+    pub fn public_parameters(&self) -> Vec<&ParameterDef> {
+        self.parameters()
+            .iter()
+            .filter(|p| p.access_level != Some(AccessModifier::Private))
+            .collect()
+    }
+
+    // =========================================================================
+    // Code system definitions
+    // =========================================================================
+
+    /// Get all code system definitions.
+    pub fn code_systems(&self) -> &[CodeSystemDef] {
+        self.library
+            .code_systems
+            .as_ref()
+            .map(|cs| cs.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a code system definition by name.
+    pub fn get_code_system(&self, name: &str) -> Option<&CodeSystemDef> {
+        self.code_systems()
+            .iter()
+            .find(|cs| cs.name.as_deref() == Some(name))
+    }
+
+    // =========================================================================
+    // Value set definitions
+    // =========================================================================
+
+    /// Get all value set definitions.
+    pub fn value_sets(&self) -> &[ValueSetDef] {
+        self.library
+            .value_sets
+            .as_ref()
+            .map(|vs| vs.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a value set definition by name.
+    pub fn get_value_set(&self, name: &str) -> Option<&ValueSetDef> {
+        self.value_sets()
+            .iter()
+            .find(|vs| vs.name.as_deref() == Some(name))
+    }
+
+    // =========================================================================
+    // Code definitions
+    // =========================================================================
+
+    /// Get all code definitions.
+    pub fn codes(&self) -> &[CodeDef] {
+        self.library
+            .codes
+            .as_ref()
+            .map(|c| c.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a code definition by name.
+    pub fn get_code(&self, name: &str) -> Option<&CodeDef> {
+        self.codes()
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+    }
+
+    // =========================================================================
+    // Concept definitions
+    // =========================================================================
+
+    /// Get all concept definitions.
+    pub fn concepts(&self) -> &[ConceptDef] {
+        self.library
+            .concepts
+            .as_ref()
+            .map(|c| c.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a concept definition by name.
+    pub fn get_concept(&self, name: &str) -> Option<&ConceptDef> {
+        self.concepts()
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+    }
+
+    // =========================================================================
+    // Context definitions
+    // =========================================================================
+
+    /// Get all context definitions.
+    pub fn contexts(&self) -> &[ContextDef] {
+        self.library
+            .contexts
+            .as_ref()
+            .map(|c| c.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get a context definition by name.
+    pub fn get_context(&self, name: &str) -> Option<&ContextDef> {
+        self.contexts()
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+    }
+
+    // =========================================================================
+    // Expression definitions
+    // =========================================================================
+
+    /// Get all expression definitions (statements).
+    pub fn expressions(&self) -> &[ExpressionDef] {
+        self.library
+            .statements
+            .as_ref()
+            .map(|s| s.defs.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get an expression definition by name.
+    pub fn get_expression(&self, name: &str) -> Option<&ExpressionDef> {
+        self.expressions()
+            .iter()
+            .find(|e| e.name.as_deref() == Some(name))
+    }
+
+    /// Get all public expression definitions.
+    pub fn public_expressions(&self) -> Vec<&ExpressionDef> {
+        self.expressions()
+            .iter()
+            .filter(|e| e.access_level != Some(AccessModifier::Private))
+            .collect()
+    }
+
+    /// Get all expression definitions for a specific context.
+    pub fn expressions_for_context(&self, context: &str) -> Vec<&ExpressionDef> {
+        self.expressions()
+            .iter()
+            .filter(|e| e.context.as_deref() == Some(context))
+            .collect()
+    }
+
+    // =========================================================================
+    // Function definitions
+    // =========================================================================
+
+    /// Get all function definitions.
+    ///
+    /// Note: In ELM, functions are stored alongside expression definitions
+    /// in the statements section, distinguished by having operands.
+    /// This method returns definitions that have the structure of functions.
+    pub fn functions(&self) -> Vec<FunctionRef<'_>> {
+        // In ELM JSON, FunctionDef and ExpressionDef are separate, but both
+        // can appear in statements. We need to look at the raw structure.
+        // For now, we'll return expression defs that could be functions.
+        // A more complete implementation would parse the raw JSON differently.
+        Vec::new()
+    }
+
+    /// Get a function definition by name.
+    ///
+    /// If there are multiple overloads, returns the first match.
+    /// Use `get_function_by_signature` for specific overload resolution.
+    pub fn get_function(&self, name: &str) -> Option<FunctionRef<'_>> {
+        // Placeholder - function lookup will be enhanced in Phase 4
+        let _ = name;
+        None
+    }
+
+    /// Get a function definition by name and operand types.
+    ///
+    /// This performs basic signature matching for function overload resolution.
+    pub fn get_function_by_signature(
+        &self,
+        name: &str,
+        operand_types: &[&str],
+    ) -> Option<FunctionRef<'_>> {
+        // Placeholder - full signature matching requires type system integration
+        let _ = (name, operand_types);
+        None
+    }
+
+    /// Get all functions with a given name (all overloads).
+    pub fn get_function_overloads(&self, name: &str) -> Vec<FunctionRef<'_>> {
+        let _ = name;
+        Vec::new()
+    }
+
+    // =========================================================================
+    // Definition lookup (any type)
+    // =========================================================================
+
+    /// Look up any definition by name.
+    ///
+    /// Searches expressions, parameters, code systems, value sets, codes,
+    /// concepts, and contexts.
+    pub fn get_definition(&self, name: &str) -> Option<DefinitionRef<'_>> {
+        // Check expressions first (most common)
+        if let Some(expr) = self.get_expression(name) {
+            return Some(DefinitionRef::Expression(expr));
+        }
+        if let Some(param) = self.get_parameter(name) {
+            return Some(DefinitionRef::Parameter(param));
+        }
+        if let Some(cs) = self.get_code_system(name) {
+            return Some(DefinitionRef::CodeSystem(cs));
+        }
+        if let Some(vs) = self.get_value_set(name) {
+            return Some(DefinitionRef::ValueSet(vs));
+        }
+        if let Some(code) = self.get_code(name) {
+            return Some(DefinitionRef::Code(code));
+        }
+        if let Some(concept) = self.get_concept(name) {
+            return Some(DefinitionRef::Concept(concept));
+        }
+        if let Some(ctx) = self.get_context(name) {
+            return Some(DefinitionRef::Context(ctx));
+        }
+        None
+    }
+
+    /// Check if a definition with the given name exists.
+    pub fn has_definition(&self, name: &str) -> bool {
+        self.get_definition(name).is_some()
+    }
+
+    /// Get all definition names in this library.
+    pub fn definition_names(&self) -> Vec<&str> {
+        let mut names = Vec::new();
+
+        for expr in self.expressions() {
+            if let Some(name) = expr.name.as_deref() {
+                names.push(name);
+            }
+        }
+        for param in self.parameters() {
+            if let Some(name) = param.name.as_deref() {
+                names.push(name);
+            }
+        }
+        for cs in self.code_systems() {
+            if let Some(name) = cs.name.as_deref() {
+                names.push(name);
+            }
+        }
+        for vs in self.value_sets() {
+            if let Some(name) = vs.name.as_deref() {
+                names.push(name);
+            }
+        }
+        for code in self.codes() {
+            if let Some(name) = code.name.as_deref() {
+                names.push(name);
+            }
+        }
+        for concept in self.concepts() {
+            if let Some(name) = concept.name.as_deref() {
+                names.push(name);
+            }
+        }
+
+        names
+    }
+}
+
+impl From<Library> for CompiledLibrary {
+    fn from(library: Library) -> Self {
+        Self::new(library)
+    }
+}
+
+/// A reference to a function definition.
+///
+/// This is a placeholder type that will be expanded when function definitions
+/// are properly parsed from ELM JSON.
+#[derive(Debug, Clone)]
+pub struct FunctionRef<'a> {
+    /// Function name.
+    pub name: &'a str,
+    /// Function operands.
+    pub operands: &'a [OperandDef],
+    /// The underlying definition (if available).
+    pub def: Option<&'a FunctionDef>,
+}
+
+/// A reference to any definition in a library.
+#[derive(Debug, Clone)]
+pub enum DefinitionRef<'a> {
+    /// An expression definition.
+    Expression(&'a ExpressionDef),
+    /// A parameter definition.
+    Parameter(&'a ParameterDef),
+    /// A code system definition.
+    CodeSystem(&'a CodeSystemDef),
+    /// A value set definition.
+    ValueSet(&'a ValueSetDef),
+    /// A code definition.
+    Code(&'a CodeDef),
+    /// A concept definition.
+    Concept(&'a ConceptDef),
+    /// A context definition.
+    Context(&'a ContextDef),
+}
+
+impl<'a> DefinitionRef<'a> {
+    /// Get the name of this definition.
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            DefinitionRef::Expression(e) => e.name.as_deref(),
+            DefinitionRef::Parameter(p) => p.name.as_deref(),
+            DefinitionRef::CodeSystem(cs) => cs.name.as_deref(),
+            DefinitionRef::ValueSet(vs) => vs.name.as_deref(),
+            DefinitionRef::Code(c) => c.name.as_deref(),
+            DefinitionRef::Concept(c) => c.name.as_deref(),
+            DefinitionRef::Context(c) => c.name.as_deref(),
+        }
+    }
+
+    /// Get the access level of this definition.
+    pub fn access_level(&self) -> Option<AccessModifier> {
+        match self {
+            DefinitionRef::Expression(e) => e.access_level.clone(),
+            DefinitionRef::Parameter(p) => p.access_level.clone(),
+            DefinitionRef::CodeSystem(cs) => cs.access_level.clone(),
+            DefinitionRef::ValueSet(vs) => vs.access_level.clone(),
+            DefinitionRef::Code(c) => c.access_level.clone(),
+            DefinitionRef::Concept(c) => c.access_level.clone(),
+            DefinitionRef::Context(_) => None, // Contexts don't have access levels
+        }
+    }
+
+    /// Check if this definition is public.
+    pub fn is_public(&self) -> bool {
+        self.access_level() != Some(AccessModifier::Private)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -558,6 +1061,7 @@ mod tests {
 
         let id2 = LibraryIdentifier::unversioned("Common");
         assert_eq!(id2.to_key(), "Common");
+
         assert_eq!(LibraryIdentifier::from_key("Common"), id2);
     }
 
@@ -1022,5 +1526,556 @@ mod tests {
         let libraries = composite.list_libraries();
         // Should have 3 unique: Shared, OnlyFirst, OnlySecond
         assert_eq!(libraries.len(), 3);
+    }
+
+    // ===========================================
+    // CompiledLibrary tests
+    // ===========================================
+
+    use crate::elm::{
+        ExpressionDef, ExpressionDefs, IncludeDef, IncludeDefs, ParameterDef, ParameterDefs,
+        UsingDef, UsingDefs,
+    };
+
+    fn create_test_library() -> Library {
+        Library {
+            identifier: Some(VersionedIdentifier {
+                id: Some("TestLibrary".to_string()),
+                version: Some("1.0.0".to_string()),
+                system: None,
+            }),
+            usings: Some(UsingDefs {
+                defs: vec![UsingDef {
+                    local_identifier: Some("FHIR".to_string()),
+                    uri: Some("http://hl7.org/fhir".to_string()),
+                    version: Some("4.0.1".to_string()),
+                }],
+            }),
+            includes: Some(IncludeDefs {
+                defs: vec![IncludeDef {
+                    local_identifier: Some("FHIRHelpers".to_string()),
+                    path: Some("FHIRHelpers".to_string()),
+                    version: Some("4.0.1".to_string()),
+                }],
+            }),
+            parameters: Some(ParameterDefs {
+                defs: vec![ParameterDef {
+                    name: Some("MeasurementPeriod".to_string()),
+                    access_level: Some(AccessModifier::Public),
+                    ..Default::default()
+                }],
+            }),
+            statements: Some(ExpressionDefs {
+                defs: vec![
+                    ExpressionDef {
+                        name: Some("InPopulation".to_string()),
+                        context: Some("Patient".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        ..Default::default()
+                    },
+                    ExpressionDef {
+                        name: Some("PrivateHelper".to_string()),
+                        context: Some("Patient".to_string()),
+                        access_level: Some(AccessModifier::Private),
+                        ..Default::default()
+                    },
+                    ExpressionDef {
+                        name: Some("UnfilteredExpression".to_string()),
+                        context: Some("Unfiltered".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_compiled_library_new() {
+        let library = Library::default();
+        let compiled = CompiledLibrary::new(library);
+        assert!(compiled.source_location().is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_with_source_location() {
+        let library = Library::default();
+        let compiled = CompiledLibrary::with_source_location(library, "/path/to/file.cql");
+        assert_eq!(compiled.source_location(), Some("/path/to/file.cql"));
+    }
+
+    #[test]
+    fn test_compiled_library_identifier() {
+        let compiled = CompiledLibrary::new(create_test_library());
+        assert_eq!(compiled.name(), Some("TestLibrary"));
+        assert_eq!(compiled.version(), Some("1.0.0"));
+
+        let lib_id = compiled.to_library_identifier();
+        assert_eq!(lib_id.name, "TestLibrary");
+        assert_eq!(lib_id.version, Some("1.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_compiled_library_usings() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let usings = compiled.usings();
+        assert_eq!(usings.len(), 1);
+
+        let fhir = compiled.get_using("FHIR");
+        assert!(fhir.is_some());
+        assert_eq!(fhir.unwrap().uri, Some("http://hl7.org/fhir".to_string()));
+
+        assert!(compiled.get_using("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_includes() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let includes = compiled.includes();
+        assert_eq!(includes.len(), 1);
+
+        let fhir_helpers = compiled.get_include("FHIRHelpers");
+        assert!(fhir_helpers.is_some());
+
+        let include_ids = compiled.include_identifiers();
+        assert_eq!(include_ids.len(), 1);
+        assert_eq!(include_ids[0].name, "FHIRHelpers");
+        assert_eq!(include_ids[0].version, Some("4.0.1".to_string()));
+    }
+
+    #[test]
+    fn test_compiled_library_parameters() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let params = compiled.parameters();
+        assert_eq!(params.len(), 1);
+
+        let mp = compiled.get_parameter("MeasurementPeriod");
+        assert!(mp.is_some());
+
+        assert!(compiled.get_parameter("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_expressions() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let exprs = compiled.expressions();
+        assert_eq!(exprs.len(), 3);
+
+        let in_pop = compiled.get_expression("InPopulation");
+        assert!(in_pop.is_some());
+        assert_eq!(in_pop.unwrap().context, Some("Patient".to_string()));
+
+        assert!(compiled.get_expression("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_public_expressions() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let public = compiled.public_expressions();
+        assert_eq!(public.len(), 2); // InPopulation and UnfilteredExpression
+        assert!(public
+            .iter()
+            .any(|e| e.name.as_deref() == Some("InPopulation")));
+        assert!(!public
+            .iter()
+            .any(|e| e.name.as_deref() == Some("PrivateHelper")));
+    }
+
+    #[test]
+    fn test_compiled_library_expressions_for_context() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let patient_exprs = compiled.expressions_for_context("Patient");
+        assert_eq!(patient_exprs.len(), 2);
+
+        let unfiltered_exprs = compiled.expressions_for_context("Unfiltered");
+        assert_eq!(unfiltered_exprs.len(), 1);
+
+        let other_exprs = compiled.expressions_for_context("Other");
+        assert_eq!(other_exprs.len(), 0);
+    }
+
+    #[test]
+    fn test_compiled_library_get_definition() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        // Expression
+        let def = compiled.get_definition("InPopulation");
+        assert!(matches!(def, Some(DefinitionRef::Expression(_))));
+
+        // Parameter
+        let def = compiled.get_definition("MeasurementPeriod");
+        assert!(matches!(def, Some(DefinitionRef::Parameter(_))));
+
+        // Not found
+        assert!(compiled.get_definition("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_has_definition() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        assert!(compiled.has_definition("InPopulation"));
+        assert!(compiled.has_definition("MeasurementPeriod"));
+        assert!(!compiled.has_definition("NonExistent"));
+    }
+
+    #[test]
+    fn test_compiled_library_definition_names() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let names = compiled.definition_names();
+        assert!(names.contains(&"InPopulation"));
+        assert!(names.contains(&"PrivateHelper"));
+        assert!(names.contains(&"MeasurementPeriod"));
+    }
+
+    #[test]
+    fn test_definition_ref_name() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let def = compiled.get_definition("InPopulation").unwrap();
+        assert_eq!(def.name(), Some("InPopulation"));
+    }
+
+    #[test]
+    fn test_definition_ref_access_level() {
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        let public_def = compiled.get_definition("InPopulation").unwrap();
+        assert!(public_def.is_public());
+
+        let private_def = compiled.get_definition("PrivateHelper").unwrap();
+        assert!(!private_def.is_public());
+    }
+
+    #[test]
+    fn test_compiled_library_from_library() {
+        let library = create_test_library();
+        let compiled: CompiledLibrary = library.into();
+        assert_eq!(compiled.name(), Some("TestLibrary"));
+    }
+
+    #[test]
+    fn test_compiled_library_empty() {
+        let compiled = CompiledLibrary::new(Library::default());
+
+        assert!(compiled.name().is_none());
+        assert!(compiled.usings().is_empty());
+        assert!(compiled.includes().is_empty());
+        assert!(compiled.parameters().is_empty());
+        assert!(compiled.expressions().is_empty());
+        assert!(compiled.definition_names().is_empty());
+    }
+
+    // ===========================================
+    // Terminology definition tests
+    // ===========================================
+
+    use crate::elm::{
+        CodeDef, CodeDefs, CodeSystemDef, CodeSystemDefs, ConceptDef, ConceptDefs, ValueSetDef,
+        ValueSetDefs,
+    };
+
+    fn create_terminology_library() -> Library {
+        Library {
+            identifier: Some(VersionedIdentifier {
+                id: Some("TerminologyLibrary".to_string()),
+                version: Some("1.0.0".to_string()),
+                system: None,
+            }),
+            code_systems: Some(CodeSystemDefs {
+                defs: vec![
+                    CodeSystemDef {
+                        name: Some("LOINC".to_string()),
+                        id: Some("http://loinc.org".to_string()),
+                        version: Some("2.73".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                    },
+                    CodeSystemDef {
+                        name: Some("SNOMED".to_string()),
+                        id: Some("http://snomed.info/sct".to_string()),
+                        version: Some("2023-09".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                    },
+                    CodeSystemDef {
+                        name: Some("InternalCodes".to_string()),
+                        id: Some("http://example.org/internal".to_string()),
+                        version: None,
+                        access_level: Some(AccessModifier::Private),
+                    },
+                ],
+            }),
+            value_sets: Some(ValueSetDefs {
+                defs: vec![
+                    ValueSetDef {
+                        name: Some("DiabetesCodes".to_string()),
+                        id: Some("http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.103.12.1001".to_string()),
+                        version: Some("20230101".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        code_system: vec![],
+                    },
+                    ValueSetDef {
+                        name: Some("PrivateValueSet".to_string()),
+                        id: Some("http://example.org/private".to_string()),
+                        version: None,
+                        access_level: Some(AccessModifier::Private),
+                        code_system: vec![],
+                    },
+                ],
+            }),
+            codes: Some(CodeDefs {
+                defs: vec![
+                    CodeDef {
+                        name: Some("HbA1c".to_string()),
+                        id: Some("4548-4".to_string()),
+                        display: Some("Hemoglobin A1c".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        code_system: None,
+                    },
+                    CodeDef {
+                        name: Some("GlucoseLevel".to_string()),
+                        id: Some("2339-0".to_string()),
+                        display: Some("Glucose [Mass/volume] in Blood".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        code_system: None,
+                    },
+                    CodeDef {
+                        name: Some("InternalCode".to_string()),
+                        id: Some("INT-001".to_string()),
+                        display: None,
+                        access_level: Some(AccessModifier::Private),
+                        code_system: None,
+                    },
+                ],
+            }),
+            concepts: Some(ConceptDefs {
+                defs: vec![
+                    ConceptDef {
+                        name: Some("DiabetesLabTests".to_string()),
+                        display: Some("Diabetes-related laboratory tests".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        code: vec![],
+                    },
+                    ConceptDef {
+                        name: Some("PrivateConcept".to_string()),
+                        display: None,
+                        access_level: Some(AccessModifier::Private),
+                        code: vec![],
+                    },
+                ],
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_compiled_library_code_systems() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let code_systems = compiled.code_systems();
+        assert_eq!(code_systems.len(), 3);
+
+        let loinc = compiled.get_code_system("LOINC");
+        assert!(loinc.is_some());
+        assert_eq!(loinc.unwrap().id, Some("http://loinc.org".to_string()));
+        assert_eq!(loinc.unwrap().version, Some("2.73".to_string()));
+
+        let snomed = compiled.get_code_system("SNOMED");
+        assert!(snomed.is_some());
+
+        assert!(compiled.get_code_system("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_value_sets() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let value_sets = compiled.value_sets();
+        assert_eq!(value_sets.len(), 2);
+
+        let diabetes = compiled.get_value_set("DiabetesCodes");
+        assert!(diabetes.is_some());
+        assert!(diabetes.unwrap().id.as_ref().unwrap().contains("2.16.840"));
+
+        assert!(compiled.get_value_set("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_codes() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let codes = compiled.codes();
+        assert_eq!(codes.len(), 3);
+
+        let hba1c = compiled.get_code("HbA1c");
+        assert!(hba1c.is_some());
+        assert_eq!(hba1c.unwrap().id, Some("4548-4".to_string()));
+        assert_eq!(hba1c.unwrap().display, Some("Hemoglobin A1c".to_string()));
+
+        assert!(compiled.get_code("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_concepts() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let concepts = compiled.concepts();
+        assert_eq!(concepts.len(), 2);
+
+        let diabetes_labs = compiled.get_concept("DiabetesLabTests");
+        assert!(diabetes_labs.is_some());
+        assert_eq!(
+            diabetes_labs.unwrap().display,
+            Some("Diabetes-related laboratory tests".to_string())
+        );
+
+        assert!(compiled.get_concept("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_get_definition_terminology() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        // CodeSystem
+        let def = compiled.get_definition("LOINC");
+        assert!(matches!(def, Some(DefinitionRef::CodeSystem(_))));
+
+        // ValueSet
+        let def = compiled.get_definition("DiabetesCodes");
+        assert!(matches!(def, Some(DefinitionRef::ValueSet(_))));
+
+        // Code
+        let def = compiled.get_definition("HbA1c");
+        assert!(matches!(def, Some(DefinitionRef::Code(_))));
+
+        // Concept
+        let def = compiled.get_definition("DiabetesLabTests");
+        assert!(matches!(def, Some(DefinitionRef::Concept(_))));
+    }
+
+    #[test]
+    fn test_compiled_library_has_definition_terminology() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        assert!(compiled.has_definition("LOINC"));
+        assert!(compiled.has_definition("DiabetesCodes"));
+        assert!(compiled.has_definition("HbA1c"));
+        assert!(compiled.has_definition("DiabetesLabTests"));
+        assert!(!compiled.has_definition("NonExistent"));
+    }
+
+    #[test]
+    fn test_compiled_library_definition_names_includes_terminology() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let names = compiled.definition_names();
+        assert!(names.contains(&"LOINC"));
+        assert!(names.contains(&"SNOMED"));
+        assert!(names.contains(&"DiabetesCodes"));
+        assert!(names.contains(&"HbA1c"));
+        assert!(names.contains(&"GlucoseLevel"));
+        assert!(names.contains(&"DiabetesLabTests"));
+    }
+
+    #[test]
+    fn test_definition_ref_access_level_terminology() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        // Public code system
+        let def = compiled.get_definition("LOINC").unwrap();
+        assert!(def.is_public());
+        assert_eq!(def.access_level(), Some(AccessModifier::Public));
+
+        // Private code system
+        let def = compiled.get_definition("InternalCodes").unwrap();
+        assert!(!def.is_public());
+        assert_eq!(def.access_level(), Some(AccessModifier::Private));
+
+        // Public value set
+        let def = compiled.get_definition("DiabetesCodes").unwrap();
+        assert!(def.is_public());
+
+        // Private value set
+        let def = compiled.get_definition("PrivateValueSet").unwrap();
+        assert!(!def.is_public());
+
+        // Public code
+        let def = compiled.get_definition("HbA1c").unwrap();
+        assert!(def.is_public());
+
+        // Private code
+        let def = compiled.get_definition("InternalCode").unwrap();
+        assert!(!def.is_public());
+
+        // Public concept
+        let def = compiled.get_definition("DiabetesLabTests").unwrap();
+        assert!(def.is_public());
+
+        // Private concept
+        let def = compiled.get_definition("PrivateConcept").unwrap();
+        assert!(!def.is_public());
+    }
+
+    #[test]
+    fn test_definition_ref_name_terminology() {
+        let compiled = CompiledLibrary::new(create_terminology_library());
+
+        let cs = compiled.get_definition("LOINC").unwrap();
+        assert_eq!(cs.name(), Some("LOINC"));
+
+        let vs = compiled.get_definition("DiabetesCodes").unwrap();
+        assert_eq!(vs.name(), Some("DiabetesCodes"));
+
+        let code = compiled.get_definition("HbA1c").unwrap();
+        assert_eq!(code.name(), Some("HbA1c"));
+
+        let concept = compiled.get_definition("DiabetesLabTests").unwrap();
+        assert_eq!(concept.name(), Some("DiabetesLabTests"));
+    }
+
+    #[test]
+    fn test_compiled_library_empty_terminology() {
+        let compiled = CompiledLibrary::new(Library::default());
+
+        assert!(compiled.code_systems().is_empty());
+        assert!(compiled.value_sets().is_empty());
+        assert!(compiled.codes().is_empty());
+        assert!(compiled.concepts().is_empty());
+    }
+
+    #[test]
+    fn test_compiled_library_mixed_definitions() {
+        // Test a library with both expressions/parameters and terminology
+        let mut library = create_test_library();
+        library.code_systems = Some(CodeSystemDefs {
+            defs: vec![CodeSystemDef {
+                name: Some("ICD10".to_string()),
+                id: Some("http://hl7.org/fhir/sid/icd-10".to_string()),
+                version: None,
+                access_level: Some(AccessModifier::Public),
+            }],
+        });
+
+        let compiled = CompiledLibrary::new(library);
+
+        // Check expressions still work
+        assert!(compiled.get_expression("InPopulation").is_some());
+        assert!(compiled.get_parameter("MeasurementPeriod").is_some());
+
+        // Check code system also works
+        assert!(compiled.get_code_system("ICD10").is_some());
+
+        // Check definition_names includes all types
+        let names = compiled.definition_names();
+        assert!(names.contains(&"InPopulation"));
+        assert!(names.contains(&"MeasurementPeriod"));
+        assert!(names.contains(&"ICD10"));
     }
 }

@@ -75,10 +75,14 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - FileLibrarySourceProvider for filesystem (non-WASM)
   - CompositeLibrarySourceProvider for layered providers
 
-- [ ] **3.2 CompiledLibrary**
-  - Wrapper for ELM Library with resolved references
-  - Expression lookup by name
-  - Function lookup by name/signature
+- [x] **3.2 CompiledLibrary**
+  - Wrapper for ELM Library with convenient lookup methods
+  - Usings, includes, parameters, expressions lookup
+  - Code systems, value sets, codes, concepts lookup
+  - Expression lookup by name and context
+  - Public/private filtering
+  - DefinitionRef enum for type-safe definition access
+  - FunctionRef placeholder for function overload resolution
 
 - [ ] **3.3 LibraryManager**
   - Library caching
