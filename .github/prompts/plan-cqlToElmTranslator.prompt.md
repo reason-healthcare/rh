@@ -95,10 +95,14 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ### Phase 4: Semantic Analysis & Translation
 **Goal**: Translate CQL AST to typed ELM
 
-- [ ] **4.1 Preprocessor**
-  - Collect LibraryInfo from AST
-  - Extract definitions without type resolution
-  - Trigger library resolution
+- [x] **4.1 Preprocessor**
+  - Collect LibraryInfo from AST (name, version, identifier)
+  - Extract definitions without type resolution (expressions, functions, parameters)
+  - Extract model and library dependencies for resolution
+  - Extract terminology definitions (code systems, value sets, codes, concepts)
+  - Definition lookup and classification (DefinitionKind)
+  - Access control tracking (public/private)
+  - Trigger library resolution via library_dependency_ids()
 
 - [ ] **4.2 LibraryBuilder Core**
   - Context management (Patient, Practitioner, etc.)
