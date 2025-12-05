@@ -57,10 +57,12 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - All expression types (70+ types)
   - Type specifiers (Named, List, Interval, Tuple, Choice)
 
-- [ ] **2.4 Parser Implementation**
-  - Full CQL grammar implementation
-  - Error recovery and reporting
-  - Source location preservation
+- [x] **2.4 Parser Implementation**
+  - Expression parser with full operator precedence (10 levels)
+  - Statement parser for library structure and definitions
+  - Library parser integrating all components
+  - CqlParser with parse() and parse_expression() methods
+  - Comprehensive tests and cql_parser example
 
 ### Phase 3: Library Resolution
 **Goal**: Resolve library dependencies
