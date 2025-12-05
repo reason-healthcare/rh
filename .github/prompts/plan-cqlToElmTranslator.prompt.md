@@ -40,7 +40,7 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 
 - [ ] **2.1 Parser Foundation**
   - Use `nom` parser combinators (same as rh-fhirpath)
-  - Translate CQL grammar from ANTLR4/spec to nom combinators
+  - Translate CQL grammar (CQL version 1.5.3) from ANTLR4/spec to nom combinators
   - Leverage patterns established in rh-fhirpath parser
 
 - [ ] **2.2 Lexer**
