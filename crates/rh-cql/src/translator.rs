@@ -1057,6 +1057,236 @@ fn extract_sort_path(expr: &ast::Expression) -> Option<String> {
 }
 
 // ============================================================================
+// Retrieve Translation (Phase 4.5e)
+// ============================================================================
+
+impl ExpressionTranslator {
+    /// Translate a CQL AST retrieve expression to an ELM Retrieve expression.
+    ///
+    /// A CQL retrieve has the form:
+    /// ```cql
+    /// [Condition: "Diabetes"]
+    /// [Encounter: type in "Inpatient Encounters"]
+    /// [Observation: code in "Blood Pressure Codes" during MeasurementPeriod]
+    /// ```
+    pub fn translate_retrieve(
+        &mut self,
+        retrieve: &ast::Retrieve,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        // Convert the data type specifier to a QName
+        let data_type = type_specifier_to_qname(&retrieve.data_type);
+
+        // Translate context expression if present
+        let context = retrieve
+            .context
+            .as_ref()
+            .map(|c| Box::new(translate_expr(self, c)));
+
+        // Translate codes expression if present
+        let codes = retrieve
+            .codes
+            .as_ref()
+            .map(|c| Box::new(translate_expr(self, c)));
+
+        // Translate date range expression if present
+        let date_range = retrieve
+            .date_range
+            .as_ref()
+            .map(|d| Box::new(translate_expr(self, d)));
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(data_type),
+            template_id: None, // Set by model info resolution
+            context,
+            code_property: retrieve.code_path.clone(),
+            code_comparator: None, // Default is "in"
+            codes,
+            date_property: retrieve.date_path.clone(),
+            date_range,
+        })
+    }
+
+    /// Translate a simple retrieve (just data type, no filters).
+    pub fn translate_simple_retrieve(
+        &mut self,
+        data_type: &ast::TypeSpecifier,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let qname = type_specifier_to_qname(data_type);
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(qname),
+            template_id: None,
+            context: None,
+            code_property: None,
+            code_comparator: None,
+            codes: None,
+            date_property: None,
+            date_range: None,
+        })
+    }
+
+    /// Translate a retrieve with code filter.
+    pub fn translate_retrieve_with_codes(
+        &mut self,
+        data_type: &ast::TypeSpecifier,
+        code_path: &str,
+        codes: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let qname = type_specifier_to_qname(data_type);
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(qname),
+            template_id: None,
+            context: None,
+            code_property: Some(code_path.to_string()),
+            code_comparator: None,
+            codes: Some(Box::new(codes)),
+            date_property: None,
+            date_range: None,
+        })
+    }
+
+    /// Translate a retrieve with date range filter.
+    pub fn translate_retrieve_with_date_range(
+        &mut self,
+        data_type: &ast::TypeSpecifier,
+        date_path: &str,
+        date_range: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let qname = type_specifier_to_qname(data_type);
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(qname),
+            template_id: None,
+            context: None,
+            code_property: None,
+            code_comparator: None,
+            codes: None,
+            date_property: Some(date_path.to_string()),
+            date_range: Some(Box::new(date_range)),
+        })
+    }
+
+    /// Translate a retrieve with both code and date range filters.
+    pub fn translate_retrieve_with_codes_and_date(
+        &mut self,
+        data_type: &ast::TypeSpecifier,
+        code_path: &str,
+        codes: elm::Expression,
+        date_path: &str,
+        date_range: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let qname = type_specifier_to_qname(data_type);
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(qname),
+            template_id: None,
+            context: None,
+            code_property: Some(code_path.to_string()),
+            code_comparator: None,
+            codes: Some(Box::new(codes)),
+            date_property: Some(date_path.to_string()),
+            date_range: Some(Box::new(date_range)),
+        })
+    }
+
+    /// Translate a retrieve with context.
+    pub fn translate_retrieve_with_context(
+        &mut self,
+        data_type: &ast::TypeSpecifier,
+        context: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let qname = type_specifier_to_qname(data_type);
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(qname),
+            template_id: None,
+            context: Some(Box::new(context)),
+            code_property: None,
+            code_comparator: None,
+            codes: None,
+            date_property: None,
+            date_range: None,
+        })
+    }
+}
+
+/// Convert an AST TypeSpecifier to an ELM QName.
+fn type_specifier_to_qname(ts: &ast::TypeSpecifier) -> elm::QName {
+    match ts {
+        ast::TypeSpecifier::Named(named) => {
+            if let Some(ns) = &named.namespace {
+                // Qualified name like FHIR.Patient
+                format!("{{{ns}}}{}", named.name)
+            } else {
+                // Simple name - assume FHIR namespace for common types
+                format!("{{http://hl7.org/fhir}}{}", named.name)
+            }
+        }
+        ast::TypeSpecifier::List(list) => {
+            let elem = type_specifier_to_qname(&list.element_type);
+            format!("{{urn:hl7-org:elm-types:r1}}List<{elem}>")
+        }
+        ast::TypeSpecifier::Interval(interval) => {
+            let point = type_specifier_to_qname(&interval.point_type);
+            format!("{{urn:hl7-org:elm-types:r1}}Interval<{point}>")
+        }
+        ast::TypeSpecifier::Tuple(_) => {
+            // Tuple types are anonymous
+            "{urn:hl7-org:elm-types:r1}Tuple".to_string()
+        }
+        ast::TypeSpecifier::Choice(choice) => {
+            // Choice types list alternatives
+            let types: Vec<String> = choice.types.iter().map(type_specifier_to_qname).collect();
+            format!("{{urn:hl7-org:elm-types:r1}}Choice<{}>", types.join(","))
+        }
+    }
+}
+
+// ============================================================================
 // N-ary Operator Enum
 // ============================================================================
 
@@ -3240,5 +3470,307 @@ mod tests {
         } else {
             panic!("Expected Query expression");
         }
+    }
+
+    // ========================================================================
+    // Phase 4.5e: Retrieve Translation Tests
+    // ========================================================================
+
+    fn make_named_type(name: &str) -> ast::TypeSpecifier {
+        ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+            namespace: None,
+            name: name.to_string(),
+        })
+    }
+
+    fn make_qualified_type(ns: &str, name: &str) -> ast::TypeSpecifier {
+        ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+            namespace: Some(ns.to_string()),
+            name: name.to_string(),
+        })
+    }
+
+    #[test]
+    fn test_translate_simple_retrieve() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_named_type("Condition");
+
+        let result = translator.translate_simple_retrieve(&data_type, None);
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert!(r.data_type.unwrap().contains("Condition"));
+            assert!(r.codes.is_none());
+            assert!(r.date_range.is_none());
+            assert!(r.context.is_none());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_qualified_type() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_qualified_type("FHIR", "Patient");
+
+        let result = translator.translate_simple_retrieve(&data_type, None);
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            let dt = r.data_type.unwrap();
+            assert!(dt.contains("FHIR"));
+            assert!(dt.contains("Patient"));
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_with_codes() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_named_type("Condition");
+        let codes =
+            translator.translate_identifier_ref("DiabetesCodes", ResolvedRefKind::ValueSet, None);
+
+        let result = translator.translate_retrieve_with_codes(&data_type, "code", codes, None);
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert_eq!(r.code_property, Some("code".to_string()));
+            assert!(r.codes.is_some());
+            assert!(r.date_range.is_none());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_with_date_range() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_named_type("Encounter");
+        let date_range = translator.translate_identifier_ref(
+            "MeasurementPeriod",
+            ResolvedRefKind::Parameter,
+            None,
+        );
+
+        let result =
+            translator.translate_retrieve_with_date_range(&data_type, "period", date_range, None);
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert_eq!(r.date_property, Some("period".to_string()));
+            assert!(r.date_range.is_some());
+            assert!(r.codes.is_none());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_with_codes_and_date() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_named_type("Observation");
+        let codes = translator.translate_identifier_ref(
+            "BloodPressureCodes",
+            ResolvedRefKind::ValueSet,
+            None,
+        );
+        let date_range = translator.translate_identifier_ref(
+            "MeasurementPeriod",
+            ResolvedRefKind::Parameter,
+            None,
+        );
+
+        let result = translator.translate_retrieve_with_codes_and_date(
+            &data_type,
+            "code",
+            codes,
+            "effective",
+            date_range,
+            None,
+        );
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert_eq!(r.code_property, Some("code".to_string()));
+            assert!(r.codes.is_some());
+            assert_eq!(r.date_property, Some("effective".to_string()));
+            assert!(r.date_range.is_some());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_with_context() {
+        let mut translator = ExpressionTranslator::new();
+        let data_type = make_named_type("Condition");
+        let context =
+            translator.translate_identifier_ref("Patient", ResolvedRefKind::Context, None);
+
+        let result = translator.translate_retrieve_with_context(&data_type, context, None);
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert!(r.context.is_some());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_full_retrieve() {
+        let mut translator = ExpressionTranslator::new();
+        let retrieve = ast::Retrieve {
+            data_type: make_named_type("Condition"),
+            context: None,
+            code_path: Some("code".to_string()),
+            codes: Some(Box::new(ast::Expression::IdentifierRef(
+                ast::IdentifierRef {
+                    name: "DiabetesCodes".to_string(),
+                    location: None,
+                },
+            ))),
+            date_path: Some("onset".to_string()),
+            date_range: Some(Box::new(ast::Expression::IdentifierRef(
+                ast::IdentifierRef {
+                    name: "MeasurementPeriod".to_string(),
+                    location: None,
+                },
+            ))),
+            location: None,
+        };
+
+        let result = translator.translate_retrieve(
+            &retrieve,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected identifier ref");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert_eq!(r.code_property, Some("code".to_string()));
+            assert!(r.codes.is_some());
+            assert_eq!(r.date_property, Some("onset".to_string()));
+            assert!(r.date_range.is_some());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_no_filters() {
+        let mut translator = ExpressionTranslator::new();
+        let retrieve = ast::Retrieve {
+            data_type: make_named_type("Patient"),
+            context: None,
+            code_path: None,
+            codes: None,
+            date_path: None,
+            date_range: None,
+            location: None,
+        };
+
+        let result = translator.translate_retrieve(
+            &retrieve,
+            |_t, _expr| {
+                panic!("Should not be called for empty retrieve");
+            },
+            None,
+        );
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert!(r.data_type.unwrap().contains("Patient"));
+            assert!(r.codes.is_none());
+            assert!(r.date_range.is_none());
+            assert!(r.context.is_none());
+            assert!(r.code_property.is_none());
+            assert!(r.date_property.is_none());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_retrieve_with_context_full() {
+        let mut translator = ExpressionTranslator::new();
+        let retrieve = ast::Retrieve {
+            data_type: make_named_type("Observation"),
+            context: Some(Box::new(ast::Expression::IdentifierRef(
+                ast::IdentifierRef {
+                    name: "Patient".to_string(),
+                    location: None,
+                },
+            ))),
+            code_path: None,
+            codes: None,
+            date_path: None,
+            date_range: None,
+            location: None,
+        };
+
+        let result = translator.translate_retrieve(
+            &retrieve,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected identifier ref");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Retrieve(r) = result {
+            assert!(r.data_type.is_some());
+            assert!(r.context.is_some());
+        } else {
+            panic!("Expected Retrieve expression");
+        }
+    }
+
+    #[test]
+    fn test_type_specifier_to_qname_named() {
+        let ts = make_named_type("Condition");
+        let qname = super::type_specifier_to_qname(&ts);
+        assert!(qname.contains("Condition"));
+        assert!(qname.contains("http://hl7.org/fhir"));
+    }
+
+    #[test]
+    fn test_type_specifier_to_qname_qualified() {
+        let ts = make_qualified_type("FHIR", "Patient");
+        let qname = super::type_specifier_to_qname(&ts);
+        assert!(qname.contains("Patient"));
+        assert!(qname.contains("FHIR"));
+    }
+
+    #[test]
+    fn test_type_specifier_to_qname_list() {
+        let ts = ast::TypeSpecifier::List(ast::ListTypeSpecifier {
+            element_type: Box::new(make_named_type("Condition")),
+        });
+        let qname = super::type_specifier_to_qname(&ts);
+        assert!(qname.contains("List"));
+    }
+
+    #[test]
+    fn test_type_specifier_to_qname_interval() {
+        let ts = ast::TypeSpecifier::Interval(ast::IntervalTypeSpecifier {
+            point_type: Box::new(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: Some("urn:hl7-org:elm-types:r1".to_string()),
+                name: "DateTime".to_string(),
+            })),
+        });
+        let qname = super::type_specifier_to_qname(&ts);
+        assert!(qname.contains("Interval"));
     }
 }
