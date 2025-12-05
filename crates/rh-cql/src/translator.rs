@@ -18,7 +18,7 @@
 //! let elm_expr = translator.translate_literal(&ast_lit);
 //! ```
 
-use crate::datatype::{DataType, SystemType};
+use crate::datatype::{DataType, SystemType, TupleElement};
 use crate::elm;
 use crate::parser::ast;
 
@@ -1457,6 +1457,461 @@ impl ExpressionTranslator {
     ) -> elm::Expression {
         self.make_case(Some(comparand), items, else_expr, result_type)
     }
+
+    // ========================================================================
+    // Type Operator Translation (Phase 4.5g)
+    // ========================================================================
+
+    /// Translate a CQL type expression (is, as, convert) to ELM.
+    ///
+    /// CQL supports three type operators:
+    /// - `is`: Check if expression is of a type (returns Boolean)
+    /// - `as`: Cast expression to a type (returns null if not compatible)
+    /// - `convert`: Convert expression to a type (throws error if not convertible)
+    ///
+    /// # Example
+    /// ```cql
+    /// value is Integer
+    /// value as Integer
+    /// convert value to String
+    /// ```
+    pub fn translate_type_expression(
+        &mut self,
+        type_expr: &ast::TypeExpression,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::Expression {
+        let operand = translate_expr(self, &type_expr.operand);
+        let type_spec = self.type_specifier_to_elm(&type_expr.type_specifier);
+
+        match type_expr.operator {
+            ast::TypeOperator::Is => self.translate_is(operand, type_spec),
+            ast::TypeOperator::As => self.translate_as(operand, type_spec, false),
+            ast::TypeOperator::Convert => self.translate_convert(operand, type_spec),
+        }
+    }
+
+    /// Create an ELM Is expression (type test).
+    ///
+    /// The `is` operator returns true if the operand is of the specified type.
+    ///
+    /// # Example
+    /// ```cql
+    /// value is Integer  // returns true if value is an Integer
+    /// ```
+    pub fn translate_is(
+        &mut self,
+        operand: elm::Expression,
+        type_specifier: elm::TypeSpecifier,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+
+        elm::Expression::Is(elm::IsExpr {
+            element,
+            operand: Some(Box::new(operand)),
+            is_type_specifier: Some(type_specifier),
+            is_type: None,
+        })
+    }
+
+    /// Create an ELM Is expression using a QName.
+    pub fn translate_is_qname(
+        &mut self,
+        operand: elm::Expression,
+        is_type: elm::QName,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+
+        elm::Expression::Is(elm::IsExpr {
+            element,
+            operand: Some(Box::new(operand)),
+            is_type_specifier: None,
+            is_type: Some(is_type),
+        })
+    }
+
+    /// Create an ELM As expression (type cast).
+    ///
+    /// The `as` operator casts the operand to the specified type.
+    /// If strict is false (default), returns null if the cast fails.
+    /// If strict is true, the cast must succeed.
+    ///
+    /// # Example
+    /// ```cql
+    /// value as Integer  // returns Integer or null if not compatible
+    /// value as strict Integer  // strict cast
+    /// ```
+    pub fn translate_as(
+        &mut self,
+        operand: elm::Expression,
+        type_specifier: elm::TypeSpecifier,
+        strict: bool,
+    ) -> elm::Expression {
+        // Result type is the target type
+        let result_type = self.type_specifier_to_datatype(&type_specifier);
+        let element = match &result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        elm::Expression::As(elm::AsExpr {
+            element,
+            operand: Some(Box::new(operand)),
+            as_type_specifier: Some(type_specifier),
+            as_type: None,
+            strict: if strict { Some(true) } else { None },
+        })
+    }
+
+    /// Create an ELM As expression using a QName.
+    pub fn translate_as_qname(
+        &mut self,
+        operand: elm::Expression,
+        as_type: elm::QName,
+        strict: bool,
+    ) -> elm::Expression {
+        elm::Expression::As(elm::AsExpr {
+            element: self.element_fields(),
+            operand: Some(Box::new(operand)),
+            as_type_specifier: None,
+            as_type: Some(as_type),
+            strict: if strict { Some(true) } else { None },
+        })
+    }
+
+    /// Create an ELM Convert expression (type conversion).
+    ///
+    /// The `convert` operator converts the operand to the specified type.
+    /// Unlike `as`, convert can invoke conversion functions.
+    ///
+    /// # Example
+    /// ```cql
+    /// convert value to String
+    /// ```
+    pub fn translate_convert(
+        &mut self,
+        operand: elm::Expression,
+        type_specifier: elm::TypeSpecifier,
+    ) -> elm::Expression {
+        // Result type is the target type
+        let result_type = self.type_specifier_to_datatype(&type_specifier);
+        let element = match &result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        elm::Expression::Convert(elm::ConvertExpr {
+            element,
+            operand: Some(Box::new(operand)),
+            to_type_specifier: Some(type_specifier),
+            to_type: None,
+        })
+    }
+
+    /// Create an ELM Convert expression using a QName.
+    pub fn translate_convert_qname(
+        &mut self,
+        operand: elm::Expression,
+        to_type: elm::QName,
+    ) -> elm::Expression {
+        elm::Expression::Convert(elm::ConvertExpr {
+            element: self.element_fields(),
+            operand: Some(Box::new(operand)),
+            to_type_specifier: None,
+            to_type: Some(to_type),
+        })
+    }
+
+    /// Create an ELM CanConvert expression.
+    ///
+    /// The `CanConvert` expression tests if a conversion is possible.
+    pub fn translate_can_convert(
+        &mut self,
+        operand: elm::Expression,
+        type_specifier: elm::TypeSpecifier,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+
+        elm::Expression::CanConvert(elm::CanConvert {
+            element,
+            operand: Some(Box::new(operand)),
+            to_type_specifier: Some(type_specifier),
+            to_type: None,
+        })
+    }
+
+    /// Create an ELM ToInteger conversion.
+    pub fn translate_to_integer(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Integer));
+        elm::Expression::ToInteger(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToLong conversion.
+    pub fn translate_to_long(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Long));
+        elm::Expression::ToLong(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToDecimal conversion.
+    pub fn translate_to_decimal(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Decimal));
+        elm::Expression::ToDecimal(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToBoolean conversion.
+    pub fn translate_to_boolean(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        elm::Expression::ToBoolean(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToString conversion.
+    pub fn translate_to_string(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::String));
+        elm::Expression::ToStringExpr(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToDate conversion.
+    pub fn translate_to_date(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Date));
+        elm::Expression::ToDate(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToDateTime conversion.
+    pub fn translate_to_datetime(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::DateTime));
+        elm::Expression::ToDateTime(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToTime conversion.
+    pub fn translate_to_time(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Time));
+        elm::Expression::ToTime(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToQuantity conversion.
+    pub fn translate_to_quantity(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Quantity));
+        elm::Expression::ToQuantity(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToRatio conversion.
+    pub fn translate_to_ratio(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Ratio));
+        elm::Expression::ToRatio(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToConcept conversion.
+    pub fn translate_to_concept(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Concept));
+        elm::Expression::ToConcept(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToList conversion.
+    pub fn translate_to_list(
+        &mut self,
+        operand: elm::Expression,
+        element_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let result_type = element_type.map(|et| DataType::List(Box::new(et.clone())));
+        let element = match &result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+        elm::Expression::ToList(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an ELM ToChars conversion (String to List<String>).
+    pub fn translate_to_chars(&mut self, operand: elm::Expression) -> elm::Expression {
+        let result_type = DataType::List(Box::new(DataType::System(SystemType::String)));
+        let element = self.element_fields_typed(&result_type);
+        elm::Expression::ToChars(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Convert an AST TypeSpecifier to an ELM TypeSpecifier.
+    #[allow(clippy::only_used_in_recursion)]
+    fn type_specifier_to_elm(&self, ts: &ast::TypeSpecifier) -> elm::TypeSpecifier {
+        match ts {
+            ast::TypeSpecifier::Named(named) => {
+                // Convert AST NamedTypeSpecifier to ELM QName format
+                let qname = match &named.namespace {
+                    Some(ns) => format!("{{{ns}}}{}", named.name),
+                    None => named.name.clone(),
+                };
+                elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+                    name: qname,
+                    ..Default::default()
+                })
+            }
+            ast::TypeSpecifier::List(list_spec) => {
+                elm::TypeSpecifier::List(elm::ListTypeSpecifier {
+                    element_type: Some(Box::new(
+                        self.type_specifier_to_elm(&list_spec.element_type),
+                    )),
+                    ..Default::default()
+                })
+            }
+            ast::TypeSpecifier::Interval(interval_spec) => {
+                elm::TypeSpecifier::Interval(elm::IntervalTypeSpecifier {
+                    point_type: Some(Box::new(
+                        self.type_specifier_to_elm(&interval_spec.point_type),
+                    )),
+                    ..Default::default()
+                })
+            }
+            ast::TypeSpecifier::Tuple(tuple_spec) => {
+                let elm_elements: Vec<elm::TupleElementDefinition> = tuple_spec
+                    .elements
+                    .iter()
+                    .map(|elem| elm::TupleElementDefinition {
+                        name: elem.name.clone(),
+                        element_type: Some(Box::new(
+                            self.type_specifier_to_elm(&elem.element_type),
+                        )),
+                        ..Default::default()
+                    })
+                    .collect();
+                elm::TypeSpecifier::Tuple(elm::TupleTypeSpecifier {
+                    element: elm_elements,
+                    ..Default::default()
+                })
+            }
+            ast::TypeSpecifier::Choice(choice_spec) => {
+                let elm_choices: Vec<elm::TypeSpecifier> = choice_spec
+                    .types
+                    .iter()
+                    .map(|c| self.type_specifier_to_elm(c))
+                    .collect();
+                elm::TypeSpecifier::Choice(elm::ChoiceTypeSpecifier {
+                    choice: elm_choices,
+                    ..Default::default()
+                })
+            }
+        }
+    }
+
+    /// Convert an ELM TypeSpecifier back to a DataType (for result typing).
+    #[allow(clippy::only_used_in_recursion)]
+    fn type_specifier_to_datatype(&self, ts: &elm::TypeSpecifier) -> Option<DataType> {
+        match ts {
+            elm::TypeSpecifier::Named(named) => {
+                // Parse the QName to extract namespace and name
+                let name = &named.name;
+                if name.starts_with("{urn:hl7-org:elm-types:r1}") {
+                    let type_name = name
+                        .strip_prefix("{urn:hl7-org:elm-types:r1}")
+                        .unwrap_or(name);
+                    Some(DataType::System(string_to_system_type(type_name)))
+                } else if let Some(pos) = name.rfind('}') {
+                    let namespace = &name[1..pos];
+                    let type_name = &name[pos + 1..];
+                    Some(DataType::Model {
+                        namespace: namespace.to_string(),
+                        name: type_name.to_string(),
+                    })
+                } else {
+                    // Simple name, assume System type
+                    Some(DataType::System(string_to_system_type(name)))
+                }
+            }
+            elm::TypeSpecifier::List(list) => {
+                let elem_type = list
+                    .element_type
+                    .as_ref()
+                    .and_then(|et| self.type_specifier_to_datatype(et))?;
+                Some(DataType::List(Box::new(elem_type)))
+            }
+            elm::TypeSpecifier::Interval(interval) => {
+                let point_type = interval
+                    .point_type
+                    .as_ref()
+                    .and_then(|pt| self.type_specifier_to_datatype(pt))?;
+                Some(DataType::Interval(Box::new(point_type)))
+            }
+            elm::TypeSpecifier::Tuple(tuple) => {
+                let elements: Vec<TupleElement> = tuple
+                    .element
+                    .iter()
+                    .filter_map(|e| {
+                        let name = e.name.clone();
+                        let element_type = e
+                            .element_type
+                            .as_ref()
+                            .and_then(|et| self.type_specifier_to_datatype(et))?;
+                        Some(TupleElement {
+                            name,
+                            element_type: Box::new(element_type),
+                        })
+                    })
+                    .collect();
+                Some(DataType::Tuple(elements))
+            }
+            elm::TypeSpecifier::Choice(choice) => {
+                let types: Vec<DataType> = choice
+                    .choice
+                    .iter()
+                    .filter_map(|c| self.type_specifier_to_datatype(c))
+                    .collect();
+                Some(DataType::Choice(types))
+            }
+            elm::TypeSpecifier::Parameter(param) => {
+                // Type parameters become DataType::TypeParameter
+                Some(DataType::TypeParameter(
+                    param.parameter_name.clone().unwrap_or_default(),
+                ))
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -1538,6 +1993,27 @@ fn system_type_name(sys: &SystemType) -> &'static str {
         SystemType::Code => "Code",
         SystemType::Concept => "Concept",
         SystemType::Vocabulary => "Vocabulary",
+    }
+}
+
+/// Convert a string name to a SystemType.
+fn string_to_system_type(name: &str) -> SystemType {
+    match name {
+        "Any" => SystemType::Any,
+        "Boolean" => SystemType::Boolean,
+        "Integer" => SystemType::Integer,
+        "Long" => SystemType::Long,
+        "Decimal" => SystemType::Decimal,
+        "String" => SystemType::String,
+        "Date" => SystemType::Date,
+        "DateTime" => SystemType::DateTime,
+        "Time" => SystemType::Time,
+        "Quantity" => SystemType::Quantity,
+        "Ratio" => SystemType::Ratio,
+        "Code" => SystemType::Code,
+        "Concept" => SystemType::Concept,
+        "Vocabulary" => SystemType::Vocabulary,
+        _ => SystemType::Any, // Default to Any for unknown types
     }
 }
 
@@ -4315,6 +4791,494 @@ mod tests {
             assert_eq!(case_result.case_item.len(), 5);
         } else {
             panic!("Expected Case expression");
+        }
+    }
+
+    // ========================================================================
+    // Type Operator Translation Tests (Phase 4.5g)
+    // ========================================================================
+
+    #[test]
+    fn test_translate_is_expression() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("Integer")),
+            ..Default::default()
+        });
+        let type_spec = elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            name: "{urn:hl7-org:elm-types:r1}Integer".to_string(),
+            ..Default::default()
+        });
+
+        let result = translator.translate_is(operand, type_spec);
+
+        if let elm::Expression::Is(is_expr) = result {
+            assert!(is_expr.operand.is_some());
+            assert!(is_expr.is_type_specifier.is_some());
+            assert!(is_expr.is_type.is_none());
+        } else {
+            panic!("Expected Is expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_is_qname() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Null(elm::Null::default());
+
+        let result =
+            translator.translate_is_qname(operand, "{urn:hl7-org:elm-types:r1}String".to_string());
+
+        if let elm::Expression::Is(is_expr) = result {
+            assert!(is_expr.operand.is_some());
+            assert!(is_expr.is_type_specifier.is_none());
+            assert_eq!(
+                is_expr.is_type,
+                Some("{urn:hl7-org:elm-types:r1}String".to_string())
+            );
+        } else {
+            panic!("Expected Is expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_as_expression() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("test".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+        let type_spec = elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            name: "{urn:hl7-org:elm-types:r1}String".to_string(),
+            ..Default::default()
+        });
+
+        let result = translator.translate_as(operand, type_spec, false);
+
+        if let elm::Expression::As(as_expr) = result {
+            assert!(as_expr.operand.is_some());
+            assert!(as_expr.as_type_specifier.is_some());
+            assert!(as_expr.strict.is_none());
+        } else {
+            panic!("Expected As expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_as_strict() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Null(elm::Null::default());
+        let type_spec = elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            name: "Integer".to_string(),
+            ..Default::default()
+        });
+
+        let result = translator.translate_as(operand, type_spec, true);
+
+        if let elm::Expression::As(as_expr) = result {
+            assert_eq!(as_expr.strict, Some(true));
+        } else {
+            panic!("Expected As expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_convert_expression() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+        let type_spec = elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            name: "{urn:hl7-org:elm-types:r1}Integer".to_string(),
+            ..Default::default()
+        });
+
+        let result = translator.translate_convert(operand, type_spec);
+
+        if let elm::Expression::Convert(convert_expr) = result {
+            assert!(convert_expr.operand.is_some());
+            assert!(convert_expr.to_type_specifier.is_some());
+        } else {
+            panic!("Expected Convert expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_can_convert() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            ..Default::default()
+        });
+        let type_spec = elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            name: "Integer".to_string(),
+            ..Default::default()
+        });
+
+        let result = translator.translate_can_convert(operand, type_spec);
+
+        if let elm::Expression::CanConvert(can_convert) = result {
+            assert!(can_convert.operand.is_some());
+            assert!(can_convert.to_type_specifier.is_some());
+        } else {
+            panic!("Expected CanConvert expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_integer() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_integer(operand);
+
+        if let elm::Expression::ToInteger(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(
+                unary.element.result_type_name,
+                Some(qname_system("Integer"))
+            );
+        } else {
+            panic!("Expected ToInteger expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_string() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("Integer")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_string(operand);
+
+        if let elm::Expression::ToStringExpr(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(unary.element.result_type_name, Some(qname_system("String")));
+        } else {
+            panic!("Expected ToString expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_decimal() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("Integer")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_decimal(operand);
+
+        if let elm::Expression::ToDecimal(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(
+                unary.element.result_type_name,
+                Some(qname_system("Decimal"))
+            );
+        } else {
+            panic!("Expected ToDecimal expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_boolean() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("true".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_boolean(operand);
+
+        if let elm::Expression::ToBoolean(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(
+                unary.element.result_type_name,
+                Some(qname_system("Boolean"))
+            );
+        } else {
+            panic!("Expected ToBoolean expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_date() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("2024-01-15".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_date(operand);
+
+        if let elm::Expression::ToDate(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(unary.element.result_type_name, Some(qname_system("Date")));
+        } else {
+            panic!("Expected ToDate expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_datetime() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("2024-01-15T10:30:00".to_string()),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_datetime(operand);
+
+        if let elm::Expression::ToDateTime(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(
+                unary.element.result_type_name,
+                Some(qname_system("DateTime"))
+            );
+        } else {
+            panic!("Expected ToDateTime expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_time() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("10:30:00".to_string()),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_time(operand);
+
+        if let elm::Expression::ToTime(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(unary.element.result_type_name, Some(qname_system("Time")));
+        } else {
+            panic!("Expected ToTime expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_quantity() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42 'kg'".to_string()),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_quantity(operand);
+
+        if let elm::Expression::ToQuantity(unary) = result {
+            assert!(unary.operand.is_some());
+            assert_eq!(
+                unary.element.result_type_name,
+                Some(qname_system("Quantity"))
+            );
+        } else {
+            panic!("Expected ToQuantity expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_list() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("42".to_string()),
+            value_type: Some(qname_system("Integer")),
+            ..Default::default()
+        });
+
+        let result =
+            translator.translate_to_list(operand, Some(&DataType::System(SystemType::Integer)));
+
+        if let elm::Expression::ToList(unary) = result {
+            assert!(unary.operand.is_some());
+        } else {
+            panic!("Expected ToList expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_to_chars() {
+        let mut translator = ExpressionTranslator::new();
+        let operand = elm::Expression::Literal(elm::Literal {
+            value: Some("hello".to_string()),
+            value_type: Some(qname_system("String")),
+            ..Default::default()
+        });
+
+        let result = translator.translate_to_chars(operand);
+
+        if let elm::Expression::ToChars(unary) = result {
+            assert!(unary.operand.is_some());
+        } else {
+            panic!("Expected ToChars expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_type_expression_is() {
+        let mut translator = ExpressionTranslator::new();
+        let type_expr = ast::TypeExpression {
+            operator: ast::TypeOperator::Is,
+            operand: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+            type_specifier: ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Integer".to_string(),
+            }),
+            location: None,
+        };
+
+        let result = translator.translate_type_expression(&type_expr, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert!(matches!(result, elm::Expression::Is(_)));
+    }
+
+    #[test]
+    fn test_translate_type_expression_as() {
+        let mut translator = ExpressionTranslator::new();
+        let type_expr = ast::TypeExpression {
+            operator: ast::TypeOperator::As,
+            operand: Box::new(ast::Expression::Literal(ast::Literal::String(
+                "42".to_string(),
+            ))),
+            type_specifier: ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: Some("urn:hl7-org:elm-types:r1".to_string()),
+                name: "Integer".to_string(),
+            }),
+            location: None,
+        };
+
+        let result = translator.translate_type_expression(&type_expr, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert!(matches!(result, elm::Expression::As(_)));
+    }
+
+    #[test]
+    fn test_translate_type_expression_convert() {
+        let mut translator = ExpressionTranslator::new();
+        let type_expr = ast::TypeExpression {
+            operator: ast::TypeOperator::Convert,
+            operand: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+            type_specifier: ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "String".to_string(),
+            }),
+            location: None,
+        };
+
+        let result = translator.translate_type_expression(&type_expr, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert!(matches!(result, elm::Expression::Convert(_)));
+    }
+
+    #[test]
+    fn test_type_specifier_to_elm_named() {
+        let translator = ExpressionTranslator::new();
+        let ast_ts = ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+            namespace: Some("http://hl7.org/fhir".to_string()),
+            name: "Patient".to_string(),
+        });
+
+        let result = translator.type_specifier_to_elm(&ast_ts);
+
+        if let elm::TypeSpecifier::Named(named) = result {
+            assert_eq!(named.name, "{http://hl7.org/fhir}Patient");
+        } else {
+            panic!("Expected Named type specifier");
+        }
+    }
+
+    #[test]
+    fn test_type_specifier_to_elm_list() {
+        let translator = ExpressionTranslator::new();
+        let ast_ts = ast::TypeSpecifier::List(ast::ListTypeSpecifier {
+            element_type: Box::new(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Integer".to_string(),
+            })),
+        });
+
+        let result = translator.type_specifier_to_elm(&ast_ts);
+
+        if let elm::TypeSpecifier::List(list) = result {
+            assert!(list.element_type.is_some());
+        } else {
+            panic!("Expected List type specifier");
+        }
+    }
+
+    #[test]
+    fn test_type_specifier_to_elm_interval() {
+        let translator = ExpressionTranslator::new();
+        let ast_ts = ast::TypeSpecifier::Interval(ast::IntervalTypeSpecifier {
+            point_type: Box::new(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Date".to_string(),
+            })),
+        });
+
+        let result = translator.type_specifier_to_elm(&ast_ts);
+
+        if let elm::TypeSpecifier::Interval(interval) = result {
+            assert!(interval.point_type.is_some());
+        } else {
+            panic!("Expected Interval type specifier");
+        }
+    }
+
+    #[test]
+    fn test_type_specifier_to_elm_tuple() {
+        let translator = ExpressionTranslator::new();
+        let ast_ts = ast::TypeSpecifier::Tuple(ast::TupleTypeSpecifier {
+            elements: vec![ast::TupleElementDef {
+                name: "value".to_string(),
+                element_type: ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                    namespace: None,
+                    name: "Integer".to_string(),
+                }),
+            }],
+        });
+
+        let result = translator.type_specifier_to_elm(&ast_ts);
+
+        if let elm::TypeSpecifier::Tuple(tuple) = result {
+            assert_eq!(tuple.element.len(), 1);
+            assert_eq!(tuple.element[0].name, "value");
+        } else {
+            panic!("Expected Tuple type specifier");
         }
     }
 }
