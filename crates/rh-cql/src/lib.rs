@@ -23,6 +23,7 @@
 //! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
 //! - [`types`]: Type resolution for CQL semantic analysis
 //! - [`operators`]: Operator resolution for CQL semantic analysis
+//! - [`translator`]: Expression translation from CQL AST to ELM
 
 pub mod builder;
 pub mod datatype;
@@ -34,6 +35,7 @@ pub mod operators;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
+pub mod translator;
 pub mod types;
 
 pub use builder::{
@@ -59,4 +61,5 @@ pub use preprocessor::{
 pub use provider::{
     fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
 };
+pub use translator::{ExpressionTranslator, TranslatorError, TranslatorResult};
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
