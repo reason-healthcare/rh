@@ -118,15 +118,19 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Error and warning collection (BuilderError enum)
   - Integration with Preprocessor via from_library_info()
 
-- [ ] **4.3 Type Resolution**
+- [x] **4.3 Type Resolution**
   - Resolve type specifiers to DataTypes
   - Type inference for expressions
   - TypeBuilder (DataType ↔ TypeSpecifier)
 
-- [ ] **4.4 Operator Resolution**
-  - System operator signatures
-  - Overload resolution
-  - Implicit conversions
+- [x] **4.4 Operator Resolution**
+  - System operator signatures (arithmetic, comparison, logical, string, list, interval, datetime)
+  - Overload resolution with scoring (exact match, conversion, subtype)
+  - Implicit conversions (Integer→Long→Decimal, Date→DateTime, Code→Concept)
+  - Generic operator support (List<T>, Interval<T> operations)
+  - Type parameter binding and substitution for result types
+  - OperatorResolver with resolve_unary, resolve_binary, resolve_ternary
+  - 21 tests + operator_resolver example
 
 - [ ] **4.5 Expression Translation**
   - Literals

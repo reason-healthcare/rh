@@ -22,6 +22,7 @@
 //! - [`preprocessor`]: Preprocessor for extracting library info from AST
 //! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
 //! - [`types`]: Type resolution for CQL semantic analysis
+//! - [`operators`]: Operator resolution for CQL semantic analysis
 
 pub mod builder;
 pub mod datatype;
@@ -29,6 +30,7 @@ pub mod elm;
 pub mod error;
 pub mod library;
 pub mod modelinfo;
+pub mod operators;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
@@ -44,6 +46,10 @@ pub use library::{
     CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FileLibrarySourceProvider,
     FunctionRef, LibraryError, LibraryIdentifier, LibraryManager, LibraryResult, LibrarySource,
     LibrarySourceProvider, MemoryLibrarySourceProvider,
+};
+pub use operators::{
+    OperatorError, OperatorKind, OperatorResolver, OperatorResult, OperatorSignature,
+    ResolvedOperator,
 };
 pub use parser::CqlParser;
 pub use preprocessor::{
