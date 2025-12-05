@@ -31,8 +31,9 @@ pub mod provider;
 pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
 pub use library::{
-    CompositeLibrarySourceProvider, FileLibrarySourceProvider, LibraryIdentifier, LibrarySource,
-    LibrarySourceProvider, MemoryLibrarySourceProvider,
+    CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FileLibrarySourceProvider,
+    FunctionRef, LibraryIdentifier, LibrarySource, LibrarySourceProvider,
+    MemoryLibrarySourceProvider,
 };
 pub use parser::CqlParser;
 pub use provider::{
