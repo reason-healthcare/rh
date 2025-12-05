@@ -20,11 +20,13 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Define ModelInfo, TypeInfo, ClassInfo structs
   - System model (primitives: Boolean, Integer, Decimal, String, Date, DateTime, Time, Quantity)
 
-- [ ] **1.3 Model Manager**
-  - ModelInfoProvider trait
-  - MemoryModelInfoProvider (for WASM)
-  - Bundle FHIR R4 model info
-  - Type resolution by name
+- [x] **1.3 Model Manager**
+  - ModelInfoProvider trait (in rh-cql)
+  - MemoryStore pattern in rh-foundation (reusable for packages, models, libraries)
+  - Implement MemoryModelInfoProvider using foundation pattern
+  - Bundle FHIR R4 model info (fhir_r4_model_info, fhir_r4_provider)
+  - Type resolution by name (resolve_type, resolve_class)
+  - *Note: Memory provider pattern in rh-foundation for WASM compatibility and reuse across crates*
 
 - [ ] **1.4 DataType System**
   - Internal DataType enum
@@ -435,7 +437,7 @@ criterion_main!(benches);
 [dependencies]
 # Workspace crates - reuse existing functionality
 rh-fhirpath = { path = "../rh-fhirpath" }   # FHIRPath parsing & evaluation
-rh-foundation = { path = "../rh-foundation" } # Package loading, HTTP, config
+rh-foundation = { path = "../rh-foundation" } # Package loading, HTTP, config, MemoryProvider pattern
 
 # Parser and serialization
 nom = { workspace = true }        # Parser combinators (same as rh-fhirpath)
@@ -539,4 +541,4 @@ harness = false
 
 ### Workspace Crates (Reuse)
 - `rh-fhirpath` - FHIRPath parsing and evaluation
-- `rh-foundation` - Package loading, HTTP, configuration
+- `rh-foundation` - Package loading, HTTP, configuration, MemoryProvider pattern (WASM-compatible in-memory storage)
