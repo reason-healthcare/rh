@@ -19,6 +19,7 @@
 //! - [`library`]: Library source providers and compiled library management
 //! - [`datatype`]: Internal DataType system for type checking
 //! - [`parser`]: CQL parser using nom combinators
+//! - [`preprocessor`]: Preprocessor for extracting library info from AST
 
 pub mod datatype;
 pub mod elm;
@@ -26,6 +27,7 @@ pub mod error;
 pub mod library;
 pub mod modelinfo;
 pub mod parser;
+pub mod preprocessor;
 pub mod provider;
 
 pub use datatype::{DataType, SystemType, TupleElement};
@@ -36,6 +38,10 @@ pub use library::{
     LibrarySourceProvider, MemoryLibrarySourceProvider,
 };
 pub use parser::CqlParser;
+pub use preprocessor::{
+    CodeInfo, CodeSystemInfo, ConceptInfo, DefinitionKind, ExpressionInfo, FunctionInfo,
+    LibraryDependency, LibraryInfo, ModelDependency, ParameterInfo, Preprocessor, ValueSetInfo,
+};
 pub use provider::{
     fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
 };

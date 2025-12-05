@@ -74,8 +74,14 @@ define "In Initial Population":
     let measure_id = LibraryIdentifier::new("MyMeasure", Some("1.0.0"));
     let nonexistent_id = LibraryIdentifier::new("NonExistent", Some("1.0"));
 
-    println!("   FHIRHelpers available: {}", manager.has_source(&helpers_id));
-    println!("   MyMeasure available: {}", manager.has_source(&measure_id));
+    println!(
+        "   FHIRHelpers available: {}",
+        manager.has_source(&helpers_id)
+    );
+    println!(
+        "   MyMeasure available: {}",
+        manager.has_source(&measure_id)
+    );
     println!(
         "   NonExistent available: {}",
         manager.has_source(&nonexistent_id)
@@ -85,7 +91,8 @@ define "In Initial Population":
     println!("\n2. Resolving Libraries:");
     match manager.resolve(&helpers_id) {
         Ok(library) => {
-            println!("   Resolved: {} v{:?}", 
+            println!(
+                "   Resolved: {} v{:?}",
                 library.name().unwrap_or("?"),
                 library.version()
             );
@@ -112,7 +119,7 @@ define "In Initial Population":
 
     // Example 5: Dependency graph (using pre-cached libraries with includes)
     println!("\n5. Dependency Graph:");
-    
+
     // Pre-cache libraries with their include information
     let fhir_helpers = CompiledLibrary::new(Library {
         identifier: Some(VersionedIdentifier {
@@ -200,7 +207,7 @@ define "In Initial Population":
 
     // Example 8: Create a cycle and detect it
     println!("\n8. Detecting Circular Dependencies:");
-    
+
     // Create two libraries that depend on each other
     let cycle_a_id = LibraryIdentifier::new("CycleA", Some("1.0"));
     let cycle_b_id = LibraryIdentifier::new("CycleB", Some("1.0"));
@@ -261,13 +268,25 @@ define "In Initial Population":
 
     // Example 10: Cache operations
     println!("\n10. Cache Operations:");
-    println!("   Before invalidate - FHIRHelpers cached: {}", manager.is_cached(&helpers_id));
+    println!(
+        "   Before invalidate - FHIRHelpers cached: {}",
+        manager.is_cached(&helpers_id)
+    );
     manager.invalidate(&helpers_id);
-    println!("   After invalidate - FHIRHelpers cached: {}", manager.is_cached(&helpers_id));
+    println!(
+        "   After invalidate - FHIRHelpers cached: {}",
+        manager.is_cached(&helpers_id)
+    );
 
-    println!("   Before clear - cached count: {}", manager.cached_libraries().len());
+    println!(
+        "   Before clear - cached count: {}",
+        manager.cached_libraries().len()
+    );
     manager.clear_cache();
-    println!("   After clear - cached count: {}", manager.cached_libraries().len());
+    println!(
+        "   After clear - cached count: {}",
+        manager.cached_libraries().len()
+    );
 
     println!("\n=== Example Complete ===");
     Ok(())
