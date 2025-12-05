@@ -20,7 +20,9 @@
 //! - [`datatype`]: Internal DataType system for type checking
 //! - [`parser`]: CQL parser using nom combinators
 //! - [`preprocessor`]: Preprocessor for extracting library info from AST
+//! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
 
+pub mod builder;
 pub mod datatype;
 pub mod elm;
 pub mod error;
@@ -30,6 +32,10 @@ pub mod parser;
 pub mod preprocessor;
 pub mod provider;
 
+pub use builder::{
+    BuilderError, BuilderResult, FunctionSignature, LibraryBuilder, ResolvedIdentifier, Scope,
+    Symbol, SymbolKind,
+};
 pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
 pub use library::{
