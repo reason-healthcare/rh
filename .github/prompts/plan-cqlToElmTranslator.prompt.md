@@ -84,10 +84,13 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - DefinitionRef enum for type-safe definition access
   - FunctionRef placeholder for function overload resolution
 
-- [ ] **3.3 LibraryManager**
-  - Library caching
-  - Dependency resolution
-  - Circular dependency detection
+- [x] **3.3 LibraryManager**
+  - Library caching using MemoryStore
+  - Dependency resolution with resolve() and resolve_all()
+  - Circular dependency detection (detect_cycle)
+  - Topological sort for compilation order
+  - Dependency graph generation
+  - LibraryError enum for error handling
 
 ### Phase 4: Semantic Analysis & Translation
 **Goal**: Translate CQL AST to typed ELM

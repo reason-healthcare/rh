@@ -32,8 +32,8 @@ pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
 pub use library::{
     CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FileLibrarySourceProvider,
-    FunctionRef, LibraryIdentifier, LibrarySource, LibrarySourceProvider,
-    MemoryLibrarySourceProvider,
+    FunctionRef, LibraryError, LibraryIdentifier, LibraryManager, LibraryResult, LibrarySource,
+    LibrarySourceProvider, MemoryLibrarySourceProvider,
 };
 pub use parser::CqlParser;
 pub use provider::{
