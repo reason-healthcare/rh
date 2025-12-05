@@ -870,6 +870,190 @@ impl ExpressionTranslator {
         let third = translate_expr(self, &expr.third);
         self.translate_ternary_operator(expr.operator, first, second, third, None)
     }
+
+    // ========================================================================
+    // Query Translation (Phase 4.5d)
+    // ========================================================================
+
+    /// Translate a CQL AST query to an ELM Query expression.
+    ///
+    /// A CQL query has the form:
+    /// ```cql
+    /// from [Source] A
+    /// let B = <expr>
+    /// with [RelatedSource] R such that <condition>
+    /// where <condition>
+    /// return <expr>
+    /// sort by <items>
+    /// ```
+    pub fn translate_query(
+        &mut self,
+        query: &ast::Query,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        // Translate sources
+        let sources: Vec<elm::AliasedQuerySource> = query
+            .sources
+            .iter()
+            .map(|s| self.translate_query_source(s, &translate_expr))
+            .collect();
+
+        // Translate let clauses
+        let let_clauses: Vec<elm::LetClause> = query
+            .let_clauses
+            .iter()
+            .map(|lc| self.translate_let_clause(lc, &translate_expr))
+            .collect();
+
+        // Translate relationship clauses
+        let relationships: Vec<elm::RelationshipClause> = query
+            .relationships
+            .iter()
+            .map(|r| self.translate_relationship_clause(r, &translate_expr))
+            .collect();
+
+        // Translate where clause
+        let where_clause = query
+            .where_clause
+            .as_ref()
+            .map(|w| Box::new(translate_expr(self, w)));
+
+        // Translate return clause
+        let return_clause = query
+            .return_clause
+            .as_ref()
+            .map(|r| self.translate_return_clause(r, &translate_expr));
+
+        // Translate sort clause
+        let sort = query
+            .sort_clause
+            .as_ref()
+            .map(|s| self.translate_sort_clause(s, &translate_expr));
+
+        elm::Expression::Query(elm::Query {
+            element,
+            source: sources,
+            let_clause: let_clauses,
+            relationship: relationships,
+            where_clause,
+            return_clause,
+            aggregate: None,
+            sort,
+        })
+    }
+
+    /// Translate a query source (aliased expression).
+    pub fn translate_query_source(
+        &mut self,
+        source: &ast::QuerySource,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::AliasedQuerySource {
+        elm::AliasedQuerySource {
+            alias: Some(source.alias.clone()),
+            expression: Some(Box::new(translate_expr(self, &source.expression))),
+        }
+    }
+
+    /// Translate a let clause.
+    pub fn translate_let_clause(
+        &mut self,
+        let_clause: &ast::LetClause,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::LetClause {
+        elm::LetClause {
+            identifier: Some(let_clause.identifier.clone()),
+            expression: Some(Box::new(translate_expr(self, &let_clause.expression))),
+        }
+    }
+
+    /// Translate a relationship clause (with/without).
+    pub fn translate_relationship_clause(
+        &mut self,
+        rel: &ast::RelationshipClause,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::RelationshipClause {
+        let relationship_type = match rel.kind {
+            ast::RelationshipKind::With => Some("With".to_string()),
+            ast::RelationshipKind::Without => Some("Without".to_string()),
+        };
+
+        elm::RelationshipClause {
+            relationship_type,
+            alias: Some(rel.source.alias.clone()),
+            expression: Some(Box::new(translate_expr(self, &rel.source.expression))),
+            such_that: rel
+                .such_that
+                .as_ref()
+                .map(|st| Box::new(translate_expr(self, st))),
+        }
+    }
+
+    /// Translate a return clause.
+    pub fn translate_return_clause(
+        &mut self,
+        ret: &ast::ReturnClause,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::ReturnClause {
+        elm::ReturnClause {
+            distinct: if ret.distinct { Some(true) } else { None },
+            expression: Some(Box::new(translate_expr(self, &ret.expression))),
+        }
+    }
+
+    /// Translate a sort clause.
+    pub fn translate_sort_clause(
+        &mut self,
+        sort: &ast::SortClause,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::SortClause {
+        let by: Vec<elm::SortByItem> = sort
+            .items
+            .iter()
+            .map(|item| self.translate_sort_item(item, &translate_expr))
+            .collect();
+
+        elm::SortClause { by }
+    }
+
+    /// Translate a sort item.
+    pub fn translate_sort_item(
+        &mut self,
+        item: &ast::SortItem,
+        _translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::SortByItem {
+        // In ELM, sort items are typically ByExpression, ByColumn, or ByDirection
+        // For simple property paths, we use ByColumn with a path
+        // For complex expressions, we'd use ByExpression
+
+        let direction = match item.direction {
+            ast::SortDirection::Ascending => Some(elm::SortDirection::Asc),
+            ast::SortDirection::Descending => Some(elm::SortDirection::Desc),
+        };
+
+        // Try to extract a simple path from the expression
+        let path = extract_sort_path(&item.expression);
+
+        elm::SortByItem { direction, path }
+    }
+}
+
+/// Extract a simple path from an expression for sorting.
+/// Returns the path string for simple identifier/property references.
+fn extract_sort_path(expr: &ast::Expression) -> Option<String> {
+    match expr {
+        ast::Expression::IdentifierRef(id_ref) => Some(id_ref.name.clone()),
+        ast::Expression::QualifiedIdentifierRef(qref) => {
+            Some(format!("{}.{}", qref.qualifier, qref.name))
+        }
+        // For more complex expressions, we'd need ByExpression
+        _ => None,
+    }
 }
 
 // ============================================================================
@@ -2410,5 +2594,651 @@ mod tests {
         let result =
             translator.translate_binary_operator(ast::BinaryOperator::IndexOf, left, right, None);
         assert!(matches!(result, elm::Expression::Indexer(_)));
+    }
+
+    // ========================================================================
+    // Phase 4.5d: Query Translation Tests
+    // ========================================================================
+
+    #[test]
+    fn test_translate_query_source() {
+        let mut translator = ExpressionTranslator::new();
+        let source = ast::QuerySource {
+            expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "Encounters".to_string(),
+                location: None,
+            })),
+            alias: "E".to_string(),
+            location: None,
+        };
+
+        let result = translator.translate_query_source(&source, |t, expr| {
+            if let ast::Expression::IdentifierRef(id_ref) = expr {
+                t.translate_ast_identifier_ref(id_ref)
+            } else {
+                panic!("Expected identifier ref");
+            }
+        });
+
+        assert_eq!(result.alias, Some("E".to_string()));
+        assert!(result.expression.is_some());
+    }
+
+    #[test]
+    fn test_translate_let_clause() {
+        let mut translator = ExpressionTranslator::new();
+        let let_clause = ast::LetClause {
+            identifier: "result".to_string(),
+            expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+            location: None,
+        };
+
+        let result = translator.translate_let_clause(&let_clause, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert_eq!(result.identifier, Some("result".to_string()));
+        assert!(result.expression.is_some());
+    }
+
+    #[test]
+    fn test_translate_relationship_with() {
+        let mut translator = ExpressionTranslator::new();
+        let rel = ast::RelationshipClause {
+            kind: ast::RelationshipKind::With,
+            source: ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Observations".to_string(),
+                    location: None,
+                })),
+                alias: "O".to_string(),
+                location: None,
+            },
+            such_that: Some(Box::new(ast::Expression::Literal(ast::Literal::Boolean(
+                true,
+            )))),
+            location: None,
+        };
+
+        let result = translator.translate_relationship_clause(&rel, |t, expr| match expr {
+            ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+            ast::Expression::Literal(lit) => t.translate_literal(lit),
+            _ => panic!("Unexpected expression"),
+        });
+
+        assert_eq!(result.relationship_type, Some("With".to_string()));
+        assert_eq!(result.alias, Some("O".to_string()));
+        assert!(result.expression.is_some());
+        assert!(result.such_that.is_some());
+    }
+
+    #[test]
+    fn test_translate_relationship_without() {
+        let mut translator = ExpressionTranslator::new();
+        let rel = ast::RelationshipClause {
+            kind: ast::RelationshipKind::Without,
+            source: ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Allergies".to_string(),
+                    location: None,
+                })),
+                alias: "A".to_string(),
+                location: None,
+            },
+            such_that: None,
+            location: None,
+        };
+
+        let result = translator.translate_relationship_clause(&rel, |t, expr| {
+            if let ast::Expression::IdentifierRef(id_ref) = expr {
+                t.translate_ast_identifier_ref(id_ref)
+            } else {
+                panic!("Expected identifier ref");
+            }
+        });
+
+        assert_eq!(result.relationship_type, Some("Without".to_string()));
+        assert_eq!(result.alias, Some("A".to_string()));
+        assert!(result.such_that.is_none());
+    }
+
+    #[test]
+    fn test_translate_return_clause() {
+        let mut translator = ExpressionTranslator::new();
+        let ret = ast::ReturnClause {
+            distinct: true,
+            all: false,
+            expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+            location: None,
+        };
+
+        let result = translator.translate_return_clause(&ret, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert_eq!(result.distinct, Some(true));
+        assert!(result.expression.is_some());
+    }
+
+    #[test]
+    fn test_translate_return_clause_no_distinct() {
+        let mut translator = ExpressionTranslator::new();
+        let ret = ast::ReturnClause {
+            distinct: false,
+            all: false,
+            expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+            location: None,
+        };
+
+        let result = translator.translate_return_clause(&ret, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert!(result.distinct.is_none());
+        assert!(result.expression.is_some());
+    }
+
+    #[test]
+    fn test_translate_sort_clause_ascending() {
+        let mut translator = ExpressionTranslator::new();
+        let sort = ast::SortClause {
+            items: vec![ast::SortItem {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "date".to_string(),
+                    location: None,
+                })),
+                direction: ast::SortDirection::Ascending,
+            }],
+            location: None,
+        };
+
+        let result = translator.translate_sort_clause(&sort, |t, expr| {
+            if let ast::Expression::IdentifierRef(id_ref) = expr {
+                t.translate_ast_identifier_ref(id_ref)
+            } else {
+                panic!("Expected identifier ref");
+            }
+        });
+
+        assert_eq!(result.by.len(), 1);
+        assert_eq!(result.by[0].direction, Some(elm::SortDirection::Asc));
+        assert_eq!(result.by[0].path, Some("date".to_string()));
+    }
+
+    #[test]
+    fn test_translate_sort_clause_descending() {
+        let mut translator = ExpressionTranslator::new();
+        let sort = ast::SortClause {
+            items: vec![ast::SortItem {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "priority".to_string(),
+                    location: None,
+                })),
+                direction: ast::SortDirection::Descending,
+            }],
+            location: None,
+        };
+
+        let result = translator.translate_sort_clause(&sort, |_t, _expr| {
+            panic!("Should not be called for path extraction");
+        });
+
+        assert_eq!(result.by.len(), 1);
+        assert_eq!(result.by[0].direction, Some(elm::SortDirection::Desc));
+        assert_eq!(result.by[0].path, Some("priority".to_string()));
+    }
+
+    #[test]
+    fn test_translate_sort_clause_multiple() {
+        let mut translator = ExpressionTranslator::new();
+        let sort = ast::SortClause {
+            items: vec![
+                ast::SortItem {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "category".to_string(),
+                        location: None,
+                    })),
+                    direction: ast::SortDirection::Ascending,
+                },
+                ast::SortItem {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "date".to_string(),
+                        location: None,
+                    })),
+                    direction: ast::SortDirection::Descending,
+                },
+            ],
+            location: None,
+        };
+
+        let result = translator.translate_sort_clause(&sort, |_t, _expr| {
+            panic!("Should not be called for path extraction");
+        });
+
+        assert_eq!(result.by.len(), 2);
+        assert_eq!(result.by[0].path, Some("category".to_string()));
+        assert_eq!(result.by[0].direction, Some(elm::SortDirection::Asc));
+        assert_eq!(result.by[1].path, Some("date".to_string()));
+        assert_eq!(result.by[1].direction, Some(elm::SortDirection::Desc));
+    }
+
+    #[test]
+    fn test_translate_simple_query() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Encounters".to_string(),
+                    location: None,
+                })),
+                alias: "E".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![],
+            relationships: vec![],
+            where_clause: None,
+            return_clause: None,
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.source.len(), 1);
+            assert_eq!(q.source[0].alias, Some("E".to_string()));
+            assert!(q.let_clause.is_empty());
+            assert!(q.relationship.is_empty());
+            assert!(q.where_clause.is_none());
+            assert!(q.return_clause.is_none());
+            assert!(q.sort.is_none());
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_query_with_where() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Patients".to_string(),
+                    location: None,
+                })),
+                alias: "P".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![],
+            relationships: vec![],
+            where_clause: Some(Box::new(ast::Expression::Literal(ast::Literal::Boolean(
+                true,
+            )))),
+            return_clause: None,
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.source.len(), 1);
+            assert!(q.where_clause.is_some());
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_query_with_return() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Conditions".to_string(),
+                    location: None,
+                })),
+                alias: "C".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![],
+            relationships: vec![],
+            where_clause: None,
+            return_clause: Some(ast::ReturnClause {
+                distinct: true,
+                all: false,
+                expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                location: None,
+            }),
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert!(q.return_clause.is_some());
+            let ret = q.return_clause.unwrap();
+            assert_eq!(ret.distinct, Some(true));
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_query_with_let() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Observations".to_string(),
+                    location: None,
+                })),
+                alias: "O".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![ast::LetClause {
+                identifier: "value".to_string(),
+                expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+                location: None,
+            }],
+            relationships: vec![],
+            where_clause: None,
+            return_clause: None,
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.let_clause.len(), 1);
+            assert_eq!(q.let_clause[0].identifier, Some("value".to_string()));
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_query_with_relationship() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Encounters".to_string(),
+                    location: None,
+                })),
+                alias: "E".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![],
+            relationships: vec![ast::RelationshipClause {
+                kind: ast::RelationshipKind::With,
+                source: ast::QuerySource {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "Diagnoses".to_string(),
+                        location: None,
+                    })),
+                    alias: "D".to_string(),
+                    location: None,
+                },
+                such_that: Some(Box::new(ast::Expression::Literal(ast::Literal::Boolean(
+                    true,
+                )))),
+                location: None,
+            }],
+            where_clause: None,
+            return_clause: None,
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.relationship.len(), 1);
+            assert_eq!(
+                q.relationship[0].relationship_type,
+                Some("With".to_string())
+            );
+            assert_eq!(q.relationship[0].alias, Some("D".to_string()));
+            assert!(q.relationship[0].such_that.is_some());
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_query_with_sort() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Events".to_string(),
+                    location: None,
+                })),
+                alias: "Ev".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![],
+            relationships: vec![],
+            where_clause: None,
+            return_clause: None,
+            sort_clause: Some(ast::SortClause {
+                items: vec![ast::SortItem {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "timestamp".to_string(),
+                        location: None,
+                    })),
+                    direction: ast::SortDirection::Descending,
+                }],
+                location: None,
+            }),
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert!(q.sort.is_some());
+            let sort = q.sort.unwrap();
+            assert_eq!(sort.by.len(), 1);
+            assert_eq!(sort.by[0].path, Some("timestamp".to_string()));
+            assert_eq!(sort.by[0].direction, Some(elm::SortDirection::Desc));
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_complex_query() {
+        let mut translator = ExpressionTranslator::new();
+        // from Encounters E
+        // let Duration = ...
+        // with Diagnoses D such that ...
+        // where ...
+        // return distinct ...
+        // sort by date desc
+        let query = ast::Query {
+            sources: vec![ast::QuerySource {
+                expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "Encounters".to_string(),
+                    location: None,
+                })),
+                alias: "E".to_string(),
+                location: None,
+            }],
+            let_clauses: vec![ast::LetClause {
+                identifier: "Duration".to_string(),
+                expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(30))),
+                location: None,
+            }],
+            relationships: vec![ast::RelationshipClause {
+                kind: ast::RelationshipKind::With,
+                source: ast::QuerySource {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "Diagnoses".to_string(),
+                        location: None,
+                    })),
+                    alias: "D".to_string(),
+                    location: None,
+                },
+                such_that: Some(Box::new(ast::Expression::Literal(ast::Literal::Boolean(
+                    true,
+                )))),
+                location: None,
+            }],
+            where_clause: Some(Box::new(ast::Expression::Literal(ast::Literal::Boolean(
+                true,
+            )))),
+            return_clause: Some(ast::ReturnClause {
+                distinct: true,
+                all: false,
+                expression: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                location: None,
+            }),
+            sort_clause: Some(ast::SortClause {
+                items: vec![ast::SortItem {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "date".to_string(),
+                        location: None,
+                    })),
+                    direction: ast::SortDirection::Descending,
+                }],
+                location: None,
+            }),
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.source.len(), 1);
+            assert_eq!(q.source[0].alias, Some("E".to_string()));
+            assert_eq!(q.let_clause.len(), 1);
+            assert_eq!(q.relationship.len(), 1);
+            assert!(q.where_clause.is_some());
+            assert!(q.return_clause.is_some());
+            assert!(q.sort.is_some());
+        } else {
+            panic!("Expected Query expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_multi_source_query() {
+        let mut translator = ExpressionTranslator::new();
+        let query = ast::Query {
+            sources: vec![
+                ast::QuerySource {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "Encounters".to_string(),
+                        location: None,
+                    })),
+                    alias: "E".to_string(),
+                    location: None,
+                },
+                ast::QuerySource {
+                    expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                        name: "Conditions".to_string(),
+                        location: None,
+                    })),
+                    alias: "C".to_string(),
+                    location: None,
+                },
+            ],
+            let_clauses: vec![],
+            relationships: vec![],
+            where_clause: None,
+            return_clause: None,
+            sort_clause: None,
+            location: None,
+        };
+
+        let result = translator.translate_query(
+            &query,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression type"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Query(q) = result {
+            assert_eq!(q.source.len(), 2);
+            assert_eq!(q.source[0].alias, Some("E".to_string()));
+            assert_eq!(q.source[1].alias, Some("C".to_string()));
+        } else {
+            panic!("Expected Query expression");
+        }
     }
 }
