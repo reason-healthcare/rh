@@ -1287,6 +1287,179 @@ fn type_specifier_to_qname(ts: &ast::TypeSpecifier) -> elm::QName {
 }
 
 // ============================================================================
+// Conditional Translation (Phase 4.5f)
+// ============================================================================
+
+impl ExpressionTranslator {
+    /// Translate a CQL if-then-else expression to an ELM If expression.
+    ///
+    /// CQL syntax:
+    /// ```cql
+    /// if condition then thenExpr else elseExpr
+    /// ```
+    pub fn translate_if_then_else(
+        &mut self,
+        if_expr: &ast::IfThenElse,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let condition = translate_expr(self, &if_expr.condition);
+        let then_expr = translate_expr(self, &if_expr.then_expr);
+        let else_expr = translate_expr(self, &if_expr.else_expr);
+
+        elm::Expression::If(elm::IfExpr {
+            element,
+            condition: Some(Box::new(condition)),
+            then_expr: Some(Box::new(then_expr)),
+            else_expr: Some(Box::new(else_expr)),
+        })
+    }
+
+    /// Translate a CQL case expression to an ELM Case expression.
+    ///
+    /// CQL supports two forms:
+    /// 1. Simple case (with comparand):
+    /// ```cql
+    /// case status
+    ///   when 'active' then 1
+    ///   when 'inactive' then 0
+    ///   else -1
+    /// end
+    /// ```
+    ///
+    /// 2. Searched case (without comparand):
+    /// ```cql
+    /// case
+    ///   when age < 18 then 'minor'
+    ///   when age < 65 then 'adult'
+    ///   else 'senior'
+    /// end
+    /// ```
+    pub fn translate_case(
+        &mut self,
+        case_expr: &ast::Case,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        // Translate comparand if present (simple case)
+        let comparand = case_expr
+            .comparand
+            .as_ref()
+            .map(|c| Box::new(translate_expr(self, c)));
+
+        // Translate case items
+        let case_items: Vec<elm::CaseItem> = case_expr
+            .items
+            .iter()
+            .map(|item| self.translate_case_item(item, &translate_expr))
+            .collect();
+
+        // Translate else expression
+        let else_expr = Some(Box::new(translate_expr(self, &case_expr.else_expr)));
+
+        elm::Expression::Case(elm::Case {
+            element,
+            comparand,
+            case_item: case_items,
+            else_expr,
+        })
+    }
+
+    /// Translate a case item (when-then pair).
+    fn translate_case_item(
+        &mut self,
+        item: &ast::CaseItem,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::CaseItem {
+        elm::CaseItem {
+            when_expr: Some(Box::new(translate_expr(self, &item.when))),
+            then_expr: Some(Box::new(translate_expr(self, &item.then))),
+        }
+    }
+
+    /// Create an If expression directly from ELM components.
+    pub fn make_if(
+        &mut self,
+        condition: elm::Expression,
+        then_expr: elm::Expression,
+        else_expr: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        elm::Expression::If(elm::IfExpr {
+            element,
+            condition: Some(Box::new(condition)),
+            then_expr: Some(Box::new(then_expr)),
+            else_expr: Some(Box::new(else_expr)),
+        })
+    }
+
+    /// Create a Case expression directly from ELM components.
+    pub fn make_case(
+        &mut self,
+        comparand: Option<elm::Expression>,
+        items: Vec<(elm::Expression, elm::Expression)>,
+        else_expr: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        let case_items: Vec<elm::CaseItem> = items
+            .into_iter()
+            .map(|(when_expr, then_expr)| elm::CaseItem {
+                when_expr: Some(Box::new(when_expr)),
+                then_expr: Some(Box::new(then_expr)),
+            })
+            .collect();
+
+        elm::Expression::Case(elm::Case {
+            element,
+            comparand: comparand.map(Box::new),
+            case_item: case_items,
+            else_expr: Some(Box::new(else_expr)),
+        })
+    }
+
+    /// Create a searched case (no comparand) from ELM components.
+    pub fn make_searched_case(
+        &mut self,
+        items: Vec<(elm::Expression, elm::Expression)>,
+        else_expr: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        self.make_case(None, items, else_expr, result_type)
+    }
+
+    /// Create a simple case (with comparand) from ELM components.
+    pub fn make_simple_case(
+        &mut self,
+        comparand: elm::Expression,
+        items: Vec<(elm::Expression, elm::Expression)>,
+        else_expr: elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        self.make_case(Some(comparand), items, else_expr, result_type)
+    }
+}
+
+// ============================================================================
 // N-ary Operator Enum
 // ============================================================================
 
@@ -3772,5 +3945,376 @@ mod tests {
         });
         let qname = super::type_specifier_to_qname(&ts);
         assert!(qname.contains("Interval"));
+    }
+
+    // ========================================================================
+    // Phase 4.5f: Conditional Translation Tests
+    // ========================================================================
+
+    #[test]
+    fn test_translate_if_then_else() {
+        let mut translator = ExpressionTranslator::new();
+        let if_expr = ast::IfThenElse {
+            condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+            then_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+            location: None,
+        };
+
+        let result = translator.translate_if_then_else(
+            &if_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::If(if_result) = result {
+            assert!(if_result.condition.is_some());
+            assert!(if_result.then_expr.is_some());
+            assert!(if_result.else_expr.is_some());
+        } else {
+            panic!("Expected If expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_if_then_else_with_type() {
+        let mut translator = ExpressionTranslator::new();
+        let if_expr = ast::IfThenElse {
+            condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+            then_expr: Box::new(ast::Expression::Literal(ast::Literal::String(
+                "yes".to_string(),
+            ))),
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::String(
+                "no".to_string(),
+            ))),
+            location: None,
+        };
+
+        let result = translator.translate_if_then_else(
+            &if_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            Some(&DataType::string()),
+        );
+
+        if let elm::Expression::If(if_result) = result {
+            assert!(if_result.element.result_type_name.is_some());
+        } else {
+            panic!("Expected If expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_searched_case() {
+        let mut translator = ExpressionTranslator::new();
+        let case_expr = ast::Case {
+            comparand: None,
+            items: vec![
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(false))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+                },
+            ],
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+            location: None,
+        };
+
+        let result = translator.translate_case(
+            &case_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Case(case_result) = result {
+            assert!(case_result.comparand.is_none());
+            assert_eq!(case_result.case_item.len(), 2);
+            assert!(case_result.else_expr.is_some());
+        } else {
+            panic!("Expected Case expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_simple_case() {
+        let mut translator = ExpressionTranslator::new();
+        let case_expr = ast::Case {
+            comparand: Some(Box::new(ast::Expression::Literal(ast::Literal::String(
+                "status".to_string(),
+            )))),
+            items: vec![
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::String(
+                        "active".to_string(),
+                    ))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::String(
+                        "inactive".to_string(),
+                    ))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                },
+            ],
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(-1))),
+            location: None,
+        };
+
+        let result = translator.translate_case(
+            &case_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Case(case_result) = result {
+            assert!(case_result.comparand.is_some());
+            assert_eq!(case_result.case_item.len(), 2);
+            assert!(case_result.else_expr.is_some());
+        } else {
+            panic!("Expected Case expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_case_single_item() {
+        let mut translator = ExpressionTranslator::new();
+        let case_expr = ast::Case {
+            comparand: None,
+            items: vec![ast::CaseItem {
+                when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                then: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+            }],
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+            location: None,
+        };
+
+        let result = translator.translate_case(
+            &case_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Case(case_result) = result {
+            assert_eq!(case_result.case_item.len(), 1);
+        } else {
+            panic!("Expected Case expression");
+        }
+    }
+
+    #[test]
+    fn test_make_if() {
+        let mut translator = ExpressionTranslator::new();
+        let condition = translator.translate_literal(&ast::Literal::Boolean(true));
+        let then_expr = translator.translate_literal(&ast::Literal::Integer(1));
+        let else_expr = translator.translate_literal(&ast::Literal::Integer(0));
+
+        let result = translator.make_if(condition, then_expr, else_expr, None);
+
+        if let elm::Expression::If(if_result) = result {
+            assert!(if_result.condition.is_some());
+            assert!(if_result.then_expr.is_some());
+            assert!(if_result.else_expr.is_some());
+        } else {
+            panic!("Expected If expression");
+        }
+    }
+
+    #[test]
+    fn test_make_searched_case() {
+        let mut translator = ExpressionTranslator::new();
+        let items = vec![
+            (
+                translator.translate_literal(&ast::Literal::Boolean(true)),
+                translator.translate_literal(&ast::Literal::Integer(1)),
+            ),
+            (
+                translator.translate_literal(&ast::Literal::Boolean(false)),
+                translator.translate_literal(&ast::Literal::Integer(2)),
+            ),
+        ];
+        let else_expr = translator.translate_literal(&ast::Literal::Integer(0));
+
+        let result = translator.make_searched_case(items, else_expr, None);
+
+        if let elm::Expression::Case(case_result) = result {
+            assert!(case_result.comparand.is_none());
+            assert_eq!(case_result.case_item.len(), 2);
+        } else {
+            panic!("Expected Case expression");
+        }
+    }
+
+    #[test]
+    fn test_make_simple_case() {
+        let mut translator = ExpressionTranslator::new();
+        let comparand = translator.translate_literal(&ast::Literal::String("x".to_string()));
+        let items = vec![
+            (
+                translator.translate_literal(&ast::Literal::String("a".to_string())),
+                translator.translate_literal(&ast::Literal::Integer(1)),
+            ),
+            (
+                translator.translate_literal(&ast::Literal::String("b".to_string())),
+                translator.translate_literal(&ast::Literal::Integer(2)),
+            ),
+        ];
+        let else_expr = translator.translate_literal(&ast::Literal::Integer(0));
+
+        let result = translator.make_simple_case(comparand, items, else_expr, None);
+
+        if let elm::Expression::Case(case_result) = result {
+            assert!(case_result.comparand.is_some());
+            assert_eq!(case_result.case_item.len(), 2);
+        } else {
+            panic!("Expected Case expression");
+        }
+    }
+
+    #[test]
+    fn test_case_item_translation() {
+        let mut translator = ExpressionTranslator::new();
+        let item = ast::CaseItem {
+            when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+            then: Box::new(ast::Expression::Literal(ast::Literal::Integer(42))),
+        };
+
+        let result = translator.translate_case_item(&item, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected literal");
+            }
+        });
+
+        assert!(result.when_expr.is_some());
+        assert!(result.then_expr.is_some());
+    }
+
+    #[test]
+    fn test_nested_if_then_else() {
+        let mut translator = ExpressionTranslator::new();
+        // if true then (if false then 1 else 2) else 3
+        let inner_if = ast::IfThenElse {
+            condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(false))),
+            then_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+            location: None,
+        };
+
+        let outer_if = ast::IfThenElse {
+            condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+            then_expr: Box::new(ast::Expression::IfThenElse(inner_if)),
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(3))),
+            location: None,
+        };
+
+        fn translate_expr_recursive(
+            t: &mut ExpressionTranslator,
+            expr: &ast::Expression,
+        ) -> elm::Expression {
+            match expr {
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                ast::Expression::IfThenElse(if_expr) => {
+                    t.translate_if_then_else(if_expr, translate_expr_recursive, None)
+                }
+                _ => panic!("Unexpected expression"),
+            }
+        }
+
+        let result = translator.translate_if_then_else(&outer_if, translate_expr_recursive, None);
+
+        if let elm::Expression::If(outer) = result {
+            assert!(outer.condition.is_some());
+            // Check that then_expr is also an If
+            if let Some(then_box) = outer.then_expr {
+                assert!(matches!(*then_box, elm::Expression::If(_)));
+            } else {
+                panic!("Expected then expression");
+            }
+        } else {
+            panic!("Expected If expression");
+        }
+    }
+
+    #[test]
+    fn test_case_with_many_items() {
+        let mut translator = ExpressionTranslator::new();
+        let case_expr = ast::Case {
+            comparand: None,
+            items: vec![
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(3))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(4))),
+                },
+                ast::CaseItem {
+                    when: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
+                    then: Box::new(ast::Expression::Literal(ast::Literal::Integer(5))),
+                },
+            ],
+            else_expr: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+            location: None,
+        };
+
+        let result = translator.translate_case(
+            &case_expr,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Case(case_result) = result {
+            assert_eq!(case_result.case_item.len(), 5);
+        } else {
+            panic!("Expected Case expression");
+        }
     }
 }
