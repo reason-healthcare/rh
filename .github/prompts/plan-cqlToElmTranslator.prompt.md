@@ -104,10 +104,19 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Access control tracking (public/private)
   - Trigger library resolution via library_dependency_ids()
 
-- [ ] **4.2 LibraryBuilder Core**
-  - Context management (Patient, Practitioner, etc.)
-  - Identifier resolution (local, included libraries)
-  - Expression building framework
+- [x] **4.2 LibraryBuilder Core**
+  - Symbol and Scope types for symbol table management
+  - SymbolKind enum (expression, function, parameter, terminology, alias, let, operand, library, context)
+  - FunctionSignature for overload resolution with operand types
+  - Context management (Patient, Practitioner, etc.) - auto-defines context symbol
+  - Nested scope stack with shadowing semantics
+  - Model registration (using declarations) with URI mapping
+  - Included library management with qualified lookup
+  - Identifier resolution through scope chain (innermost to outermost)
+  - Qualified identifier resolution (library.name, model.type, alias.property)
+  - Function overload resolution by name
+  - Error and warning collection (BuilderError enum)
+  - Integration with Preprocessor via from_library_info()
 
 - [ ] **4.3 Type Resolution**
   - Resolve type specifiers to DataTypes
