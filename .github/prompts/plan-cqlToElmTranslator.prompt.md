@@ -133,13 +133,13 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - 21 tests + operator_resolver example
 
 - [ ] **4.5 Expression Translation**
-  - Literals
-  - References (ExpressionRef, FunctionRef, ParameterRef)
-  - Operators (unary, binary, nary)
-  - Queries (source, where, return, sort)
-  - Retrieve expressions
-  - Conditionals (if, case)
-  - Type operators (as, is, convert)
+  - a. Literals
+  - b. References (ExpressionRef, FunctionRef, ParameterRef)
+  - c. Operators (unary, binary, nary)
+  - d. Queries (source, where, return, sort)
+  - e. Retrieve expressions
+  - f. Conditionals (if, case)
+  - g. Type operators (as, is, convert)
 
 - [ ] **4.6 Function Resolution**
   - System functions
