@@ -67,9 +67,13 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ### Phase 3: Library Resolution
 **Goal**: Resolve library dependencies
 
-- [ ] **3.1 LibrarySourceProvider Trait**
-  - MemoryLibrarySourceProvider
-  - FileLibrarySourceProvider (non-WASM)
+- [x] **3.1 LibrarySourceProvider Trait**
+  - LibraryIdentifier (name + version key)
+  - LibrarySource (source code with metadata)
+  - LibrarySourceProvider trait (get_source, has_library, list_libraries, find_by_name)
+  - MemoryLibrarySourceProvider using MemoryStore
+  - FileLibrarySourceProvider for filesystem (non-WASM)
+  - CompositeLibrarySourceProvider for layered providers
 
 - [ ] **3.2 CompiledLibrary**
   - Wrapper for ELM Library with resolved references

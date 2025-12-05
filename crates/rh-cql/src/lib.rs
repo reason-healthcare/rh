@@ -16,18 +16,24 @@
 //! - [`elm`]: ELM (Expression Logical Model) type definitions
 //! - [`modelinfo`]: ModelInfo type definitions for CQL data model resolution
 //! - [`provider`]: Model information providers (in-memory, WASM-compatible)
+//! - [`library`]: Library source providers and compiled library management
 //! - [`datatype`]: Internal DataType system for type checking
 //! - [`parser`]: CQL parser using nom combinators
 
 pub mod datatype;
 pub mod elm;
 pub mod error;
+pub mod library;
 pub mod modelinfo;
 pub mod parser;
 pub mod provider;
 
 pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
+pub use library::{
+    CompositeLibrarySourceProvider, FileLibrarySourceProvider, LibraryIdentifier, LibrarySource,
+    LibrarySourceProvider, MemoryLibrarySourceProvider,
+};
 pub use parser::CqlParser;
 pub use provider::{
     fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
