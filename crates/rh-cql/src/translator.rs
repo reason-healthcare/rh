@@ -1912,6 +1912,727 @@ impl ExpressionTranslator {
             }
         }
     }
+
+    // ========================================================================
+    // Function Resolution (Phase 4.6)
+    // ========================================================================
+
+    /// Resolve a function invocation to the appropriate ELM expression.
+    ///
+    /// This method determines whether a function call should be translated to:
+    /// - A system operator (e.g., `Sum`, `Count`, `First`, `Now`)
+    /// - A user-defined function reference
+    ///
+    /// # System Functions
+    ///
+    /// CQL provides many built-in functions that translate directly to ELM operators:
+    ///
+    /// - **Aggregate**: `Sum`, `Count`, `Min`, `Max`, `Avg`, `Median`, `Mode`, etc.
+    /// - **List**: `First`, `Last`, `Flatten`, `Distinct`, `Exists`, `SingletonFrom`
+    /// - **Nullological**: `Coalesce`, `IsNull`, `IsTrue`, `IsFalse`
+    /// - **Date/Time**: `Now`, `Today`, `TimeOfDay`
+    /// - **String**: `Length`, `Upper`, `Lower`, `Substring`, `StartsWith`, etc.
+    /// - **Arithmetic**: `Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`
+    ///
+    /// # Example
+    /// ```cql
+    /// Sum({1, 2, 3})           -- Translates to Sum aggregate expression
+    /// Count(Encounters)         -- Translates to Count aggregate expression
+    /// First(SortedList)         -- Translates to First unary expression
+    /// Now()                     -- Translates to Now nullary expression
+    /// MyLib.CustomFunc(x)       -- Translates to FunctionRef
+    /// ```
+    pub fn resolve_function_invocation(
+        &mut self,
+        func: &ast::FunctionInvocation,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        // If there's a library qualifier, it's a user-defined or library function
+        if func.library.is_some() {
+            return self.translate_ast_function_invocation(func, translate_expr);
+        }
+
+        // Try to resolve as a system function
+        if let Some(expr) = self.try_resolve_system_function(
+            &func.name,
+            &func.arguments,
+            &translate_expr,
+            result_type,
+        ) {
+            return expr;
+        }
+
+        // Fall back to FunctionRef for user-defined functions
+        self.translate_ast_function_invocation(func, translate_expr)
+    }
+
+    /// Try to resolve a function name as a system function.
+    ///
+    /// Returns `None` if the function is not a system function.
+    #[allow(clippy::only_used_in_recursion)]
+    fn try_resolve_system_function(
+        &mut self,
+        name: &str,
+        args: &[ast::Expression],
+        translate_expr: &impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> Option<elm::Expression> {
+        let element = match result_type {
+            Some(dt) => self.element_fields_typed(dt),
+            None => self.element_fields(),
+        };
+
+        // Nullary functions (0 arguments)
+        if args.is_empty() {
+            return match name {
+                "Now" => Some(elm::Expression::Now(elm::NullaryExpression { element })),
+                "Today" => Some(elm::Expression::Today(elm::NullaryExpression { element })),
+                "TimeOfDay" => Some(elm::Expression::TimeOfDay(elm::NullaryExpression {
+                    element,
+                })),
+                _ => None,
+            };
+        }
+
+        // Single argument functions
+        if args.len() == 1 {
+            let operand = translate_expr(self, &args[0]);
+
+            return match name {
+                // Aggregate functions
+                "Sum" => Some(elm::Expression::Sum(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Count" => Some(elm::Expression::Count(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Min" => Some(elm::Expression::Min(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Max" => Some(elm::Expression::Max(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Avg" => Some(elm::Expression::Avg(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Median" => Some(elm::Expression::Median(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Mode" => Some(elm::Expression::Mode(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "Variance" => Some(elm::Expression::Variance(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "StdDev" => Some(elm::Expression::StdDev(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "PopulationVariance" => Some(elm::Expression::PopulationVariance(
+                    elm::AggregateExpression {
+                        element,
+                        source: Some(Box::new(operand)),
+                        path: None,
+                        signature: Vec::new(),
+                    },
+                )),
+                "PopulationStdDev" => Some(elm::Expression::PopulationStdDev(
+                    elm::AggregateExpression {
+                        element,
+                        source: Some(Box::new(operand)),
+                        path: None,
+                        signature: Vec::new(),
+                    },
+                )),
+                "AllTrue" => Some(elm::Expression::AllTrue(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+                "AnyTrue" => Some(elm::Expression::AnyTrue(elm::AggregateExpression {
+                    element,
+                    source: Some(Box::new(operand)),
+                    path: None,
+                    signature: Vec::new(),
+                })),
+
+                // List functions
+                "First" => Some(elm::Expression::First(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Last" => Some(elm::Expression::Last(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Flatten" => Some(elm::Expression::Flatten(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Distinct" => Some(elm::Expression::Distinct(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Exists" => Some(elm::Expression::Exists(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "SingletonFrom" => Some(elm::Expression::SingletonFrom(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToList" => Some(elm::Expression::ToList(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Collapse" => Some(elm::Expression::Collapse(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Nullological functions
+                "IsNull" => Some(elm::Expression::IsNull(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "IsTrue" => Some(elm::Expression::IsTrue(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "IsFalse" => Some(elm::Expression::IsFalse(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Arithmetic functions
+                "Abs" => Some(elm::Expression::Abs(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Ceiling" => Some(elm::Expression::Ceiling(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Floor" => Some(elm::Expression::Floor(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Truncate" => Some(elm::Expression::Truncate(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Round" => Some(elm::Expression::Round(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Ln" => Some(elm::Expression::Ln(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Exp" => Some(elm::Expression::Exp(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Negate" => Some(elm::Expression::Negate(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Successor" => Some(elm::Expression::Successor(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Predecessor" => Some(elm::Expression::Predecessor(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // String functions
+                "Length" => Some(elm::Expression::Length(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Upper" => Some(elm::Expression::Upper(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Lower" => Some(elm::Expression::Lower(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToChars" => Some(elm::Expression::ToChars(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Interval functions
+                "Start" => Some(elm::Expression::Start(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "End" => Some(elm::Expression::End(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Width" => Some(elm::Expression::Width(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "Size" => Some(elm::Expression::Size(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "PointFrom" => Some(elm::Expression::PointFrom(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ExpandValueSet" => Some(elm::Expression::ExpandValueSet(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Clinical functions
+                "CalculateAge" => Some(elm::Expression::CalculateAge(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Type conversion functions (handled in Phase 4.5g but included for completeness)
+                "ToBoolean" => Some(elm::Expression::ToBoolean(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToInteger" => Some(elm::Expression::ToInteger(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToLong" => Some(elm::Expression::ToLong(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToDecimal" => Some(elm::Expression::ToDecimal(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToString" => Some(elm::Expression::ToStringExpr(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToDate" => Some(elm::Expression::ToDate(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToDateTime" => Some(elm::Expression::ToDateTime(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToTime" => Some(elm::Expression::ToTime(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToQuantity" => Some(elm::Expression::ToQuantity(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToRatio" => Some(elm::Expression::ToRatio(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+                "ToConcept" => Some(elm::Expression::ToConcept(elm::UnaryExpression {
+                    element,
+                    operand: Some(Box::new(operand)),
+                    signature: Vec::new(),
+                })),
+
+                // Not a system unary function
+                _ => None,
+            };
+        }
+
+        // Two argument functions
+        if args.len() == 2 {
+            let left = translate_expr(self, &args[0]);
+            let right = translate_expr(self, &args[1]);
+
+            return match name {
+                // Arithmetic
+                "Log" => Some(elm::Expression::Log(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Power" => Some(elm::Expression::Power(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+
+                // String
+                "StartsWith" => Some(elm::Expression::StartsWith(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "EndsWith" => Some(elm::Expression::EndsWith(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Matches" => Some(elm::Expression::Matches(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+
+                // List/Interval
+                "Contains" => Some(elm::Expression::Contains(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "In" => Some(elm::Expression::In(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Includes" => Some(elm::Expression::Includes(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "IncludedIn" => Some(elm::Expression::IncludedIn(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "ProperContains" => Some(elm::Expression::ProperContains(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "ProperIn" => Some(elm::Expression::ProperIn(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "ProperIncludes" => Some(elm::Expression::ProperIncludes(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "ProperIncludedIn" => {
+                    Some(elm::Expression::ProperIncludedIn(elm::BinaryExpression {
+                        element,
+                        operand: vec![left, right],
+                        signature: Vec::new(),
+                    }))
+                }
+                "Meets" => Some(elm::Expression::Meets(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "MeetsBefore" => Some(elm::Expression::MeetsBefore(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "MeetsAfter" => Some(elm::Expression::MeetsAfter(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Union" => Some(elm::Expression::Union(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Intersect" => Some(elm::Expression::Intersect(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Except" => Some(elm::Expression::Except(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Indexer" => Some(elm::Expression::Indexer(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Times" => Some(elm::Expression::Times(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "Expand" => Some(elm::Expression::Expand(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+
+                // Clinical
+                "CalculateAgeAt" => Some(elm::Expression::CalculateAgeAt(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "ConvertQuantity" => {
+                    Some(elm::Expression::ConvertQuantity(elm::BinaryExpression {
+                        element,
+                        operand: vec![left, right],
+                        signature: Vec::new(),
+                    }))
+                }
+                "CanConvertQuantity" => {
+                    Some(elm::Expression::CanConvertQuantity(elm::BinaryExpression {
+                        element,
+                        operand: vec![left, right],
+                        signature: Vec::new(),
+                    }))
+                }
+
+                // Terminology
+                "Subsumes" => Some(elm::Expression::Subsumes(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+                "SubsumedBy" => Some(elm::Expression::SubsumedBy(elm::BinaryExpression {
+                    element,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })),
+
+                // Not a system binary function
+                _ => None,
+            };
+        }
+
+        // Variable argument functions (Coalesce, Concatenate)
+        if !args.is_empty() {
+            let operands: Vec<elm::Expression> =
+                args.iter().map(|a| translate_expr(self, a)).collect();
+
+            return match name {
+                "Coalesce" => Some(elm::Expression::Coalesce(elm::NaryExpression {
+                    element,
+                    operand: operands,
+                    signature: Vec::new(),
+                })),
+                "Concatenate" => Some(elm::Expression::Concatenate(elm::NaryExpression {
+                    element,
+                    operand: operands,
+                    signature: Vec::new(),
+                })),
+                _ => None,
+            };
+        }
+
+        None
+    }
+
+    /// Resolve a fluent function invocation.
+    ///
+    /// Fluent functions are called using the syntax `value.function(args)`, where
+    /// the value becomes the first argument to the function.
+    ///
+    /// # Example
+    /// ```cql
+    /// list.First()           -- Translates to First(list)
+    /// encounters.Count()     -- Translates to Count(encounters)
+    /// value.MyCustomFunc(x)  -- Translates to FunctionRef with value as first arg
+    /// ```
+    pub fn resolve_fluent_function(
+        &mut self,
+        source: &ast::Expression,
+        name: &str,
+        args: &[ast::Expression],
+        library: Option<&str>,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+    ) -> elm::Expression {
+        // Build combined arguments with source as first argument
+        let mut all_args = vec![source.clone()];
+        all_args.extend(args.iter().cloned());
+
+        // Create a synthetic function invocation
+        let func = ast::FunctionInvocation {
+            library: library.map(String::from),
+            name: name.to_string(),
+            arguments: all_args,
+            location: None,
+        };
+
+        // Resolve as regular function
+        self.resolve_function_invocation(&func, translate_expr, result_type)
+    }
+
+    /// Translate a user-defined function definition to ELM.
+    ///
+    /// This translates function definitions, including:
+    /// - Regular functions with body
+    /// - External functions (no body)
+    /// - Fluent functions
+    ///
+    /// # Example
+    /// ```cql
+    /// define function Double(x Integer) returns Integer: x * 2
+    /// define fluent function IsAdult(p Patient) returns Boolean: AgeInYears(p) >= 18
+    /// ```
+    pub fn translate_function_def(
+        &mut self,
+        func: &ast::FunctionDef,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::FunctionDef {
+        // Translate operands (parameters)
+        let operand: Vec<elm::OperandDef> = func
+            .parameters
+            .iter()
+            .map(|p| elm::OperandDef {
+                name: Some(p.name.clone()),
+                operand_type_name: p.type_specifier.as_ref().map(|ts| {
+                    let elm_ts = self.type_specifier_to_elm(ts);
+                    type_specifier_to_qname_string(&elm_ts)
+                }),
+                operand_type_specifier: p
+                    .type_specifier
+                    .as_ref()
+                    .map(|ts| self.type_specifier_to_elm(ts)),
+            })
+            .collect();
+
+        // Translate return type
+        let result_type_specifier = func
+            .return_type
+            .as_ref()
+            .map(|ts| self.type_specifier_to_elm(ts));
+        let result_type_name = result_type_specifier
+            .as_ref()
+            .map(type_specifier_to_qname_string);
+
+        // Translate body expression
+        let expression = func
+            .body
+            .as_ref()
+            .map(|b| Box::new(translate_expr(self, b)));
+
+        // Map access modifier
+        let access_level = match func.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        elm::FunctionDef {
+            local_id: self.next_local_id(),
+            locator: None,
+            name: Some(func.name.clone()),
+            context: None,
+            access_level,
+            result_type_name,
+            result_type_specifier,
+            operand,
+            expression,
+            external: if func.external { Some(true) } else { None },
+            fluent: if func.fluent { Some(true) } else { None },
+            annotation: Vec::new(),
+        }
+    }
+}
+
+/// Convert an ELM TypeSpecifier to a QName string.
+fn type_specifier_to_qname_string(ts: &elm::TypeSpecifier) -> String {
+    match ts {
+        elm::TypeSpecifier::Named(named) => named.name.clone(),
+        elm::TypeSpecifier::List(list) => {
+            if let Some(elem) = &list.element_type {
+                format!("List<{}>", type_specifier_to_qname_string(elem))
+            } else {
+                "List".to_string()
+            }
+        }
+        elm::TypeSpecifier::Interval(interval) => {
+            if let Some(point) = &interval.point_type {
+                format!("Interval<{}>", type_specifier_to_qname_string(point))
+            } else {
+                "Interval".to_string()
+            }
+        }
+        elm::TypeSpecifier::Tuple(_) => "Tuple".to_string(),
+        elm::TypeSpecifier::Choice(_) => "Choice".to_string(),
+        elm::TypeSpecifier::Parameter(param) => param.parameter_name.clone().unwrap_or_default(),
+    }
 }
 
 // ============================================================================
@@ -5280,5 +6001,1392 @@ mod tests {
         } else {
             panic!("Expected Tuple type specifier");
         }
+    }
+
+    // ========================================================================
+    // Function Resolution Tests (Phase 4.6)
+    // ========================================================================
+
+    // -- Nullary System Functions --
+
+    #[test]
+    fn test_resolve_now() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Now".to_string(),
+            arguments: vec![],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |_, _| panic!("Should not translate args"),
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Now(_)));
+    }
+
+    #[test]
+    fn test_resolve_today() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Today".to_string(),
+            arguments: vec![],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |_, _| panic!("Should not translate args"),
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Today(_)));
+    }
+
+    #[test]
+    fn test_resolve_time_of_day() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "TimeOfDay".to_string(),
+            arguments: vec![],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |_, _| panic!("Should not translate args"),
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::TimeOfDay(_)));
+    }
+
+    // -- Aggregate Functions --
+
+    #[test]
+    fn test_resolve_sum() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Sum".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "values".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Sum(agg) = result {
+            assert!(agg.source.is_some());
+        } else {
+            panic!("Expected Sum expression");
+        }
+    }
+
+    #[test]
+    fn test_resolve_count() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Count".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "items".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Count(_)));
+    }
+
+    #[test]
+    fn test_resolve_min() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Min".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "values".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Min(_)));
+    }
+
+    #[test]
+    fn test_resolve_max() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Max".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "values".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Max(_)));
+    }
+
+    #[test]
+    fn test_resolve_avg() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Avg".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "values".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Avg(_)));
+    }
+
+    #[test]
+    fn test_resolve_all_true() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "AllTrue".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "flags".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::AllTrue(_)));
+    }
+
+    #[test]
+    fn test_resolve_any_true() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "AnyTrue".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "flags".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::AnyTrue(_)));
+    }
+
+    // -- List Functions --
+
+    #[test]
+    fn test_resolve_first() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "First".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "list".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::First(unary) = result {
+            assert!(unary.operand.is_some());
+        } else {
+            panic!("Expected First expression");
+        }
+    }
+
+    #[test]
+    fn test_resolve_last() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Last".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "list".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Last(_)));
+    }
+
+    #[test]
+    fn test_resolve_flatten() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Flatten".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "nested".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Flatten(_)));
+    }
+
+    #[test]
+    fn test_resolve_distinct() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Distinct".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "list".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Distinct(_)));
+    }
+
+    #[test]
+    fn test_resolve_exists() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Exists".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "list".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Exists(_)));
+    }
+
+    // -- Nullological Functions --
+
+    #[test]
+    fn test_resolve_is_null() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "IsNull".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "value".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::IsNull(_)));
+    }
+
+    #[test]
+    fn test_resolve_coalesce() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Coalesce".to_string(),
+            arguments: vec![
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "a".to_string(),
+                    location: None,
+                }),
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "b".to_string(),
+                    location: None,
+                }),
+                ast::Expression::Literal(ast::Literal::Integer(0)),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression"),
+            },
+            None,
+        );
+
+        if let elm::Expression::Coalesce(nary) = result {
+            assert_eq!(nary.operand.len(), 3);
+        } else {
+            panic!("Expected Coalesce expression");
+        }
+    }
+
+    // -- Arithmetic Functions --
+
+    #[test]
+    fn test_resolve_abs() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Abs".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::Integer(-5))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Abs(_)));
+    }
+
+    #[test]
+    fn test_resolve_ceiling() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Ceiling".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::Decimal(3.7))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Ceiling(_)));
+    }
+
+    #[test]
+    fn test_resolve_floor() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Floor".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::Decimal(3.7))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Floor(_)));
+    }
+
+    #[test]
+    fn test_resolve_log_binary() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Log".to_string(),
+            arguments: vec![
+                ast::Expression::Literal(ast::Literal::Integer(100)),
+                ast::Expression::Literal(ast::Literal::Integer(10)),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Log(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected Log expression");
+        }
+    }
+
+    #[test]
+    fn test_resolve_power() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Power".to_string(),
+            arguments: vec![
+                ast::Expression::Literal(ast::Literal::Integer(2)),
+                ast::Expression::Literal(ast::Literal::Integer(8)),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Power(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected Power expression");
+        }
+    }
+
+    // -- String Functions --
+
+    #[test]
+    fn test_resolve_length() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Length".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::String(
+                "hello".to_string(),
+            ))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Length(_)));
+    }
+
+    #[test]
+    fn test_resolve_upper() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Upper".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::String(
+                "hello".to_string(),
+            ))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Upper(_)));
+    }
+
+    #[test]
+    fn test_resolve_lower() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Lower".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::String(
+                "HELLO".to_string(),
+            ))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Lower(_)));
+    }
+
+    #[test]
+    fn test_resolve_starts_with() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "StartsWith".to_string(),
+            arguments: vec![
+                ast::Expression::Literal(ast::Literal::String("hello".to_string())),
+                ast::Expression::Literal(ast::Literal::String("he".to_string())),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::StartsWith(_)));
+    }
+
+    #[test]
+    fn test_resolve_ends_with() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "EndsWith".to_string(),
+            arguments: vec![
+                ast::Expression::Literal(ast::Literal::String("hello".to_string())),
+                ast::Expression::Literal(ast::Literal::String("lo".to_string())),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::EndsWith(_)));
+    }
+
+    #[test]
+    fn test_resolve_concatenate() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Concatenate".to_string(),
+            arguments: vec![
+                ast::Expression::Literal(ast::Literal::String("Hello".to_string())),
+                ast::Expression::Literal(ast::Literal::String(" ".to_string())),
+                ast::Expression::Literal(ast::Literal::String("World".to_string())),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Concatenate(nary) = result {
+            assert_eq!(nary.operand.len(), 3);
+        } else {
+            panic!("Expected Concatenate expression");
+        }
+    }
+
+    // -- Interval Functions --
+
+    #[test]
+    fn test_resolve_start() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Start".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "interval".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Start(_)));
+    }
+
+    #[test]
+    fn test_resolve_end() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "End".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "interval".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::End(_)));
+    }
+
+    #[test]
+    fn test_resolve_width() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Width".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "interval".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::Width(_)));
+    }
+
+    #[test]
+    fn test_resolve_union() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Union".to_string(),
+            arguments: vec![
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list1".to_string(),
+                    location: None,
+                }),
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list2".to_string(),
+                    location: None,
+                }),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Union(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected Union expression");
+        }
+    }
+
+    #[test]
+    fn test_resolve_intersect() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Intersect".to_string(),
+            arguments: vec![
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list1".to_string(),
+                    location: None,
+                }),
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list2".to_string(),
+                    location: None,
+                }),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Intersect(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected Intersect expression");
+        }
+    }
+
+    #[test]
+    fn test_resolve_except() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "Except".to_string(),
+            arguments: vec![
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list1".to_string(),
+                    location: None,
+                }),
+                ast::Expression::IdentifierRef(ast::IdentifierRef {
+                    name: "list2".to_string(),
+                    location: None,
+                }),
+            ],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        if let elm::Expression::Except(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected Except expression");
+        }
+    }
+
+    // -- User-Defined Functions --
+
+    #[test]
+    fn test_resolve_user_defined_function() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "MyCustomFunction".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::Integer(42))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        // Should fall back to FunctionRef for unknown functions
+        if let elm::Expression::FunctionRef(func_ref) = result {
+            assert_eq!(func_ref.name, Some("MyCustomFunction".to_string()));
+            assert_eq!(func_ref.operand.len(), 1);
+        } else {
+            panic!("Expected FunctionRef for user-defined function");
+        }
+    }
+
+    #[test]
+    fn test_resolve_library_qualified_function() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: Some("FHIRHelpers".to_string()),
+            name: "ToQuantity".to_string(),
+            arguments: vec![ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "value".to_string(),
+                location: None,
+            })],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        // Library-qualified functions always become FunctionRef
+        if let elm::Expression::FunctionRef(func_ref) = result {
+            assert_eq!(func_ref.name, Some("ToQuantity".to_string()));
+            assert_eq!(func_ref.library_name, Some("FHIRHelpers".to_string()));
+        } else {
+            panic!("Expected FunctionRef for library-qualified function");
+        }
+    }
+
+    // -- Fluent Function Syntax --
+
+    #[test]
+    fn test_resolve_fluent_first() {
+        let mut translator = ExpressionTranslator::new();
+        let source = ast::Expression::IdentifierRef(ast::IdentifierRef {
+            name: "myList".to_string(),
+            location: None,
+        });
+
+        let result = translator.resolve_fluent_function(
+            &source,
+            "First",
+            &[], // No additional args
+            None,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        // Should resolve to First(myList)
+        if let elm::Expression::First(unary) = result {
+            assert!(unary.operand.is_some());
+        } else {
+            panic!("Expected First expression for fluent call");
+        }
+    }
+
+    #[test]
+    fn test_resolve_fluent_count() {
+        let mut translator = ExpressionTranslator::new();
+        let source = ast::Expression::IdentifierRef(ast::IdentifierRef {
+            name: "encounters".to_string(),
+            location: None,
+        });
+
+        let result = translator.resolve_fluent_function(
+            &source,
+            "Count",
+            &[],
+            None,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        // Should resolve to Count(encounters)
+        if let elm::Expression::Count(agg) = result {
+            assert!(agg.source.is_some());
+        } else {
+            panic!("Expected Count expression for fluent call");
+        }
+    }
+
+    #[test]
+    fn test_resolve_fluent_user_function() {
+        let mut translator = ExpressionTranslator::new();
+        let source = ast::Expression::IdentifierRef(ast::IdentifierRef {
+            name: "patient".to_string(),
+            location: None,
+        });
+
+        let result = translator.resolve_fluent_function(
+            &source,
+            "IsAdult",
+            &[],
+            None,
+            |t, expr| {
+                if let ast::Expression::IdentifierRef(id_ref) = expr {
+                    t.translate_ast_identifier_ref(id_ref)
+                } else {
+                    panic!("Expected IdentifierRef");
+                }
+            },
+            None,
+        );
+
+        // User-defined fluent function becomes FunctionRef with source as first arg
+        if let elm::Expression::FunctionRef(func_ref) = result {
+            assert_eq!(func_ref.name, Some("IsAdult".to_string()));
+            assert_eq!(func_ref.operand.len(), 1); // patient is first arg
+        } else {
+            panic!("Expected FunctionRef for fluent user function");
+        }
+    }
+
+    #[test]
+    fn test_resolve_fluent_with_args() {
+        let mut translator = ExpressionTranslator::new();
+        let source = ast::Expression::IdentifierRef(ast::IdentifierRef {
+            name: "str".to_string(),
+            location: None,
+        });
+
+        let result = translator.resolve_fluent_function(
+            &source,
+            "StartsWith",
+            &[ast::Expression::Literal(ast::Literal::String(
+                "prefix".to_string(),
+            ))],
+            None,
+            |t, expr| match expr {
+                ast::Expression::IdentifierRef(id_ref) => t.translate_ast_identifier_ref(id_ref),
+                ast::Expression::Literal(lit) => t.translate_literal(lit),
+                _ => panic!("Unexpected expression"),
+            },
+            None,
+        );
+
+        // str.StartsWith("prefix") -> StartsWith(str, "prefix")
+        if let elm::Expression::StartsWith(binary) = result {
+            assert_eq!(binary.operand.len(), 2);
+        } else {
+            panic!("Expected StartsWith expression");
+        }
+    }
+
+    // -- Function Definition Translation --
+
+    #[test]
+    fn test_translate_function_def_basic() {
+        let mut translator = ExpressionTranslator::new();
+        let func_def = ast::FunctionDef {
+            name: "Double".to_string(),
+            parameters: vec![ast::FunctionParameter {
+                name: "x".to_string(),
+                type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                    namespace: None,
+                    name: "Integer".to_string(),
+                })),
+            }],
+            return_type: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Integer".to_string(),
+            })),
+            body: Some(ast::Expression::Literal(ast::Literal::Integer(42))),
+            fluent: false,
+            external: false,
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_function_def(&func_def, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected Literal");
+            }
+        });
+
+        assert_eq!(result.name, Some("Double".to_string()));
+        assert_eq!(result.operand.len(), 1);
+        assert_eq!(result.operand[0].name, Some("x".to_string()));
+        assert!(result.expression.is_some());
+        assert_eq!(result.fluent, None); // Not fluent
+        assert_eq!(result.external, None); // Not external
+    }
+
+    #[test]
+    fn test_translate_function_def_fluent() {
+        let mut translator = ExpressionTranslator::new();
+        let func_def = ast::FunctionDef {
+            name: "IsAdult".to_string(),
+            parameters: vec![ast::FunctionParameter {
+                name: "p".to_string(),
+                type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                    namespace: Some("FHIR".to_string()),
+                    name: "Patient".to_string(),
+                })),
+            }],
+            return_type: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Boolean".to_string(),
+            })),
+            body: Some(ast::Expression::Literal(ast::Literal::Boolean(true))),
+            fluent: true,
+            external: false,
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_function_def(&func_def, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected Literal");
+            }
+        });
+
+        assert_eq!(result.name, Some("IsAdult".to_string()));
+        assert_eq!(result.fluent, Some(true));
+    }
+
+    #[test]
+    fn test_translate_function_def_external() {
+        let mut translator = ExpressionTranslator::new();
+        let func_def = ast::FunctionDef {
+            name: "ExternalFunc".to_string(),
+            parameters: vec![],
+            return_type: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "String".to_string(),
+            })),
+            body: None, // External functions have no body
+            fluent: false,
+            external: true,
+            access: ast::AccessModifier::Private,
+            location: None,
+        };
+
+        let result = translator.translate_function_def(&func_def, |_, _| {
+            panic!("Should not translate body");
+        });
+
+        assert_eq!(result.name, Some("ExternalFunc".to_string()));
+        assert_eq!(result.external, Some(true));
+        assert!(result.expression.is_none());
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Private));
+    }
+
+    #[test]
+    fn test_translate_function_def_multiple_params() {
+        let mut translator = ExpressionTranslator::new();
+        let func_def = ast::FunctionDef {
+            name: "Add".to_string(),
+            parameters: vec![
+                ast::FunctionParameter {
+                    name: "a".to_string(),
+                    type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                        namespace: None,
+                        name: "Integer".to_string(),
+                    })),
+                },
+                ast::FunctionParameter {
+                    name: "b".to_string(),
+                    type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                        namespace: None,
+                        name: "Integer".to_string(),
+                    })),
+                },
+            ],
+            return_type: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Integer".to_string(),
+            })),
+            body: Some(ast::Expression::Literal(ast::Literal::Integer(0))),
+            fluent: false,
+            external: false,
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_function_def(&func_def, |t, expr| {
+            if let ast::Expression::Literal(lit) = expr {
+                t.translate_literal(lit)
+            } else {
+                panic!("Expected Literal");
+            }
+        });
+
+        assert_eq!(result.operand.len(), 2);
+        assert_eq!(result.operand[0].name, Some("a".to_string()));
+        assert_eq!(result.operand[1].name, Some("b".to_string()));
+    }
+
+    // -- Type Conversion Functions (via function invocation) --
+
+    #[test]
+    fn test_resolve_to_integer_function() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "ToInteger".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::String(
+                "42".to_string(),
+            ))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::ToInteger(_)));
+    }
+
+    #[test]
+    fn test_resolve_to_string_function() {
+        let mut translator = ExpressionTranslator::new();
+        let func = ast::FunctionInvocation {
+            library: None,
+            name: "ToString".to_string(),
+            arguments: vec![ast::Expression::Literal(ast::Literal::Integer(42))],
+            location: None,
+        };
+
+        let result = translator.resolve_function_invocation(
+            &func,
+            |t, expr| {
+                if let ast::Expression::Literal(lit) = expr {
+                    t.translate_literal(lit)
+                } else {
+                    panic!("Expected Literal");
+                }
+            },
+            None,
+        );
+
+        assert!(matches!(result, elm::Expression::ToStringExpr(_)));
     }
 }
