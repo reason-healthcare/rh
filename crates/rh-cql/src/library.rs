@@ -357,7 +357,9 @@ impl FileLibrarySourceProvider {
     }
 
     /// Generate possible filenames for a library identifier.
-    fn possible_filenames(&self, identifier: &LibraryIdentifier) -> Vec<String> {
+    ///
+    /// This is useful for understanding how libraries are resolved from the filesystem.
+    pub fn possible_filenames(&self, identifier: &LibraryIdentifier) -> Vec<String> {
         let mut names = Vec::new();
 
         // Try versioned filename first: LibraryName-version.cql
@@ -530,6 +532,24 @@ impl LibrarySourceProvider for CompositeLibrarySourceProvider {
 mod tests {
     use super::*;
 
+    // ===========================================
+    // LibraryIdentifier tests
+    // ===========================================
+
+    #[test]
+    fn test_library_identifier_new() {
+        let id = LibraryIdentifier::new("FHIRHelpers", Some("4.0.1"));
+        assert_eq!(id.name, "FHIRHelpers");
+        assert_eq!(id.version, Some("4.0.1".to_string()));
+    }
+
+    #[test]
+    fn test_library_identifier_unversioned() {
+        let id = LibraryIdentifier::unversioned("Common");
+        assert_eq!(id.name, "Common");
+        assert_eq!(id.version, None);
+    }
+
     #[test]
     fn test_library_identifier_key() {
         let id = LibraryIdentifier::new("FHIRHelpers", Some("4.0.1"));
@@ -539,6 +559,16 @@ mod tests {
         let id2 = LibraryIdentifier::unversioned("Common");
         assert_eq!(id2.to_key(), "Common");
         assert_eq!(LibraryIdentifier::from_key("Common"), id2);
+    }
+
+    #[test]
+    fn test_library_identifier_key_with_special_chars() {
+        // Version can have dots, dashes, etc.
+        let id = LibraryIdentifier::new("MyLib", Some("1.2.3-beta.1"));
+        assert_eq!(id.to_key(), "MyLib|1.2.3-beta.1");
+        let parsed = LibraryIdentifier::from_key("MyLib|1.2.3-beta.1");
+        assert_eq!(parsed.name, "MyLib");
+        assert_eq!(parsed.version, Some("1.2.3-beta.1".to_string()));
     }
 
     #[test]
@@ -566,10 +596,90 @@ mod tests {
         assert!(versioned.matches(&versioned));
         assert!(!versioned.matches(&different_version));
         assert!(!versioned.matches(&different_name));
+
+        // Versioned doesn't match unversioned candidate
+        assert!(!versioned.matches(&unversioned));
     }
 
     #[test]
-    fn test_memory_provider() {
+    fn test_library_identifier_equality() {
+        let id1 = LibraryIdentifier::new("Test", Some("1.0"));
+        let id2 = LibraryIdentifier::new("Test", Some("1.0"));
+        let id3 = LibraryIdentifier::new("Test", Some("2.0"));
+
+        assert_eq!(id1, id2);
+        assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_library_identifier_hash() {
+        use std::collections::HashSet;
+
+        let mut set = HashSet::new();
+        set.insert(LibraryIdentifier::new("A", Some("1.0")));
+        set.insert(LibraryIdentifier::new("B", Some("1.0")));
+        set.insert(LibraryIdentifier::new("A", Some("1.0"))); // duplicate
+
+        assert_eq!(set.len(), 2);
+    }
+
+    // ===========================================
+    // LibrarySource tests
+    // ===========================================
+
+    #[test]
+    fn test_library_source_new() {
+        let id = LibraryIdentifier::new("Test", Some("1.0"));
+        let source = LibrarySource::new(id.clone(), "library Test", None::<String>);
+
+        assert_eq!(source.identifier, id);
+        assert_eq!(source.source, "library Test");
+        assert!(source.location.is_none());
+    }
+
+    #[test]
+    fn test_library_source_with_location() {
+        let id = LibraryIdentifier::new("Test", Some("1.0"));
+        let source = LibrarySource::new(id, "library Test", Some("/path/to/file.cql"));
+
+        assert_eq!(source.location, Some("/path/to/file.cql".to_string()));
+    }
+
+    // ===========================================
+    // MemoryLibrarySourceProvider tests
+    // ===========================================
+
+    #[test]
+    fn test_memory_provider_new() {
+        let provider = MemoryLibrarySourceProvider::new();
+        assert_eq!(provider.library_count(), 0);
+    }
+
+    #[test]
+    fn test_memory_provider_default() {
+        let provider = MemoryLibrarySourceProvider::default();
+        assert_eq!(provider.library_count(), 0);
+    }
+
+    #[test]
+    fn test_memory_provider_with_max_libraries() {
+        let provider = MemoryLibrarySourceProvider::with_max_libraries(10);
+        assert_eq!(provider.library_count(), 0);
+    }
+
+    #[test]
+    fn test_memory_provider_with_stats() {
+        let provider = MemoryLibrarySourceProvider::with_stats();
+        let id = LibraryIdentifier::new("Test", Some("1.0"));
+        provider.register_source(id.clone(), "test".to_string());
+
+        let _ = provider.get_source(&id);
+        let stats = provider.stats();
+        assert!(stats.hits > 0 || stats.insertions > 0);
+    }
+
+    #[test]
+    fn test_memory_provider_register_and_get() {
         let provider = MemoryLibrarySourceProvider::new();
 
         let id = LibraryIdentifier::new("TestLib", Some("1.0"));
@@ -581,11 +691,28 @@ mod tests {
         let source = provider.get_source(&id).unwrap();
         assert_eq!(source.source, "library TestLib version '1.0'");
         assert!(source.location.is_none());
+    }
 
-        // Test lookup without version
+    #[test]
+    fn test_memory_provider_get_unversioned() {
+        let provider = MemoryLibrarySourceProvider::new();
+
+        let id = LibraryIdentifier::new("TestLib", Some("1.0"));
+        provider.register_source(id, "library TestLib version '1.0'".to_string());
+
+        // Look up without version
         let unversioned_id = LibraryIdentifier::unversioned("TestLib");
-        let source2 = provider.get_source(&unversioned_id).unwrap();
-        assert_eq!(source2.source, source.source);
+        let source = provider.get_source(&unversioned_id).unwrap();
+        assert_eq!(source.source, "library TestLib version '1.0'");
+    }
+
+    #[test]
+    fn test_memory_provider_get_nonexistent() {
+        let provider = MemoryLibrarySourceProvider::new();
+
+        let id = LibraryIdentifier::new("NotFound", Some("1.0"));
+        assert!(provider.get_source(&id).is_none());
+        assert!(!provider.has_library(&id));
     }
 
     #[test]
@@ -604,6 +731,23 @@ mod tests {
             source.location,
             Some("/path/to/TestLib-1.0.cql".to_string())
         );
+    }
+
+    #[test]
+    fn test_memory_provider_register_library_source() {
+        let provider = MemoryLibrarySourceProvider::new();
+
+        let source = LibrarySource::new(
+            LibraryIdentifier::new("Direct", Some("1.0")),
+            "library Direct",
+            Some("/path/file.cql"),
+        );
+        provider.register(source);
+
+        let id = LibraryIdentifier::new("Direct", Some("1.0"));
+        let retrieved = provider.get_source(&id).unwrap();
+        assert_eq!(retrieved.source, "library Direct");
+        assert_eq!(retrieved.location, Some("/path/file.cql".to_string()));
     }
 
     #[test]
@@ -647,6 +791,12 @@ mod tests {
         let common_libs = provider.find_by_name("Common");
         assert_eq!(common_libs.len(), 2);
         assert!(common_libs.iter().all(|id| id.name == "Common"));
+
+        let other_libs = provider.find_by_name("Other");
+        assert_eq!(other_libs.len(), 1);
+
+        let none_libs = provider.find_by_name("NotFound");
+        assert_eq!(none_libs.len(), 0);
     }
 
     #[test]
@@ -660,6 +810,67 @@ mod tests {
         let removed = provider.remove(&id);
         assert!(removed.is_some());
         assert!(!provider.has_library(&id));
+
+        // Remove again returns None
+        let removed_again = provider.remove(&id);
+        assert!(removed_again.is_none());
+    }
+
+    #[test]
+    fn test_memory_provider_clear() {
+        let provider = MemoryLibrarySourceProvider::new();
+
+        provider.register_source(LibraryIdentifier::new("A", Some("1.0")), "a".to_string());
+        provider.register_source(LibraryIdentifier::new("B", Some("1.0")), "b".to_string());
+        assert_eq!(provider.library_count(), 2);
+
+        provider.clear();
+        assert_eq!(provider.library_count(), 0);
+    }
+
+    #[test]
+    fn test_memory_provider_overwrite() {
+        let provider = MemoryLibrarySourceProvider::new();
+
+        let id = LibraryIdentifier::new("Test", Some("1.0"));
+        provider.register_source(id.clone(), "original".to_string());
+        provider.register_source(id.clone(), "updated".to_string());
+
+        let source = provider.get_source(&id).unwrap();
+        assert_eq!(source.source, "updated");
+        assert_eq!(provider.library_count(), 1);
+    }
+
+    // ===========================================
+    // FileLibrarySourceProvider tests
+    // ===========================================
+
+    #[test]
+    fn test_file_provider_new() {
+        let provider = FileLibrarySourceProvider::new();
+        assert!(provider.paths().is_empty());
+    }
+
+    #[test]
+    fn test_file_provider_default() {
+        let provider = FileLibrarySourceProvider::default();
+        assert!(provider.paths().is_empty());
+    }
+
+    #[test]
+    fn test_file_provider_with_path() {
+        let provider = FileLibrarySourceProvider::new()
+            .with_path("./cql")
+            .with_path("./libs");
+
+        assert_eq!(provider.paths().len(), 2);
+    }
+
+    #[test]
+    fn test_file_provider_with_paths() {
+        let provider = FileLibrarySourceProvider::new().with_paths(["./cql", "./libs", "./other"]);
+
+        assert_eq!(provider.paths().len(), 3);
     }
 
     #[test]
@@ -685,7 +896,32 @@ mod tests {
     }
 
     #[test]
-    fn test_composite_provider() {
+    fn test_file_provider_nonexistent_path() {
+        let provider = FileLibrarySourceProvider::new().with_path("/nonexistent/path");
+
+        let id = LibraryIdentifier::new("Test", Some("1.0"));
+        assert!(!provider.has_library(&id));
+        assert!(provider.get_source(&id).is_none());
+    }
+
+    // ===========================================
+    // CompositeLibrarySourceProvider tests
+    // ===========================================
+
+    #[test]
+    fn test_composite_provider_new() {
+        let composite = CompositeLibrarySourceProvider::new();
+        assert!(composite.list_libraries().is_empty());
+    }
+
+    #[test]
+    fn test_composite_provider_default() {
+        let composite = CompositeLibrarySourceProvider::default();
+        assert!(composite.list_libraries().is_empty());
+    }
+
+    #[test]
+    fn test_composite_provider_single() {
         let memory = MemoryLibrarySourceProvider::new();
         memory.register_source(
             LibraryIdentifier::new("MemoryLib", Some("1.0")),
@@ -698,8 +934,93 @@ mod tests {
         let source = composite.get_source(&id).unwrap();
         assert_eq!(source.source, "from memory");
 
-        // List should include all
         let libraries = composite.list_libraries();
         assert_eq!(libraries.len(), 1);
+    }
+
+    #[test]
+    fn test_composite_provider_priority() {
+        // First provider takes precedence
+        let memory1 = MemoryLibrarySourceProvider::new();
+        memory1.register_source(
+            LibraryIdentifier::new("Shared", Some("1.0")),
+            "from first".to_string(),
+        );
+
+        let memory2 = MemoryLibrarySourceProvider::new();
+        memory2.register_source(
+            LibraryIdentifier::new("Shared", Some("1.0")),
+            "from second".to_string(),
+        );
+
+        let composite = CompositeLibrarySourceProvider::new()
+            .add_provider(memory1)
+            .add_provider(memory2);
+
+        let id = LibraryIdentifier::new("Shared", Some("1.0"));
+        let source = composite.get_source(&id).unwrap();
+        assert_eq!(source.source, "from first");
+    }
+
+    #[test]
+    fn test_composite_provider_fallback() {
+        let memory1 = MemoryLibrarySourceProvider::new();
+        memory1.register_source(
+            LibraryIdentifier::new("OnlyInFirst", Some("1.0")),
+            "from first".to_string(),
+        );
+
+        let memory2 = MemoryLibrarySourceProvider::new();
+        memory2.register_source(
+            LibraryIdentifier::new("OnlyInSecond", Some("1.0")),
+            "from second".to_string(),
+        );
+
+        let composite = CompositeLibrarySourceProvider::new()
+            .add_provider(memory1)
+            .add_provider(memory2);
+
+        // Found in first
+        let id1 = LibraryIdentifier::new("OnlyInFirst", Some("1.0"));
+        assert!(composite.has_library(&id1));
+
+        // Found in second (fallback)
+        let id2 = LibraryIdentifier::new("OnlyInSecond", Some("1.0"));
+        assert!(composite.has_library(&id2));
+
+        // Not found anywhere
+        let id3 = LibraryIdentifier::new("NotFound", Some("1.0"));
+        assert!(!composite.has_library(&id3));
+    }
+
+    #[test]
+    fn test_composite_provider_list_deduplicates() {
+        let memory1 = MemoryLibrarySourceProvider::new();
+        memory1.register_source(
+            LibraryIdentifier::new("Shared", Some("1.0")),
+            "from first".to_string(),
+        );
+        memory1.register_source(
+            LibraryIdentifier::new("OnlyFirst", Some("1.0")),
+            "first only".to_string(),
+        );
+
+        let memory2 = MemoryLibrarySourceProvider::new();
+        memory2.register_source(
+            LibraryIdentifier::new("Shared", Some("1.0")),
+            "from second".to_string(),
+        );
+        memory2.register_source(
+            LibraryIdentifier::new("OnlySecond", Some("1.0")),
+            "second only".to_string(),
+        );
+
+        let composite = CompositeLibrarySourceProvider::new()
+            .add_provider(memory1)
+            .add_provider(memory2);
+
+        let libraries = composite.list_libraries();
+        // Should have 3 unique: Shared, OnlyFirst, OnlySecond
+        assert_eq!(libraries.len(), 3);
     }
 }
