@@ -9,6 +9,27 @@ pub enum CqlError {
     #[error("CQL parse error: {0}")]
     Parse(String),
 
+    /// Syntax error at a specific location.
+    #[error("Syntax error at line {line}, column {column}: {message}")]
+    ParseError {
+        message: String,
+        line: usize,
+        column: usize,
+    },
+
+    /// Unexpected token during parsing.
+    #[error("Unexpected token '{found}' at line {line}, column {column}, expected {expected}")]
+    UnexpectedToken {
+        found: String,
+        expected: String,
+        line: usize,
+        column: usize,
+    },
+
+    /// Unexpected end of input.
+    #[error("Unexpected end of input at line {line}, column {column}")]
+    UnexpectedEof { line: usize, column: usize },
+
     /// Error translating CQL to ELM.
     #[error("CQL translation error: {0}")]
     Translation(String),

@@ -38,22 +38,24 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ### Phase 2: CQL Parser
 **Goal**: Parse CQL source into AST using `nom` (consistent with rh-fhirpath)
 
-- [ ] **2.1 Parser Foundation**
+- [x] **2.1 Parser Foundation**
   - Use `nom` parser combinators (same as rh-fhirpath)
   - Translate CQL grammar (CQL version 1.5.3) from ANTLR4/spec to nom combinators
   - Leverage patterns established in rh-fhirpath parser
+  - Created parser module structure (mod.rs, lexer.rs, span.rs, ast.rs)
+  - Source location tracking with Span type implementing nom traits
 
-- [ ] **2.2 Lexer**
-  - CQL keywords and operators
+- [x] **2.2 Lexer**
+  - CQL keywords and operators (130+ keywords)
   - Literals (string, number, date/time, quantity)
-  - Identifiers and comments
-  - Source location tracking
+  - Identifiers and comments (line //, block /* */)
+  - Source location tracking (Span, SourceLocation, SourceRange)
 
-- [ ] **2.3 CQL AST Types**
+- [x] **2.3 CQL AST Types**
   - Library header (library, using, include, codesystem, valueset, code, concept, parameter, context)
   - Expression definitions and function definitions
-  - All expression types
-  - Type specifiers
+  - All expression types (70+ types)
+  - Type specifiers (Named, List, Interval, Tuple, Choice)
 
 - [ ] **2.4 Parser Implementation**
   - Full CQL grammar implementation
