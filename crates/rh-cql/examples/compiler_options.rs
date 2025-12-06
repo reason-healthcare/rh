@@ -99,14 +99,14 @@ fn main() {
     println!("7. Parse Options from String");
     let options_str = "EnableAnnotations,EnableLocators,DisableListDemotion";
     let parsed = CompilerOptions::parse_options(options_str);
-    println!("   Parsed '{}': {:?}", options_str, parsed);
+    println!("   Parsed '{options_str}': {parsed:?}");
     println!();
 
     // Demonstrate serialization
     println!("8. JSON Serialization");
     let options = CompilerOptions::default();
     let json = serde_json::to_string_pretty(&options).unwrap();
-    println!("{}", json);
+    println!("{json}");
     println!();
 
     // Demonstrate SignatureLevel variants
@@ -117,7 +117,7 @@ fn main() {
         SignatureLevel::Overloads,
         SignatureLevel::All,
     ] {
-        println!("   {:?}", level);
+        println!("   {level:?}");
     }
     println!();
 
@@ -128,7 +128,7 @@ fn main() {
         ErrorSeverity::Warning,
         ErrorSeverity::Error,
     ] {
-        println!("   {:?}", severity);
+        println!("   {severity:?}");
     }
 
     println!("\n=== Example Complete ===");

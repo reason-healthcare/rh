@@ -24,6 +24,7 @@
 //! - [`types`]: Type resolution for CQL semantic analysis
 //! - [`operators`]: Operator resolution for CQL semantic analysis
 //! - [`translator`]: Expression translation from CQL AST to ELM
+//! - [`output`]: ELM output generation (JSON serialization)
 
 pub mod builder;
 pub mod datatype;
@@ -33,6 +34,7 @@ pub mod library;
 pub mod modelinfo;
 pub mod operators;
 pub mod options;
+pub mod output;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
@@ -55,6 +57,10 @@ pub use operators::{
     ResolvedOperator,
 };
 pub use options::{CompilerOption, CompilerOptions, ErrorSeverity, OutputFormat, SignatureLevel};
+pub use output::{
+    library_to_compact_json, library_to_json, library_to_json_with_options, ElmWriter,
+    OutputError, TRANSLATOR_VERSION,
+};
 pub use parser::CqlParser;
 pub use preprocessor::{
     CodeInfo, CodeSystemInfo, ConceptInfo, DefinitionKind, ExpressionInfo, FunctionInfo,
