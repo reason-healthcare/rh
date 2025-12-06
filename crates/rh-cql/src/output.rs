@@ -94,7 +94,11 @@ impl<'a> ElmWriter<'a> {
     }
 
     /// Generate output in the specified format.
-    pub fn to_format(&self, library: &Library, format: OutputFormat) -> Result<String, OutputError> {
+    pub fn to_format(
+        &self,
+        library: &Library,
+        format: OutputFormat,
+    ) -> Result<String, OutputError> {
         match format {
             OutputFormat::Json => self.to_json(library),
             OutputFormat::Xml => Err(OutputError::UnsupportedFormat("XML".to_string())),
@@ -113,9 +117,10 @@ impl<'a> ElmWriter<'a> {
             };
 
             // Check if CqlToElmInfo already exists
-            let has_info = output.annotation.iter().any(|a| {
-                matches!(a, LibraryAnnotation::CqlToElmInfo(_))
-            });
+            let has_info = output
+                .annotation
+                .iter()
+                .any(|a| matches!(a, LibraryAnnotation::CqlToElmInfo(_)));
 
             if !has_info {
                 output
@@ -197,15 +202,15 @@ pub fn library_to_json_with_options(
 /// Convenience function to convert an ELM library to compact JSON (no pretty printing).
 pub fn library_to_compact_json(library: &Library) -> Result<String, OutputError> {
     let options = CompilerOptions::default();
-    ElmWriter::new(&options).with_pretty_print(false).to_json(library)
+    ElmWriter::new(&options)
+        .with_pretty_print(false)
+        .to_json(library)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elm::{
-        ExpressionDef, ExpressionDefs, Expression, Literal, UsingDef, UsingDefs,
-    };
+    use crate::elm::{Expression, ExpressionDef, ExpressionDefs, Literal, UsingDef, UsingDefs};
 
     fn create_test_library() -> Library {
         Library {
@@ -296,10 +301,12 @@ mod tests {
     fn test_translator_info_not_duplicated() {
         let mut library = create_test_library();
         // Pre-add CqlToElmInfo
-        library.annotation.push(LibraryAnnotation::CqlToElmInfo(CqlToElmInfo {
-            translator_version: Some("existing".to_string()),
-            translator_options: None,
-        }));
+        library
+            .annotation
+            .push(LibraryAnnotation::CqlToElmInfo(CqlToElmInfo {
+                translator_version: Some("existing".to_string()),
+                translator_options: None,
+            }));
 
         let options = CompilerOptions::default();
         let writer = ElmWriter::new(&options);

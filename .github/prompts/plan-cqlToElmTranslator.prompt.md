@@ -186,10 +186,17 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Write to String, Vec<u8>, or any io::Write
   - XML output returns UnsupportedFormat (placeholder for future)
 
-- [ ] **6.3 Error Reporting**
+- [x] **6.3 Error Reporting**
   - Detailed error messages
   - Source locations
   - Warning levels
+
+- [ ] **Phase 6.4: Translation Integration**
+├── [ ] 6.4a: translate_expression() - unified expression dispatch
+├── [ ] 6.4b: Statement translation (expression_def, parameter_def, function_def) 
+├── [ ] 6.4c: Terminology translation (using, include, codesystem, valueset, code, concept)
+├── [ ] 6.4d: LibraryBuilder.build() - assemble complete library
+└── [ ] 6.4e: compile() entry point - public API
 
 ### Phase 7: WASM & Integration
 **Goal**: WASM build and JavaScript API

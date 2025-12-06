@@ -395,7 +395,9 @@ impl CompilerOptions {
             .filter_map(|s| {
                 let s = s.trim();
                 match s {
-                    "EnableDateRangeOptimization" => Some(CompilerOption::EnableDateRangeOptimization),
+                    "EnableDateRangeOptimization" => {
+                        Some(CompilerOption::EnableDateRangeOptimization)
+                    }
                     "EnableAnnotations" => Some(CompilerOption::EnableAnnotations),
                     "EnableLocators" => Some(CompilerOption::EnableLocators),
                     "EnableResultTypes" => Some(CompilerOption::EnableResultTypes),
@@ -407,7 +409,9 @@ impl CompilerOptions {
                     "EnableIntervalPromotion" => Some(CompilerOption::EnableIntervalPromotion),
                     "DisableMethodInvocation" => Some(CompilerOption::DisableMethodInvocation),
                     "RequireFromKeyword" => Some(CompilerOption::RequireFromKeyword),
-                    "DisableDefaultModelInfoLoad" => Some(CompilerOption::DisableDefaultModelInfoLoad),
+                    "DisableDefaultModelInfoLoad" => {
+                        Some(CompilerOption::DisableDefaultModelInfoLoad)
+                    }
                     _ => None,
                 }
             })
@@ -476,8 +480,7 @@ mod tests {
 
     #[test]
     fn test_without_option() {
-        let options = CompilerOptions::default()
-            .without_option(CompilerOption::EnableAnnotations);
+        let options = CompilerOptions::default().without_option(CompilerOption::EnableAnnotations);
 
         assert!(!options.annotations_enabled());
         assert!(options.locators_enabled());
@@ -496,7 +499,8 @@ mod tests {
 
     #[test]
     fn test_parse_options() {
-        let parsed = CompilerOptions::parse_options("EnableAnnotations,EnableLocators,DisableListDemotion");
+        let parsed =
+            CompilerOptions::parse_options("EnableAnnotations,EnableLocators,DisableListDemotion");
 
         assert!(parsed.contains(&CompilerOption::EnableAnnotations));
         assert!(parsed.contains(&CompilerOption::EnableLocators));
@@ -540,16 +544,13 @@ mod tests {
     fn test_signature_level_variants() {
         assert_eq!(SignatureLevel::default(), SignatureLevel::Overloads);
 
-        let options = CompilerOptions::new()
-            .with_signature_level(SignatureLevel::None);
+        let options = CompilerOptions::new().with_signature_level(SignatureLevel::None);
         assert_eq!(options.signature_level, SignatureLevel::None);
 
-        let options = CompilerOptions::new()
-            .with_signature_level(SignatureLevel::Differing);
+        let options = CompilerOptions::new().with_signature_level(SignatureLevel::Differing);
         assert_eq!(options.signature_level, SignatureLevel::Differing);
 
-        let options = CompilerOptions::new()
-            .with_signature_level(SignatureLevel::All);
+        let options = CompilerOptions::new().with_signature_level(SignatureLevel::All);
         assert_eq!(options.signature_level, SignatureLevel::All);
     }
 
@@ -557,19 +558,16 @@ mod tests {
     fn test_error_severity_variants() {
         assert_eq!(ErrorSeverity::default(), ErrorSeverity::Info);
 
-        let options = CompilerOptions::new()
-            .with_error_level(ErrorSeverity::Warning);
+        let options = CompilerOptions::new().with_error_level(ErrorSeverity::Warning);
         assert_eq!(options.error_level, ErrorSeverity::Warning);
 
-        let options = CompilerOptions::new()
-            .with_error_level(ErrorSeverity::Error);
+        let options = CompilerOptions::new().with_error_level(ErrorSeverity::Error);
         assert_eq!(options.error_level, ErrorSeverity::Error);
     }
 
     #[test]
     fn test_compatibility_level() {
-        let options = CompilerOptions::new()
-            .with_compatibility_level("1.4");
+        let options = CompilerOptions::new().with_compatibility_level("1.4");
         assert_eq!(options.compatibility_level, "1.4");
 
         let options = CompilerOptions::default();
@@ -578,8 +576,7 @@ mod tests {
 
     #[test]
     fn test_verify_only() {
-        let options = CompilerOptions::new()
-            .with_verify_only(true);
+        let options = CompilerOptions::new().with_verify_only(true);
         assert!(options.verify_only);
 
         let options = CompilerOptions::default();
@@ -588,8 +585,7 @@ mod tests {
 
     #[test]
     fn test_validate_units() {
-        let options = CompilerOptions::new()
-            .with_validate_units(false);
+        let options = CompilerOptions::new().with_validate_units(false);
         assert!(!options.validate_units);
 
         let options = CompilerOptions::default();

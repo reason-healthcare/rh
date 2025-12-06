@@ -145,7 +145,12 @@ impl SourceLocator {
     }
 
     /// Create a locator from usize values (converts to i32).
-    pub fn from_usize(start_line: usize, start_char: usize, end_line: usize, end_char: usize) -> Self {
+    pub fn from_usize(
+        start_line: usize,
+        start_char: usize,
+        end_line: usize,
+        end_char: usize,
+    ) -> Self {
         Self::new(
             start_line as i32,
             start_char as i32,
@@ -160,7 +165,10 @@ impl SourceLocator {
             if self.start_char == self.end_char {
                 format!("[{}:{}]", self.start_line, self.start_char)
             } else {
-                format!("[{}:{}-{}]", self.start_line, self.start_char, self.end_char)
+                format!(
+                    "[{}:{}-{}]",
+                    self.start_line, self.start_char, self.end_char
+                )
             }
         } else {
             format!(
@@ -267,7 +275,9 @@ impl CqlCompilerException {
         end_line: Option<i32>,
         end_char: Option<i32>,
     ) -> Self {
-        if let (Some(sl), Some(sc), Some(el), Some(ec)) = (start_line, start_char, end_line, end_char) {
+        if let (Some(sl), Some(sc), Some(el), Some(ec)) =
+            (start_line, start_char, end_line, end_char)
+        {
             self.locator = Some(SourceLocator::new(sl, sc, el, ec));
         }
         self
@@ -391,15 +401,15 @@ impl CqlCompilerException {
     /// Format as a detailed diagnostic string.
     pub fn to_diagnostic_string(&self) -> String {
         let mut result = format!("{}: {}", self.severity, self.message);
-        
+
         if let Some(loc) = &self.locator {
             result.push_str(&format!(" at {loc}"));
         }
-        
+
         if let Some(cause) = &self.cause {
             result.push_str(&format!("\n  Caused by: {cause}"));
         }
-        
+
         result
     }
 }
@@ -494,7 +504,11 @@ impl ExceptionCollector {
     }
 
     /// Add a semantic error with optional location.
-    pub fn add_semantic_error(&mut self, message: impl Into<String>, locator: Option<SourceLocator>) {
+    pub fn add_semantic_error(
+        &mut self,
+        message: impl Into<String>,
+        locator: Option<SourceLocator>,
+    ) {
         let mut exc = CqlCompilerException::semantic(message);
         if let Some(loc) = locator {
             exc = exc.with_locator(loc);
@@ -504,10 +518,7 @@ impl ExceptionCollector {
 
     /// Add an include error.
     pub fn add_include_error(&mut self, message: impl Into<String>, library: impl Into<String>) {
-        self.add(
-            CqlCompilerException::include(message)
-                .with_target_library(library)
-        );
+        self.add(CqlCompilerException::include(message).with_target_library(library));
     }
 
     /// Get all collected exceptions.
@@ -581,7 +592,7 @@ impl ExceptionCollector {
     pub fn summary(&self) -> String {
         let errors = self.error_count();
         let warnings = self.warning_count();
-        
+
         match (errors, warnings) {
             (0, 0) => "No issues".to_string(),
             (e, 0) => format!("{e} error{}", if e == 1 { "" } else { "s" }),
@@ -703,7 +714,10 @@ mod tests {
         let exc = CqlCompilerException::new("Failed to resolve")
             .with_cause("Library 'FHIRHelpers' not found");
 
-        assert_eq!(exc.full_message(), "Failed to resolve: Library 'FHIRHelpers' not found");
+        assert_eq!(
+            exc.full_message(),
+            "Failed to resolve: Library 'FHIRHelpers' not found"
+        );
     }
 
     #[test]
@@ -751,10 +765,8 @@ mod tests {
     fn test_collector_to_elm_errors() {
         let mut collector = ExceptionCollector::all();
 
-        collector.add(
-            CqlCompilerException::new("error")
-                .with_locator(SourceLocator::new(1, 0, 1, 5))
-        );
+        collector
+            .add(CqlCompilerException::new("error").with_locator(SourceLocator::new(1, 0, 1, 5)));
 
         let elm_errors = collector.to_elm_errors();
         assert_eq!(elm_errors.len(), 1);

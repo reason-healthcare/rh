@@ -13,9 +13,18 @@ fn main() {
     let default_options = CompilerOptions::default();
     println!("   Annotations: {}", default_options.annotations_enabled());
     println!("   Locators: {}", default_options.locators_enabled());
-    println!("   Result Types: {}", default_options.result_types_enabled());
-    println!("   List Demotion: {}", default_options.list_demotion_enabled());
-    println!("   List Promotion: {}", default_options.list_promotion_enabled());
+    println!(
+        "   Result Types: {}",
+        default_options.result_types_enabled()
+    );
+    println!(
+        "   List Demotion: {}",
+        default_options.list_demotion_enabled()
+    );
+    println!(
+        "   List Promotion: {}",
+        default_options.list_promotion_enabled()
+    );
     println!("   Error Level: {:?}", default_options.error_level);
     println!("   Signature Level: {:?}", default_options.signature_level);
     println!("   Options String: {}", default_options.options_to_string());
@@ -44,7 +53,10 @@ fn main() {
         "   List Traversal: {}",
         strict_options.list_traversal_enabled()
     );
-    println!("   List Demotion: {}", strict_options.list_demotion_enabled());
+    println!(
+        "   List Demotion: {}",
+        strict_options.list_demotion_enabled()
+    );
     println!(
         "   List Promotion: {}",
         strict_options.list_promotion_enabled()
@@ -79,12 +91,14 @@ fn main() {
     println!("6. ExpressionTranslator with Options");
 
     // Without annotations - no local IDs
-    let mut translator_no_annotations =
-        ExpressionTranslator::with_options(CompilerOptions::new());
+    let mut translator_no_annotations = ExpressionTranslator::with_options(CompilerOptions::new());
     let literal = rh_cql::parser::ast::Literal::Integer(42);
     let elm_expr = translator_no_annotations.translate_literal(&literal);
     if let rh_cql::elm::Expression::Literal(lit) = &elm_expr {
-        println!("   Without annotations - local_id: {:?}", lit.element.local_id);
+        println!(
+            "   Without annotations - local_id: {:?}",
+            lit.element.local_id
+        );
     }
 
     // With annotations - has local IDs

@@ -9,9 +9,7 @@
 //! Run with: cargo run --example error_reporting
 
 use rh_cql::options::ErrorSeverity;
-use rh_cql::reporting::{
-    CqlCompilerException, ExceptionCollector, ExceptionType, SourceLocator,
-};
+use rh_cql::reporting::{CqlCompilerException, ExceptionCollector, ExceptionType, SourceLocator};
 
 fn main() {
     println!("=== CQL Error Reporting Example ===\n");
@@ -61,8 +59,12 @@ fn main() {
 
     collector.add(CqlCompilerException::new("Error 1: Undefined symbol"));
     collector.add(CqlCompilerException::new("Error 2: Type mismatch"));
-    collector.add(CqlCompilerException::warning("Warning: Deprecated function"));
-    collector.add(CqlCompilerException::info("Info: This will be filtered out"));
+    collector.add(CqlCompilerException::warning(
+        "Warning: Deprecated function",
+    ));
+    collector.add(CqlCompilerException::info(
+        "Info: This will be filtered out",
+    ));
 
     println!("Collector with Warning threshold:");
     println!("  Total collected: {}", collector.len());
@@ -81,10 +83,7 @@ fn main() {
 
     let elm_error = exc.to_elm_error();
     println!("ELM Error JSON:");
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&elm_error).unwrap()
-    );
+    println!("{}", serde_json::to_string_pretty(&elm_error).unwrap());
     println!();
 
     // Example 5: Full diagnostic output
@@ -119,7 +118,13 @@ fn main() {
     let elm_errors = full_collector.to_elm_errors();
     println!("ELM Errors ({}): ", elm_errors.len());
     for (i, err) in elm_errors.iter().enumerate() {
-        println!("  {}. {} at {}:{}", i + 1, err.message, err.start_line.unwrap_or(0), err.start_char.unwrap_or(0));
+        println!(
+            "  {}. {} at {}:{}",
+            i + 1,
+            err.message,
+            err.start_line.unwrap_or(0),
+            err.start_char.unwrap_or(0)
+        );
     }
     println!();
 
