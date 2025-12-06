@@ -178,10 +178,13 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - JSON serialization/deserialization
   - Options string parsing for compatibility with reference implementation
 
-- [ ] **6.2 Output Generation**
-  - JSON ELM output
-  - Optional: XML ELM output
-  - Annotation/locator inclusion
+- [x] **6.2 Output Generation** ✅
+  - ElmWriter struct for JSON ELM output with pretty/compact options
+  - Automatic translator metadata injection (version, options)
+  - Schema identifier added to output
+  - Convenience functions: library_to_json, library_to_json_with_options, library_to_compact_json
+  - Write to String, Vec<u8>, or any io::Write
+  - XML output returns UnsupportedFormat (placeholder for future)
 
 - [ ] **6.3 Error Reporting**
   - Detailed error messages
