@@ -24,7 +24,9 @@
 //! - [`types`]: Type resolution for CQL semantic analysis
 //! - [`operators`]: Operator resolution for CQL semantic analysis
 //! - [`translator`]: Expression translation from CQL AST to ELM
+//! - [`options`]: Compiler options for translation behavior
 //! - [`output`]: ELM output generation (JSON serialization)
+//! - [`reporting`]: Error reporting with source locations and severity levels
 
 pub mod builder;
 pub mod datatype;
@@ -38,6 +40,7 @@ pub mod output;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
+pub mod reporting;
 pub mod translator;
 pub mod types;
 
@@ -68,6 +71,9 @@ pub use preprocessor::{
 };
 pub use provider::{
     fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
+};
+pub use reporting::{
+    CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
 pub use translator::{ExpressionTranslator, TranslatorError, TranslatorResult};
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
