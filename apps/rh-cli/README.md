@@ -24,6 +24,9 @@ cargo run -p rh -- fhirpath eval "Patient.name.family" -d examples/patient.json
 cargo run -p rh -- vcl parse "(http://snomed.info/sct)status = \"active\""
 cargo run -p rh -- vcl translate "(http://snomed.info/sct)123456" --default-system http://snomed.info/sct
 
+# Compile CQL to ELM
+cargo run -p rh -- cql compile library.cql -o library.json
+
 # Validate JSON syntax
 cargo run -p rh -- validate json -i examples/patient.json
 
@@ -59,6 +62,11 @@ rh
 │   ├── generate # Generate from single file
 │   ├── batch   # Batch processing
 │   └── install # Install and generate
+├── cql         # CQL (Clinical Quality Language) operations
+│   ├── compile # Compile CQL to ELM JSON
+│   ├── validate # Validate CQL syntax
+│   ├── info    # Show CQL library metadata
+│   └── repl    # Interactive CQL shell
 ├── download    # FHIR package management
 │   ├── package # Download packages from registries
 │   └── list    # List available package versions
@@ -150,6 +158,127 @@ The package manager integrates with code generation for streamlined workflows:
 ```bash
 # Install package and generate types in one step
 cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
+```
+
+## CQL Compilation (`rh cql`)
+
+Compile, validate, and explore Clinical Quality Language (CQL) libraries with comprehensive support for CQL-to-ELM translation.
+
+### Compile CQL to ELM
+
+Compile CQL source files to ELM (Expression Logical Model) JSON:
+
+```bash
+# Compile a CQL file to ELM JSON
+cargo run -p rh -- cql compile library.cql -o library.json
+
+# Compile with pretty-printed output
+cargo run -p rh -- cql compile library.cql -o library.json --pretty
+
+# Compile without annotations (for smaller output)
+cargo run -p rh -- cql compile library.cql -o library.json --no-annotations
+
+# Compile from stdin
+cat library.cql | cargo run -p rh -- cql compile - -o library.json
+```
+
+**Example CQL input:**
+```cql
+library MyLibrary version '1.0.0'
+
+using FHIR version '4.0.1'
+
+context Patient
+
+define "Is Adult":
+  AgeInYears() >= 18
+
+define "Has Active Condition":
+  exists([Condition: status in {'active', 'recurrence'}])
+```
+
+### Validate CQL Syntax
+
+Check CQL files for syntax errors without generating output:
+
+```bash
+# Validate a single file
+cargo run -p rh -- cql validate library.cql
+
+# Validate multiple files
+cargo run -p rh -- cql validate lib1.cql lib2.cql lib3.cql
+```
+
+**Example output for valid CQL:**
+```
+✓ library.cql: Valid CQL
+```
+
+**Example output with errors:**
+```
+✗ library.cql: Invalid CQL
+  Line 5: Expected 'define' keyword
+  Line 8: Unrecognized function 'FooBar'
+```
+
+### Show Library Information
+
+Display metadata and contents of a CQL library:
+
+```bash
+# Show library info from file
+cargo run -p rh -- cql info library.cql
+
+# Show info from stdin
+cat library.cql | cargo run -p rh -- cql info -
+```
+
+**Example output:**
+```
+Library: MyLibrary
+Version: 1.0.0
+
+Using Declarations:
+  - FHIR version 4.0.1
+
+Contexts:
+  - Patient
+
+Parameters: (none)
+
+Definitions:
+  - Is Adult (public)
+  - Has Active Condition (public)
+```
+
+### Interactive CQL REPL
+
+Start an interactive shell for CQL experimentation:
+
+```bash
+# Start the CQL REPL
+cargo run -p rh -- cql repl
+```
+
+**REPL Commands:**
+- `.help` - Show available commands
+- `.quit` or `.exit` - Exit the REPL
+- Type CQL definitions to see them parsed and analyzed
+
+**Example REPL Session:**
+```
+🔬 CQL Interactive REPL
+Type CQL definitions or expressions to parse them.
+Commands: .help, .quit
+
+cql> define "Test": 2 + 2
+Parsed definition: Test
+
+cql> library MyLib version '1.0'
+Parsed library declaration: MyLib v1.0
+
+cql> .quit
+Goodbye!
 ```
 
 ## FHIRPath Operations (`rh fhirpath`)
