@@ -32,6 +32,7 @@ pub mod error;
 pub mod library;
 pub mod modelinfo;
 pub mod operators;
+pub mod options;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
@@ -53,6 +54,7 @@ pub use operators::{
     OperatorError, OperatorKind, OperatorResolver, OperatorResult, OperatorSignature,
     ResolvedOperator,
 };
+pub use options::{CompilerOption, CompilerOptions, ErrorSeverity, OutputFormat, SignatureLevel};
 pub use parser::CqlParser;
 pub use preprocessor::{
     CodeInfo, CodeSystemInfo, ConceptInfo, DefinitionKind, ExpressionInfo, FunctionInfo,

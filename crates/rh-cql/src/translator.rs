@@ -128,8 +128,8 @@ pub enum QualifiedRefKind {
 pub struct ExpressionTranslator {
     /// Counter for generating local IDs.
     local_id_counter: u32,
-    /// Whether to generate local IDs.
-    generate_local_ids: bool,
+    /// Compiler options controlling translation behavior.
+    options: std::sync::Arc<crate::options::CompilerOptions>,
 }
 
 impl Default for ExpressionTranslator {
@@ -139,23 +139,49 @@ impl Default for ExpressionTranslator {
 }
 
 impl ExpressionTranslator {
-    /// Create a new expression translator.
+    /// Create a new expression translator with default options.
     pub fn new() -> Self {
         Self {
             local_id_counter: 0,
-            generate_local_ids: false,
+            options: std::sync::Arc::new(crate::options::CompilerOptions::default()),
         }
     }
 
-    /// Enable local ID generation.
+    /// Create a new expression translator with specific options.
+    pub fn with_options(options: crate::options::CompilerOptions) -> Self {
+        Self {
+            local_id_counter: 0,
+            options: std::sync::Arc::new(options),
+        }
+    }
+
+    /// Create a new expression translator with shared options.
+    pub fn with_shared_options(options: std::sync::Arc<crate::options::CompilerOptions>) -> Self {
+        Self {
+            local_id_counter: 0,
+            options,
+        }
+    }
+
+    /// Enable local ID generation (for backwards compatibility).
+    ///
+    /// This is equivalent to enabling `EnableAnnotations` in options.
     pub fn with_local_ids(mut self) -> Self {
-        self.generate_local_ids = true;
+        // Create new options with annotations enabled
+        let mut new_options = (*self.options).clone();
+        new_options.options.insert(crate::options::CompilerOption::EnableAnnotations);
+        self.options = std::sync::Arc::new(new_options);
         self
     }
 
-    /// Generate a new local ID.
+    /// Get the current compiler options.
+    pub fn options(&self) -> &crate::options::CompilerOptions {
+        &self.options
+    }
+
+    /// Generate a new local ID if annotations are enabled.
     fn next_local_id(&mut self) -> Option<String> {
-        if self.generate_local_ids {
+        if self.options.annotations_enabled() {
             self.local_id_counter += 1;
             Some(self.local_id_counter.to_string())
         } else {
@@ -175,7 +201,11 @@ impl ExpressionTranslator {
     fn element_fields_typed(&mut self, result_type: &DataType) -> elm::ElementFields {
         elm::ElementFields {
             local_id: self.next_local_id(),
-            result_type_name: Some(datatype_to_qname(result_type)),
+            result_type_name: if self.options.result_types_enabled() {
+                Some(datatype_to_qname(result_type))
+            } else {
+                None
+            },
             ..Default::default()
         }
     }
@@ -3030,10 +3060,21 @@ mod tests {
 
     #[test]
     fn test_no_local_id_by_default() {
-        let mut translator = ExpressionTranslator::new();
+        // Use CompilerOptions::new() which has no options enabled
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::new());
         let result = translator.translate_literal(&ast::Literal::Integer(42));
         if let elm::Expression::Literal(lit) = result {
             assert!(lit.element.local_id.is_none());
+        }
+    }
+
+    #[test]
+    fn test_local_id_with_annotations_enabled() {
+        // Default options have annotations enabled
+        let mut translator = ExpressionTranslator::new();
+        let result = translator.translate_literal(&ast::Literal::Integer(42));
+        if let elm::Expression::Literal(lit) = result {
+            assert!(lit.element.local_id.is_some());
         }
     }
 
@@ -3080,7 +3121,8 @@ mod tests {
 
     #[test]
     fn test_translate_expression_ref() {
-        let mut translator = ExpressionTranslator::new();
+        // Use debug options which enable result types
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let result = translator.translate_identifier_ref(
             "MyExpression",
             ResolvedRefKind::Expression,
@@ -3090,6 +3132,24 @@ mod tests {
             assert_eq!(expr_ref.name, Some("MyExpression".to_string()));
             assert!(expr_ref.library_name.is_none());
             assert!(expr_ref.element.result_type_name.is_some());
+        } else {
+            panic!("Expected ExpressionRef");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_ref_no_result_type() {
+        // Default options do not include EnableResultTypes
+        let mut translator = ExpressionTranslator::new();
+        let result = translator.translate_identifier_ref(
+            "MyExpression",
+            ResolvedRefKind::Expression,
+            Some(&DataType::integer()),
+        );
+        if let elm::Expression::ExpressionRef(expr_ref) = result {
+            assert_eq!(expr_ref.name, Some("MyExpression".to_string()));
+            // Result type not included without EnableResultTypes
+            assert!(expr_ref.element.result_type_name.is_none());
         } else {
             panic!("Expected ExpressionRef");
         }
@@ -5181,7 +5241,8 @@ mod tests {
 
     #[test]
     fn test_translate_if_then_else_with_type() {
-        let mut translator = ExpressionTranslator::new();
+        // Use debug options which enable result types
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let if_expr = ast::IfThenElse {
             condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
             then_expr: Box::new(ast::Expression::Literal(ast::Literal::String(
@@ -5652,7 +5713,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_integer() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("String")),
@@ -5674,7 +5735,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_string() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("Integer")),
@@ -5693,7 +5754,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_decimal() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("Integer")),
@@ -5715,7 +5776,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_boolean() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("true".to_string()),
             value_type: Some(qname_system("String")),
@@ -5737,7 +5798,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_date() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("2024-01-15".to_string()),
             value_type: Some(qname_system("String")),
@@ -5756,7 +5817,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_datetime() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("2024-01-15T10:30:00".to_string()),
             ..Default::default()
@@ -5777,7 +5838,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_time() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("10:30:00".to_string()),
             ..Default::default()
@@ -5795,7 +5856,7 @@ mod tests {
 
     #[test]
     fn test_translate_to_quantity() {
-        let mut translator = ExpressionTranslator::new();
+        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42 'kg'".to_string()),
             ..Default::default()
