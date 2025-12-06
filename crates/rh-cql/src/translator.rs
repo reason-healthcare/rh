@@ -2974,6 +2974,173 @@ impl ExpressionTranslator {
             ),
         }
     }
+
+    // ========================================================================
+    // Terminology Translation (Phase 6.4c)
+    // ========================================================================
+
+    /// Translate a using definition (data model reference) to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// using FHIR version '4.0.1'
+    /// ```
+    pub fn translate_using_def(&self, using_def: &ast::UsingDef) -> elm::UsingDef {
+        // Map model name to URI
+        let uri = model_name_to_uri(&using_def.model_name);
+
+        elm::UsingDef {
+            local_identifier: Some(using_def.model_name.clone()),
+            uri: Some(uri),
+            version: using_def.version.clone(),
+        }
+    }
+
+    /// Translate an include definition (library reference) to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// include FHIRHelpers version '4.0.1' called Helpers
+    /// ```
+    pub fn translate_include_def(&self, include_def: &ast::IncludeDef) -> elm::IncludeDef {
+        elm::IncludeDef {
+            local_identifier: include_def
+                .alias
+                .clone()
+                .or_else(|| Some(include_def.path.clone())),
+            path: Some(include_def.path.clone()),
+            version: include_def.version.clone(),
+        }
+    }
+
+    /// Translate a code system definition to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// codesystem "LOINC": 'http://loinc.org'
+    /// ```
+    pub fn translate_codesystem_def(&self, cs_def: &ast::CodeSystemDef) -> elm::CodeSystemDef {
+        let access_level = match cs_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        elm::CodeSystemDef {
+            name: Some(cs_def.name.clone()),
+            id: Some(cs_def.id.clone()),
+            version: cs_def.version.clone(),
+            access_level,
+        }
+    }
+
+    /// Translate a value set definition to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// valueset "Active Conditions": 'http://example.org/fhir/ValueSet/active-conditions'
+    /// ```
+    pub fn translate_valueset_def(&self, vs_def: &ast::ValueSetDef) -> elm::ValueSetDef {
+        let access_level = match vs_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        // Convert code system references
+        let code_system: Vec<elm::CodeSystemDefRef> = vs_def
+            .codesystems
+            .iter()
+            .map(|cs_name| elm::CodeSystemDefRef {
+                name: Some(cs_name.clone()),
+                library_name: None,
+            })
+            .collect();
+
+        elm::ValueSetDef {
+            name: Some(vs_def.name.clone()),
+            id: Some(vs_def.id.clone()),
+            version: vs_def.version.clone(),
+            access_level,
+            code_system,
+        }
+    }
+
+    /// Translate a code definition to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// code "Blood Pressure": '85354-9' from "LOINC" display 'Blood pressure panel'
+    /// ```
+    pub fn translate_code_def(&self, code_def: &ast::CodeDef) -> elm::CodeDef {
+        let access_level = match code_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        elm::CodeDef {
+            name: Some(code_def.name.clone()),
+            id: Some(code_def.code.clone()),
+            display: code_def.display.clone(),
+            access_level,
+            code_system: Some(elm::CodeSystemDefRef {
+                name: Some(code_def.codesystem.clone()),
+                library_name: None,
+            }),
+        }
+    }
+
+    /// Translate a concept definition to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// concept "Blood Pressure Codes": { "Systolic BP", "Diastolic BP" } display 'Blood Pressure'
+    /// ```
+    pub fn translate_concept_def(&self, concept_def: &ast::ConceptDef) -> elm::ConceptDef {
+        let access_level = match concept_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        // Convert code references
+        let code: Vec<elm::CodeDefRef> = concept_def
+            .codes
+            .iter()
+            .map(|code_name| elm::CodeDefRef {
+                name: Some(code_name.clone()),
+                library_name: None,
+            })
+            .collect();
+
+        elm::ConceptDef {
+            name: Some(concept_def.name.clone()),
+            display: concept_def.display.clone(),
+            access_level,
+            code,
+        }
+    }
+
+    /// Translate a context definition to ELM.
+    ///
+    /// # Example
+    /// ```cql
+    /// context Patient
+    /// ```
+    pub fn translate_context_def(&self, ctx_def: &ast::ContextDef) -> elm::ContextDef {
+        elm::ContextDef {
+            name: Some(ctx_def.name.clone()),
+        }
+    }
+}
+
+/// Map a model name to its URI.
+fn model_name_to_uri(model_name: &str) -> String {
+    match model_name {
+        "FHIR" => "http://hl7.org/fhir".to_string(),
+        "QDM" => "urn:healthit-gov:qdm:v5_6".to_string(),
+        "QICore" => "http://hl7.org/fhir/us/qicore".to_string(),
+        "USCore" => "http://hl7.org/fhir/us/core".to_string(),
+        "System" => "urn:hl7-org:elm-types:r1".to_string(),
+        _ => format!("http://unknown/{model_name}"),
+    }
 }
 
 /// Result of translating a statement.
@@ -8162,5 +8329,178 @@ mod tests {
         } else {
             panic!("Expected Function translation");
         }
+    }
+
+    // ========================================================================
+    // Terminology Translation Tests (Phase 6.4c)
+    // ========================================================================
+
+    #[test]
+    fn test_translate_using_def_fhir() {
+        let translator = ExpressionTranslator::new();
+        let using_def = ast::UsingDef {
+            model_name: "FHIR".to_string(),
+            version: Some("4.0.1".to_string()),
+            location: None,
+        };
+
+        let result = translator.translate_using_def(&using_def);
+
+        assert_eq!(result.local_identifier, Some("FHIR".to_string()));
+        assert_eq!(result.uri, Some("http://hl7.org/fhir".to_string()));
+        assert_eq!(result.version, Some("4.0.1".to_string()));
+    }
+
+    #[test]
+    fn test_translate_using_def_qicore() {
+        let translator = ExpressionTranslator::new();
+        let using_def = ast::UsingDef {
+            model_name: "QICore".to_string(),
+            version: None,
+            location: None,
+        };
+
+        let result = translator.translate_using_def(&using_def);
+
+        assert_eq!(result.local_identifier, Some("QICore".to_string()));
+        assert_eq!(
+            result.uri,
+            Some("http://hl7.org/fhir/us/qicore".to_string())
+        );
+        assert_eq!(result.version, None);
+    }
+
+    #[test]
+    fn test_translate_include_def_with_alias() {
+        let translator = ExpressionTranslator::new();
+        let include_def = ast::IncludeDef {
+            path: "FHIRHelpers".to_string(),
+            version: Some("4.0.1".to_string()),
+            alias: Some("Helpers".to_string()),
+            location: None,
+        };
+
+        let result = translator.translate_include_def(&include_def);
+
+        assert_eq!(result.local_identifier, Some("Helpers".to_string()));
+        assert_eq!(result.path, Some("FHIRHelpers".to_string()));
+        assert_eq!(result.version, Some("4.0.1".to_string()));
+    }
+
+    #[test]
+    fn test_translate_include_def_no_alias() {
+        let translator = ExpressionTranslator::new();
+        let include_def = ast::IncludeDef {
+            path: "CommonLibrary".to_string(),
+            version: None,
+            alias: None,
+            location: None,
+        };
+
+        let result = translator.translate_include_def(&include_def);
+
+        assert_eq!(result.local_identifier, Some("CommonLibrary".to_string()));
+        assert_eq!(result.path, Some("CommonLibrary".to_string()));
+    }
+
+    #[test]
+    fn test_translate_codesystem_def() {
+        let translator = ExpressionTranslator::new();
+        let cs_def = ast::CodeSystemDef {
+            name: "LOINC".to_string(),
+            id: "http://loinc.org".to_string(),
+            version: Some("2.73".to_string()),
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_codesystem_def(&cs_def);
+
+        assert_eq!(result.name, Some("LOINC".to_string()));
+        assert_eq!(result.id, Some("http://loinc.org".to_string()));
+        assert_eq!(result.version, Some("2.73".to_string()));
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Public));
+    }
+
+    #[test]
+    fn test_translate_valueset_def() {
+        let translator = ExpressionTranslator::new();
+        let vs_def = ast::ValueSetDef {
+            name: "Active Conditions".to_string(),
+            id: "http://example.org/fhir/ValueSet/active-conditions".to_string(),
+            version: None,
+            codesystems: vec!["SNOMED".to_string(), "ICD10".to_string()],
+            access: ast::AccessModifier::Private,
+            location: None,
+        };
+
+        let result = translator.translate_valueset_def(&vs_def);
+
+        assert_eq!(result.name, Some("Active Conditions".to_string()));
+        assert_eq!(
+            result.id,
+            Some("http://example.org/fhir/ValueSet/active-conditions".to_string())
+        );
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Private));
+        assert_eq!(result.code_system.len(), 2);
+        assert_eq!(result.code_system[0].name, Some("SNOMED".to_string()));
+        assert_eq!(result.code_system[1].name, Some("ICD10".to_string()));
+    }
+
+    #[test]
+    fn test_translate_code_def() {
+        let translator = ExpressionTranslator::new();
+        let code_def = ast::CodeDef {
+            name: "Blood Pressure".to_string(),
+            code: "85354-9".to_string(),
+            codesystem: "LOINC".to_string(),
+            display: Some("Blood pressure panel".to_string()),
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_code_def(&code_def);
+
+        assert_eq!(result.name, Some("Blood Pressure".to_string()));
+        assert_eq!(result.id, Some("85354-9".to_string()));
+        assert_eq!(result.display, Some("Blood pressure panel".to_string()));
+        assert!(result.code_system.is_some());
+        assert_eq!(
+            result.code_system.as_ref().unwrap().name,
+            Some("LOINC".to_string())
+        );
+    }
+
+    #[test]
+    fn test_translate_concept_def() {
+        let translator = ExpressionTranslator::new();
+        let concept_def = ast::ConceptDef {
+            name: "Blood Pressure Codes".to_string(),
+            codes: vec!["Systolic BP".to_string(), "Diastolic BP".to_string()],
+            display: Some("Blood Pressure".to_string()),
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_concept_def(&concept_def);
+
+        assert_eq!(result.name, Some("Blood Pressure Codes".to_string()));
+        assert_eq!(result.display, Some("Blood Pressure".to_string()));
+        assert_eq!(result.code.len(), 2);
+        assert_eq!(result.code[0].name, Some("Systolic BP".to_string()));
+        assert_eq!(result.code[1].name, Some("Diastolic BP".to_string()));
+    }
+
+    #[test]
+    fn test_translate_context_def() {
+        let translator = ExpressionTranslator::new();
+        let ctx_def = ast::ContextDef {
+            name: "Patient".to_string(),
+            location: None,
+        };
+
+        let result = translator.translate_context_def(&ctx_def);
+
+        assert_eq!(result.name, Some("Patient".to_string()));
     }
 }
