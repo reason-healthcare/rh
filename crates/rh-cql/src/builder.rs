@@ -928,6 +928,381 @@ impl<'a> LibraryBuilder<'a> {
             ast::AccessModifier::Private => elm::AccessModifier::Private,
         }
     }
+
+    // ========================================================================
+    // Library Building (Phase 6.4d)
+    // ========================================================================
+
+    /// Build a complete ELM Library from an AST Library.
+    ///
+    /// This is the main entry point for translating a complete CQL library
+    /// to ELM. It translates all definitions and assembles them into an
+    /// ELM Library structure.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rh_cql::parser::CqlParser;
+    /// use rh_cql::builder::LibraryBuilder;
+    ///
+    /// let source = r#"
+    ///     library TestLib version '1.0'
+    ///     using FHIR version '4.0.1'
+    ///     context Patient
+    ///     define X: true
+    /// "#;
+    ///
+    /// let ast = CqlParser::new().parse(source).unwrap();
+    /// let mut builder = LibraryBuilder::new();
+    /// let elm_library = builder.build(&ast);
+    /// assert_eq!(elm_library.identifier.as_ref().unwrap().id, Some("TestLib".to_string()));
+    /// ```
+    pub fn build(&mut self, ast_library: &ast::Library) -> elm::Library {
+        use crate::translator::ExpressionTranslator;
+
+        let mut translator = ExpressionTranslator::new();
+
+        // Build library identifier
+        let identifier = ast_library
+            .identifier
+            .as_ref()
+            .map(|id| elm::VersionedIdentifier {
+                id: Some(id.name.clone()),
+                system: None,
+                version: id.version.clone(),
+            });
+
+        // Set library info
+        if let Some(id) = &ast_library.identifier {
+            self.library_name = Some(id.name.clone());
+            self.library_version = id.version.clone();
+        }
+
+        // Translate using definitions
+        let usings = if ast_library.usings.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::UsingDef> = ast_library
+                .usings
+                .iter()
+                .map(|u| translator.translate_using_def(u))
+                .collect();
+            Some(elm::UsingDefs { defs })
+        };
+
+        // Translate include definitions
+        let includes = if ast_library.includes.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::IncludeDef> = ast_library
+                .includes
+                .iter()
+                .map(|i| translator.translate_include_def(i))
+                .collect();
+            Some(elm::IncludeDefs { defs })
+        };
+
+        // Translate code system definitions
+        let code_systems = if ast_library.codesystems.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::CodeSystemDef> = ast_library
+                .codesystems
+                .iter()
+                .map(|cs| translator.translate_codesystem_def(cs))
+                .collect();
+            Some(elm::CodeSystemDefs { defs })
+        };
+
+        // Translate value set definitions
+        let value_sets = if ast_library.valuesets.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ValueSetDef> = ast_library
+                .valuesets
+                .iter()
+                .map(|vs| translator.translate_valueset_def(vs))
+                .collect();
+            Some(elm::ValueSetDefs { defs })
+        };
+
+        // Translate code definitions
+        let codes = if ast_library.codes.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::CodeDef> = ast_library
+                .codes
+                .iter()
+                .map(|c| translator.translate_code_def(c))
+                .collect();
+            Some(elm::CodeDefs { defs })
+        };
+
+        // Translate concept definitions
+        let concepts = if ast_library.concepts.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ConceptDef> = ast_library
+                .concepts
+                .iter()
+                .map(|c| translator.translate_concept_def(c))
+                .collect();
+            Some(elm::ConceptDefs { defs })
+        };
+
+        // Translate parameter definitions
+        let parameters = if ast_library.parameters.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ParameterDef> = ast_library
+                .parameters
+                .iter()
+                .map(|p| translator.translate_parameter_def(p))
+                .collect();
+            Some(elm::ParameterDefs { defs })
+        };
+
+        // Translate context definitions
+        let contexts = if ast_library.contexts.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ContextDef> = ast_library
+                .contexts
+                .iter()
+                .map(|c| translator.translate_context_def(c))
+                .collect();
+            Some(elm::ContextDefs { defs })
+        };
+
+        // Determine current context for statements
+        let current_context = ast_library.contexts.last().map(|c| c.name.as_str());
+
+        // Translate statements (expression and function definitions)
+        let statements = if ast_library.statements.is_empty() {
+            None
+        } else {
+            let mut expression_defs = Vec::new();
+
+            for stmt in &ast_library.statements {
+                match stmt {
+                    ast::Statement::ExpressionDef(expr_def) => {
+                        expression_defs
+                            .push(translator.translate_expression_def(expr_def, current_context));
+                    }
+                    ast::Statement::FunctionDef(func_def) => {
+                        // Functions are translated separately
+                        // For now, we skip them as ELM Library.statements only holds ExpressionDefs
+                        // In a full implementation, functions would go in a separate field
+                        let _ = translator
+                            .translate_function_def(func_def, |t, e| t.translate_expression(e));
+                    }
+                }
+            }
+
+            if expression_defs.is_empty() {
+                None
+            } else {
+                Some(elm::ExpressionDefs {
+                    defs: expression_defs,
+                })
+            }
+        };
+
+        elm::Library {
+            identifier,
+            schema_identifier: Some(elm::VersionedIdentifier {
+                id: Some("urn:hl7-org:elm".to_string()),
+                system: None,
+                version: Some("r1".to_string()),
+            }),
+            usings,
+            includes,
+            parameters,
+            code_systems,
+            value_sets,
+            codes,
+            concepts,
+            contexts,
+            statements,
+            annotation: Vec::new(),
+        }
+    }
+
+    /// Build a library with compiler options.
+    ///
+    /// This variant allows specifying compiler options that control
+    /// translation behavior.
+    pub fn build_with_options(
+        &mut self,
+        ast_library: &ast::Library,
+        options: &crate::options::CompilerOptions,
+    ) -> elm::Library {
+        use crate::translator::ExpressionTranslator;
+
+        let mut translator = ExpressionTranslator::with_options(options.clone());
+
+        // Build library identifier
+        let identifier = ast_library
+            .identifier
+            .as_ref()
+            .map(|id| elm::VersionedIdentifier {
+                id: Some(id.name.clone()),
+                system: None,
+                version: id.version.clone(),
+            });
+
+        // Set library info
+        if let Some(id) = &ast_library.identifier {
+            self.library_name = Some(id.name.clone());
+            self.library_version = id.version.clone();
+        }
+
+        // Translate using definitions
+        let usings = if ast_library.usings.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::UsingDef> = ast_library
+                .usings
+                .iter()
+                .map(|u| translator.translate_using_def(u))
+                .collect();
+            Some(elm::UsingDefs { defs })
+        };
+
+        // Translate include definitions
+        let includes = if ast_library.includes.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::IncludeDef> = ast_library
+                .includes
+                .iter()
+                .map(|i| translator.translate_include_def(i))
+                .collect();
+            Some(elm::IncludeDefs { defs })
+        };
+
+        // Translate code system definitions
+        let code_systems = if ast_library.codesystems.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::CodeSystemDef> = ast_library
+                .codesystems
+                .iter()
+                .map(|cs| translator.translate_codesystem_def(cs))
+                .collect();
+            Some(elm::CodeSystemDefs { defs })
+        };
+
+        // Translate value set definitions
+        let value_sets = if ast_library.valuesets.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ValueSetDef> = ast_library
+                .valuesets
+                .iter()
+                .map(|vs| translator.translate_valueset_def(vs))
+                .collect();
+            Some(elm::ValueSetDefs { defs })
+        };
+
+        // Translate code definitions
+        let codes = if ast_library.codes.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::CodeDef> = ast_library
+                .codes
+                .iter()
+                .map(|c| translator.translate_code_def(c))
+                .collect();
+            Some(elm::CodeDefs { defs })
+        };
+
+        // Translate concept definitions
+        let concepts = if ast_library.concepts.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ConceptDef> = ast_library
+                .concepts
+                .iter()
+                .map(|c| translator.translate_concept_def(c))
+                .collect();
+            Some(elm::ConceptDefs { defs })
+        };
+
+        // Translate parameter definitions
+        let parameters = if ast_library.parameters.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ParameterDef> = ast_library
+                .parameters
+                .iter()
+                .map(|p| translator.translate_parameter_def(p))
+                .collect();
+            Some(elm::ParameterDefs { defs })
+        };
+
+        // Translate context definitions
+        let contexts = if ast_library.contexts.is_empty() {
+            None
+        } else {
+            let defs: Vec<elm::ContextDef> = ast_library
+                .contexts
+                .iter()
+                .map(|c| translator.translate_context_def(c))
+                .collect();
+            Some(elm::ContextDefs { defs })
+        };
+
+        // Determine current context for statements
+        let current_context = ast_library.contexts.last().map(|c| c.name.as_str());
+
+        // Translate statements (expression and function definitions)
+        let statements = if ast_library.statements.is_empty() {
+            None
+        } else {
+            let mut expression_defs = Vec::new();
+
+            for stmt in &ast_library.statements {
+                match stmt {
+                    ast::Statement::ExpressionDef(expr_def) => {
+                        expression_defs
+                            .push(translator.translate_expression_def(expr_def, current_context));
+                    }
+                    ast::Statement::FunctionDef(func_def) => {
+                        let _ = translator
+                            .translate_function_def(func_def, |t, e| t.translate_expression(e));
+                    }
+                }
+            }
+
+            if expression_defs.is_empty() {
+                None
+            } else {
+                Some(elm::ExpressionDefs {
+                    defs: expression_defs,
+                })
+            }
+        };
+
+        elm::Library {
+            identifier,
+            schema_identifier: Some(elm::VersionedIdentifier {
+                id: Some("urn:hl7-org:elm".to_string()),
+                system: None,
+                version: Some("r1".to_string()),
+            }),
+            usings,
+            includes,
+            parameters,
+            code_systems,
+            value_sets,
+            codes,
+            concepts,
+            contexts,
+            statements,
+            annotation: Vec::new(),
+        }
+    }
 }
 
 // ============================================================================
@@ -1291,5 +1666,214 @@ mod tests {
             LibraryBuilder::convert_access_modifier(ast::AccessModifier::Private),
             elm::AccessModifier::Private
         );
+    }
+
+    // ========================================================================
+    // Build Tests (Phase 6.4d)
+    // ========================================================================
+
+    #[test]
+    fn test_build_basic_library() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library TestLib version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define X: true
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        // Check library identifier
+        assert!(elm.identifier.is_some());
+        let id = elm.identifier.unwrap();
+        assert_eq!(id.id, Some("TestLib".to_string()));
+        assert_eq!(id.version, Some("1.0".to_string()));
+
+        // Check schema identifier
+        assert!(elm.schema_identifier.is_some());
+        let schema = elm.schema_identifier.unwrap();
+        assert_eq!(schema.id, Some("urn:hl7-org:elm".to_string()));
+
+        // Check usings
+        assert!(elm.usings.is_some());
+        let usings = elm.usings.unwrap();
+        assert_eq!(usings.defs.len(), 1);
+        assert_eq!(usings.defs[0].local_identifier, Some("FHIR".to_string()));
+
+        // Check contexts
+        assert!(elm.contexts.is_some());
+        let contexts = elm.contexts.unwrap();
+        assert_eq!(contexts.defs.len(), 1);
+        assert_eq!(contexts.defs[0].name, Some("Patient".to_string()));
+
+        // Check statements
+        assert!(elm.statements.is_some());
+        let statements = elm.statements.unwrap();
+        assert_eq!(statements.defs.len(), 1);
+        assert_eq!(statements.defs[0].name, Some("X".to_string()));
+        assert_eq!(statements.defs[0].context, Some("Patient".to_string()));
+    }
+
+    #[test]
+    fn test_build_library_with_terminology() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library TermLib version '1.0'
+            
+            codesystem "LOINC": 'http://loinc.org'
+            valueset "BP Codes": 'http://example.org/vs/bp'
+            code "Systolic BP": '8480-6' from "LOINC" display 'Systolic blood pressure'
+            concept "Blood Pressure": { "Systolic BP" } display 'Blood Pressure'
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        // Check code systems
+        assert!(elm.code_systems.is_some());
+        let code_systems = elm.code_systems.unwrap();
+        assert_eq!(code_systems.defs.len(), 1);
+        assert_eq!(code_systems.defs[0].name, Some("LOINC".to_string()));
+        assert_eq!(
+            code_systems.defs[0].id,
+            Some("http://loinc.org".to_string())
+        );
+
+        // Check value sets
+        assert!(elm.value_sets.is_some());
+        let value_sets = elm.value_sets.unwrap();
+        assert_eq!(value_sets.defs.len(), 1);
+        assert_eq!(value_sets.defs[0].name, Some("BP Codes".to_string()));
+
+        // Check codes
+        assert!(elm.codes.is_some());
+        let codes = elm.codes.unwrap();
+        assert_eq!(codes.defs.len(), 1);
+        assert_eq!(codes.defs[0].name, Some("Systolic BP".to_string()));
+        assert_eq!(codes.defs[0].id, Some("8480-6".to_string()));
+
+        // Check concepts
+        assert!(elm.concepts.is_some());
+        let concepts = elm.concepts.unwrap();
+        assert_eq!(concepts.defs.len(), 1);
+        assert_eq!(concepts.defs[0].name, Some("Blood Pressure".to_string()));
+    }
+
+    #[test]
+    fn test_build_library_with_parameters() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library ParamLib version '1.0'
+            
+            parameter "Measurement Period" Interval<DateTime>
+            parameter "Max Count" Integer default 10
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        // Check parameters
+        assert!(elm.parameters.is_some());
+        let parameters = elm.parameters.unwrap();
+        assert_eq!(parameters.defs.len(), 2);
+        assert_eq!(
+            parameters.defs[0].name,
+            Some("Measurement Period".to_string())
+        );
+        assert_eq!(parameters.defs[1].name, Some("Max Count".to_string()));
+        assert!(parameters.defs[1].default_value.is_some());
+    }
+
+    #[test]
+    fn test_build_library_with_includes() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library IncludeLib version '1.0'
+            
+            include FHIRHelpers version '4.0.1' called Helpers
+            include CommonLib
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        // Check includes
+        assert!(elm.includes.is_some());
+        let includes = elm.includes.unwrap();
+        assert_eq!(includes.defs.len(), 2);
+        assert_eq!(
+            includes.defs[0].local_identifier,
+            Some("Helpers".to_string())
+        );
+        assert_eq!(includes.defs[0].path, Some("FHIRHelpers".to_string()));
+        assert_eq!(
+            includes.defs[1].local_identifier,
+            Some("CommonLib".to_string())
+        );
+    }
+
+    #[test]
+    fn test_build_empty_library() {
+        use crate::parser::CqlParser;
+
+        let source = "library EmptyLib version '1.0'";
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        assert!(elm.identifier.is_some());
+        assert!(elm.usings.is_none());
+        assert!(elm.includes.is_none());
+        assert!(elm.parameters.is_none());
+        assert!(elm.code_systems.is_none());
+        assert!(elm.value_sets.is_none());
+        assert!(elm.codes.is_none());
+        assert!(elm.concepts.is_none());
+        assert!(elm.contexts.is_none());
+        assert!(elm.statements.is_none());
+    }
+
+    #[test]
+    fn test_build_library_multiple_expressions() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library MultiExpr version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            
+            define "Is Adult": AgeInYears() >= 18
+            define "Is Minor": not "Is Adult"
+            define "Helper": true
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        assert!(elm.statements.is_some());
+        let statements = elm.statements.unwrap();
+        assert_eq!(statements.defs.len(), 3);
+
+        // All should have Patient context
+        for def in &statements.defs {
+            assert_eq!(def.context, Some("Patient".to_string()));
+        }
+
+        // Check names
+        assert_eq!(statements.defs[0].name, Some("Is Adult".to_string()));
+        assert_eq!(statements.defs[1].name, Some("Is Minor".to_string()));
+        assert_eq!(statements.defs[2].name, Some("Helper".to_string()));
     }
 }
