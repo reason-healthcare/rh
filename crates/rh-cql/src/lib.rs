@@ -61,8 +61,8 @@ pub use operators::{
 };
 pub use options::{CompilerOption, CompilerOptions, ErrorSeverity, OutputFormat, SignatureLevel};
 pub use output::{
-    library_to_compact_json, library_to_json, library_to_json_with_options, ElmWriter,
-    OutputError, TRANSLATOR_VERSION,
+    library_to_compact_json, library_to_json, library_to_json_with_options, ElmWriter, OutputError,
+    TRANSLATOR_VERSION,
 };
 pub use parser::CqlParser;
 pub use preprocessor::{

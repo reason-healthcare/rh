@@ -169,7 +169,9 @@ impl ExpressionTranslator {
     pub fn with_local_ids(mut self) -> Self {
         // Create new options with annotations enabled
         let mut new_options = (*self.options).clone();
-        new_options.options.insert(crate::options::CompilerOption::EnableAnnotations);
+        new_options
+            .options
+            .insert(crate::options::CompilerOption::EnableAnnotations);
         self.options = std::sync::Arc::new(new_options);
         self
     }
@@ -208,6 +210,239 @@ impl ExpressionTranslator {
             },
             ..Default::default()
         }
+    }
+
+    // ========================================================================
+    // Unified Expression Translation (Phase 6.4a)
+    // ========================================================================
+
+    /// Translate any CQL AST expression to an ELM expression.
+    ///
+    /// This is the main entry point for expression translation. It dispatches
+    /// to the appropriate translation method based on the expression type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rh_cql::translator::ExpressionTranslator;
+    /// use rh_cql::parser::CqlParser;
+    ///
+    /// let parser = CqlParser::new();
+    /// let ast_expr = parser.parse_expression("42 + 1").unwrap();
+    ///
+    /// let mut translator = ExpressionTranslator::new();
+    /// let elm_expr = translator.translate_expression(&ast_expr);
+    /// ```
+    pub fn translate_expression(&mut self, expr: &ast::Expression) -> elm::Expression {
+        match expr {
+            // Literals
+            ast::Expression::Literal(lit) => self.translate_literal(lit),
+
+            // References
+            ast::Expression::IdentifierRef(id_ref) => self.translate_ast_identifier_ref(id_ref),
+            ast::Expression::QualifiedIdentifierRef(qid_ref) => {
+                self.translate_ast_qualified_ref(qid_ref)
+            }
+
+            // Operators
+            ast::Expression::UnaryExpression(unary) => {
+                self.translate_ast_unary_expression(unary, |s, e| s.translate_expression(e))
+            }
+            ast::Expression::BinaryExpression(binary) => {
+                self.translate_ast_binary_expression(binary, |s, e| s.translate_expression(e))
+            }
+            ast::Expression::TernaryExpression(ternary) => {
+                self.translate_ast_ternary_expression(ternary, |s, e| s.translate_expression(e))
+            }
+
+            // Type operations
+            ast::Expression::TypeExpression(type_expr) => {
+                self.translate_type_expression(type_expr, |s, e| s.translate_expression(e))
+            }
+
+            // Function/invocation
+            ast::Expression::FunctionInvocation(func) => {
+                self.translate_ast_function_invocation(func, |s, e| s.translate_expression(e))
+            }
+            ast::Expression::MemberInvocation(member) => self.translate_member_invocation(member),
+            ast::Expression::IndexInvocation(index) => self.translate_index_invocation(index),
+
+            // Query
+            ast::Expression::Query(query) => {
+                self.translate_query(query, |s, e| s.translate_expression(e), None)
+            }
+            ast::Expression::Retrieve(retrieve) => {
+                self.translate_retrieve(retrieve, |s, e| s.translate_expression(e), None)
+            }
+
+            // Conditionals
+            ast::Expression::IfThenElse(if_expr) => {
+                self.translate_if_then_else(if_expr, |s, e| s.translate_expression(e), None)
+            }
+            ast::Expression::Case(case_expr) => {
+                self.translate_case(case_expr, |s, e| s.translate_expression(e), None)
+            }
+
+            // Interval/List/Tuple constructors
+            ast::Expression::IntervalExpression(interval) => {
+                self.translate_interval_expression(interval)
+            }
+            ast::Expression::ListExpression(list) => self.translate_list_expression(list),
+            ast::Expression::TupleExpression(tuple) => self.translate_tuple_expression(tuple),
+
+            // Instance
+            ast::Expression::Instance(instance) => self.translate_instance_expression(instance),
+
+            // Let
+            ast::Expression::Let(let_clause) => self.translate_let_expression(let_clause),
+
+            // Parenthesized - unwrap and translate inner expression
+            ast::Expression::Parenthesized(inner) => self.translate_expression(inner),
+        }
+    }
+
+    // ========================================================================
+    // Interval/List/Tuple/Instance Translation (Phase 6.4a)
+    // ========================================================================
+
+    /// Translate an interval expression.
+    ///
+    /// CQL syntax: `Interval[low, high]` or `Interval(low, high)`
+    fn translate_interval_expression(
+        &mut self,
+        interval: &ast::IntervalExpression,
+    ) -> elm::Expression {
+        let element = self.element_fields();
+
+        let low = interval
+            .low
+            .as_ref()
+            .map(|e| Box::new(self.translate_expression(e)));
+        let high = interval
+            .high
+            .as_ref()
+            .map(|e| Box::new(self.translate_expression(e)));
+
+        elm::Expression::Interval(elm::IntervalExpr {
+            element,
+            low,
+            high,
+            low_closed: Some(interval.low_closed),
+            high_closed: Some(interval.high_closed),
+            low_closed_expression: None,
+            high_closed_expression: None,
+        })
+    }
+
+    /// Translate a list expression.
+    ///
+    /// CQL syntax: `{ expr1, expr2, ... }` or `List<Type> { ... }`
+    fn translate_list_expression(&mut self, list: &ast::ListExpression) -> elm::Expression {
+        let element = self.element_fields();
+
+        let elements: Vec<elm::Expression> = list
+            .elements
+            .iter()
+            .map(|e| self.translate_expression(e))
+            .collect();
+
+        let type_specifier = list
+            .type_specifier
+            .as_ref()
+            .map(|ts| self.type_specifier_to_elm(ts));
+
+        elm::Expression::List(elm::ListExpr {
+            element,
+            type_specifier,
+            elements,
+        })
+    }
+
+    /// Translate a tuple expression.
+    ///
+    /// CQL syntax: `Tuple { name: value, ... }`
+    fn translate_tuple_expression(&mut self, tuple: &ast::TupleExpression) -> elm::Expression {
+        let element = self.element_fields();
+
+        let elements: Vec<elm::TupleElement> = tuple
+            .elements
+            .iter()
+            .map(|e| elm::TupleElement {
+                name: Some(e.name.clone()),
+                value: Some(Box::new(self.translate_expression(&e.value))),
+            })
+            .collect();
+
+        elm::Expression::Tuple(elm::TupleExpr { element, elements })
+    }
+
+    /// Translate an instance expression (type instantiation).
+    ///
+    /// CQL syntax: `TypeName { element: value, ... }`
+    fn translate_instance_expression(&mut self, instance: &ast::Instance) -> elm::Expression {
+        let element = self.element_fields();
+
+        let class_type = Some(type_specifier_to_qname(&instance.class_type));
+
+        let elements: Vec<elm::InstanceElement> = instance
+            .elements
+            .iter()
+            .map(|e| elm::InstanceElement {
+                name: Some(e.name.clone()),
+                value: Some(Box::new(self.translate_expression(&e.value))),
+            })
+            .collect();
+
+        elm::Expression::Instance(elm::Instance {
+            element,
+            class_type,
+            elements,
+        })
+    }
+
+    /// Translate a let expression.
+    ///
+    /// Note: Let expressions in CQL are typically part of queries.
+    /// Standalone let expressions translate to the inner expression
+    /// after binding the identifier in scope.
+    fn translate_let_expression(&mut self, let_clause: &ast::LetClause) -> elm::Expression {
+        // For standalone let expressions, we translate the expression
+        // The actual let binding would be handled by query translation
+        self.translate_expression(&let_clause.expression)
+    }
+
+    // ========================================================================
+    // Member/Index Invocation Translation (Phase 6.4a)
+    // ========================================================================
+
+    /// Translate a member invocation (property access).
+    ///
+    /// CQL syntax: `expr.member` → Property expression
+    fn translate_member_invocation(&mut self, member: &ast::MemberInvocation) -> elm::Expression {
+        // Translate the source expression
+        let source = self.translate_expression(&member.source);
+
+        // Create Property expression for member access
+        elm::Expression::Property(elm::Property {
+            element: self.element_fields(),
+            source: Some(Box::new(source)),
+            path: Some(member.name.clone()),
+            scope: None,
+        })
+    }
+
+    /// Translate an index invocation (indexer access).
+    ///
+    /// CQL syntax: `expr[index]`
+    fn translate_index_invocation(&mut self, index: &ast::IndexInvocation) -> elm::Expression {
+        let source = self.translate_expression(&index.source);
+        let index_expr = self.translate_expression(&index.index);
+
+        elm::Expression::Indexer(elm::BinaryExpression {
+            element: self.element_fields(),
+            operand: vec![source, index_expr],
+            signature: Vec::new(),
+        })
     }
 
     // ========================================================================
@@ -3061,7 +3296,8 @@ mod tests {
     #[test]
     fn test_no_local_id_by_default() {
         // Use CompilerOptions::new() which has no options enabled
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::new());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::new());
         let result = translator.translate_literal(&ast::Literal::Integer(42));
         if let elm::Expression::Literal(lit) = result {
             assert!(lit.element.local_id.is_none());
@@ -3122,7 +3358,8 @@ mod tests {
     #[test]
     fn test_translate_expression_ref() {
         // Use debug options which enable result types
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let result = translator.translate_identifier_ref(
             "MyExpression",
             ResolvedRefKind::Expression,
@@ -5242,7 +5479,8 @@ mod tests {
     #[test]
     fn test_translate_if_then_else_with_type() {
         // Use debug options which enable result types
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let if_expr = ast::IfThenElse {
             condition: Box::new(ast::Expression::Literal(ast::Literal::Boolean(true))),
             then_expr: Box::new(ast::Expression::Literal(ast::Literal::String(
@@ -5713,7 +5951,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_integer() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("String")),
@@ -5735,7 +5974,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_string() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("Integer")),
@@ -5754,7 +5994,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_decimal() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42".to_string()),
             value_type: Some(qname_system("Integer")),
@@ -5776,7 +6017,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_boolean() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("true".to_string()),
             value_type: Some(qname_system("String")),
@@ -5798,7 +6040,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_date() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("2024-01-15".to_string()),
             value_type: Some(qname_system("String")),
@@ -5817,7 +6060,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_datetime() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("2024-01-15T10:30:00".to_string()),
             ..Default::default()
@@ -5838,7 +6082,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_time() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("10:30:00".to_string()),
             ..Default::default()
@@ -5856,7 +6101,8 @@ mod tests {
 
     #[test]
     fn test_translate_to_quantity() {
-        let mut translator = ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
+        let mut translator =
+            ExpressionTranslator::with_options(crate::options::CompilerOptions::debug());
         let operand = elm::Expression::Literal(elm::Literal {
             value: Some("42 'kg'".to_string()),
             ..Default::default()
@@ -7449,5 +7695,184 @@ mod tests {
         );
 
         assert!(matches!(result, elm::Expression::ToStringExpr(_)));
+    }
+
+    // ========================================================================
+    // translate_expression Tests (Phase 6.4a)
+    // ========================================================================
+
+    #[test]
+    fn test_translate_expression_literal() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::Literal(ast::Literal::Integer(42));
+        let result = translator.translate_expression(&expr);
+        assert!(matches!(result, elm::Expression::Literal(_)));
+    }
+
+    #[test]
+    fn test_translate_expression_identifier_ref() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::IdentifierRef(ast::IdentifierRef {
+            name: "foo".to_string(),
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        assert!(matches!(result, elm::Expression::IdentifierRef(_)));
+    }
+
+    #[test]
+    fn test_translate_expression_binary_add() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::BinaryExpression(ast::BinaryExpression {
+            operator: ast::BinaryOperator::Add,
+            left: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+            right: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        assert!(matches!(result, elm::Expression::Add(_)));
+    }
+
+    #[test]
+    fn test_translate_expression_parenthesized() {
+        let mut translator = ExpressionTranslator::new();
+        // Parenthesized expressions should unwrap to their inner expression
+        let expr = ast::Expression::Parenthesized(Box::new(ast::Expression::Literal(
+            ast::Literal::Boolean(true),
+        )));
+        let result = translator.translate_expression(&expr);
+        assert!(matches!(result, elm::Expression::Literal(_)));
+    }
+
+    #[test]
+    fn test_translate_expression_interval() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::IntervalExpression(ast::IntervalExpression {
+            low: Some(Box::new(ast::Expression::Literal(ast::Literal::Integer(1)))),
+            high: Some(Box::new(ast::Expression::Literal(ast::Literal::Integer(
+                10,
+            )))),
+            low_closed: true,
+            high_closed: true,
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::Interval(interval) = result {
+            assert!(interval.low.is_some());
+            assert!(interval.high.is_some());
+            assert_eq!(interval.low_closed, Some(true));
+            assert_eq!(interval.high_closed, Some(true));
+        } else {
+            panic!("Expected Interval expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_list() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::ListExpression(ast::ListExpression {
+            elements: vec![
+                ast::Expression::Literal(ast::Literal::Integer(1)),
+                ast::Expression::Literal(ast::Literal::Integer(2)),
+                ast::Expression::Literal(ast::Literal::Integer(3)),
+            ],
+            type_specifier: None,
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::List(list) = result {
+            assert_eq!(list.elements.len(), 3);
+        } else {
+            panic!("Expected List expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_tuple() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::TupleExpression(ast::TupleExpression {
+            elements: vec![
+                ast::TupleElement {
+                    name: "x".to_string(),
+                    value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                },
+                ast::TupleElement {
+                    name: "y".to_string(),
+                    value: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+                },
+            ],
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::Tuple(tuple) = result {
+            assert_eq!(tuple.elements.len(), 2);
+            assert_eq!(tuple.elements[0].name, Some("x".to_string()));
+            assert_eq!(tuple.elements[1].name, Some("y".to_string()));
+        } else {
+            panic!("Expected Tuple expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_instance() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::Instance(ast::Instance {
+            class_type: ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: Some("FHIR".to_string()),
+                name: "Quantity".to_string(),
+            }),
+            elements: vec![ast::InstanceElement {
+                name: "value".to_string(),
+                value: Box::new(ast::Expression::Literal(ast::Literal::Decimal(5.0))),
+            }],
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::Instance(instance) = result {
+            assert!(instance.class_type.is_some());
+            assert_eq!(instance.elements.len(), 1);
+            assert_eq!(instance.elements[0].name, Some("value".to_string()));
+        } else {
+            panic!("Expected Instance expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_member_invocation() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::MemberInvocation(ast::MemberInvocation {
+            source: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "patient".to_string(),
+                location: None,
+            })),
+            name: "birthDate".to_string(),
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::Property(prop) = result {
+            assert_eq!(prop.path, Some("birthDate".to_string()));
+            assert!(prop.source.is_some());
+        } else {
+            panic!("Expected Property expression");
+        }
+    }
+
+    #[test]
+    fn test_translate_expression_index_invocation() {
+        let mut translator = ExpressionTranslator::new();
+        let expr = ast::Expression::IndexInvocation(ast::IndexInvocation {
+            source: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                name: "list".to_string(),
+                location: None,
+            })),
+            index: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+            location: None,
+        });
+        let result = translator.translate_expression(&expr);
+        if let elm::Expression::Indexer(indexer) = result {
+            assert_eq!(indexer.operand.len(), 2);
+        } else {
+            panic!("Expected Indexer expression");
+        }
     }
 }
