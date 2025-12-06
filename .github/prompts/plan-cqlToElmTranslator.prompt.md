@@ -168,10 +168,15 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ### Phase 6: Compiler Options & Output
 **Goal**: Complete translation with options
 
-- [ ] **6.1 CompilerOptions**
-  - Annotation options
-  - Semantic options (list/interval promotion)
-  - Error severity levels
+- [x] **6.1 CompilerOptions** ✅
+  - CompilerOption enum with all option flags (EnableAnnotations, EnableLocators, EnableResultTypes, DisableListDemotion, etc.)
+  - SignatureLevel enum (None, Differing, Overloads, All)
+  - ErrorSeverity enum (Info, Warning, Error)
+  - CompilerOptions struct with default(), new(), strict(), debug() constructors
+  - Builder pattern for fluent configuration
+  - Integration with ExpressionTranslator
+  - JSON serialization/deserialization
+  - Options string parsing for compatibility with reference implementation
 
 - [ ] **6.2 Output Generation**
   - JSON ELM output
