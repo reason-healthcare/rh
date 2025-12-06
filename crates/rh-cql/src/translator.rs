@@ -2874,6 +2874,115 @@ impl ExpressionTranslator {
             annotation: Vec::new(),
         }
     }
+
+    // ========================================================================
+    // Statement Translation (Phase 6.4b)
+    // ========================================================================
+
+    /// Translate an AST expression definition to ELM.
+    ///
+    /// This translates CQL `define` statements to ELM ExpressionDef.
+    ///
+    /// # Example
+    /// ```cql
+    /// define "Active Encounters":
+    ///   [Encounter] E where E.status = 'active'
+    /// ```
+    pub fn translate_expression_def(
+        &mut self,
+        expr_def: &ast::ExpressionDef,
+        context: Option<&str>,
+    ) -> elm::ExpressionDef {
+        // Translate the expression body
+        let expression = Some(Box::new(self.translate_expression(&expr_def.expression)));
+
+        // Map access modifier
+        let access_level = match expr_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        elm::ExpressionDef {
+            local_id: self.next_local_id(),
+            locator: None,
+            name: Some(expr_def.name.clone()),
+            context: context.map(String::from),
+            access_level,
+            result_type_name: None,
+            result_type_specifier: None,
+            expression,
+            annotation: Vec::new(),
+        }
+    }
+
+    /// Translate an AST parameter definition to ELM.
+    ///
+    /// This translates CQL `parameter` declarations to ELM ParameterDef.
+    ///
+    /// # Example
+    /// ```cql
+    /// parameter "Measurement Period" Interval<DateTime>
+    /// parameter "Max Count" Integer default 10
+    /// ```
+    pub fn translate_parameter_def(&mut self, param_def: &ast::ParameterDef) -> elm::ParameterDef {
+        // Translate the type specifier
+        let parameter_type_specifier = param_def
+            .type_specifier
+            .as_ref()
+            .map(|ts| self.type_specifier_to_elm(ts));
+
+        let parameter_type_name = parameter_type_specifier
+            .as_ref()
+            .map(type_specifier_to_qname_string);
+
+        // Translate the default value
+        let default_value = param_def
+            .default
+            .as_ref()
+            .map(|d| Box::new(self.translate_expression(d)));
+
+        // Map access modifier
+        let access_level = match param_def.access {
+            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+        };
+
+        elm::ParameterDef {
+            name: Some(param_def.name.clone()),
+            access_level,
+            parameter_type_name,
+            parameter_type_specifier,
+            default_value,
+        }
+    }
+
+    /// Translate a statement (expression def or function def) to ELM.
+    ///
+    /// This is a convenience method that dispatches to the appropriate
+    /// translation method based on the statement type.
+    pub fn translate_statement(
+        &mut self,
+        stmt: &ast::Statement,
+        context: Option<&str>,
+    ) -> StatementTranslation {
+        match stmt {
+            ast::Statement::ExpressionDef(expr_def) => {
+                StatementTranslation::Expression(self.translate_expression_def(expr_def, context))
+            }
+            ast::Statement::FunctionDef(func_def) => StatementTranslation::Function(
+                self.translate_function_def(func_def, |t, e| t.translate_expression(e)),
+            ),
+        }
+    }
+}
+
+/// Result of translating a statement.
+#[derive(Debug, Clone)]
+pub enum StatementTranslation {
+    /// An expression definition.
+    Expression(elm::ExpressionDef),
+    /// A function definition.
+    Function(elm::FunctionDef),
 }
 
 /// Convert an ELM TypeSpecifier to a QName string.
@@ -7873,6 +7982,185 @@ mod tests {
             assert_eq!(indexer.operand.len(), 2);
         } else {
             panic!("Expected Indexer expression");
+        }
+    }
+
+    // ========================================================================
+    // Statement Translation Tests (Phase 6.4b)
+    // ========================================================================
+
+    #[test]
+    fn test_translate_expression_def_basic() {
+        let mut translator = ExpressionTranslator::new();
+        let expr_def = ast::ExpressionDef {
+            name: "ActiveEncounters".to_string(),
+            expression: ast::Expression::Literal(ast::Literal::Integer(42)),
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_expression_def(&expr_def, Some("Patient"));
+
+        assert_eq!(result.name, Some("ActiveEncounters".to_string()));
+        assert_eq!(result.context, Some("Patient".to_string()));
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Public));
+        assert!(result.expression.is_some());
+    }
+
+    #[test]
+    fn test_translate_expression_def_private() {
+        let mut translator = ExpressionTranslator::new();
+        let expr_def = ast::ExpressionDef {
+            name: "PrivateHelper".to_string(),
+            expression: ast::Expression::Literal(ast::Literal::Boolean(true)),
+            access: ast::AccessModifier::Private,
+            location: None,
+        };
+
+        let result = translator.translate_expression_def(&expr_def, None);
+
+        assert_eq!(result.name, Some("PrivateHelper".to_string()));
+        assert_eq!(result.context, None);
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Private));
+    }
+
+    #[test]
+    fn test_translate_expression_def_with_complex_body() {
+        let mut translator = ExpressionTranslator::new();
+        let expr_def = ast::ExpressionDef {
+            name: "Sum".to_string(),
+            expression: ast::Expression::BinaryExpression(ast::BinaryExpression {
+                operator: ast::BinaryOperator::Add,
+                left: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
+                right: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+                location: None,
+            }),
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_expression_def(&expr_def, Some("Practitioner"));
+
+        assert_eq!(result.name, Some("Sum".to_string()));
+        assert!(result.expression.is_some());
+        if let Some(expr) = result.expression {
+            assert!(matches!(*expr, elm::Expression::Add(_)));
+        }
+    }
+
+    #[test]
+    fn test_translate_parameter_def_basic() {
+        let mut translator = ExpressionTranslator::new();
+        let param_def = ast::ParameterDef {
+            name: "MeasurementPeriod".to_string(),
+            type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "DateTime".to_string(),
+            })),
+            default: None,
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_parameter_def(&param_def);
+
+        assert_eq!(result.name, Some("MeasurementPeriod".to_string()));
+        assert!(result.parameter_type_specifier.is_some());
+        assert!(result.parameter_type_name.is_some());
+        assert!(result.default_value.is_none());
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Public));
+    }
+
+    #[test]
+    fn test_translate_parameter_def_with_default() {
+        let mut translator = ExpressionTranslator::new();
+        let param_def = ast::ParameterDef {
+            name: "MaxCount".to_string(),
+            type_specifier: Some(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Integer".to_string(),
+            })),
+            default: Some(ast::Expression::Literal(ast::Literal::Integer(10))),
+            access: ast::AccessModifier::Private,
+            location: None,
+        };
+
+        let result = translator.translate_parameter_def(&param_def);
+
+        assert_eq!(result.name, Some("MaxCount".to_string()));
+        assert!(result.default_value.is_some());
+        assert_eq!(result.access_level, Some(elm::AccessModifier::Private));
+    }
+
+    #[test]
+    fn test_translate_parameter_def_interval_type() {
+        let mut translator = ExpressionTranslator::new();
+        let param_def = ast::ParameterDef {
+            name: "MeasurementPeriod".to_string(),
+            type_specifier: Some(ast::TypeSpecifier::Interval(ast::IntervalTypeSpecifier {
+                point_type: Box::new(ast::TypeSpecifier::Named(ast::NamedTypeSpecifier {
+                    namespace: None,
+                    name: "DateTime".to_string(),
+                })),
+            })),
+            default: None,
+            access: ast::AccessModifier::Public,
+            location: None,
+        };
+
+        let result = translator.translate_parameter_def(&param_def);
+
+        assert_eq!(result.name, Some("MeasurementPeriod".to_string()));
+        assert!(result.parameter_type_specifier.is_some());
+        if let Some(ts) = result.parameter_type_specifier {
+            assert!(matches!(ts, elm::TypeSpecifier::Interval(_)));
+        }
+        assert_eq!(
+            result.parameter_type_name,
+            Some("Interval<DateTime>".to_string())
+        );
+    }
+
+    #[test]
+    fn test_translate_statement_expression() {
+        let mut translator = ExpressionTranslator::new();
+        let stmt = ast::Statement::ExpressionDef(ast::ExpressionDef {
+            name: "TestExpr".to_string(),
+            expression: ast::Expression::Literal(ast::Literal::String("hello".to_string())),
+            access: ast::AccessModifier::Public,
+            location: None,
+        });
+
+        let result = translator.translate_statement(&stmt, Some("Patient"));
+
+        if let StatementTranslation::Expression(expr_def) = result {
+            assert_eq!(expr_def.name, Some("TestExpr".to_string()));
+            assert_eq!(expr_def.context, Some("Patient".to_string()));
+        } else {
+            panic!("Expected Expression translation");
+        }
+    }
+
+    #[test]
+    fn test_translate_statement_function() {
+        let mut translator = ExpressionTranslator::new();
+        let stmt = ast::Statement::FunctionDef(ast::FunctionDef {
+            name: "TestFunc".to_string(),
+            parameters: vec![],
+            return_type: None,
+            body: Some(ast::Expression::Literal(ast::Literal::Integer(42))),
+            fluent: false,
+            external: false,
+            access: ast::AccessModifier::Public,
+            location: None,
+        });
+
+        let result = translator.translate_statement(&stmt, None);
+
+        if let StatementTranslation::Function(func_def) = result {
+            assert_eq!(func_def.name, Some("TestFunc".to_string()));
+        } else {
+            panic!("Expected Function translation");
         }
     }
 }
