@@ -75,5 +75,7 @@ pub use provider::{
 pub use reporting::{
     CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
-pub use translator::{ExpressionTranslator, TranslatorError, TranslatorResult};
+pub use translator::{
+    ExpressionTranslator, StatementTranslation, TranslatorError, TranslatorResult,
+};
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
