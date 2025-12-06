@@ -6,16 +6,35 @@ CQL (Clinical Quality Language) capabilities for the RH ecosystem.
 
 This crate provides:
 
+- **CQL-to-ELM Compiler**: Parse CQL source and translate to ELM
 - **ELM Types**: Complete Rust type definitions for ELM (Expression Logical Model)
-- **ELM JSON Parsing**: Deserialize ELM JSON into strongly-typed Rust structures
+- **ELM JSON Output**: Serialize ELM to JSON (compatible with reference implementation)
 - **ModelInfo Types**: FHIR and custom model definitions for type resolution
 - **Model Providers**: In-memory model management (WASM-compatible)
 - **DataType System**: Type checking, compatibility, and implicit conversions
-- **CQL Execution** *(planned)*: Evaluate ELM expressions against FHIR data
 
 ## Status
 
-🚧 **Under Development** - Phase 1 (Foundation) complete; parser and execution planned.
+🚧 **Under Development** - Parser and core translation complete; execution engine planned.
+
+## Quick Start
+
+```rust
+use rh_cql::{compile, CompilerOptions};
+
+let source = r#"
+    library Example version '1.0.0'
+    define Greeting: 'Hello, CQL!'
+    define Answer: 42
+"#;
+
+let result = compile(source, None).unwrap();
+assert!(result.is_success());
+
+// Get the ELM as JSON
+let json = result.to_json().unwrap();
+println!("{}", json);
+```
 
 ## Background
 
@@ -39,67 +58,163 @@ CQL compiles to ELM (Expression Logical Model), a structured representation that
                     rh-cql
 ```
 
+## Public API
+
+### Compiling CQL
+
+The main entry point is the `compile()` function:
+
+```rust
+use rh_cql::{compile, CompilerOptions};
+
+let source = r#"
+    library MyLibrary version '1.0'
+    using FHIR version '4.0.1'
+    context Patient
+    define IsAdult: AgeInYears() >= 18
+"#;
+
+// Compile with default options
+let result = compile(source, None).unwrap();
+
+if result.is_success() {
+    println!("Compiled successfully!");
+    
+    // Access the ELM library
+    let library = &result.library;
+    if let Some(id) = &library.identifier {
+        println!("Library: {} v{}", 
+            id.id.as_deref().unwrap_or("?"),
+            id.version.as_deref().unwrap_or("?"));
+    }
+} else {
+    // Handle errors
+    for err in &result.errors {
+        println!("Error: {}", err.message());
+    }
+}
+```
+
+### Compiler Options
+
+Customize compilation behavior:
+
+```rust
+use rh_cql::{compile, CompilerOptions, CompilerOption, SignatureLevel};
+
+// Debug mode: includes annotations, locators, and result types
+let options = CompilerOptions::debug();
+
+// Strict mode: disables implicit conversions
+let options = CompilerOptions::strict();
+
+// Custom options
+let options = CompilerOptions::new()
+    .with_option(CompilerOption::EnableAnnotations)
+    .with_option(CompilerOption::EnableLocators)
+    .with_signature_level(SignatureLevel::All);
+
+let result = compile(source, Some(options)).unwrap();
+```
+
+### Direct to JSON
+
+Compile and serialize in one step:
+
+```rust
+use rh_cql::compile_to_json;
+
+let source = "library Test version '1.0' define X: 42";
+
+// Pretty-printed JSON
+let json = compile_to_json(source, None, true).unwrap();
+
+// Compact JSON
+let compact = compile_to_json(source, None, false).unwrap();
+```
+
+### Validation Only
+
+Check CQL syntax without generating full ELM:
+
+```rust
+use rh_cql::validate;
+
+let source = "library Test version '1.0' define X: 42";
+let result = validate(source, None).unwrap();
+
+if result.is_valid() {
+    println!("CQL is valid!");
+} else {
+    for err in &result.errors {
+        println!("Error: {}", err.message());
+    }
+}
+```
+
+### Working with CompilationResult
+
+```rust
+use rh_cql::compile;
+
+let result = compile(source, None).unwrap();
+
+// Check status
+result.is_success();      // true if no errors
+result.has_warnings();    // true if warnings present
+result.issue_count();     // total errors + warnings + messages
+
+// Access issues
+result.errors;            // Vec<CqlCompilerException>
+result.warnings;          // Vec<CqlCompilerException>  
+result.messages;          // Vec<CqlCompilerException>
+
+// Get JSON output
+let json = result.to_json().unwrap();           // Pretty-printed
+let compact = result.to_compact_json().unwrap(); // Minified
+```
+
 ## Features
 
-### ✅ Phase 1: Foundation (Complete)
+### ✅ CQL-to-ELM Compiler
 
-#### ELM Type Definitions
+- **Full CQL Parser**: Lexer and parser built with nom combinators
+- **Preprocessor**: Extract library metadata before full compilation
+- **Semantic Analysis**: Type checking, symbol resolution, operator overloading
+- **ELM Generation**: Complete translation to ELM structures
+- **JSON Output**: Serialize to JSON compatible with reference implementation
+
+### ✅ ELM Type Definitions
+
 Full Rust type definitions for ELM, supporting:
 - **Library structure**: Identifier, usings, includes, parameters, statements
 - **220+ expression types**: Literals, operators, queries, retrieves, clinical operations
 - **Type specifiers**: Named, list, interval, tuple, choice types
 - **Annotations**: CQL-to-ELM translator info, errors, and tags
 
-#### ModelInfo Types
-- **ModelInfo**: Data model definitions (FHIR, QDM, custom models)
-- **TypeInfo**: Simple types, classes, profiles, intervals, lists, tuples, choices
-- **ClassInfo**: Elements, primary code paths, retrievability
+### ✅ ModelInfo & Type System
 
-#### Model Provider System
-- **ModelInfoProvider trait**: Type resolution interface
-- **MemoryModelInfoProvider**: In-memory model storage (WASM-compatible)
+- **ModelInfo types**: Data model definitions (FHIR, QDM, custom)
+- **Model providers**: In-memory model storage (WASM-compatible)
 - **Built-in FHIR R4**: Pre-loaded model with core resource types
-- **Statistics tracking**: Cache hit/miss metrics
-
-#### DataType System
-- **SystemType**: All CQL primitives (Boolean, Integer, Long, Decimal, String, Date, DateTime, Time, Quantity, Code, Concept, etc.)
-- **DataType**: Model types, List, Interval, Tuple, Choice, type parameters
-- **Subtype checking**: Integer <: Long <: Decimal, Date <: DateTime
-- **Implicit conversions**: With conversion function mapping
+- **DataType system**: Type checking, subtyping, implicit conversions
 
 ### 🚧 Planned Features
 
-- [ ] Phase 2: CQL Parser (nom-based)
-- [ ] Phase 3: Library Resolution
-- [ ] Phase 4: Semantic Analysis & Translation
-- [ ] Phase 5+: Execution Engine
+- [ ] WASM build for browser/Node.js usage
+- [ ] Retrieve expression translation
+- [ ] Query expression translation  
+- [ ] Execution engine for ELM evaluation
 
-## Usage
+## Additional APIs
 
 ### Parsing ELM JSON
 
 ```rust
-use rh_cql::elm::{Library, Expression};
+use rh_cql::elm::Library;
 
-// Parse an ELM library from JSON
-let json = r#"{
-    "identifier": { "id": "MyLibrary", "version": "1.0.0" },
-    "statements": {
-        "def": [{
-            "name": "IsAdult",
-            "expression": {
-                "type": "GreaterOrEqual",
-                "operand": [
-                    { "type": "CalculateAge", "operand": { "type": "Property", "path": "birthDate" } },
-                    { "type": "Literal", "valueType": "{urn:hl7-org:elm-types:r1}Integer", "value": "18" }
-                ]
-            }
-        }]
-    }
-}"#;
-
+let json = r#"{"identifier": {"id": "MyLib", "version": "1.0"}}"#;
 let library: Library = serde_json::from_str(json)?;
-println!("Library: {:?}", library.identifier);
 ```
 
 ### Using ModelInfo Providers
@@ -107,18 +222,10 @@ println!("Library: {:?}", library.identifier);
 ```rust
 use rh_cql::{fhir_r4_provider, ModelInfoProvider};
 
-// Get the built-in FHIR R4 provider
 let provider = fhir_r4_provider();
 
-// Resolve types
 if let Some(patient) = provider.resolve_class("FHIR", Some("4.0.1"), "Patient") {
     println!("Patient has {} elements", patient.element.len());
-    println!("Primary code path: {:?}", patient.primary_code_path);
-}
-
-// Get patient class via helper
-if let Some(patient) = provider.get_patient_class("FHIR", Some("4.0.1")) {
-    println!("Found patient class: {:?}", patient.name);
 }
 ```
 
@@ -127,17 +234,11 @@ if let Some(patient) = provider.get_patient_class("FHIR", Some("4.0.1")) {
 ```rust
 use rh_cql::datatype::{DataType, SystemType};
 
-// Create types
 let int_type = DataType::integer();
 let decimal_type = DataType::decimal();
-let list_of_patients = DataType::list(DataType::model("FHIR", "Patient"));
 
 // Check type compatibility
 assert!(int_type.is_subtype_of(&decimal_type));  // Integer <: Decimal
-assert!(int_type.can_convert_to(&decimal_type)); // Implicit conversion available
-
-// Find common type
-let common = int_type.common_type(&decimal_type); // -> Decimal
 ```
 
 ## Examples
@@ -145,10 +246,13 @@ let common = int_type.common_type(&decimal_type); // -> Decimal
 Run the examples to explore the API:
 
 ```bash
-# Parse a complete ELM library
+# Compile CQL to ELM (main public API)
+cargo run --example compile_cql
+
+# Parse existing ELM JSON
 cargo run --example parse_elm
 
-# Work with Query expressions
+# Work with Query expressions  
 cargo run --example elm_query
 
 # ModelInfo providers and type resolution
@@ -156,6 +260,12 @@ cargo run --example model_provider
 
 # DataType system and type checking
 cargo run --example datatype_system
+
+# Compiler options
+cargo run --example compiler_options
+
+# Library management
+cargo run --example library_manager
 ```
 
 ## Related Crates
