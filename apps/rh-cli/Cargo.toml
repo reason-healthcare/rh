@@ -25,6 +25,7 @@ rustyline = { workspace = true }
 # Local workspace crates
 rh-foundation = { path = "../../crates/rh-foundation", features = ["http"] }
 rh-codegen = { path = "../../crates/rh-codegen" }
+rh-cql = { path = "../../crates/rh-cql" }
 rh-fhirpath = { path = "../../crates/rh-fhirpath" }
 rh-validator = { path = "../../crates/rh-validator" }
 rh-vcl = { path = "../../crates/rh-vcl" }

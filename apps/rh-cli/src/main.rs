@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use tracing::error;
 
 mod codegen;
+mod cql;
 mod download;
 mod fhirpath;
 mod snapshot;
@@ -31,6 +32,10 @@ struct Cli {
 enum Commands {
     /// Generate organized Rust crates from FHIR Packages
     Codegen(codegen::CodegenArgs),
+
+    /// Compile CQL (Clinical Quality Language) to ELM
+    #[clap(subcommand)]
+    Cql(cql::CqlCommands),
 
     /// Download and install FHIR packages from npm-style registries
     #[clap(subcommand)]
@@ -73,6 +78,12 @@ async fn main() -> Result<()> {
         Commands::Codegen(cmd) => {
             if let Err(e) = codegen::handle_command(cmd).await {
                 error!("Codegen error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Cql(cmd) => {
+            if let Err(e) = cql::handle_command(cmd).await {
+                error!("CQL error: {}", e);
                 std::process::exit(1);
             }
         }
