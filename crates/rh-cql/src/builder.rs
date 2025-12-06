@@ -475,6 +475,8 @@ pub struct LibraryBuilder<'a> {
     included_libraries: HashMap<String, CompiledLibrary>,
     /// Using models, keyed by local name.
     using_models: HashMap<String, String>,
+    /// Compiler options.
+    options: crate::options::CompilerOptions,
     /// Errors collected during building.
     errors: Vec<BuilderError>,
     /// Warnings collected during building.
@@ -495,6 +497,7 @@ impl std::fmt::Debug for LibraryBuilder<'_> {
                 &self.included_libraries.keys().collect::<Vec<_>>(),
             )
             .field("using_models", &self.using_models)
+            .field("options", &self.options)
             .field("errors", &self.errors)
             .field("warnings", &self.warnings)
             .finish()
@@ -519,6 +522,7 @@ impl<'a> LibraryBuilder<'a> {
             model_provider: None,
             included_libraries: HashMap::new(),
             using_models: HashMap::new(),
+            options: crate::options::CompilerOptions::default(),
             errors: Vec::new(),
             warnings: Vec::new(),
         }
@@ -562,6 +566,16 @@ impl<'a> LibraryBuilder<'a> {
         self.library_name
             .as_ref()
             .map(|n| LibraryIdentifier::new(n, self.library_version.as_deref()))
+    }
+
+    /// Set the compiler options.
+    pub fn set_options(&mut self, options: crate::options::CompilerOptions) {
+        self.options = options;
+    }
+
+    /// Get the compiler options.
+    pub fn options(&self) -> &crate::options::CompilerOptions {
+        &self.options
     }
 
     // ========================================================================

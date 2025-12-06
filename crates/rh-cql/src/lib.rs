@@ -11,8 +11,26 @@
 //!
 //! 🚧 Under development - API is not yet stable.
 //!
+//! ## Quick Start
+//!
+//! The simplest way to compile CQL to ELM:
+//!
+//! ```
+//! use rh_cql::{compile, CompilerOptions};
+//!
+//! let source = r#"
+//!     library Example version '1.0.0'
+//!     define Greeting: 'Hello, CQL!'
+//! "#;
+//!
+//! let result = compile(source, None).unwrap();
+//! assert!(result.is_success());
+//! println!("{}", result.to_json().unwrap());
+//! ```
+//!
 //! ## Modules
 //!
+//! - [`compiler`]: Public compilation API (`compile`, `validate`, `compile_to_json`)
 //! - [`elm`]: ELM (Expression Logical Model) type definitions
 //! - [`modelinfo`]: ModelInfo type definitions for CQL data model resolution
 //! - [`provider`]: Model information providers (in-memory, WASM-compatible)
@@ -29,6 +47,7 @@
 //! - [`reporting`]: Error reporting with source locations and severity levels
 
 pub mod builder;
+pub mod compiler;
 pub mod datatype;
 pub mod elm;
 pub mod error;
@@ -43,6 +62,11 @@ pub mod provider;
 pub mod reporting;
 pub mod translator;
 pub mod types;
+
+// Primary public API - compile CQL to ELM
+pub use compiler::{
+    compile, compile_to_json, validate, CompilationError, CompilationResult, ValidationResult,
+};
 
 pub use builder::{
     BuilderError, BuilderResult, FunctionSignature, LibraryBuilder, ResolvedIdentifier, Scope,

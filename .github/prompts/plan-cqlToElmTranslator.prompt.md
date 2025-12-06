@@ -191,11 +191,11 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
   - Source locations
   - Warning levels
 
-- [ ] **Phase 6.4: Translation Integration**
-├── [ ] 6.4a: translate_expression() - unified expression dispatch
-├── [ ] 6.4b: Statement translation (expression_def, parameter_def, function_def) 
-├── [ ] 6.4c: Terminology translation (using, include, codesystem, valueset, code, concept)
-├── [ ] 6.4d: LibraryBuilder.build() - assemble complete library
+- [x] **Phase 6.4: Translation Integration** ✅
+├── [x] 6.4a: translate_expression() - unified expression dispatch ✅
+├── [x] 6.4b: Statement translation (expression_def, parameter_def, function_def) ✅
+├── [x] 6.4c: Terminology translation (using, include, codesystem, valueset, code, concept) ✅
+├── [x] 6.4d: LibraryBuilder.build() - assemble complete library ✅
 └── [ ] 6.4e: compile() entry point - public API
 
 ### Phase 7: WASM & Integration
