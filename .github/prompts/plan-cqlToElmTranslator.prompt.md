@@ -196,7 +196,7 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ├── [x] 6.4b: Statement translation (expression_def, parameter_def, function_def) ✅
 ├── [x] 6.4c: Terminology translation (using, include, codesystem, valueset, code, concept) ✅
 ├── [x] 6.4d: LibraryBuilder.build() - assemble complete library ✅
-└── [ ] 6.4e: compile() entry point - public API
+└── [x] 6.4e: compile() entry point - public API ✅
 
 ### Phase 7: WASM & Integration
 **Goal**: WASM build and JavaScript API
