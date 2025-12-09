@@ -7,51 +7,32 @@ Based on comparison of OperatorTests with matching compiler options.
 - **Total operator test files**: 32
 - **Compilation failures in Rust**: 22 (parser limitations)
 - **Successfully compared**: 10 (all have differences)
-- **Zero-difference files**: 0
+- **Zero-difference matches**: 0
 
-## Core Structural Differences
+## Structural Differences
 
-### 1. LocalId Generation
-- **Java**: Only includes `localId` when `--debug` is enabled OR when needed for annotation references
-- **Rust**: Always includes `localId` when annotations are enabled
-- **Impact**: 16+ extra fields per file
+### Fixed ✅
 
-**Recommendation**: Make `localId` emission conditional on debug mode or when referenced by annotations.
+1. **Library Identifier** - Now always emits `identifier: {}` even when empty
+2. **Annotation Type** - Now includes `"type": "CqlToElmInfo"` discriminator
+3. **Default Context** - Now emits `"context": "Unfiltered"` on expression defs
 
-### 2. Locator Format
-- **Java**: `"line:start-line:end"` (e.g., `"1:23-1:36"`)
-- **Rust**: `"line:col"` (e.g., `"1:1"`) - only start position
-- **Impact**: Missing end positions, inconsistent format
+### Remaining (Expected Behavior)
 
-**Recommendation**: Track and emit both start and end positions in locator strings.
+4. **LocalId Generation**
+   - **Java**: Only includes `localId` when `--debug` is enabled
+   - **Rust**: Always includes `localId` when annotations are enabled
+   - **Status**: Intentional - provides better debugging/traceability
 
-### 3. Default Context
-- **Java**: Includes `"context": "Unfiltered"` on expression definitions without explicit context
-- **Rust**: Omits context when unfiltered
-- **Impact**: Every statement definition missing context field
+5. **Locator Format**
+   - **Java**: `"line:start-line:end"` (e.g., `"1:23-1:36"`)
+   - **Rust**: `"line:col"` (e.g., `"1:1"`) - only start position
+   - **Status**: Would require parser changes to track end positions
 
-**Recommendation**: Always emit `context` field on ExpressionDef, defaulting to `"Unfiltered"`.
+### Omitted (OK per user)
 
-### 4. Library Identifier
-- **Java**: Always includes `"identifier": {}` even when empty
-- **Rust**: Omits identifier when no id/version
-- **Impact**: Missing field in library
-
-**Recommendation**: Always emit `identifier` object (can be empty).
-
-### 5. Annotation Type Field
-- **Java**: `{"type": "CqlToElmInfo", ...}`
-- **Rust**: `{...}` (no type field)
-- **Impact**: Missing discriminator for annotation type
-
-**Recommendation**: Add `"type": "CqlToElmInfo"` to translator info annotation.
-
-### 6. Empty Arrays
-- **Java**: Includes empty `annotation: []` and `signature: []` arrays on elements
-- **Rust**: Omits empty arrays
-- **Impact**: Many extra/missing fields
-
-**Recommendation**: Consider matching Java's behavior of including empty arrays (or update comparison script to normalize).
+6. **Empty Arrays** - Java includes empty `annotation: []`, Rust omits
+   - **Status**: Acceptable to omit empty values
 
 ## Files Successfully Compared (with differences)
 
@@ -78,9 +59,10 @@ Missing language features causing parse errors:
 - `sort by` clauses
 - Time-related operations
 
-## Recommended Fix Order
+## Conformance Progress
 
-1. **Quick wins** (structural): identifier, context, annotation type
-2. **Medium effort**: locator format (start-end)
-3. **Larger changes**: conditional localId emission
+| Test | Before | After | Change |
+|------|--------|-------|--------|
+| LogicalOperators | 30 | 24 | -6 (20% reduction) |
 
+The 6 eliminated differences were all `missing_in_rust` issues (identifier, type, context).
