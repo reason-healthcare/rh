@@ -55,32 +55,34 @@ fn main() {
 
     let a = translator.translate_literal(&ast::Literal::Integer(10));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let add = translator.translate_binary_operator(ast::BinaryOperator::Add, a, b, None);
+    let add = translator.translate_binary_operator(ast::BinaryOperator::Add, a, b, None, None);
     println!("10 + 3 => {:?}", expr_type(&add));
 
     let a = translator.translate_literal(&ast::Literal::Integer(10));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let sub = translator.translate_binary_operator(ast::BinaryOperator::Subtract, a, b, None);
+    let sub = translator.translate_binary_operator(ast::BinaryOperator::Subtract, a, b, None, None);
     println!("10 - 3 => {:?}", expr_type(&sub));
 
     let a = translator.translate_literal(&ast::Literal::Integer(10));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let mul = translator.translate_binary_operator(ast::BinaryOperator::Multiply, a, b, None);
+    let mul = translator.translate_binary_operator(ast::BinaryOperator::Multiply, a, b, None, None);
     println!("10 * 3 => {:?}", expr_type(&mul));
 
     let a = translator.translate_literal(&ast::Literal::Decimal(10.0));
     let b = translator.translate_literal(&ast::Literal::Decimal(3.0));
-    let div = translator.translate_binary_operator(ast::BinaryOperator::Divide, a, b, None);
+    let div = translator.translate_binary_operator(ast::BinaryOperator::Divide, a, b, None, None);
     println!("10.0 / 3.0 => {:?}", expr_type(&div));
 
     let a = translator.translate_literal(&ast::Literal::Integer(10));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let modulo = translator.translate_binary_operator(ast::BinaryOperator::Modulo, a, b, None);
+    let modulo =
+        translator.translate_binary_operator(ast::BinaryOperator::Modulo, a, b, None, None);
     println!("10 mod 3 => {:?}", expr_type(&modulo));
 
     let base = translator.translate_literal(&ast::Literal::Integer(2));
     let exp = translator.translate_literal(&ast::Literal::Integer(8));
-    let power = translator.translate_binary_operator(ast::BinaryOperator::Power, base, exp, None);
+    let power =
+        translator.translate_binary_operator(ast::BinaryOperator::Power, base, exp, None, None);
     println!("2 ^ 8 => {:?}", expr_type(&power));
 
     // ========================================================================
@@ -90,27 +92,29 @@ fn main() {
 
     let a = translator.translate_literal(&ast::Literal::Integer(5));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let eq = translator.translate_binary_operator(ast::BinaryOperator::Equal, a, b, None);
+    let eq = translator.translate_binary_operator(ast::BinaryOperator::Equal, a, b, None, None);
     println!("5 = 3 => {:?}", expr_type(&eq));
 
     let a = translator.translate_literal(&ast::Literal::Integer(5));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let neq = translator.translate_binary_operator(ast::BinaryOperator::NotEqual, a, b, None);
+    let neq = translator.translate_binary_operator(ast::BinaryOperator::NotEqual, a, b, None, None);
     println!("5 != 3 => {:?}", expr_type(&neq));
 
     let a = translator.translate_literal(&ast::Literal::Integer(5));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let less = translator.translate_binary_operator(ast::BinaryOperator::Less, a, b, None);
+    let less = translator.translate_binary_operator(ast::BinaryOperator::Less, a, b, None, None);
     println!("5 < 3 => {:?}", expr_type(&less));
 
     let a = translator.translate_literal(&ast::Literal::Integer(5));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let greater = translator.translate_binary_operator(ast::BinaryOperator::Greater, a, b, None);
+    let greater =
+        translator.translate_binary_operator(ast::BinaryOperator::Greater, a, b, None, None);
     println!("5 > 3 => {:?}", expr_type(&greater));
 
     let a = translator.translate_literal(&ast::Literal::Integer(5));
     let b = translator.translate_literal(&ast::Literal::Integer(3));
-    let equiv = translator.translate_binary_operator(ast::BinaryOperator::Equivalent, a, b, None);
+    let equiv =
+        translator.translate_binary_operator(ast::BinaryOperator::Equivalent, a, b, None, None);
     println!("5 ~ 3 => {:?}", expr_type(&equiv));
 
     // ========================================================================
@@ -120,22 +124,23 @@ fn main() {
 
     let a = translator.translate_literal(&ast::Literal::Boolean(true));
     let b = translator.translate_literal(&ast::Literal::Boolean(false));
-    let and_expr = translator.translate_binary_operator(ast::BinaryOperator::And, a, b, None);
+    let and_expr = translator.translate_binary_operator(ast::BinaryOperator::And, a, b, None, None);
     println!("true and false => {:?}", expr_type(&and_expr));
 
     let a = translator.translate_literal(&ast::Literal::Boolean(true));
     let b = translator.translate_literal(&ast::Literal::Boolean(false));
-    let or_expr = translator.translate_binary_operator(ast::BinaryOperator::Or, a, b, None);
+    let or_expr = translator.translate_binary_operator(ast::BinaryOperator::Or, a, b, None, None);
     println!("true or false => {:?}", expr_type(&or_expr));
 
     let a = translator.translate_literal(&ast::Literal::Boolean(true));
     let b = translator.translate_literal(&ast::Literal::Boolean(false));
-    let xor_expr = translator.translate_binary_operator(ast::BinaryOperator::Xor, a, b, None);
+    let xor_expr = translator.translate_binary_operator(ast::BinaryOperator::Xor, a, b, None, None);
     println!("true xor false => {:?}", expr_type(&xor_expr));
 
     let a = translator.translate_literal(&ast::Literal::Boolean(true));
     let b = translator.translate_literal(&ast::Literal::Boolean(true));
-    let implies = translator.translate_binary_operator(ast::BinaryOperator::Implies, a, b, None);
+    let implies =
+        translator.translate_binary_operator(ast::BinaryOperator::Implies, a, b, None, None);
     println!("true implies true => {:?}", expr_type(&implies));
 
     // ========================================================================
@@ -145,8 +150,13 @@ fn main() {
 
     let hello = translator.translate_literal(&ast::Literal::String("hello".to_string()));
     let world = translator.translate_literal(&ast::Literal::String(" world".to_string()));
-    let concat =
-        translator.translate_binary_operator(ast::BinaryOperator::Concatenate, hello, world, None);
+    let concat = translator.translate_binary_operator(
+        ast::BinaryOperator::Concatenate,
+        hello,
+        world,
+        None,
+        None,
+    );
     println!("'hello' & ' world' => {:?}", expr_type(&concat));
 
     // ========================================================================
@@ -157,19 +167,24 @@ fn main() {
     let list1 = translator.translate_literal(&ast::Literal::Null);
     let list2 = translator.translate_literal(&ast::Literal::Null);
     let union =
-        translator.translate_binary_operator(ast::BinaryOperator::Union, list1, list2, None);
+        translator.translate_binary_operator(ast::BinaryOperator::Union, list1, list2, None, None);
     println!("list1 union list2 => {:?}", expr_type(&union));
 
     let list1 = translator.translate_literal(&ast::Literal::Null);
     let list2 = translator.translate_literal(&ast::Literal::Null);
-    let intersect =
-        translator.translate_binary_operator(ast::BinaryOperator::Intersect, list1, list2, None);
+    let intersect = translator.translate_binary_operator(
+        ast::BinaryOperator::Intersect,
+        list1,
+        list2,
+        None,
+        None,
+    );
     println!("list1 intersect list2 => {:?}", expr_type(&intersect));
 
     let list1 = translator.translate_literal(&ast::Literal::Null);
     let list2 = translator.translate_literal(&ast::Literal::Null);
     let except =
-        translator.translate_binary_operator(ast::BinaryOperator::Except, list1, list2, None);
+        translator.translate_binary_operator(ast::BinaryOperator::Except, list1, list2, None, None);
     println!("list1 except list2 => {:?}", expr_type(&except));
 
     // ========================================================================
@@ -179,19 +194,25 @@ fn main() {
 
     let elem = translator.translate_literal(&ast::Literal::Integer(1));
     let list = translator.translate_literal(&ast::Literal::Null);
-    let in_expr = translator.translate_binary_operator(ast::BinaryOperator::In, elem, list, None);
+    let in_expr =
+        translator.translate_binary_operator(ast::BinaryOperator::In, elem, list, None, None);
     println!("1 in list => {:?}", expr_type(&in_expr));
 
     let list = translator.translate_literal(&ast::Literal::Null);
     let elem = translator.translate_literal(&ast::Literal::Integer(1));
     let contains =
-        translator.translate_binary_operator(ast::BinaryOperator::Contains, list, elem, None);
+        translator.translate_binary_operator(ast::BinaryOperator::Contains, list, elem, None, None);
     println!("list contains 1 => {:?}", expr_type(&contains));
 
     let list1 = translator.translate_literal(&ast::Literal::Null);
     let list2 = translator.translate_literal(&ast::Literal::Null);
-    let includes =
-        translator.translate_binary_operator(ast::BinaryOperator::Includes, list1, list2, None);
+    let includes = translator.translate_binary_operator(
+        ast::BinaryOperator::Includes,
+        list1,
+        list2,
+        None,
+        None,
+    );
     println!("list1 includes list2 => {:?}", expr_type(&includes));
 
     // ========================================================================
@@ -206,6 +227,7 @@ fn main() {
         interval1,
         interval2,
         None,
+        None,
     );
     println!("interval1 overlaps interval2 => {:?}", expr_type(&overlaps));
 
@@ -216,19 +238,20 @@ fn main() {
         interval1,
         interval2,
         None,
+        None,
     );
     println!("interval1 meets interval2 => {:?}", expr_type(&meets));
 
     let date1 = translator.translate_literal(&ast::Literal::Null);
     let date2 = translator.translate_literal(&ast::Literal::Null);
     let before =
-        translator.translate_binary_operator(ast::BinaryOperator::Before, date1, date2, None);
+        translator.translate_binary_operator(ast::BinaryOperator::Before, date1, date2, None, None);
     println!("date1 before date2 => {:?}", expr_type(&before));
 
     let date1 = translator.translate_literal(&ast::Literal::Null);
     let date2 = translator.translate_literal(&ast::Literal::Null);
     let after =
-        translator.translate_binary_operator(ast::BinaryOperator::After, date1, date2, None);
+        translator.translate_binary_operator(ast::BinaryOperator::After, date1, date2, None, None);
     println!("date1 after date2 => {:?}", expr_type(&after));
 
     // ========================================================================
@@ -291,6 +314,7 @@ fn main() {
         operator: ast::BinaryOperator::Add,
         left: Box::new(ast::Expression::Literal(ast::Literal::Integer(100))),
         right: Box::new(ast::Expression::Literal(ast::Literal::Integer(200))),
+        precision: None,
         location: None,
     };
     let elm_binary = translator.translate_ast_binary_expression(&ast_binary, |t, expr| {

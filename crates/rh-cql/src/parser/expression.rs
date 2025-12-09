@@ -19,13 +19,14 @@
 use super::ast::*;
 use super::lexer::{
     any_identifier, date_literal, datetime_literal, decimal_literal, integer_literal, keyword,
-    long_literal, quantity_literal, skip_ws_and_comments, string_literal, time_literal, ws,
+    long_literal, quantity_literal, quoted_identifier, skip_ws_and_comments, string_literal,
+    time_literal, ws,
 };
 use super::span::{SourceLocation, Span};
 use nom::{
     branch::alt,
     bytes::complete::tag_no_case,
-    character::complete::char,
+    character::complete::{char, multispace1},
     combinator::{map, not, opt, peek, value},
     multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, preceded, terminated, tuple},
@@ -62,6 +63,7 @@ fn parse_or_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -83,6 +85,7 @@ fn parse_and_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: BinaryOperator::And,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -104,6 +107,7 @@ fn parse_implies_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: BinaryOperator::Implies,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -138,6 +142,7 @@ fn parse_equality_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -169,6 +174,7 @@ fn parse_comparison_expression(input: Span<'_>) -> IResult<Span<'_>, Expression>
                 operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -209,85 +215,213 @@ fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // Interval Operators
 // ============================================================================
 
+/// Parse datetime precision specifier: year, month, week, day, hour, minute, second, millisecond
+fn parse_precision(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecision> {
+    ws(alt((
+        value(DateTimePrecision::Year, keyword("year")),
+        value(DateTimePrecision::Month, keyword("month")),
+        value(DateTimePrecision::Week, keyword("week")),
+        value(DateTimePrecision::Day, keyword("day")),
+        value(DateTimePrecision::Hour, keyword("hour")),
+        value(DateTimePrecision::Minute, keyword("minute")),
+        value(DateTimePrecision::Second, keyword("second")),
+        value(DateTimePrecision::Millisecond, keyword("millisecond")),
+    )))(input)
+}
+
+/// Parse optional precision specifier: [precision] "of"
+fn parse_optional_precision_of(input: Span<'_>) -> IResult<Span<'_>, Option<DateTimePrecision>> {
+    opt(map(
+        tuple((parse_precision, ws(keyword("of")))),
+        |(prec, _)| prec,
+    ))(input)
+}
+
+/// Represents a parsed interval operator with optional modifier
+#[derive(Debug, Clone)]
+enum IntervalOp {
+    /// Simple binary operator
+    Simple(BinaryOperator),
+    /// starts/ends followed by during/before/after with optional precision
+    /// (interval_boundary, relationship, precision)
+    Compound {
+        boundary: UnaryOperator, // Start or End
+        operator: BinaryOperator,
+        precision: Option<DateTimePrecision>,
+    },
+    /// during/before/after with precision
+    WithPrecision(BinaryOperator, DateTimePrecision),
+}
+
 fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_union_expression(input)?;
 
     // Parse interval relationship operators
-    let (input, rest) = many0(tuple((
-        ws(alt((
-            // "properly includes" / "properly included in" first (longer match)
-            value(
-                BinaryOperator::ProperlyIncludes,
-                tuple((keyword("properly"), ws(keyword("includes")))),
-            ),
-            value(
-                BinaryOperator::ProperlyIncludedIn,
-                tuple((
-                    keyword("properly"),
-                    ws(keyword("included")),
-                    ws(keyword("in")),
-                )),
-            ),
-            // Regular includes/included in
-            value(BinaryOperator::Includes, keyword("includes")),
-            value(
-                BinaryOperator::IncludedIn,
-                tuple((keyword("included"), ws(keyword("in")))),
-            ),
-            // Other interval operators
-            value(BinaryOperator::During, keyword("during")),
-            value(BinaryOperator::Overlaps, keyword("overlaps")),
-            value(
-                BinaryOperator::OverlapsBefore,
-                tuple((keyword("overlaps"), ws(keyword("before")))),
-            ),
-            value(
-                BinaryOperator::OverlapsAfter,
-                tuple((keyword("overlaps"), ws(keyword("after")))),
-            ),
-            value(BinaryOperator::Meets, keyword("meets")),
-            value(
-                BinaryOperator::MeetsBefore,
-                tuple((keyword("meets"), ws(keyword("before")))),
-            ),
-            value(
-                BinaryOperator::MeetsAfter,
-                tuple((keyword("meets"), ws(keyword("after")))),
-            ),
-            value(BinaryOperator::Starts, keyword("starts")),
-            value(BinaryOperator::Ends, keyword("ends")),
-            // Before/after (with same precision support)
-            value(BinaryOperator::Before, keyword("before")),
-            value(BinaryOperator::After, keyword("after")),
-            value(
-                BinaryOperator::SameAs,
-                tuple((keyword("same"), ws(keyword("as")))),
-            ),
-            value(
-                BinaryOperator::SameOrBefore,
-                tuple((keyword("same"), ws(keyword("or")), ws(keyword("before")))),
-            ),
-            value(
-                BinaryOperator::SameOrAfter,
-                tuple((keyword("same"), ws(keyword("or")), ws(keyword("after")))),
-            ),
-            // Within
-            value(BinaryOperator::Within, keyword("within")),
-        ))),
-        parse_union_expression,
-    )))(input)?;
+    let (input, rest) = many0(parse_interval_op_with_operand)(input)?;
 
     Ok((
         input,
-        rest.into_iter().fold(first, |acc, (op, expr)| {
-            Expression::BinaryExpression(BinaryExpression {
-                operator: op,
+        rest.into_iter().fold(first, |acc, (op, expr)| match op {
+            IntervalOp::Simple(binary_op) => Expression::BinaryExpression(BinaryExpression {
+                operator: binary_op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
-            })
+            }),
+            IntervalOp::Compound {
+                boundary,
+                operator,
+                precision,
+            } => {
+                // "X ends during Y" => BinaryOp(End(X), Y) with `during` becoming `In`
+                let boundary_expr = Expression::UnaryExpression(UnaryExpression {
+                    operator: boundary,
+                    operand: Box::new(acc),
+                    location: None,
+                });
+                // Map "during" to "In" when used with point (from ends/starts)
+                let mapped_op = match operator {
+                    BinaryOperator::During => BinaryOperator::In,
+                    other => other,
+                };
+                Expression::BinaryExpression(BinaryExpression {
+                    operator: mapped_op,
+                    left: Box::new(boundary_expr),
+                    right: Box::new(expr),
+                    precision,
+                    location: None,
+                })
+            }
+            IntervalOp::WithPrecision(binary_op, prec) => {
+                Expression::BinaryExpression(BinaryExpression {
+                    operator: binary_op,
+                    left: Box::new(acc),
+                    right: Box::new(expr),
+                    precision: Some(prec),
+                    location: None,
+                })
+            }
         }),
     ))
+}
+
+/// Parse a single interval operator followed by its operand
+fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (IntervalOp, Expression)> {
+    // First, try to parse compound operators: "starts/ends during/before/after [precision of]"
+    let compound_result = opt(tuple((
+        ws(alt((
+            value(UnaryOperator::Start, keyword("starts")),
+            value(UnaryOperator::End, keyword("ends")),
+        ))),
+        ws(alt((
+            value(BinaryOperator::During, keyword("during")),
+            value(BinaryOperator::Before, keyword("before")),
+            value(BinaryOperator::After, keyword("after")),
+        ))),
+        parse_optional_precision_of,
+    )))(input)?;
+
+    match compound_result {
+        (remaining, Some((boundary, op, precision))) => {
+            let (remaining, expr) = parse_union_expression(remaining)?;
+            Ok((
+                remaining,
+                (
+                    IntervalOp::Compound {
+                        boundary,
+                        operator: op,
+                        precision,
+                    },
+                    expr,
+                ),
+            ))
+        }
+        (_, None) => {
+            // Try temporal operators with precision: "during/before/after [precision of]"
+            let temporal_with_precision = opt(tuple((
+                ws(alt((
+                    value(BinaryOperator::During, keyword("during")),
+                    value(BinaryOperator::Before, keyword("before")),
+                    value(BinaryOperator::After, keyword("after")),
+                ))),
+                parse_precision,
+                ws(keyword("of")),
+            )))(input)?;
+
+            match temporal_with_precision {
+                (remaining, Some((op, precision, _))) => {
+                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    Ok((remaining, (IntervalOp::WithPrecision(op, precision), expr)))
+                }
+                (_, None) => {
+                    // Fall back to simple operators
+                    let (remaining, op) = ws(alt((
+                        // "properly includes" / "properly included in" first (longer match)
+                        value(
+                            BinaryOperator::ProperlyIncludes,
+                            tuple((keyword("properly"), ws(keyword("includes")))),
+                        ),
+                        value(
+                            BinaryOperator::ProperlyIncludedIn,
+                            tuple((
+                                keyword("properly"),
+                                ws(keyword("included")),
+                                ws(keyword("in")),
+                            )),
+                        ),
+                        // Regular includes/included in
+                        value(BinaryOperator::Includes, keyword("includes")),
+                        value(
+                            BinaryOperator::IncludedIn,
+                            tuple((keyword("included"), ws(keyword("in")))),
+                        ),
+                        // Other interval operators
+                        value(BinaryOperator::During, keyword("during")),
+                        value(BinaryOperator::Overlaps, keyword("overlaps")),
+                        value(
+                            BinaryOperator::OverlapsBefore,
+                            tuple((keyword("overlaps"), ws(keyword("before")))),
+                        ),
+                        value(
+                            BinaryOperator::OverlapsAfter,
+                            tuple((keyword("overlaps"), ws(keyword("after")))),
+                        ),
+                        value(BinaryOperator::Meets, keyword("meets")),
+                        value(
+                            BinaryOperator::MeetsBefore,
+                            tuple((keyword("meets"), ws(keyword("before")))),
+                        ),
+                        value(
+                            BinaryOperator::MeetsAfter,
+                            tuple((keyword("meets"), ws(keyword("after")))),
+                        ),
+                        value(BinaryOperator::Starts, keyword("starts")),
+                        value(BinaryOperator::Ends, keyword("ends")),
+                        value(BinaryOperator::Before, keyword("before")),
+                        value(BinaryOperator::After, keyword("after")),
+                        value(
+                            BinaryOperator::SameAs,
+                            tuple((keyword("same"), ws(keyword("as")))),
+                        ),
+                        value(
+                            BinaryOperator::SameOrBefore,
+                            tuple((keyword("same"), ws(keyword("or")), ws(keyword("before")))),
+                        ),
+                        value(
+                            BinaryOperator::SameOrAfter,
+                            tuple((keyword("same"), ws(keyword("or")), ws(keyword("after")))),
+                        ),
+                        // Within
+                        value(BinaryOperator::Within, keyword("within")),
+                    )))(input)?;
+
+                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    Ok((remaining, (IntervalOp::Simple(op), expr)))
+                }
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -308,6 +442,7 @@ fn parse_union_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: BinaryOperator::Union,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -336,6 +471,7 @@ fn parse_additive_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -365,6 +501,7 @@ fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Express
                 operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
+                precision: None,
                 location: None,
             })
         }),
@@ -599,37 +736,38 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = skip_ws_and_comments(input)?;
 
     alt((
-        // Literals
-        parse_null_literal,
-        parse_boolean_literal,
-        parse_datetime_literal_expr,
-        parse_time_literal_expr,
-        parse_date_literal_expr,
-        parse_quantity_literal_expr,
-        parse_long_literal_expr,
-        parse_decimal_literal_expr,
-        parse_integer_literal_expr,
-        parse_string_literal_expr,
-        // Interval selector
-        parse_interval_selector,
-        // List selector
-        parse_list_selector,
-        // Tuple selector
-        parse_tuple_selector,
-        // Instance selector
-        parse_instance_selector,
-        // If-then-else
-        parse_if_then_else,
-        // Case
-        parse_case,
-        // Query
-        parse_query,
-        // Retrieve
-        parse_retrieve,
-        // Parenthesized expression
-        parse_parenthesized,
-        // Function invocation or identifier reference
-        parse_function_or_identifier,
+        // Group 1: Literals
+        alt((
+            parse_null_literal,
+            parse_boolean_literal,
+            parse_datetime_literal_expr,
+            parse_time_literal_expr,
+            parse_date_literal_expr,
+            parse_duration_quantity_expr, // 30 days style
+            parse_quantity_literal_expr,  // 5 'mg' style
+            parse_long_literal_expr,
+            parse_decimal_literal_expr,
+            parse_integer_literal_expr,
+            parse_string_literal_expr, // Single-quoted CQL strings
+        )),
+        // Group 2: Selectors
+        alt((
+            parse_interval_selector,
+            parse_list_selector,
+            parse_tuple_selector,
+            parse_instance_selector,
+        )),
+        // Group 3: Control flow
+        alt((parse_if_then_else, parse_case)),
+        // Group 4: Queries and retrieves
+        alt((
+            parse_query,
+            parse_identifier_source_query,
+            parse_single_source_query,
+            parse_retrieve,
+        )),
+        // Group 5: Others
+        alt((parse_parenthesized, parse_function_or_identifier)),
     ))(input)
 }
 
@@ -676,6 +814,37 @@ fn parse_quantity_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression>
     map(quantity_literal, |(value, unit)| {
         Expression::Literal(Literal::Quantity { value, unit })
     })(input)
+}
+
+fn parse_duration_quantity_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, qty_value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
+    let (input, _) = multispace1(input)?;
+    let (input, unit) = alt((
+        value("year", keyword("year")),
+        value("year", keyword("years")),
+        value("month", keyword("month")),
+        value("month", keyword("months")),
+        value("week", keyword("week")),
+        value("week", keyword("weeks")),
+        value("day", keyword("day")),
+        value("day", keyword("days")),
+        value("hour", keyword("hour")),
+        value("hour", keyword("hours")),
+        value("minute", keyword("minute")),
+        value("minute", keyword("minutes")),
+        value("second", keyword("second")),
+        value("second", keyword("seconds")),
+        value("millisecond", keyword("millisecond")),
+        value("millisecond", keyword("milliseconds")),
+    ))(input)?;
+
+    Ok((
+        input,
+        Expression::Literal(Literal::Quantity {
+            value: qty_value,
+            unit: unit.to_string(),
+        }),
+    ))
 }
 
 fn parse_date_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
@@ -868,6 +1037,7 @@ fn parse_case_item(input: Span<'_>) -> IResult<Span<'_>, CaseItem> {
 // Query
 // ============================================================================
 
+/// Parse a full query with explicit `from` keyword
 fn parse_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("from"))(input)?;
     let (input, sources) = separated_list1(ws(char(',')), parse_query_source)(input)?;
@@ -881,6 +1051,124 @@ fn parse_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         input,
         Expression::Query(Query {
             sources,
+            let_clauses,
+            relationships,
+            where_clause: where_clause.map(Box::new),
+            return_clause,
+            sort_clause,
+            location: None,
+        }),
+    ))
+}
+
+/// Parse a single-source query with a retrieve as source
+/// This handles the implicit from syntax: `[Type] alias where ...`
+fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // First parse the retrieve
+    let (input, retrieve) = parse_retrieve(input)?;
+
+    // Then look for an alias - this is what distinguishes a query from a plain retrieve
+    let (input, alias) = any_identifier(input)?;
+
+    // Now we must have at least one query clause (where, return, sort, let, with, without)
+    // Otherwise this would just be a retrieve with an erroneous identifier after it
+    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, relationships) = many0(parse_relationship_clause)(input)?;
+    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
+    let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, sort_clause) = opt(parse_sort_clause)(input)?;
+
+    // Must have at least one clause to be a query
+    if let_clauses.is_empty()
+        && relationships.is_empty()
+        && where_clause.is_none()
+        && return_clause.is_none()
+        && sort_clause.is_none()
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    let source = QuerySource {
+        expression: Box::new(retrieve),
+        alias,
+        location: None,
+    };
+
+    Ok((
+        input,
+        Expression::Query(Query {
+            sources: vec![source],
+            let_clauses,
+            relationships,
+            where_clause: where_clause.map(Box::new),
+            return_clause,
+            sort_clause,
+            location: None,
+        }),
+    ))
+}
+
+/// Parse a single-source query with a quoted identifier as source
+/// This handles: `"DefinitionName" alias sort by ...`
+fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Parse a quoted identifier (definition reference) - uses double quotes or backticks
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, name) = quoted_identifier(input)?;
+
+    let mut source_expr = Expression::IdentifierRef(IdentifierRef {
+        name,
+        location: None,
+    });
+
+    // Check for property access chain (.property)
+    let (input, properties) = many0(preceded(ws(char('.')), any_identifier))(input)?;
+
+    // Build property access chain
+    for prop in properties {
+        source_expr = Expression::MemberInvocation(MemberInvocation {
+            source: Box::new(source_expr),
+            name: prop,
+            location: None,
+        });
+    }
+
+    // Then look for an alias (with whitespace handling)
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, alias) = any_identifier(input)?;
+
+    // Now parse query clauses
+    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, relationships) = many0(parse_relationship_clause)(input)?;
+    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
+    let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, sort_clause) = opt(parse_sort_clause)(input)?;
+
+    // Must have at least one clause to be a query
+    if let_clauses.is_empty()
+        && relationships.is_empty()
+        && where_clause.is_none()
+        && return_clause.is_none()
+        && sort_clause.is_none()
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    let source = QuerySource {
+        expression: Box::new(source_expr),
+        alias,
+        location: None,
+    };
+
+    Ok((
+        input,
+        Expression::Query(Query {
+            sources: vec![source],
             let_clauses,
             relationships,
             where_clause: where_clause.map(Box::new),
@@ -1011,17 +1299,27 @@ fn parse_retrieve(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, data_type) = parse_type_specifier(input)?;
 
     // Code path and codes (optional)
-    let (input, code_info) = opt(tuple((
+    // Supports three forms:
+    // 1. [Type] - no codes
+    // 2. [Type: codesExpression] - codes with default code path
+    // 3. [Type: codePath in codesExpression] - explicit code path
+    let (input, code_info) = opt(preceded(
         ws(char(':')),
-        any_identifier, // code path
-        ws(keyword("in")),
-        expression, // codes expression
-    )))(input)?;
+        alt((
+            // Form 3: codePath in codesExpression
+            map(
+                tuple((any_identifier, ws(keyword("in")), expression)),
+                |(path, _, codes_expr)| (Some(path), codes_expr),
+            ),
+            // Form 2: just codesExpression (default code path)
+            map(expression, |codes_expr| (None, codes_expr)),
+        )),
+    ))(input)?;
 
     let (input, _) = ws(char(']'))(input)?;
 
     let (code_path, codes) = match code_info {
-        Some((_, path, _, codes_expr)) => (Some(path), Some(Box::new(codes_expr))),
+        Some((path, codes_expr)) => (path, Some(Box::new(codes_expr))),
         None => (None, None),
     };
 

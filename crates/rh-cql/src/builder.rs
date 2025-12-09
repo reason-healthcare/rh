@@ -44,6 +44,7 @@
 
 use std::collections::HashMap;
 
+use crate::conversion::{ConversionContext, ConversionRegistry, ConversionResult};
 use crate::datatype::DataType;
 use crate::elm;
 use crate::library::{CompiledLibrary, LibraryIdentifier};
@@ -363,6 +364,8 @@ pub enum BuilderError {
     InvalidExpression { message: String },
     /// Unsupported feature.
     Unsupported { feature: String },
+    /// Generic semantic error.
+    SemanticError { message: String },
 }
 
 impl std::fmt::Display for BuilderError {
@@ -430,6 +433,9 @@ impl std::fmt::Display for BuilderError {
             BuilderError::Unsupported { feature } => {
                 write!(f, "Unsupported feature: {feature}")
             }
+            BuilderError::SemanticError { message } => {
+                write!(f, "{message}")
+            }
         }
     }
 }
@@ -481,6 +487,11 @@ pub struct LibraryBuilder<'a> {
     errors: Vec<BuilderError>,
     /// Warnings collected during building.
     warnings: Vec<String>,
+    /// Type conversion context for implicit conversions.
+    conversion_context: ConversionContext,
+    /// Tracks inferred result types for expression definitions.
+    /// Maps definition name to FHIR type string (e.g., "FHIR.Quantity").
+    expression_result_types: HashMap<String, String>,
 }
 
 impl std::fmt::Debug for LibraryBuilder<'_> {
@@ -500,6 +511,14 @@ impl std::fmt::Debug for LibraryBuilder<'_> {
             .field("options", &self.options)
             .field("errors", &self.errors)
             .field("warnings", &self.warnings)
+            .field(
+                "conversion_context",
+                &format!("{} conversions", self.conversion_context.registry().len()),
+            )
+            .field(
+                "expression_result_types",
+                &self.expression_result_types.len(),
+            )
             .finish()
     }
 }
@@ -525,6 +544,8 @@ impl<'a> LibraryBuilder<'a> {
             options: crate::options::CompilerOptions::default(),
             errors: Vec::new(),
             warnings: Vec::new(),
+            conversion_context: ConversionContext::new(),
+            expression_result_types: HashMap::new(),
         }
     }
 
@@ -637,6 +658,347 @@ impl<'a> LibraryBuilder<'a> {
     /// Get the URI for a model.
     pub fn model_uri(&self, name: &str) -> Option<&str> {
         self.using_models.get(name).map(|s| s.as_str())
+    }
+
+    // ========================================================================
+    // Type Conversion Management
+    // ========================================================================
+
+    /// Set the conversion registry from a ModelInfo.
+    ///
+    /// This loads all conversion definitions from the ModelInfo, enabling
+    /// automatic implicit conversions during translation.
+    pub fn set_conversion_registry(&mut self, registry: ConversionRegistry) {
+        self.conversion_context = ConversionContext::with_registry(registry);
+    }
+
+    /// Get the conversion context.
+    pub fn conversion_context(&self) -> &ConversionContext {
+        &self.conversion_context
+    }
+
+    /// Get a mutable reference to the conversion context.
+    pub fn conversion_context_mut(&mut self) -> &mut ConversionContext {
+        &mut self.conversion_context
+    }
+
+    /// Register a library as available for conversions.
+    ///
+    /// Call this when an `include` statement is processed to enable
+    /// conversions that require that library (e.g., FHIRHelpers).
+    pub fn register_conversion_library(&mut self, alias: &str, library_name: &str) {
+        self.conversion_context
+            .add_included_library(alias, library_name);
+    }
+
+    /// Check if a library required for conversions is available.
+    pub fn is_conversion_library_available(&self, library_name: &str) -> bool {
+        self.conversion_context.is_library_included(library_name)
+    }
+
+    /// Try to apply an implicit conversion to an expression.
+    ///
+    /// If the actual type doesn't match the expected type and a conversion
+    /// is defined in the ModelInfo, this wraps the expression in a FunctionRef
+    /// to the appropriate converter function.
+    ///
+    /// This method respects compiler options:
+    /// - `DisableImplicitConversions`: If set, no conversions are applied
+    /// - `StrictConversionLibraryCheck`: If set, missing library is an error not warning
+    ///
+    /// # Arguments
+    ///
+    /// * `operand` - The expression to potentially convert.
+    /// * `actual_type` - The actual type of the operand.
+    /// * `expected_type` - The expected/target type.
+    /// * `translator` - The expression translator (for generating element fields).
+    ///
+    /// # Returns
+    ///
+    /// The potentially converted expression and a boolean indicating if conversion was applied.
+    pub fn apply_implicit_conversion(
+        &mut self,
+        operand: elm::Expression,
+        actual_type: &DataType,
+        expected_type: &DataType,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> (elm::Expression, bool) {
+        // Check if implicit conversions are disabled
+        if !self.options.implicit_conversions_enabled() {
+            return (operand, false);
+        }
+
+        let element_fields = translator.element_fields();
+
+        match self.conversion_context.try_convert(
+            operand.clone(),
+            actual_type,
+            expected_type,
+            element_fields,
+        ) {
+            ConversionResult::NotNeeded => (operand, false),
+            ConversionResult::Applied { expression, .. } => (*expression, true),
+            ConversionResult::LibraryNotIncluded {
+                entry,
+                required_library,
+            } => {
+                let message = format!(
+                    "Implicit conversion from {} to {} requires {} to be included",
+                    entry.from_type, entry.to_type, required_library
+                );
+
+                // Check if strict mode is enabled - emit error instead of warning
+                if self.options.strict_conversion_library_check() {
+                    self.errors.push(BuilderError::SemanticError {
+                        message: message.clone(),
+                    });
+                } else {
+                    self.warnings.push(message);
+                }
+                (operand, false)
+            }
+            ConversionResult::NoConversionDefined { from_type, to_type } => {
+                // Type mismatch with no known conversion - this might be an error
+                // depending on context, but we don't emit here since it might be
+                // valid for other reasons (e.g., subtype relationship, etc.)
+                // Only emit as a debug-level message, not a warning
+                let _ = (from_type, to_type); // suppress unused variable warning
+                (operand, false)
+            }
+        }
+    }
+
+    /// Look up a property type from ModelInfo.
+    ///
+    /// Given a FHIR class name (e.g., "Observation") and property name (e.g., "status"),
+    /// returns the property type (e.g., "FHIR.ObservationStatus").
+    ///
+    /// Returns None if:
+    /// - No model provider is configured
+    /// - The class is not found in ModelInfo
+    /// - The property is not found on the class
+    pub fn lookup_property_type(
+        &self,
+        model_name: &str,
+        class_name: &str,
+        property_name: &str,
+    ) -> Option<String> {
+        let provider = self.model_provider?;
+        let class_info = provider.resolve_class(model_name, None, class_name)?;
+
+        // Look through the elements to find the property
+        for element in &class_info.element {
+            if element.name.as_deref() == Some(property_name) {
+                // Return element_type if available, otherwise type_name
+                return element
+                    .element_type
+                    .clone()
+                    .or_else(|| element.type_name.clone());
+            }
+        }
+
+        // Property not found on this class - could check base classes but ModelInfo
+        // typically flattens inherited properties. For now, return None.
+        None
+    }
+
+    /// Attempt to apply a FHIR-to-System conversion on a property access expression.
+    ///
+    /// This is called for scoped property access (e.g., `ER.status` in a query).
+    /// If the property type is a FHIR primitive (like `FHIR.code`) and we have
+    /// FHIRHelpers included, wraps the property in the appropriate conversion
+    /// function (e.g., `FHIRHelpers.ToString`).
+    ///
+    /// Returns the original expression unchanged if:
+    /// - The alias type is unknown
+    /// - The property type is unknown
+    /// - No conversion is defined for the property type
+    /// - The required converter library is not included
+    fn maybe_apply_property_conversion(
+        &self,
+        property_expr: elm::Expression,
+        alias_name: &str,
+        property_name: &str,
+        translator: &crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        // Get the alias type (FHIR class name like "Observation")
+        let class_name = match translator.get_query_alias_type(alias_name) {
+            Some(t) => t,
+            None => return property_expr,
+        };
+
+        // Look up the property type from ModelInfo
+        let property_type = match self.lookup_property_type("FHIR", class_name, property_name) {
+            Some(t) => t,
+            None => return property_expr,
+        };
+
+        // Find a conversion from this FHIR type to a System type
+        // We look for any conversion from this property type
+        let conversions = self
+            .conversion_context
+            .registry()
+            .find_conversions_from(&property_type);
+
+        // Find a conversion to a System type if FHIRHelpers is available
+        for entry in conversions {
+            // Accept both System.* types and Interval<System.*> types
+            if entry.to_type.starts_with("System.") || entry.to_type.starts_with("Interval<System.")
+            {
+                // Check if the required library is included
+                if let Some(lib) = &entry.library_name {
+                    if self.conversion_context.is_library_included(lib) {
+                        // Apply the conversion
+                        return crate::conversion::wrap_in_conversion(
+                            property_expr,
+                            entry,
+                            elm::ElementFields::default(),
+                        );
+                    }
+                }
+            }
+        }
+
+        // No applicable conversion found
+        property_expr
+    }
+
+    /// Infer the FHIR result type from an AST expression.
+    ///
+    /// Returns the type string (e.g., "FHIR.Quantity") if it can be determined.
+    /// Currently handles:
+    /// - `as` type casts (e.g., `.value as Quantity`)
+    /// - First/Last on typed queries (unwraps list to element type)
+    fn infer_fhir_result_type(&self, expr: &ast::Expression) -> Option<String> {
+        match expr {
+            // Handle `as` type cast - the explicit type annotation
+            ast::Expression::TypeExpression(type_expr) => {
+                if type_expr.operator == ast::TypeOperator::As {
+                    // Extract the type from the type specifier
+                    return self.type_specifier_to_fhir_type(&type_expr.type_specifier);
+                }
+                None
+            }
+
+            // Handle First/Last - unwraps list to element type
+            ast::Expression::FunctionInvocation(func) => {
+                if (func.name == "First" || func.name == "Last") && func.arguments.len() == 1 {
+                    // Try to get the element type of the list argument
+                    // For now, we propagate if the argument is an ExpressionRef
+                    if let ast::Expression::IdentifierRef(id_ref) = &func.arguments[0] {
+                        // Look up the referenced definition's type
+                        if let Some(ref_type) = self.expression_result_types.get(&id_ref.name) {
+                            // If it's a list type, return the element type
+                            // For simplicity, just return as-is since FHIR types don't use List<>
+                            return Some(ref_type.clone());
+                        }
+                    }
+                }
+                None
+            }
+
+            // Handle query - try to infer from the return clause or source
+            ast::Expression::Query(query) => {
+                // If there's an explicit return clause, try to infer from that
+                if let Some(ret) = &query.return_clause {
+                    return self.infer_fhir_result_type(&ret.expression);
+                }
+                // Otherwise, query returns list of source type
+                None
+            }
+
+            // Recursively handle parenthesized expressions
+            ast::Expression::Parenthesized(inner) => self.infer_fhir_result_type(inner),
+
+            _ => None,
+        }
+    }
+
+    /// Convert a type specifier to a FHIR type string.
+    fn type_specifier_to_fhir_type(&self, ts: &ast::TypeSpecifier) -> Option<String> {
+        match ts {
+            ast::TypeSpecifier::Named(named) => {
+                let namespace = named.namespace.as_deref().unwrap_or("FHIR");
+                Some(format!("{}.{}", namespace, named.name))
+            }
+            _ => None,
+        }
+    }
+
+    /// Register the result type of an expression definition.
+    fn register_expression_result_type(&mut self, name: &str, fhir_type: &str) {
+        self.expression_result_types
+            .insert(name.to_string(), fhir_type.to_string());
+    }
+
+    /// Get the registered result type of an expression definition.
+    pub fn get_expression_result_type(&self, name: &str) -> Option<&str> {
+        self.expression_result_types.get(name).map(|s| s.as_str())
+    }
+
+    /// Apply conversion to an ExpressionRef if needed based on the referenced
+    /// expression's result type.
+    fn maybe_apply_expression_ref_conversion(
+        &self,
+        expr_ref: elm::Expression,
+        def_name: &str,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        // Look up the result type of the referenced definition
+        let fhir_type = match self.get_expression_result_type(def_name) {
+            Some(t) => t,
+            None => return expr_ref,
+        };
+
+        // Find a conversion from this FHIR type to a System type
+        let conversions = self
+            .conversion_context
+            .registry()
+            .find_conversions_from(fhir_type);
+
+        // Look for a conversion to a System type with FHIRHelpers available
+        for entry in conversions {
+            if entry.to_type.starts_with("System.") {
+                if let Some(lib) = &entry.library_name {
+                    if self.conversion_context.is_library_included(lib) {
+                        return crate::conversion::wrap_in_conversion(
+                            expr_ref,
+                            entry,
+                            translator.element_fields(),
+                        );
+                    }
+                }
+            }
+        }
+
+        expr_ref
+    }
+
+    /// Check if an AST expression is an identifier reference and apply
+    /// type conversion if the referenced expression has a known FHIR type.
+    ///
+    /// This is used for comparison operators where operands may need
+    /// FHIRHelpers conversions (e.g., FHIR.Quantity → System.Quantity).
+    fn maybe_convert_expression_ref(
+        &self,
+        ast_expr: &ast::Expression,
+        elm_expr: elm::Expression,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        // Check if this is an identifier reference to a definition
+        if let ast::Expression::IdentifierRef(id_ref) = ast_expr {
+            // Check if it resolves to an expression definition
+            if let Some(resolved) = self.resolve_identifier(&id_ref.name) {
+                if resolved.symbol.kind == SymbolKind::Expression {
+                    return self.maybe_apply_expression_ref_conversion(
+                        elm_expr,
+                        &id_ref.name,
+                        translator,
+                    );
+                }
+            }
+        }
+        elm_expr
     }
 
     // ========================================================================
@@ -870,6 +1232,492 @@ impl<'a> LibraryBuilder<'a> {
         self.resolve_identifier(name).is_some()
     }
 
+    /// Map a SymbolKind to a ResolvedRefKind.
+    fn symbol_kind_to_ref_kind(kind: SymbolKind) -> crate::translator::ResolvedRefKind {
+        use crate::translator::ResolvedRefKind;
+        match kind {
+            SymbolKind::Expression => ResolvedRefKind::Expression,
+            SymbolKind::Function => ResolvedRefKind::Expression, // Functions are expression-like
+            SymbolKind::Parameter => ResolvedRefKind::Parameter,
+            SymbolKind::CodeSystem => ResolvedRefKind::CodeSystem,
+            SymbolKind::ValueSet => ResolvedRefKind::ValueSet,
+            SymbolKind::Code => ResolvedRefKind::Code,
+            SymbolKind::Concept => ResolvedRefKind::Concept,
+            SymbolKind::QueryAlias => ResolvedRefKind::QueryAlias,
+            SymbolKind::Let => ResolvedRefKind::Let,
+            SymbolKind::Operand => ResolvedRefKind::Operand,
+            SymbolKind::Library => ResolvedRefKind::Unknown, // Library refs need qualified handling
+            SymbolKind::Context => ResolvedRefKind::Context,
+        }
+    }
+
+    /// Translate an expression with symbol resolution.
+    ///
+    /// This method translates an AST expression to ELM, resolving identifier
+    /// references using the builder's symbol table.
+    pub fn translate_expression_with_resolution(
+        &self,
+        expr: &ast::Expression,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        self.translate_expr_recursive(expr, translator)
+    }
+
+    /// Recursive helper for expression translation with resolution.
+    fn translate_expr_recursive(
+        &self,
+        expr: &ast::Expression,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        use crate::translator::ResolvedRefKind;
+
+        match expr {
+            // Handle identifier references with resolution
+            ast::Expression::IdentifierRef(id_ref) => {
+                if let Some(resolved) = self.resolve_identifier(&id_ref.name) {
+                    let ref_kind = Self::symbol_kind_to_ref_kind(resolved.symbol.kind);
+                    translator.translate_identifier_ref(&id_ref.name, ref_kind, None)
+                } else {
+                    // Unresolved - keep as IdentifierRef
+                    translator.translate_identifier_ref(
+                        &id_ref.name,
+                        ResolvedRefKind::Unknown,
+                        None,
+                    )
+                }
+            }
+
+            // Handle qualified identifier references
+            ast::Expression::QualifiedIdentifierRef(qid_ref) => {
+                // Check if qualifier is a known alias in scope (query alias, let binding)
+                if let Some(resolved) = self.resolve_identifier(&qid_ref.qualifier) {
+                    match resolved.symbol.kind {
+                        SymbolKind::QueryAlias | SymbolKind::Let => {
+                            // This is property access on an alias - use scope
+                            elm::Expression::Property(elm::Property {
+                                element: translator.element_fields(),
+                                source: None,
+                                path: Some(qid_ref.name.clone()),
+                                scope: Some(qid_ref.qualifier.clone()),
+                            })
+                        }
+                        _ => {
+                            // Fall through to generic handling
+                            translator.translate_identifier_ref(
+                                &qid_ref.name,
+                                ResolvedRefKind::Unknown,
+                                None,
+                            )
+                        }
+                    }
+                } else {
+                    // Unknown qualifier
+                    elm::Expression::IdentifierRef(elm::IdentifierRef {
+                        element: translator.element_fields(),
+                        name: Some(qid_ref.name.clone()),
+                        library_name: Some(qid_ref.qualifier.clone()),
+                    })
+                }
+            }
+
+            // For all other expressions, delegate to translator but recursively
+            // handle sub-expressions with resolution
+            ast::Expression::Literal(lit) => translator.translate_literal(lit),
+
+            ast::Expression::UnaryExpression(unary) => {
+                let operand = self.translate_expr_recursive(&unary.operand, translator);
+                translator.translate_unary_operator(unary.operator, operand, None)
+            }
+
+            ast::Expression::BinaryExpression(binary) => {
+                let mut left = self.translate_expr_recursive(&binary.left, translator);
+                let mut right = self.translate_expr_recursive(&binary.right, translator);
+
+                // For comparison operators, apply ExpressionRef type conversions
+                // This handles cases like: "Most Recent Tumor Size Quantity" > 1 'cm'
+                // where the left side is a FHIR.Quantity that needs FHIRHelpers.ToQuantity
+                if binary.operator.is_comparison() {
+                    left = self.maybe_convert_expression_ref(&binary.left, left, translator);
+                    right = self.maybe_convert_expression_ref(&binary.right, right, translator);
+                }
+
+                translator.translate_binary_operator(
+                    binary.operator,
+                    left,
+                    right,
+                    None,
+                    binary.precision.as_ref(),
+                )
+            }
+
+            ast::Expression::TernaryExpression(ternary) => {
+                let first = self.translate_expr_recursive(&ternary.first, translator);
+                let second = self.translate_expr_recursive(&ternary.second, translator);
+                let third = self.translate_expr_recursive(&ternary.third, translator);
+                translator.translate_ternary_operator(ternary.operator, first, second, third, None)
+            }
+
+            ast::Expression::IfThenElse(if_expr) => {
+                let condition = self.translate_expr_recursive(&if_expr.condition, translator);
+                let then_expr = self.translate_expr_recursive(&if_expr.then_expr, translator);
+                let else_expr = self.translate_expr_recursive(&if_expr.else_expr, translator);
+                elm::Expression::If(elm::IfExpr {
+                    element: translator.element_fields(),
+                    condition: Some(Box::new(condition)),
+                    then_expr: Some(Box::new(then_expr)),
+                    else_expr: Some(Box::new(else_expr)),
+                })
+            }
+
+            ast::Expression::Query(query) => {
+                self.translate_query_with_resolution(query, translator)
+            }
+
+            ast::Expression::Retrieve(retrieve) => {
+                self.translate_retrieve_with_resolution(retrieve, translator)
+            }
+
+            ast::Expression::FunctionInvocation(func) => {
+                let operands: Vec<elm::Expression> = func
+                    .arguments
+                    .iter()
+                    .map(|arg| self.translate_expr_recursive(arg, translator))
+                    .collect();
+
+                elm::Expression::FunctionRef(elm::FunctionRef {
+                    element: translator.element_fields(),
+                    name: Some(func.name.clone()),
+                    library_name: func.library.clone(),
+                    operand: operands,
+                    signature: Vec::new(),
+                })
+            }
+
+            ast::Expression::MemberInvocation(member) => {
+                // Check if source is a simple identifier that's a query alias
+                if let ast::Expression::IdentifierRef(ident_ref) = &*member.source {
+                    if translator.is_query_alias(&ident_ref.name) {
+                        // Create the Property expression with scope attribute
+                        let property_expr = elm::Expression::Property(elm::Property {
+                            element: translator.element_fields(),
+                            source: None,
+                            path: Some(member.name.clone()),
+                            scope: Some(ident_ref.name.clone()),
+                        });
+
+                        // Try to apply FHIR-to-System type conversion if needed
+                        return self.maybe_apply_property_conversion(
+                            property_expr,
+                            &ident_ref.name,
+                            &member.name,
+                            translator,
+                        );
+                    }
+                }
+
+                // Default: translate source expression normally
+                let source = self.translate_expr_recursive(&member.source, translator);
+                elm::Expression::Property(elm::Property {
+                    element: translator.element_fields(),
+                    source: Some(Box::new(source)),
+                    path: Some(member.name.clone()),
+                    scope: None,
+                })
+            }
+
+            ast::Expression::IndexInvocation(index) => {
+                let source = self.translate_expr_recursive(&index.source, translator);
+                let idx = self.translate_expr_recursive(&index.index, translator);
+                elm::Expression::Indexer(elm::BinaryExpression {
+                    element: translator.element_fields(),
+                    operand: vec![source, idx],
+                    signature: Vec::new(),
+                })
+            }
+
+            ast::Expression::TypeExpression(type_expr) => translator
+                .translate_type_expression(type_expr, |t, e| self.translate_expr_recursive(e, t)),
+
+            ast::Expression::Case(case_expr) => translator.translate_case(
+                case_expr,
+                |t, e| self.translate_expr_recursive(e, t),
+                None,
+            ),
+
+            ast::Expression::IntervalExpression(interval) => {
+                let low = interval
+                    .low
+                    .as_ref()
+                    .map(|e| Box::new(self.translate_expr_recursive(e, translator)));
+                let high = interval
+                    .high
+                    .as_ref()
+                    .map(|e| Box::new(self.translate_expr_recursive(e, translator)));
+                elm::Expression::Interval(elm::IntervalExpr {
+                    element: translator.element_fields(),
+                    low,
+                    high,
+                    low_closed: Some(interval.low_closed),
+                    high_closed: Some(interval.high_closed),
+                    low_closed_expression: None,
+                    high_closed_expression: None,
+                })
+            }
+
+            ast::Expression::ListExpression(list) => {
+                let elements: Vec<elm::Expression> = list
+                    .elements
+                    .iter()
+                    .map(|e| self.translate_expr_recursive(e, translator))
+                    .collect();
+                elm::Expression::List(elm::ListExpr {
+                    element: translator.element_fields(),
+                    elements,
+                    type_specifier: list
+                        .type_specifier
+                        .as_ref()
+                        .map(|ts| translator.type_specifier_to_elm(ts)),
+                })
+            }
+
+            ast::Expression::TupleExpression(tuple) => {
+                let elements: Vec<elm::TupleElement> = tuple
+                    .elements
+                    .iter()
+                    .map(|e| elm::TupleElement {
+                        name: Some(e.name.clone()),
+                        value: Some(Box::new(
+                            self.translate_expr_recursive(&e.value, translator),
+                        )),
+                    })
+                    .collect();
+                elm::Expression::Tuple(elm::TupleExpr {
+                    element: translator.element_fields(),
+                    elements,
+                })
+            }
+
+            ast::Expression::Instance(instance) => {
+                let elements: Vec<elm::InstanceElement> = instance
+                    .elements
+                    .iter()
+                    .map(|e| elm::InstanceElement {
+                        name: Some(e.name.clone()),
+                        value: Some(Box::new(
+                            self.translate_expr_recursive(&e.value, translator),
+                        )),
+                    })
+                    .collect();
+                elm::Expression::Instance(elm::Instance {
+                    element: translator.element_fields(),
+                    class_type: Some(translator.type_specifier_to_qname(&instance.class_type)),
+                    elements,
+                })
+            }
+
+            ast::Expression::Let(let_clause) => {
+                // Let expression creates a scope
+                let value = self.translate_expr_recursive(&let_clause.expression, translator);
+                // Note: proper let handling would need to add the binding to scope
+                // For now, we translate it directly
+                elm::Expression::Query(elm::Query {
+                    element: translator.element_fields(),
+                    source: Vec::new(),
+                    let_clause: vec![elm::LetClause {
+                        identifier: Some(let_clause.identifier.clone()),
+                        expression: Some(Box::new(value)),
+                    }],
+                    relationship: Vec::new(),
+                    where_clause: None,
+                    return_clause: None,
+                    aggregate: None,
+                    sort: None,
+                })
+            }
+
+            ast::Expression::Parenthesized(inner) => {
+                self.translate_expr_recursive(inner, translator)
+            }
+        }
+    }
+
+    /// Translate a query expression with symbol resolution.
+    ///
+    /// Extracts type information from Retrieve source expressions and passes
+    /// it to the translator for alias type tracking. This enables implicit
+    /// type conversions on property access (e.g., FHIR.code to System.String).
+    fn translate_query_with_resolution(
+        &self,
+        query: &ast::Query,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        // Extract alias types from source expressions
+        let alias_types = self.extract_query_alias_types(query);
+
+        translator.translate_query_with_types(
+            query,
+            |t, e| self.translate_expr_recursive(e, t),
+            None,
+            &alias_types,
+        )
+    }
+
+    /// Extract alias-to-type mappings from query source expressions.
+    ///
+    /// When a source expression is a Retrieve, extracts the FHIR type name
+    /// (e.g., "Observation" from `[Observation]`).
+    fn extract_query_alias_types(
+        &self,
+        query: &ast::Query,
+    ) -> std::collections::HashMap<String, String> {
+        let mut alias_types = std::collections::HashMap::new();
+
+        for source in &query.sources {
+            if let Some(type_name) = self.extract_type_from_expression(&source.expression) {
+                alias_types.insert(source.alias.clone(), type_name);
+            }
+        }
+
+        alias_types
+    }
+
+    /// Extract the FHIR type name from an expression if it's a Retrieve.
+    fn extract_type_from_expression(&self, expr: &ast::Expression) -> Option<String> {
+        match expr {
+            ast::Expression::Retrieve(retrieve) => {
+                // Extract type name from Retrieve's data_type
+                match &retrieve.data_type {
+                    ast::TypeSpecifier::Named(named) => Some(named.name.clone()),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Translate a retrieve expression with symbol resolution and model info.
+    ///
+    /// This method enhances the basic retrieve translation with:
+    /// - `templateId` from model info (profile URL/identifier)
+    /// - `codeProperty` from model info (primary code path) if not specified
+    /// - `codeComparator` set to "~" (equivalent) when codes are present
+    fn translate_retrieve_with_resolution(
+        &self,
+        retrieve: &ast::Retrieve,
+        translator: &mut crate::translator::ExpressionTranslator,
+    ) -> elm::Expression {
+        let element = translator.element_fields();
+
+        // Convert the data type specifier to a QName
+        let data_type = crate::translator::type_specifier_to_qname(&retrieve.data_type);
+
+        // Try to look up model info to get templateId and codeProperty
+        let (template_id, model_code_property) =
+            self.lookup_retrieve_model_info(&retrieve.data_type);
+
+        // Translate context expression if present
+        let context = retrieve
+            .context
+            .as_ref()
+            .map(|c| Box::new(self.translate_expr_recursive(c, translator)));
+
+        // Translate codes expression if present
+        // For ValueSetRef, use directly (it's already a list-like reference)
+        // For CodeRef, wrap in ToList (single code needs to be converted to list)
+        let (codes, is_valueset_ref) = match retrieve.codes.as_ref() {
+            Some(c) => {
+                let translated = self.translate_expr_recursive(c, translator);
+                match &translated {
+                    elm::Expression::ValueSetRef(_) => {
+                        // ValueSetRef is used directly; codeComparator should be "in"
+                        (Some(Box::new(translated)), true)
+                    }
+                    elm::Expression::CodeRef(_) => {
+                        // CodeRef needs ToList wrapping; codeComparator should be "~"
+                        let wrapped = elm::Expression::ToList(elm::UnaryExpression {
+                            element: translator.element_fields(),
+                            operand: Some(Box::new(translated)),
+                            signature: Vec::new(),
+                        });
+                        (Some(Box::new(wrapped)), false)
+                    }
+                    _ => (Some(Box::new(translated)), false),
+                }
+            }
+            None => (None, false),
+        };
+
+        // Translate date range expression if present
+        let date_range = retrieve
+            .date_range
+            .as_ref()
+            .map(|d| Box::new(self.translate_expr_recursive(d, translator)));
+
+        // Determine code property: use explicit from CQL, or fall back to model default
+        let code_property = retrieve.code_path.clone().or(model_code_property);
+
+        // Set codeComparator based on codes type:
+        // - "in" for ValueSetRef (membership test)
+        // - "~" for CodeRef or other expressions (equivalent)
+        let code_comparator = if codes.is_some() {
+            Some(if is_valueset_ref { "in" } else { "~" }.to_string())
+        } else {
+            None
+        };
+
+        elm::Expression::Retrieve(elm::Retrieve {
+            element,
+            data_type: Some(data_type),
+            template_id,
+            context,
+            code_property,
+            code_comparator,
+            codes,
+            date_property: retrieve.date_path.clone(),
+            date_range,
+            // Include empty arrays for conformance with reference translator
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
+        })
+    }
+
+    /// Look up model info for a retrieve data type.
+    ///
+    /// Returns (template_id, primary_code_path) if model info is available.
+    fn lookup_retrieve_model_info(
+        &self,
+        data_type: &ast::TypeSpecifier,
+    ) -> (Option<String>, Option<String>) {
+        // Extract model name and type name from the type specifier
+        let (model_name, type_name) = match data_type {
+            ast::TypeSpecifier::Named(named) => {
+                let model = named.namespace.as_deref().unwrap_or("FHIR");
+                (model, named.name.as_str())
+            }
+            _ => return (None, None),
+        };
+
+        // Look up the model provider
+        let provider = match self.model_provider {
+            Some(p) => p,
+            None => return (None, None),
+        };
+
+        // Resolve the class from model info
+        let class_info = match provider.resolve_class(model_name, None, type_name) {
+            Some(ci) => ci,
+            None => return (None, None),
+        };
+
+        // Extract template_id (profile URL/identifier) and primary_code_path
+        let template_id = class_info.identifier.clone();
+        let code_property = class_info.primary_code_path.clone();
+
+        (template_id, code_property)
+    }
+
     // ========================================================================
     // Error Handling
     // ========================================================================
@@ -992,26 +1840,96 @@ impl<'a> LibraryBuilder<'a> {
             self.library_version = id.version.clone();
         }
 
-        // Translate using definitions
-        let usings = if ast_library.usings.is_empty() {
-            None
-        } else {
-            let defs: Vec<elm::UsingDef> = ast_library
-                .usings
-                .iter()
-                .map(|u| translator.translate_using_def(u))
-                .collect();
+        // ========================================
+        // Phase 1: Populate symbol table
+        // ========================================
+        // Register all definitions in the symbol table BEFORE translating
+        // expression bodies, so identifier references can be properly resolved.
+
+        // Register code systems
+        for cs in &ast_library.codesystems {
+            let symbol = Symbol::new(&cs.name, SymbolKind::CodeSystem);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register value sets
+        for vs in &ast_library.valuesets {
+            let symbol = Symbol::new(&vs.name, SymbolKind::ValueSet);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register codes
+        for code in &ast_library.codes {
+            let symbol = Symbol::new(&code.name, SymbolKind::Code);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register concepts
+        for concept in &ast_library.concepts {
+            let symbol = Symbol::new(&concept.name, SymbolKind::Concept);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register parameters
+        for param in &ast_library.parameters {
+            let symbol = Symbol::new(&param.name, SymbolKind::Parameter);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register contexts
+        for ctx in &ast_library.contexts {
+            let symbol = Symbol::new(&ctx.name, SymbolKind::Context);
+            self.define_library_symbol(symbol);
+        }
+
+        // Register expression definitions (forward declarations for mutual recursion)
+        for stmt in &ast_library.statements {
+            if let ast::Statement::ExpressionDef(expr_def) = stmt {
+                let symbol = Symbol::new(&expr_def.name, SymbolKind::Expression);
+                self.define_library_symbol(symbol);
+            }
+        }
+
+        // ========================================
+        // Phase 2: Translate definitions
+        // ========================================
+
+        // Translate using definitions with implicit System using
+        let usings = {
+            // Always include the implicit System using first
+            let system_using = elm::UsingDef {
+                local_identifier: Some("System".to_string()),
+                uri: Some("urn:hl7-org:elm-types:r1".to_string()),
+                version: None,
+            };
+            let mut defs = vec![system_using];
+
+            // Add explicit usings from the source
+            defs.extend(
+                ast_library
+                    .usings
+                    .iter()
+                    .map(|u| translator.translate_using_def(u)),
+            );
             Some(elm::UsingDefs { defs })
         };
 
-        // Translate include definitions
+        // Translate include definitions and register with conversion context
         let includes = if ast_library.includes.is_empty() {
             None
         } else {
             let defs: Vec<elm::IncludeDef> = ast_library
                 .includes
                 .iter()
-                .map(|i| translator.translate_include_def(i))
+                .map(|i| {
+                    // Register the include with the conversion context
+                    // The alias (or path if no alias) is the local reference name
+                    let local_name = i.alias.as_ref().unwrap_or(&i.path);
+                    self.conversion_context
+                        .add_included_library(local_name, &i.path);
+
+                    translator.translate_include_def(i)
+                })
                 .collect();
             Some(elm::IncludeDefs { defs })
         };
@@ -1092,23 +2010,147 @@ impl<'a> LibraryBuilder<'a> {
         let current_context = ast_library.contexts.last().map(|c| c.name.as_str());
 
         // Translate statements (expression and function definitions)
+        // Use resolution-aware translation for expression bodies
         let statements = if ast_library.statements.is_empty() {
             None
         } else {
             let mut expression_defs = Vec::new();
 
+            // Generate implicit context expression definition (e.g., Patient definition for Patient context)
+            // This matches reference translator behavior which generates:
+            // define "Patient": SingletonFrom([Patient])
+            if let Some(ctx_name) = current_context {
+                // Create Retrieve for the context type
+                let retrieve_local_id = translator.next_local_id();
+                let retrieve = elm::Retrieve {
+                    element: elm::ElementFields {
+                        local_id: retrieve_local_id.clone(),
+                        locator: None,
+                        result_type_name: None,
+                        result_type_specifier: None,
+                    },
+                    data_type: Some(format!("{{http://hl7.org/fhir}}{ctx_name}")),
+                    template_id: Some(format!(
+                        "http://hl7.org/fhir/StructureDefinition/{ctx_name}"
+                    )),
+                    context: None,
+                    code_property: None,
+                    code_comparator: None,
+                    codes: None,
+                    date_property: None,
+                    date_range: None,
+                    include: Vec::new(),
+                    code_filter: Vec::new(),
+                    date_filter: Vec::new(),
+                    other_filter: Vec::new(),
+                };
+
+                // Wrap in SingletonFrom
+                let singleton_local_id = translator.next_local_id();
+                let singleton = elm::UnaryExpression {
+                    element: elm::ElementFields {
+                        local_id: singleton_local_id,
+                        locator: None,
+                        result_type_name: None,
+                        result_type_specifier: None,
+                    },
+                    signature: Vec::new(),
+                    operand: Some(Box::new(elm::Expression::Retrieve(retrieve))),
+                };
+
+                // Create ExpressionDef for the context
+                let def_local_id = translator.next_local_id();
+
+                // Generate annotation if enabled
+                let annotation = if self.options.annotations_enabled() {
+                    if let Some(ref id) = def_local_id {
+                        vec![elm::Annotation::source(elm::Narrative::with_ref(
+                            id.clone(),
+                        ))]
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    Vec::new()
+                };
+
+                expression_defs.push(elm::ExpressionDef {
+                    local_id: def_local_id,
+                    locator: None,
+                    name: Some(ctx_name.to_string()),
+                    context: Some(ctx_name.to_string()),
+                    access_level: None, // Implicit definition has no explicit access modifier
+                    result_type_name: None,
+                    result_type_specifier: None,
+                    expression: Some(Box::new(elm::Expression::SingletonFrom(singleton))),
+                    annotation,
+                });
+            }
+
             for stmt in &ast_library.statements {
                 match stmt {
                     ast::Statement::ExpressionDef(expr_def) => {
-                        expression_defs
-                            .push(translator.translate_expression_def(expr_def, current_context));
+                        // Try to infer the result type before translation
+                        if let Some(fhir_type) = self.infer_fhir_result_type(&expr_def.expression) {
+                            self.register_expression_result_type(&expr_def.name, &fhir_type);
+                        }
+
+                        // Translate expression body with symbol resolution
+                        let expression = Some(Box::new(self.translate_expression_with_resolution(
+                            &expr_def.expression,
+                            &mut translator,
+                        )));
+
+                        let access_level = match expr_def.access {
+                            ast::AccessModifier::Public => Some(elm::AccessModifier::Public),
+                            ast::AccessModifier::Private => Some(elm::AccessModifier::Private),
+                        };
+
+                        // Generate locator if enabled
+                        let locator = if self.options.locators_enabled() {
+                            expr_def
+                                .location
+                                .as_ref()
+                                .map(|loc| format!("{}:{}", loc.line, loc.column))
+                        } else {
+                            None
+                        };
+
+                        // Generate localId (always needed for annotations)
+                        let local_id = translator.next_local_id();
+
+                        // Generate annotation if enabled
+                        let annotation = if self.options.annotations_enabled() {
+                            if let Some(ref id) = local_id {
+                                vec![elm::Annotation::source(elm::Narrative::with_ref(
+                                    id.clone(),
+                                ))]
+                            } else {
+                                Vec::new()
+                            }
+                        } else {
+                            Vec::new()
+                        };
+
+                        expression_defs.push(elm::ExpressionDef {
+                            local_id,
+                            locator,
+                            name: Some(expr_def.name.clone()),
+                            context: current_context.map(String::from),
+                            access_level,
+                            result_type_name: None,
+                            result_type_specifier: None,
+                            expression,
+                            annotation,
+                        });
                     }
                     ast::Statement::FunctionDef(func_def) => {
                         // Functions are translated separately
                         // For now, we skip them as ELM Library.statements only holds ExpressionDefs
                         // In a full implementation, functions would go in a separate field
-                        let _ = translator
-                            .translate_function_def(func_def, |t, e| t.translate_expression(e));
+                        let _ = translator.translate_function_def(func_def, |t, e| {
+                            self.translate_expr_recursive(e, t)
+                        });
                     }
                 }
             }
@@ -1122,7 +2164,11 @@ impl<'a> LibraryBuilder<'a> {
             }
         };
 
+        // Get localId for the library (Library extends Element)
+        let local_id = translator.next_local_id();
+
         elm::Library {
+            local_id,
             identifier,
             schema_identifier: Some(elm::VersionedIdentifier {
                 id: Some("urn:hl7-org:elm".to_string()),
@@ -1171,26 +2217,42 @@ impl<'a> LibraryBuilder<'a> {
             self.library_version = id.version.clone();
         }
 
-        // Translate using definitions
-        let usings = if ast_library.usings.is_empty() {
-            None
-        } else {
-            let defs: Vec<elm::UsingDef> = ast_library
-                .usings
-                .iter()
-                .map(|u| translator.translate_using_def(u))
-                .collect();
+        // Translate using definitions with implicit System using
+        let usings = {
+            // Always include the implicit System using first
+            let system_using = elm::UsingDef {
+                local_identifier: Some("System".to_string()),
+                uri: Some("urn:hl7-org:elm-types:r1".to_string()),
+                version: None,
+            };
+            let mut defs = vec![system_using];
+
+            // Add explicit usings from the source
+            defs.extend(
+                ast_library
+                    .usings
+                    .iter()
+                    .map(|u| translator.translate_using_def(u)),
+            );
             Some(elm::UsingDefs { defs })
         };
 
-        // Translate include definitions
+        // Translate include definitions and register with conversion context
         let includes = if ast_library.includes.is_empty() {
             None
         } else {
             let defs: Vec<elm::IncludeDef> = ast_library
                 .includes
                 .iter()
-                .map(|i| translator.translate_include_def(i))
+                .map(|i| {
+                    // Register the include with the conversion context
+                    // The alias (or path if no alias) is the local reference name
+                    let local_name = i.alias.as_ref().unwrap_or(&i.path);
+                    self.conversion_context
+                        .add_included_library(local_name, &i.path);
+
+                    translator.translate_include_def(i)
+                })
                 .collect();
             Some(elm::IncludeDefs { defs })
         };
@@ -1298,7 +2360,11 @@ impl<'a> LibraryBuilder<'a> {
             }
         };
 
+        // Get localId for the library (Library extends Element)
+        let local_id = translator.next_local_id();
+
         elm::Library {
+            local_id,
             identifier,
             schema_identifier: Some(elm::VersionedIdentifier {
                 id: Some("urn:hl7-org:elm".to_string()),
@@ -1712,11 +2778,16 @@ mod tests {
         let schema = elm.schema_identifier.unwrap();
         assert_eq!(schema.id, Some("urn:hl7-org:elm".to_string()));
 
-        // Check usings
+        // Check usings - System is always first (implicit), then explicit usings
         assert!(elm.usings.is_some());
         let usings = elm.usings.unwrap();
-        assert_eq!(usings.defs.len(), 1);
-        assert_eq!(usings.defs[0].local_identifier, Some("FHIR".to_string()));
+        assert_eq!(usings.defs.len(), 2);
+        assert_eq!(usings.defs[0].local_identifier, Some("System".to_string()));
+        assert_eq!(
+            usings.defs[0].uri,
+            Some("urn:hl7-org:elm-types:r1".to_string())
+        );
+        assert_eq!(usings.defs[1].local_identifier, Some("FHIR".to_string()));
 
         // Check contexts
         assert!(elm.contexts.is_some());
@@ -1725,11 +2796,18 @@ mod tests {
         assert_eq!(contexts.defs[0].name, Some("Patient".to_string()));
 
         // Check statements
+        // Reference translator generates an implicit "Patient" definition for Patient context
         assert!(elm.statements.is_some());
         let statements = elm.statements.unwrap();
-        assert_eq!(statements.defs.len(), 1);
-        assert_eq!(statements.defs[0].name, Some("X".to_string()));
+        assert_eq!(statements.defs.len(), 2); // Implicit Patient + X
+
+        // First definition is implicit Patient
+        assert_eq!(statements.defs[0].name, Some("Patient".to_string()));
         assert_eq!(statements.defs[0].context, Some("Patient".to_string()));
+
+        // Second definition is our explicit X
+        assert_eq!(statements.defs[1].name, Some("X".to_string()));
+        assert_eq!(statements.defs[1].context, Some("Patient".to_string()));
     }
 
     #[test]
@@ -1847,7 +2925,15 @@ mod tests {
         let elm = builder.build(&ast);
 
         assert!(elm.identifier.is_some());
-        assert!(elm.usings.is_none());
+        // System using is always implicitly added
+        assert!(elm.usings.is_some());
+        let usings = elm.usings.unwrap();
+        assert_eq!(usings.defs.len(), 1);
+        assert_eq!(usings.defs[0].local_identifier, Some("System".to_string()));
+        assert_eq!(
+            usings.defs[0].uri,
+            Some("urn:hl7-org:elm-types:r1".to_string())
+        );
         assert!(elm.includes.is_none());
         assert!(elm.parameters.is_none());
         assert!(elm.code_systems.is_none());
@@ -1878,16 +2964,629 @@ mod tests {
 
         assert!(elm.statements.is_some());
         let statements = elm.statements.unwrap();
-        assert_eq!(statements.defs.len(), 3);
+        // 4 = implicit Patient + 3 explicit definitions
+        assert_eq!(statements.defs.len(), 4);
 
         // All should have Patient context
         for def in &statements.defs {
             assert_eq!(def.context, Some("Patient".to_string()));
         }
 
-        // Check names
-        assert_eq!(statements.defs[0].name, Some("Is Adult".to_string()));
-        assert_eq!(statements.defs[1].name, Some("Is Minor".to_string()));
-        assert_eq!(statements.defs[2].name, Some("Helper".to_string()));
+        // Check names (first is implicit Patient)
+        assert_eq!(statements.defs[0].name, Some("Patient".to_string()));
+        assert_eq!(statements.defs[1].name, Some("Is Adult".to_string()));
+        assert_eq!(statements.defs[2].name, Some("Is Minor".to_string()));
+        assert_eq!(statements.defs[3].name, Some("Helper".to_string()));
+    }
+
+    // ========================================================================
+    // Phase 6.5 High Priority Tests - Symbol Resolution
+    // ========================================================================
+
+    #[test]
+    fn test_expression_ref_resolution() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library RefTest version '1.0'
+            define "Base": 42
+            define "Reference": "Base"
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        assert_eq!(statements.defs.len(), 2);
+
+        // The second expression should reference the first via ExpressionRef
+        let ref_expr = &statements.defs[1].expression;
+        assert!(ref_expr.is_some());
+
+        // Check it's an ExpressionRef, not IdentifierRef
+        let json = serde_json::to_string(ref_expr.as_ref().unwrap()).unwrap();
+        assert!(
+            json.contains(r#""type":"ExpressionRef""#),
+            "Expected ExpressionRef, got: {json}"
+        );
+        assert!(json.contains(r#""name":"Base""#));
+    }
+
+    #[test]
+    fn test_valueset_ref_resolution() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library VSRefTest version '1.0'
+            using FHIR version '4.0.1'
+            valueset "My VS": 'http://example.org/vs'
+            context Patient
+            define "Test": [Condition: "My VS"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is Test
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Should have ValueSetRef in the Retrieve codes
+        assert!(
+            json.contains(r#""type":"ValueSetRef""#),
+            "Expected ValueSetRef in: {json}"
+        );
+        assert!(json.contains(r#""name":"My VS""#));
+    }
+
+    #[test]
+    fn test_code_ref_resolution() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library CodeRefTest version '1.0'
+            using FHIR version '4.0.1'
+            codesystem "LOINC": 'http://loinc.org'
+            code "BP Code": '55284-4' from "LOINC"
+            context Patient
+            define "Test": [Observation: "BP Code"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is Test
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Should have CodeRef in the Retrieve codes
+        assert!(
+            json.contains(r#""type":"CodeRef""#),
+            "Expected CodeRef in: {json}"
+        );
+        assert!(json.contains(r#""name":"BP Code""#));
+    }
+
+    #[test]
+    fn test_query_alias_scope_attribute() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library QueryAliasTest version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define "Test": 
+                [Condition] C where C.id = 'test'
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is Test
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Query alias property access should use scope attribute, not source+IdentifierRef
+        // This matches the reference Java translator output
+        assert!(
+            json.contains(r#""scope":"C""#),
+            "Expected scope attribute for query alias in: {json}"
+        );
+        assert!(json.contains(r#""path":"id""#));
+        // Should NOT have IdentifierRef as source for the property
+        assert!(
+            !json.contains(r#""source":{"type":"IdentifierRef""#),
+            "Should use scope, not source+IdentifierRef: {json}"
+        );
+    }
+
+    #[test]
+    fn test_mixed_references() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library MixedRefTest version '1.0'
+            using FHIR version '4.0.1'
+            valueset "Conditions VS": 'http://example.org/vs'
+            codesystem "SNOMED": 'http://snomed.info/sct'
+            code "Diabetes": '73211009' from "SNOMED"
+            context Patient
+            define "HasCondition": exists [Condition: "Conditions VS"]
+            define "Final": "HasCondition" and exists [Observation: "Diabetes"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+
+        // defs[0] is implicit Patient, defs[1] is HasCondition, defs[2] is Final
+        // First explicit expression should have ValueSetRef
+        let expr1 = statements.defs[1].expression.as_ref().unwrap();
+        let json1 = serde_json::to_string(expr1).unwrap();
+        assert!(json1.contains(r#""type":"ValueSetRef""#));
+
+        // Second explicit expression should have ExpressionRef and CodeRef
+        let expr2 = statements.defs[2].expression.as_ref().unwrap();
+        let json2 = serde_json::to_string(expr2).unwrap();
+        assert!(json2.contains(r#""type":"ExpressionRef""#));
+        assert!(json2.contains(r#""type":"CodeRef""#));
+    }
+
+    // ========================================================================
+    // Phase 6.5 High Priority Tests - Retrieve Enhancement
+    // ========================================================================
+
+    #[test]
+    fn test_retrieve_with_model_info() {
+        use crate::parser::CqlParser;
+        use crate::provider::fhir_r4_provider;
+
+        let source = r#"
+            library RetrieveTest version '1.0'
+            using FHIR version '4.0.1'
+            valueset "Test VS": 'http://example.org/vs'
+            context Patient
+            define "Conditions": [Condition: "Test VS"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let provider = fhir_r4_provider();
+        let mut builder = LibraryBuilder::new();
+        builder.set_model_provider(&provider);
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is Conditions
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Should have templateId from model info
+        assert!(
+            json.contains(r#""templateId":"http://hl7.org/fhir/StructureDefinition/Condition""#),
+            "Expected templateId in: {json}"
+        );
+
+        // Should have codeProperty from model info
+        assert!(
+            json.contains(r#""codeProperty":"code""#),
+            "Expected codeProperty in: {json}"
+        );
+
+        // Should have codeComparator "in" when using ValueSetRef
+        assert!(
+            json.contains(r#""codeComparator":"in""#),
+            "Expected codeComparator 'in' for ValueSetRef in: {json}"
+        );
+    }
+
+    #[test]
+    fn test_retrieve_observation_model_info() {
+        use crate::parser::CqlParser;
+        use crate::provider::fhir_r4_provider;
+
+        let source = r#"
+            library RetrieveObsTest version '1.0'
+            using FHIR version '4.0.1'
+            codesystem "LOINC": 'http://loinc.org'
+            code "BP": '55284-4' from "LOINC"
+            context Patient
+            define "BPs": [Observation: "BP"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let provider = fhir_r4_provider();
+        let mut builder = LibraryBuilder::new();
+        builder.set_model_provider(&provider);
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is BPs
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Observation should have its own templateId
+        assert!(
+            json.contains(r#""templateId":"http://hl7.org/fhir/StructureDefinition/Observation""#)
+        );
+        assert!(json.contains(r#""codeProperty":"code""#));
+    }
+
+    #[test]
+    fn test_retrieve_without_codes_no_comparator() {
+        use crate::parser::CqlParser;
+        use crate::provider::fhir_r4_provider;
+
+        let source = r#"
+            library RetrieveNoCodes version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define "AllConditions": [Condition]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let provider = fhir_r4_provider();
+        let mut builder = LibraryBuilder::new();
+        builder.set_model_provider(&provider);
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is AllConditions
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Should have templateId even without codes
+        assert!(
+            json.contains(r#""templateId":"http://hl7.org/fhir/StructureDefinition/Condition""#)
+        );
+
+        // Should NOT have codeComparator when no codes
+        assert!(
+            !json.contains(r#""codeComparator""#),
+            "Should not have codeComparator without codes: {json}"
+        );
+    }
+
+    #[test]
+    fn test_retrieve_without_model_provider() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library RetrieveNoModel version '1.0'
+            using FHIR version '4.0.1'
+            valueset "Test VS": 'http://example.org/vs'
+            context Patient
+            define "Conditions": [Condition: "Test VS"]
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        // Don't set model provider
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        // defs[0] is implicit Patient, defs[1] is Conditions
+        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+
+        // Should have codeComparator "in" for ValueSetRef
+        assert!(json.contains(r#""codeComparator":"in""#));
+
+        // But no templateId or codeProperty without model info
+        assert!(!json.contains(r#""templateId""#));
+    }
+
+    #[test]
+    fn test_enable_locators() {
+        use crate::options::{CompilerOption, CompilerOptions};
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library LocatorTest version '1.0'
+            using FHIR version '4.0.1'
+            define "TestExpr": 42
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+
+        // With locators enabled (debug mode)
+        let opts = CompilerOptions::debug();
+        let mut builder = LibraryBuilder::new();
+        builder.set_options(opts);
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        let locator = statements.defs[0].locator.as_ref();
+        assert!(locator.is_some(), "Should have locator when enabled");
+        assert!(
+            locator.unwrap().contains(":"),
+            "Locator should have line:column format"
+        );
+
+        // Without locators (explicitly disabled)
+        let opts_no_loc = CompilerOptions::default().without_option(CompilerOption::EnableLocators);
+        let mut builder2 = LibraryBuilder::new();
+        builder2.set_options(opts_no_loc);
+        let elm2 = builder2.build(&ast);
+
+        let statements2 = elm2.statements.unwrap();
+        let locator2 = statements2.defs[0].locator.as_ref();
+        assert!(locator2.is_none(), "Should not have locator when disabled");
+    }
+
+    #[test]
+    fn test_enable_annotations() {
+        use crate::options::{CompilerOption, CompilerOptions};
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library AnnotationTest version '1.0'
+            using FHIR version '4.0.1'
+            define "TestExpr": 42
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+
+        // With annotations enabled (debug mode)
+        let opts = CompilerOptions::debug();
+        let mut builder = LibraryBuilder::new();
+        builder.set_options(opts);
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+        let def = &statements.defs[0];
+
+        // Should have localId
+        assert!(
+            def.local_id.is_some(),
+            "Should have localId when annotations enabled"
+        );
+        let local_id = def.local_id.as_ref().unwrap();
+
+        // Should have annotation
+        assert!(
+            !def.annotation.is_empty(),
+            "Should have annotation when enabled"
+        );
+        let annotation = &def.annotation[0];
+        assert_eq!(annotation.tag_type, Some("Annotation".to_string()));
+
+        // Annotation should have source with reference to localId
+        let source = annotation.source.as_ref().expect("Should have source");
+        assert_eq!(source.local_id_ref, Some(local_id.clone()));
+
+        // Without annotations (explicitly disabled)
+        let opts_no_annot =
+            CompilerOptions::default().without_option(CompilerOption::EnableAnnotations);
+        let mut builder2 = LibraryBuilder::new();
+        builder2.set_options(opts_no_annot);
+        let elm2 = builder2.build(&ast);
+
+        let statements2 = elm2.statements.unwrap();
+        let def2 = &statements2.defs[0];
+
+        // Should not have annotation
+        assert!(
+            def2.annotation.is_empty(),
+            "Should not have annotation when disabled"
+        );
+    }
+
+    #[test]
+    fn test_implicit_patient_definition() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library ImplicitPatientTest version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define "TestExpr": true
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+
+        // First definition should be implicit Patient
+        assert_eq!(statements.defs.len(), 2);
+        let patient_def = &statements.defs[0];
+        assert_eq!(patient_def.name, Some("Patient".to_string()));
+        assert_eq!(patient_def.context, Some("Patient".to_string()));
+        assert!(
+            patient_def.access_level.is_none(),
+            "Implicit def has no access level"
+        );
+
+        // Should have SingletonFrom([Patient]) expression
+        let expr = patient_def.expression.as_ref().unwrap();
+        let json = serde_json::to_string(expr).unwrap();
+        assert!(json.contains(r#""type":"SingletonFrom""#));
+        assert!(json.contains(r#""type":"Retrieve""#));
+        assert!(json.contains(r#"{http://hl7.org/fhir}Patient"#));
+        assert!(json.contains(r#""templateId":"http://hl7.org/fhir/StructureDefinition/Patient""#));
+
+        // Second definition should be the explicit one
+        let test_def = &statements.defs[1];
+        assert_eq!(test_def.name, Some("TestExpr".to_string()));
+    }
+
+    #[test]
+    fn test_no_implicit_definition_without_context() {
+        use crate::parser::CqlParser;
+
+        let source = r#"
+            library NoContextTest version '1.0'
+            define "TestExpr": true
+        "#;
+
+        let ast = CqlParser::new().parse(source).unwrap();
+        let mut builder = LibraryBuilder::new();
+        let elm = builder.build(&ast);
+
+        let statements = elm.statements.unwrap();
+
+        // Should only have one definition (no implicit Patient)
+        assert_eq!(statements.defs.len(), 1);
+        assert_eq!(statements.defs[0].name, Some("TestExpr".to_string()));
+    }
+
+    #[test]
+    fn test_apply_implicit_conversion_disabled() {
+        use crate::options::{CompilerOption, CompilerOptions};
+        use crate::translator::ExpressionTranslator;
+
+        // Create builder with implicit conversions disabled
+        let opts = CompilerOptions::new().with_option(CompilerOption::DisableImplicitConversions);
+        let mut builder = LibraryBuilder::new();
+        builder.set_options(opts);
+
+        // Set up a conversion registry with a conversion
+        let mut registry = ConversionRegistry::new();
+        registry.register(crate::conversion::ConversionEntry {
+            from_type: "FHIR.Coding".to_string(),
+            to_type: "System.Code".to_string(),
+            function_name: "FHIRHelpers.ToCode".to_string(),
+            library_name: Some("FHIRHelpers".to_string()),
+            function_simple_name: "ToCode".to_string(),
+        });
+        builder.set_conversion_registry(registry);
+        builder.register_conversion_library("FHIRHelpers", "FHIRHelpers");
+
+        let mut translator = ExpressionTranslator::new();
+
+        // Create a test operand
+        let operand = elm::Expression::Literal(elm::Literal {
+            element: elm::ElementFields::default(),
+            value_type: None,
+            value: Some("test".to_string()),
+        });
+
+        let fhir_coding = DataType::model("FHIR", "Coding");
+        let system_code = DataType::system(SystemType::Code);
+
+        // With conversions disabled, should NOT apply conversion
+        let (result, was_converted) =
+            builder.apply_implicit_conversion(operand, &fhir_coding, &system_code, &mut translator);
+
+        assert!(!was_converted, "Should not convert when disabled");
+        assert!(matches!(result, elm::Expression::Literal(_)));
+    }
+
+    #[test]
+    fn test_apply_implicit_conversion_strict_mode() {
+        use crate::options::{CompilerOption, CompilerOptions};
+        use crate::translator::ExpressionTranslator;
+
+        // Create builder with strict conversion library check
+        let opts = CompilerOptions::new().with_option(CompilerOption::StrictConversionLibraryCheck);
+        let mut builder = LibraryBuilder::new();
+        builder.set_options(opts);
+
+        // Set up a conversion registry but DON'T register FHIRHelpers
+        let mut registry = ConversionRegistry::new();
+        registry.register(crate::conversion::ConversionEntry {
+            from_type: "FHIR.Coding".to_string(),
+            to_type: "System.Code".to_string(),
+            function_name: "FHIRHelpers.ToCode".to_string(),
+            library_name: Some("FHIRHelpers".to_string()),
+            function_simple_name: "ToCode".to_string(),
+        });
+        builder.set_conversion_registry(registry);
+        // Note: NOT registering FHIRHelpers library
+
+        let mut translator = ExpressionTranslator::new();
+
+        let operand = elm::Expression::Literal(elm::Literal {
+            element: elm::ElementFields::default(),
+            value_type: None,
+            value: Some("test".to_string()),
+        });
+
+        let fhir_coding = DataType::model("FHIR", "Coding");
+        let system_code = DataType::system(SystemType::Code);
+
+        // With strict mode, should emit ERROR when library not included
+        let (result, was_converted) =
+            builder.apply_implicit_conversion(operand, &fhir_coding, &system_code, &mut translator);
+
+        assert!(!was_converted, "Should not convert when library missing");
+        assert!(matches!(result, elm::Expression::Literal(_)));
+
+        // Should have an error in strict mode
+        assert!(
+            !builder.errors.is_empty(),
+            "Should have error in strict mode"
+        );
+        let error_msg = builder.errors[0].to_string();
+        assert!(
+            error_msg.contains("FHIRHelpers"),
+            "Error should mention FHIRHelpers: {error_msg}"
+        );
+    }
+
+    #[test]
+    fn test_apply_implicit_conversion_warning_mode() {
+        use crate::options::CompilerOptions;
+        use crate::translator::ExpressionTranslator;
+
+        // Create builder with default options (warnings, not errors)
+        let mut builder = LibraryBuilder::new();
+        builder.set_options(CompilerOptions::default());
+
+        // Set up a conversion registry but DON'T register FHIRHelpers
+        let mut registry = ConversionRegistry::new();
+        registry.register(crate::conversion::ConversionEntry {
+            from_type: "FHIR.Coding".to_string(),
+            to_type: "System.Code".to_string(),
+            function_name: "FHIRHelpers.ToCode".to_string(),
+            library_name: Some("FHIRHelpers".to_string()),
+            function_simple_name: "ToCode".to_string(),
+        });
+        builder.set_conversion_registry(registry);
+        // Note: NOT registering FHIRHelpers library
+
+        let mut translator = ExpressionTranslator::new();
+
+        let operand = elm::Expression::Literal(elm::Literal {
+            element: elm::ElementFields::default(),
+            value_type: None,
+            value: Some("test".to_string()),
+        });
+
+        let fhir_coding = DataType::model("FHIR", "Coding");
+        let system_code = DataType::system(SystemType::Code);
+
+        // With default mode, should emit WARNING when library not included
+        let (result, was_converted) =
+            builder.apply_implicit_conversion(operand, &fhir_coding, &system_code, &mut translator);
+
+        assert!(!was_converted, "Should not convert when library missing");
+        assert!(matches!(result, elm::Expression::Literal(_)));
+
+        // Should NOT have an error (it's a warning)
+        assert!(
+            builder.errors.is_empty(),
+            "Should not have error in warning mode"
+        );
+
+        // Should have a warning
+        assert!(
+            !builder.warnings.is_empty(),
+            "Should have warning when library missing"
+        );
+        assert!(
+            builder.warnings[0].contains("FHIRHelpers"),
+            "Warning should mention FHIRHelpers"
+        );
     }
 }

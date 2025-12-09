@@ -21,6 +21,10 @@ use super::{
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Library {
+    /// Local identifier for tracking (Library extends Element).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_id: Option<String>,
+
     /// Library identifier (name and version).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub identifier: Option<VersionedIdentifier>,

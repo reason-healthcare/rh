@@ -184,6 +184,63 @@ let compact = result.to_compact_json().unwrap(); // Minified
 - **ELM Generation**: Complete translation to ELM structures
 - **JSON Output**: Serialize to JSON compatible with reference implementation
 
+#### Design Decision: FHIRHelpers-Agnostic Translation
+
+Unlike the Java reference translator, **rh-cql does not automatically insert FHIRHelpers conversion calls** during translation. This is an intentional design choice:
+
+| Aspect | Reference Translator | rh-cql |
+|--------|---------------------|--------|
+| FHIR→CQL type conversions | Inserts `FHIRHelpers.ToString`, `ToConcept`, etc. | Leaves types as-is |
+| CodeableConcept ~ Code | Wraps both in `ToConcept` calls | Direct comparison |
+| Translator complexity | Must load FHIRHelpers definitions | Simpler, no external dependencies |
+| Runtime responsibility | Minimal type handling | Must handle FHIR↔CQL coercion |
+
+**Example - Comparing CodeableConcept to Code:**
+
+CQL:
+```cql
+C.clinicalStatus ~ "Active Condition Code"
+```
+
+Reference translator output:
+```json
+{
+  "type": "Equivalent",
+  "operand": [
+    {
+      "name": "ToConcept",
+      "libraryName": "FHIRHelpers",
+      "type": "FunctionRef",
+      "operand": [{ "path": "clinicalStatus", "scope": "C", "type": "Property" }]
+    },
+    {
+      "type": "ToConcept",
+      "operand": { "name": "Active Condition Code", "type": "CodeRef" }
+    }
+  ]
+}
+```
+
+rh-cql output:
+```json
+{
+  "type": "Equivalent",
+  "operand": [
+    { "path": "clinicalStatus", "scope": "C", "type": "Property" },
+    { "name": "Active Condition Code", "type": "CodeRef" }
+  ]
+}
+```
+
+**Why this approach?**
+
+1. **Separation of Concerns**: Translation converts syntax to structure; type coercion is a runtime concern
+2. **Model Independence**: The translator can work with any data model, not just FHIR
+3. **Runtime Flexibility**: Executors can implement FHIR type handling natively (potentially more efficiently)
+4. **Simpler Translator**: No need to load/parse FHIRHelpers library during translation
+
+The ELM output is valid per the ELM specification—the runtime/executor must understand how to evaluate equivalence between FHIR and CQL types.
+
 ### ✅ ELM Type Definitions
 
 Full Rust type definitions for ELM, supporting:

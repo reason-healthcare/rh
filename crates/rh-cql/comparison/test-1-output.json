@@ -1,0 +1,415 @@
+{
+  "library": {
+    "annotation": [
+      {
+        "type": "CqlToElmInfo",
+        "translatorVersion": "4.2.0-SNAPSHOT",
+        "translatorOptions": "EnableLocators,DisableListDemotion,DisableListPromotion",
+        "signatureLevel": "Overloads"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 5,
+        "startChar": 1,
+        "endLine": 5,
+        "endChar": 35,
+        "message": "Library FHIRHelpers was included with version 0.1.0, but id: FHIRHelpers and version 4.0.1 of the library was found.",
+        "errorType": "include",
+        "errorSeverity": "error",
+        "targetIncludeLibraryId": "FHIRHelpers",
+        "targetIncludeLibraryVersionId": "0.1.0"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 6,
+        "startChar": 1,
+        "endLine": 6,
+        "endChar": 87,
+        "message": "Could not load source for library ActiveMethotrexateFeatureLogic, version 0.1.0, namespace uri null.",
+        "errorType": "include",
+        "errorSeverity": "error",
+        "targetIncludeLibraryId": "ActiveMethotrexateFeatureLogic",
+        "targetIncludeLibraryVersionId": "0.1.0"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 7,
+        "startChar": 1,
+        "endLine": 7,
+        "endChar": 89,
+        "message": "Could not load source for library ActiveSulfasalazineFeatureLogic, version 0.1.0, namespace uri null.",
+        "errorType": "include",
+        "errorSeverity": "error",
+        "targetIncludeLibraryId": "ActiveSulfasalazineFeatureLogic",
+        "targetIncludeLibraryVersionId": "0.1.0"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 8,
+        "startChar": 1,
+        "endLine": 8,
+        "endChar": 100,
+        "message": "Could not load source for library LastCbcPanelReportDateFeatureLogic, version 0.1.0, namespace uri null.",
+        "errorType": "include",
+        "errorSeverity": "error",
+        "targetIncludeLibraryId": "LastCbcPanelReportDateFeatureLogic",
+        "targetIncludeLibraryVersionId": "0.1.0"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 14,
+        "startChar": 14,
+        "endLine": 14,
+        "endChar": 38,
+        "message": "Could not resolve identifier ActiveMethotrexateFeature in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 20,
+        "startChar": 14,
+        "endLine": 20,
+        "endChar": 39,
+        "message": "Could not resolve identifier ActiveSulfasalazineFeature in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 26,
+        "startChar": 9,
+        "endLine": 27,
+        "endChar": 24,
+        "message": "Could not resolve library name FHIRHelpers.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 31,
+        "startChar": 3,
+        "endLine": 31,
+        "endChar": 13,
+        "message": "Could not validate reference to expression Condition because its definition contains errors.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 38,
+        "startChar": 14,
+        "endLine": 38,
+        "endChar": 47,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 44,
+        "startChar": 4,
+        "endLine": 44,
+        "endChar": 37,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 47,
+        "startChar": 4,
+        "endLine": 47,
+        "endChar": 37,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 50,
+        "startChar": 10,
+        "endLine": 50,
+        "endChar": 43,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 53,
+        "startChar": 10,
+        "endLine": 53,
+        "endChar": 43,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 56,
+        "startChar": 11,
+        "endLine": 56,
+        "endChar": 44,
+        "message": "Could not resolve identifier LastCbcPanelReportDateFeatureLogic in the current library.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 63,
+        "startChar": 7,
+        "endLine": 63,
+        "endChar": 31,
+        "message": "Could not validate reference to expression Missing last CBC result because its definition contains errors.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      },
+      {
+        "type": "CqlToElmError",
+        "libraryId": "ApplicabilityLogic",
+        "libraryVersion": "0.1.0",
+        "startLine": 73,
+        "startChar": 7,
+        "endLine": 73,
+        "endChar": 31,
+        "message": "Could not validate reference to expression Missing last CBC result because its definition contains errors.",
+        "errorType": "semantic",
+        "errorSeverity": "error"
+      }
+    ],
+    "identifier": {
+      "id": "ApplicabilityLogic",
+      "version": "0.1.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "usings": {
+      "def": [
+        {
+          "localIdentifier": "System",
+          "uri": "urn:hl7-org:elm-types:r1",
+          "annotation": []
+        },
+        {
+          "locator": "3:1-3:26",
+          "localIdentifier": "FHIR",
+          "uri": "http://hl7.org/fhir",
+          "version": "4.0.1",
+          "annotation": []
+        }
+      ]
+    },
+    "contexts": {
+      "def": [
+        {
+          "locator": "11:1-11:15",
+          "name": "Patient",
+          "annotation": []
+        }
+      ]
+    },
+    "statements": {
+      "def": [
+        {
+          "locator": "11:1-11:15",
+          "name": "Patient",
+          "context": "Patient",
+          "annotation": [],
+          "expression": {
+            "type": "SingletonFrom",
+            "annotation": [],
+            "signature": [],
+            "operand": {
+              "type": "Retrieve",
+              "locator": "11:1-11:15",
+              "dataType": "{http://hl7.org/fhir}Patient",
+              "templateId": "http://hl7.org/fhir/StructureDefinition/Patient",
+              "annotation": [],
+              "include": [],
+              "codeFilter": [],
+              "dateFilter": [],
+              "otherFilter": []
+            }
+          }
+        },
+        {
+          "locator": "13:1-17:9",
+          "name": "On Methotrexate therapy",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "14:3-17:9",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "19:1-23:9",
+          "name": "On Sulfasalazine therapy",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "20:3-23:9",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "25:1-28:3",
+          "name": "Condition",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "26:3-28:3",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "30:1-31:32",
+          "name": "Timing of Service",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "31:3-31:32",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "37:1-41:8",
+          "name": "Missing last CBC result",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "38:3-41:8",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "43:1-44:73",
+          "name": "DEBUG 1 (value)",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "44:3-44:73",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "46:1-47:79",
+          "name": "DEBUG 2 (value.value)",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "47:3-47:79",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "49:1-50:73",
+          "name": "DEBUG 3 (exists)",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "50:3-50:73",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "52:1-53:91",
+          "name": "DEBUG 4 (exists value as dateTime)",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "53:3-53:91",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "55:1-56:99",
+          "name": "DEBUG 5 (exists value as dateTime).value",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "56:3-56:99",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "62:1-66:9",
+          "name": "Should order CBC if on Sulfasalazine therapy and missing test",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "63:3-66:9",
+            "annotation": []
+          }
+        },
+        {
+          "locator": "72:1-76:9",
+          "name": "Should order CBC if on Methotrexate therapy and missing test",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "annotation": [],
+          "expression": {
+            "type": "Null",
+            "locator": "73:3-76:9",
+            "annotation": []
+          }
+        }
+      ]
+    }
+  }
+}

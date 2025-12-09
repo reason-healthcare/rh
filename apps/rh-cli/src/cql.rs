@@ -140,8 +140,43 @@ fn compile_cql(
         opts
     };
 
-    let json = compile_to_json(&source, Some(options), !compact)
-        .context("Failed to compile CQL to ELM")?;
+    // First compile to get detailed errors
+    let result = match compile(&source, Some(options.clone())) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("✗ {e}");
+            anyhow::bail!("CQL compilation failed");
+        }
+    };
+
+    // If there are errors, display them and exit
+    if !result.is_success() {
+        eprintln!(
+            "✗ Compilation failed with {} error(s):\n",
+            result.errors.len()
+        );
+        for err in &result.errors {
+            eprintln!("  ✗ {}", err.message());
+            if let Some(loc) = err.locator() {
+                eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
+            }
+        }
+        if !result.warnings.is_empty() {
+            eprintln!("\nWarnings ({}):", result.warnings.len());
+            for warning in &result.warnings {
+                eprintln!("  ⚠ {}", warning.message());
+            }
+        }
+        anyhow::bail!("CQL compilation failed");
+    }
+
+    // Generate JSON output
+    let json = if compact {
+        result.to_compact_json()
+    } else {
+        result.to_json()
+    }
+    .context("Failed to serialize ELM to JSON")?;
 
     // Write output
     if let Some(path) = output {

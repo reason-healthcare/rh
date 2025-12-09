@@ -120,7 +120,7 @@ pub enum Expression {
     End(UnaryExpression),
     Contains(BinaryExpression),
     ProperContains(BinaryExpression),
-    In(BinaryExpression),
+    In(TimeBinaryExpression),
     ProperIn(BinaryExpression),
     Includes(BinaryExpression),
     ProperIncludes(BinaryExpression),
@@ -714,6 +714,8 @@ pub struct Sort {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SortByItem {
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub sort_by_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub direction: Option<SortDirection>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -980,6 +982,78 @@ pub struct Retrieve {
     pub date_property: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_range: Option<Box<Expression>>,
+    /// Include elements (always serialized, even if empty)
+    #[serde(default)]
+    pub include: Vec<IncludeElement>,
+    /// Code filter elements (always serialized, even if empty)
+    #[serde(default)]
+    pub code_filter: Vec<CodeFilterElement>,
+    /// Date filter elements (always serialized, even if empty)
+    #[serde(default)]
+    pub date_filter: Vec<DateFilterElement>,
+    /// Other filter elements (always serialized, even if empty)
+    #[serde(default)]
+    pub other_filter: Vec<OtherFilterElement>,
+}
+
+/// Include element for Retrieve (placeholder for now)
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IncludeElement {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub related_data_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub related_property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub related_search: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_reverse: Option<bool>,
+}
+
+/// Code filter element for Retrieve
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeFilterElement {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_set_property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comparator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Box<Expression>>,
+}
+
+/// Date filter element for Retrieve
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DateFilterElement {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub low_property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub high_property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Box<Expression>>,
+}
+
+/// Other filter element for Retrieve
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OtherFilterElement {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub property: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comparator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Box<Expression>>,
 }
 
 // === Structured Values ===

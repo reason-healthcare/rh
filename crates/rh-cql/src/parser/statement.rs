@@ -272,6 +272,7 @@ pub fn parse_context_def(input: Span<'_>) -> IResult<Span<'_>, ContextDef> {
 /// Parse expression definition: `define Name: expression`
 pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
+    let start_loc = input.location();
     let (input, access) = parse_access_modifier(input)?;
     let (input, _) = keyword("define")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
@@ -285,7 +286,7 @@ pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef>
             name,
             expression: expr,
             access,
-            location: None,
+            location: Some(start_loc),
         },
     ))
 }
@@ -419,6 +420,25 @@ fn parse_access_modifier(input: Span<'_>) -> IResult<Span<'_>, AccessModifier> {
 // Full Library Parser
 // ============================================================================
 
+/// A terminology definition (codesystem, valueset, code, or concept)
+#[derive(Debug, Clone)]
+enum TerminologyDef {
+    CodeSystem(CodeSystemDef),
+    ValueSet(ValueSetDef),
+    Code(CodeDef),
+    Concept(ConceptDef),
+}
+
+/// Parse a single terminology definition (codesystem, valueset, code, or concept)
+fn parse_terminology_def(input: Span<'_>) -> IResult<Span<'_>, TerminologyDef> {
+    alt((
+        map(parse_codesystem_def, TerminologyDef::CodeSystem),
+        map(parse_valueset_def, TerminologyDef::ValueSet),
+        map(parse_code_def, TerminologyDef::Code),
+        map(parse_concept_def, TerminologyDef::Concept),
+    ))(input)
+}
+
 /// Parse a complete CQL library
 pub fn parse_library(input: Span<'_>) -> IResult<Span<'_>, Library> {
     let (input, _) = skip_ws_and_comments(input)?;
@@ -432,17 +452,23 @@ pub fn parse_library(input: Span<'_>) -> IResult<Span<'_>, Library> {
     // Parse include definitions
     let (input, includes) = many0(parse_include_def)(input)?;
 
-    // Parse codesystem definitions
-    let (input, codesystems) = many0(parse_codesystem_def)(input)?;
+    // Parse terminology definitions in any order (codesystem, valueset, code, concept)
+    let (input, terminology_defs) = many0(parse_terminology_def)(input)?;
 
-    // Parse valueset definitions
-    let (input, valuesets) = many0(parse_valueset_def)(input)?;
+    // Separate terminology definitions by type
+    let mut codesystems = Vec::new();
+    let mut valuesets = Vec::new();
+    let mut codes = Vec::new();
+    let mut concepts = Vec::new();
 
-    // Parse code definitions
-    let (input, codes) = many0(parse_code_def)(input)?;
-
-    // Parse concept definitions
-    let (input, concepts) = many0(parse_concept_def)(input)?;
+    for def in terminology_defs {
+        match def {
+            TerminologyDef::CodeSystem(cs) => codesystems.push(cs),
+            TerminologyDef::ValueSet(vs) => valuesets.push(vs),
+            TerminologyDef::Code(c) => codes.push(c),
+            TerminologyDef::Concept(c) => concepts.push(c),
+        }
+    }
 
     // Parse parameter definitions
     let (input, parameters) = many0(parse_parameter_def)(input)?;

@@ -132,6 +132,32 @@ pub fn compile(
     source: &str,
     options: Option<CompilerOptions>,
 ) -> Result<CompilationResult, CompilationError> {
+    // Use FHIR R4 model provider - prefer package with full ModelInfo,
+    // fall back to built-in minimal info if package not available
+    let provider = crate::provider::fhir_r4_provider_from_package();
+    compile_with_model(source, options, Some(&provider))
+}
+
+/// Compile CQL source code to ELM with a custom model provider.
+///
+/// This allows specifying a custom model provider for type resolution.
+/// For most FHIR-based CQL, use `compile()` which provides FHIR R4 by default.
+///
+/// # Arguments
+///
+/// * `source` - The CQL source code to compile.
+/// * `options` - Optional compiler options. If None, default options are used.
+/// * `model_provider` - Optional model provider for type resolution.
+///
+/// # Returns
+///
+/// Returns a `CompilationResult` containing the ELM library and any
+/// errors or warnings.
+pub fn compile_with_model(
+    source: &str,
+    options: Option<CompilerOptions>,
+    model_provider: Option<&dyn crate::provider::ModelInfoProvider>,
+) -> Result<CompilationResult, CompilationError> {
     let options = options.unwrap_or_default();
 
     // Parse the CQL source
@@ -143,6 +169,20 @@ pub fn compile(
     // Create the builder and translate
     let mut builder = LibraryBuilder::new();
     builder.set_options(options.clone());
+
+    // Set model provider if provided
+    if let Some(provider) = model_provider {
+        builder.set_model_provider(provider);
+
+        // Load conversion registry from ModelInfo if available
+        // The CQL file typically includes FHIR model via 'using FHIR version ...'
+        // We load conversions from the FHIR ModelInfo which contains
+        // FHIRHelpers conversion definitions.
+        if let Some(model_info) = provider.get_model("FHIR", None) {
+            let registry = crate::conversion::ConversionRegistry::from_model_info(&model_info);
+            builder.set_conversion_registry(registry);
+        }
+    }
 
     let library = builder.build(&ast);
 
