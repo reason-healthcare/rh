@@ -1357,6 +1357,12 @@ impl<'a> LibraryBuilder<'a> {
                 translator.translate_ternary_operator(ternary.operator, first, second, third, None)
             }
 
+            ast::Expression::DateTimeComponentFrom(dtc) => {
+                translator.translate_datetime_component_from(dtc, |t, e| {
+                    self.translate_expr_recursive(e, t)
+                })
+            }
+
             ast::Expression::IfThenElse(if_expr) => {
                 let condition = self.translate_expr_recursive(&if_expr.condition, translator);
                 let then_expr = self.translate_expr_recursive(&if_expr.then_expr, translator);

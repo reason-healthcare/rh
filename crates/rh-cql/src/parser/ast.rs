@@ -313,6 +313,9 @@ pub enum Expression {
     BinaryExpression(BinaryExpression),
     TernaryExpression(TernaryExpression),
 
+    // DateTime component extraction (year from, month from, etc.)
+    DateTimeComponentFrom(DateTimeComponentFromExpr),
+
     // Type operations
     TypeExpression(TypeExpression),
 
@@ -386,6 +389,14 @@ pub struct QualifiedIdentifierRef {
     pub location: Option<SourceLocation>,
 }
 
+/// DateTime component extraction (year from, month from, etc.)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DateTimeComponentFromExpr {
+    pub precision: DateTimePrecision,
+    pub operand: Box<Expression>,
+    pub location: Option<SourceLocation>,
+}
+
 /// Unary expression
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UnaryExpression {
@@ -414,6 +425,9 @@ pub enum UnaryOperator {
     Collapse,
     Expand,
     Singleton,
+    DateFrom,
+    TimeFrom,
+    TimezoneOffsetFrom,
     ToBoolean,
     ToInteger,
     ToLong,
