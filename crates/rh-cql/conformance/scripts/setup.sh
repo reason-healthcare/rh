@@ -53,6 +53,14 @@ else
     echo "✓ Java translator repo already cloned"
 fi
 
+# Clone Cooking with CQL examples if not present
+if [ ! -d "cooking-with-cql" ]; then
+    echo "Cloning Cooking with CQL examples..."
+    git clone --depth 1 https://github.com/cqframework/CQL-Formatting-and-Usage-Wiki.git cooking-with-cql
+else
+    echo "✓ Cooking with CQL repo already cloned"
+fi
+
 # Build Java translator
 JAVA_CLI="$TOOLS_DIR/cql-java/Src/java/cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli"
 
