@@ -373,6 +373,14 @@ impl CompilerOptions {
         self.has_option(CompilerOption::RequireFromKeyword)
     }
 
+    /// Check if default model info loading is enabled.
+    ///
+    /// When enabled (default), the compiler automatically loads FHIR R4 ModelInfo.
+    /// When disabled, explicit model registration is required.
+    pub fn default_model_info_load_enabled(&self) -> bool {
+        !self.has_option(CompilerOption::DisableDefaultModelInfoLoad)
+    }
+
     /// Check if implicit type conversions are enabled.
     ///
     /// When enabled (default), the compiler will automatically insert FHIRHelpers
