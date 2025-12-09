@@ -2132,11 +2132,18 @@ impl<'a> LibraryBuilder<'a> {
                             Vec::new()
                         };
 
+                        // Context defaults to "Unfiltered" when no explicit context is defined
+                        let context = Some(
+                            current_context
+                                .map(String::from)
+                                .unwrap_or_else(|| "Unfiltered".to_string()),
+                        );
+
                         expression_defs.push(elm::ExpressionDef {
                             local_id,
                             locator,
                             name: Some(expr_def.name.clone()),
-                            context: current_context.map(String::from),
+                            context,
                             access_level,
                             result_type_name: None,
                             result_type_specifier: None,

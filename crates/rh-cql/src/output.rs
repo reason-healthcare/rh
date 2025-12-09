@@ -124,10 +124,9 @@ impl<'a> ElmWriter<'a> {
 
         // Add translator info if annotations are enabled
         if self.options.annotations_enabled() {
-            let cql_to_elm_info = CqlToElmInfo {
-                translator_version: Some(TRANSLATOR_VERSION.to_string()),
-                translator_options: Some(self.options.options_to_string()),
-            };
+            let mut cql_to_elm_info = CqlToElmInfo::new();
+            cql_to_elm_info.translator_version = Some(TRANSLATOR_VERSION.to_string());
+            cql_to_elm_info.translator_options = Some(self.options.options_to_string());
 
             // Check if CqlToElmInfo already exists
             let has_info = output
@@ -314,12 +313,11 @@ mod tests {
     fn test_translator_info_not_duplicated() {
         let mut library = create_test_library();
         // Pre-add CqlToElmInfo
+        let mut existing_info = CqlToElmInfo::new();
+        existing_info.translator_version = Some("existing".to_string());
         library
             .annotation
-            .push(LibraryAnnotation::CqlToElmInfo(CqlToElmInfo {
-                translator_version: Some("existing".to_string()),
-                translator_options: None,
-            }));
+            .push(LibraryAnnotation::CqlToElmInfo(existing_info));
 
         let options = CompilerOptions::default();
         let writer = ElmWriter::new(&options);
