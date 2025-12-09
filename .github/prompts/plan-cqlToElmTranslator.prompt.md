@@ -409,6 +409,96 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
         - Query return clause type inference
         - Retrieve source type propagation
 
+- [ ] **Phase 6.7: Compiler Options Implementation**
+  
+  **Goal**: Implement all CompilerOption flags that affect translation behavior
+  
+  **Option Status Table**:
+  | Option | Status | Implementation Location |
+  |--------|--------|------------------------|
+  | EnableDateRangeOptimization | ❌ Not implemented | Retrieve optimization |
+  | EnableAnnotations | ✅ Implemented | translator.rs, builder.rs, output.rs |
+  | EnableLocators | ✅ Implemented | translator.rs, builder.rs |
+  | EnableResultTypes | ✅ Implemented | translator.rs |
+  | EnableDetailedErrors | ❌ Not implemented | reporting.rs |
+  | DisableListTraversal | ❌ Not implemented | translator.rs (property access) |
+  | DisableListDemotion | ❌ Not implemented | operators.rs (type coercion) |
+  | DisableListPromotion | ❌ Not implemented | operators.rs (type coercion) |
+  | EnableIntervalDemotion | ❌ Not implemented | operators.rs (type coercion) |
+  | EnableIntervalPromotion | ❌ Not implemented | operators.rs (type coercion) |
+  | DisableMethodInvocation | ❌ Not implemented | parser (fluent syntax) |
+  | RequireFromKeyword | ❌ Not implemented | parser (query syntax) |
+  | DisableDefaultModelInfoLoad | ❌ Not implemented | compiler.rs |
+  | DisableImplicitConversions | ✅ Implemented | builder.rs |
+  | StrictConversionLibraryCheck | ✅ Implemented | builder.rs |
+  
+  **Implementation Tasks**:
+  
+  - [ ] **6.7a: EnableDateRangeOptimization**
+    - Optimize Retrieve expressions with date range filters
+    - Move date comparisons from Where clause into Retrieve.dateRange
+    - Reference: Java translator's DateRangeOptimizer
+    - Affects: Retrieve translation in builder.rs
+    
+  - [ ] **6.7b: EnableDetailedErrors**
+    - Include additional context in error messages
+    - Show source snippets in error output
+    - Include suggestion/fix hints where possible
+    - Affects: reporting.rs, ExceptionCollector
+    
+  - [ ] **6.7c: DisableListTraversal**
+    - When disabled: property access on List<T> is an error
+    - When enabled (default): `patients.name` traverses list, returns List<name type>
+    - Affects: translate_member_invocation in translator.rs
+    - Check: if source type is List<T> and option disabled, emit error
+    
+  - [ ] **6.7d: DisableListDemotion**
+    - When disabled: no auto-conversion from List<T> to T (singleton)
+    - When enabled (default): List<T> can demote to T in singleton context
+    - Affects: operator resolution, function argument matching
+    - Check: OperatorResolver.resolve_* should respect this option
+    
+  - [ ] **6.7e: DisableListPromotion**
+    - When disabled: no auto-conversion from T to List<T>
+    - When enabled (default): T can promote to List<T> where list expected
+    - Affects: operator resolution, function argument matching
+    - Check: OperatorResolver.resolve_* should respect this option
+    
+  - [ ] **6.7f: EnableIntervalDemotion**
+    - When enabled: Interval<T> can demote to T (point) in point context
+    - When disabled (default): no auto-conversion
+    - Affects: operator resolution for interval/point comparisons
+    
+  - [ ] **6.7g: EnableIntervalPromotion**
+    - When enabled: T (point) can promote to Interval<T>
+    - When disabled (default): no auto-conversion
+    - Affects: operator resolution for interval/point comparisons
+    
+  - [ ] **6.7h: DisableMethodInvocation**
+    - When disabled: fluent syntax `value.function(args)` is an error
+    - When enabled (default): `value.function(args)` → `function(value, args)`
+    - Affects: parser or translator fluent function handling
+    - Note: Parser currently accepts fluent syntax; need check before translation
+    
+  - [ ] **6.7i: RequireFromKeyword**
+    - When enabled: queries MUST use `from` keyword
+    - When disabled (default): `from` is optional
+    - Example required: `from [Condition] C where ...`
+    - Example error: `[Condition] C where ...` (missing from)
+    - Affects: parser query_clause validation
+    
+  - [ ] **6.7j: DisableDefaultModelInfoLoad**
+    - When enabled: don't auto-load FHIR R4 ModelInfo
+    - Requires explicit model registration
+    - Affects: compiler.rs compile() function
+    - Add accessor: `default_model_info_load_enabled() -> bool`
+  
+  **Testing Strategy**:
+  - Each option gets integration tests showing enabled vs disabled behavior
+  - Test strict() preset enables appropriate restrictions
+  - Test default() preset has expected defaults
+  - Verify options_to_string() round-trips through parse_options()
+
 
 ### Phase 7: WASM & Integration
 **Goal**: WASM build and JavaScript API
