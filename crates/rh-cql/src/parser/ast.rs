@@ -579,6 +579,7 @@ pub struct TypeExpression {
 pub enum TypeOperator {
     Is,
     As,
+    Cast,
     Convert,
 }
 

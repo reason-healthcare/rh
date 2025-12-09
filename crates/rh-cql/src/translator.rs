@@ -2046,6 +2046,7 @@ impl ExpressionTranslator {
         match type_expr.operator {
             ast::TypeOperator::Is => self.translate_is(operand, type_spec),
             ast::TypeOperator::As => self.translate_as(operand, type_spec, false),
+            ast::TypeOperator::Cast => self.translate_as(operand, type_spec, true),
             ast::TypeOperator::Convert => self.translate_convert(operand, type_spec),
         }
     }
