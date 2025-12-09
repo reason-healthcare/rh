@@ -432,7 +432,22 @@ pub struct BinaryExpression {
     pub operator: BinaryOperator,
     pub left: Box<Expression>,
     pub right: Box<Expression>,
+    /// Precision for temporal operators (day, month, year, etc.)
+    pub precision: Option<DateTimePrecision>,
     pub location: Option<SourceLocation>,
+}
+
+/// Date/time precision for temporal operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DateTimePrecision {
+    Year,
+    Month,
+    Week,
+    Day,
+    Hour,
+    Minute,
+    Second,
+    Millisecond,
 }
 
 /// Binary operators
@@ -497,6 +512,26 @@ pub enum BinaryOperator {
     Intersect,
     Except,
     IndexOf,
+}
+
+impl BinaryOperator {
+    /// Returns true if this is a comparison operator.
+    ///
+    /// Comparison operators compare two values and return a Boolean result.
+    /// This includes equality, equivalence, and ordering comparisons.
+    pub fn is_comparison(&self) -> bool {
+        matches!(
+            self,
+            BinaryOperator::Equal
+                | BinaryOperator::NotEqual
+                | BinaryOperator::Equivalent
+                | BinaryOperator::NotEquivalent
+                | BinaryOperator::Less
+                | BinaryOperator::LessOrEqual
+                | BinaryOperator::Greater
+                | BinaryOperator::GreaterOrEqual
+        )
+    }
 }
 
 /// Ternary expression (between)

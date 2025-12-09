@@ -594,6 +594,256 @@ pub fn fhir_r4_provider() -> MemoryModelInfoProvider {
     provider
 }
 
+// =============================================================================
+// FHIR Package ModelInfo Loading
+// =============================================================================
+
+use std::path::Path;
+
+/// Load ModelInfo from a FHIR package directory.
+///
+/// This function searches for Library resources in the package that contain
+/// ModelInfo XML content (base64 encoded in the `content` field).
+///
+/// # Arguments
+///
+/// * `package_dir` - Path to the extracted FHIR package directory
+///   (e.g., `~/.fhir/packages/fhir.cqf.common#4.0.1`)
+///
+/// # Returns
+///
+/// The parsed `ModelInfo` if found, or an error if not found or parsing failed.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use rh_cql::provider::load_modelinfo_from_package;
+/// use std::path::Path;
+///
+/// let package_dir = Path::new("/Users/user/.fhir/packages/fhir.cqf.common#4.0.1");
+/// let model_info = load_modelinfo_from_package(package_dir).unwrap();
+/// assert_eq!(model_info.name, Some("FHIR".to_string()));
+/// ```
+pub fn load_modelinfo_from_package(package_dir: &Path) -> anyhow::Result<ModelInfo> {
+    // Look for Library-FHIR-ModelInfo.json or similar files
+    let package_path = package_dir.join("package");
+    let search_dir = if package_path.exists() {
+        package_path
+    } else {
+        package_dir.to_path_buf()
+    };
+
+    // Search for files that might contain ModelInfo
+    let modelinfo_patterns = [
+        "Library-FHIR-ModelInfo.json",
+        "Library-FHIRModelInfo.json",
+        "FHIR-ModelInfo.json",
+    ];
+
+    for pattern in &modelinfo_patterns {
+        let file_path = search_dir.join(pattern);
+        if file_path.exists() {
+            return load_modelinfo_from_library_file(&file_path);
+        }
+    }
+
+    // Fall back to searching all Library files
+    if let Ok(entries) = std::fs::read_dir(&search_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.starts_with("Library-")
+                    && name.contains("ModelInfo")
+                    && name.ends_with(".json")
+                {
+                    if let Ok(model_info) = load_modelinfo_from_library_file(&path) {
+                        return Ok(model_info);
+                    }
+                }
+            }
+        }
+    }
+
+    anyhow::bail!(
+        "No ModelInfo found in package directory: {}",
+        package_dir.display()
+    )
+}
+
+/// Load ModelInfo from a Library JSON file.
+///
+/// The Library resource is expected to have a `content` array with an entry
+/// containing the ModelInfo XML as base64-encoded data.
+fn load_modelinfo_from_library_file(file_path: &Path) -> anyhow::Result<ModelInfo> {
+    use anyhow::Context;
+
+    let contents = std::fs::read_to_string(file_path)
+        .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+
+    let library: serde_json::Value = serde_json::from_str(&contents)
+        .with_context(|| format!("Failed to parse JSON: {}", file_path.display()))?;
+
+    // Navigate to content[0].data (base64 encoded XML)
+    let content = library
+        .get("content")
+        .and_then(|c| c.as_array())
+        .and_then(|arr| arr.first())
+        .ok_or_else(|| anyhow::anyhow!("No content array in Library resource"))?;
+
+    let base64_data = content
+        .get("data")
+        .and_then(|d| d.as_str())
+        .ok_or_else(|| anyhow::anyhow!("No data field in content"))?;
+
+    // Decode base64
+    let xml_bytes =
+        decode_base64(base64_data).with_context(|| "Failed to decode base64 content")?;
+
+    let xml_string =
+        String::from_utf8(xml_bytes).with_context(|| "ModelInfo content is not valid UTF-8")?;
+
+    // Parse XML to ModelInfo
+    ModelInfo::from_xml(&xml_string).with_context(|| "Failed to parse ModelInfo XML")
+}
+
+/// Simple base64 decoder (no external dependency).
+fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
+    fn char_to_value(c: u8) -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            b'=' => Some(0), // Padding
+            _ => None,
+        }
+    }
+
+    // Remove whitespace and validate
+    let clean: Vec<u8> = input
+        .bytes()
+        .filter(|&b| !b.is_ascii_whitespace())
+        .collect();
+
+    if clean.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Process in 4-byte chunks
+    let mut result = Vec::with_capacity(clean.len() * 3 / 4);
+    let mut chunks = clean.chunks_exact(4);
+
+    for chunk in chunks.by_ref() {
+        let a =
+            char_to_value(chunk[0]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+        let b =
+            char_to_value(chunk[1]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+        let c =
+            char_to_value(chunk[2]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+        let d =
+            char_to_value(chunk[3]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+
+        result.push((a << 2) | (b >> 4));
+        if chunk[2] != b'=' {
+            result.push((b << 4) | (c >> 2));
+        }
+        if chunk[3] != b'=' {
+            result.push((c << 6) | d);
+        }
+    }
+
+    // Handle remainder (should be empty if properly padded)
+    let remainder = chunks.remainder();
+    if !remainder.is_empty() {
+        anyhow::bail!("Invalid base64: length not a multiple of 4");
+    }
+
+    Ok(result)
+}
+
+/// Get the default FHIR packages directory.
+///
+/// Returns `~/.fhir/packages` on Unix or `%USERPROFILE%\.fhir\packages` on Windows.
+pub fn get_default_packages_dir() -> anyhow::Result<std::path::PathBuf> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_err(|_| anyhow::anyhow!("Could not determine home directory"))?;
+    Ok(std::path::PathBuf::from(home)
+        .join(".fhir")
+        .join("packages"))
+}
+
+/// Get the package directory path for a specific package.
+///
+/// # Arguments
+///
+/// * `package_name` - The package name (e.g., "fhir.cqf.common")
+/// * `version` - The package version (e.g., "4.0.1")
+///
+/// # Returns
+///
+/// The path to the package directory (e.g., `~/.fhir/packages/fhir.cqf.common#4.0.1`)
+pub fn get_package_dir(package_name: &str, version: &str) -> anyhow::Result<std::path::PathBuf> {
+    let packages_dir = get_default_packages_dir()?;
+    Ok(packages_dir.join(format!("{package_name}#{version}")))
+}
+
+/// Try to load FHIR R4 ModelInfo from the fhir.cqf.common package.
+///
+/// This looks for the ModelInfo in `~/.fhir/packages/fhir.cqf.common#4.0.1`.
+/// If the package is not present, returns an error.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use rh_cql::provider::load_fhir_r4_modelinfo_from_package;
+///
+/// // Load from ~/.fhir/packages/fhir.cqf.common#4.0.1
+/// let model_info = load_fhir_r4_modelinfo_from_package().unwrap();
+/// assert_eq!(model_info.name, Some("FHIR".to_string()));
+/// assert!(model_info.conversion_info.len() > 200);
+/// ```
+pub fn load_fhir_r4_modelinfo_from_package() -> anyhow::Result<ModelInfo> {
+    let package_dir = get_package_dir("fhir.cqf.common", "4.0.1")?;
+
+    if !package_dir.exists() {
+        anyhow::bail!(
+            "FHIR R4 ModelInfo package not found. Download it with:\n\
+             rh package download fhir.cqf.common 4.0.1\n\n\
+             Expected location: {}",
+            package_dir.display()
+        );
+    }
+
+    load_modelinfo_from_package(&package_dir)
+}
+
+/// Create a provider pre-loaded with FHIR R4 ModelInfo from the package.
+///
+/// This loads the full ModelInfo from `fhir.cqf.common@4.0.1` which includes:
+/// - All FHIR R4 type definitions
+/// - 264 implicit conversion definitions (FHIRHelpers.*)
+/// - Context and relationship information
+///
+/// Falls back to the built-in minimal `fhir_r4_model_info()` if the package
+/// is not available.
+pub fn fhir_r4_provider_from_package() -> MemoryModelInfoProvider {
+    let provider = MemoryModelInfoProvider::new();
+
+    match load_fhir_r4_modelinfo_from_package() {
+        Ok(model_info) => {
+            provider.register_model(model_info);
+        }
+        Err(_) => {
+            // Fall back to built-in minimal model info
+            provider.register_model(fhir_r4_model_info());
+        }
+    }
+
+    provider
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -799,5 +1049,103 @@ mod tests {
         let stats = provider.stats();
         assert!(stats.hits >= 2);
         assert!(stats.misses >= 1);
+    }
+
+    // =========================================================================
+    // FHIR Package Loading Tests
+    // =========================================================================
+
+    #[test]
+    fn test_decode_base64_simple() {
+        let result = decode_base64("SGVsbG8=").unwrap();
+        assert_eq!(result, b"Hello");
+    }
+
+    #[test]
+    fn test_decode_base64_with_whitespace() {
+        let result = decode_base64("SGVs\nbG8=").unwrap();
+        assert_eq!(result, b"Hello");
+    }
+
+    #[test]
+    fn test_decode_base64_padding() {
+        // No padding needed
+        assert_eq!(decode_base64("YWJj").unwrap(), b"abc");
+        // One padding
+        assert_eq!(decode_base64("YWI=").unwrap(), b"ab");
+        // Two padding
+        assert_eq!(decode_base64("YQ==").unwrap(), b"a");
+    }
+
+    #[test]
+    fn test_get_default_packages_dir() {
+        let dir = get_default_packages_dir().unwrap();
+        assert!(dir.to_string_lossy().contains(".fhir"));
+        assert!(dir.to_string_lossy().contains("packages"));
+    }
+
+    #[test]
+    fn test_get_package_dir() {
+        let dir = get_package_dir("fhir.cqf.common", "4.0.1").unwrap();
+        assert!(dir.to_string_lossy().contains("fhir.cqf.common#4.0.1"));
+    }
+
+    #[test]
+    fn test_load_from_package_if_exists() {
+        // This test only runs if the package is downloaded
+        let package_dir = get_package_dir("fhir.cqf.common", "4.0.1");
+        if let Ok(dir) = package_dir {
+            if dir.exists() {
+                let model_info = load_modelinfo_from_package(&dir).unwrap();
+
+                assert_eq!(model_info.name, Some("FHIR".to_string()));
+                assert_eq!(model_info.version, Some("4.0.1".to_string()));
+
+                // Should have many types
+                assert!(
+                    model_info.type_info.len() > 100,
+                    "Expected > 100 types, got {}",
+                    model_info.type_info.len()
+                );
+
+                // Should have conversion info
+                assert!(
+                    model_info.conversion_info.len() > 200,
+                    "Expected > 200 conversions, got {}",
+                    model_info.conversion_info.len()
+                );
+
+                // Verify key conversions exist
+                let has_to_code = model_info
+                    .conversion_info
+                    .iter()
+                    .any(|c| c.function_name.as_deref() == Some("FHIRHelpers.ToCode"));
+                assert!(has_to_code, "Should have FHIRHelpers.ToCode conversion");
+
+                let has_to_concept = model_info
+                    .conversion_info
+                    .iter()
+                    .any(|c| c.function_name.as_deref() == Some("FHIRHelpers.ToConcept"));
+                assert!(
+                    has_to_concept,
+                    "Should have FHIRHelpers.ToConcept conversion"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_fhir_r4_provider_from_package() {
+        let provider = fhir_r4_provider_from_package();
+
+        // Should have FHIR model regardless of whether package exists
+        assert!(provider.has_model("FHIR", Some("4.0.1")));
+
+        let model = provider.get_model("FHIR", Some("4.0.1")).unwrap();
+        assert_eq!(model.name, Some("FHIR".to_string()));
+
+        // Should have Patient type
+        let patient = provider.resolve_class("FHIR", Some("4.0.1"), "Patient");
+        assert!(patient.is_some());
     }
 }

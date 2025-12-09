@@ -198,6 +198,218 @@ Implementation plan for `rh-cql`, a Rust CQL-to-ELM translator library integrate
 ├── [x] 6.4d: LibraryBuilder.build() - assemble complete library ✅
 └── [x] 6.4e: compile() entry point - public API ✅
 
+- [x] **Phase 6.5: ELM Output Refinement** (Complete)
+  
+  - High Priority (ELM Semantic Correctness)
+    - [x] Symbol Resolution Infrastructure: Added translate_expression_with_resolution() 
+          and translate_expr_recursive() in builder.rs for resolution-aware translation
+    - [x] Expression Resolution: IdentifierRef → ExpressionRef for define references
+    - [x] Terminology References: Use CodeRef, ValueSetRef, CodeSystemRef based on symbol table
+    - [x] Query Alias Resolution: IdentifierRef used correctly for query aliases (in-scope)
+    - [x] Retrieve Enhancement: Add codeProperty, codeComparator, templateId from model info
+          - templateId from ClassInfo.identifier (profile URL)
+          - codeProperty from ClassInfo.primary_code_path (defaults from model)
+          - codeComparator set to "~" (equivalent) when codes present
+          - compile() now uses FHIR R4 model provider by default
+  - Medium Priority (ELM Spec Compliance)
+    - [x] Query Scope: Use scope attribute instead of nested source for query aliases
+          - ExpressionTranslator: Added query_alias_scopes stack for tracking aliases
+          - push_query_scope/pop_query_scope for entering/exiting query contexts
+          - is_query_alias() checks if identifier is in scope
+          - translate_query: Pushes aliases from sources and let clauses
+          - translate_relationship_clause: Pushes alias for such_that condition
+          - translate_member_invocation: Uses scope attribute when source is query alias
+          - builder.rs: Updated MemberInvocation translation to use scope
+          - Test: test_query_alias_scope_attribute verifies scope usage
+    - [x] EnableLocators: Parser captures SourceLocation, builder emits "line:column" locator
+          - Parser: parse_expression_def now captures start_loc before define keyword
+          - Builder: ExpressionDef uses locator from expr_def.location when enabled
+          - Test: test_enable_locators verifies enabled/disabled behavior
+    - [x] EnableAnnotations: Implement annotation with "s" narrative structure ✓
+          - Updated Annotation struct with source (Narrative) field
+          - Narrative struct with local_id_ref (r) and segments (s)
+          - NarrativeSegment enum: Value (text fragments) or Nested (recursive)
+          - Builder: Generate annotation when annotations_enabled()
+          - Test: test_enable_annotations verifies enabled/disabled behavior
+    - [ ] Empty Arrays: Add let, relationship arrays where expected
+          - Deferred: Requires structural changes to ELM types (Query.let, Query.relationship)
+          - [x] Retrieve: include, codeFilter, dateFilter, otherFilter (completed in 6.6g)
+    - [x] Patient Context: Generate implicit Patient definition ✓
+          - Builder: Generates `define "Patient": SingletonFrom([Patient])` when context is Patient
+          - Retrieve has dataType="{http://hl7.org/fhir}Patient" and templateId
+          - Tests: test_implicit_patient_definition, test_no_implicit_definition_without_context
+  - Low Priority (Metadata)
+    - [x] Library Metadata: Add localId to Library (extends Element) ✓
+          - Library struct: Added localId field for element tracking
+          - Builder: Calls translator.next_local_id() when building library
+    - [x] Using System: Add implicit System using declaration ✓
+          - Builder: Always adds System using first with uri urn:hl7-org:elm-types:r1
+          - Explicit usings from source follow after System using
+    - [x] Sort Type: Add "type": "ByColumn" to sort by clauses ✓
+          - SortByItem struct: Added sort_by_type field (ByColumn, ByExpression, ByDirection)
+          - Translator: Sets type based on whether path is present
+
+- [ ] **Phase 6.6: Type System & Implicit Conversions** (Planned)
+  
+  **Goal**: Implement proper type inference and implicit conversions based on ModelInfo
+  
+  **Background**:
+  The Java reference translator inserts FHIRHelpers conversion calls (e.g., `FHIRHelpers.ToString`,
+  `FHIRHelpers.ToConcept`) to convert FHIR types to CQL System types. This is driven by:
+  1. **ModelInfo** - defines `conversionInfo` entries specifying fromType, toType, and functionName
+  2. **FHIRHelpers library** - provides the actual conversion function implementations
+  
+  The official ModelInfo for FHIR 4.0.1 is in the `fhir.cqf.common@4.0.1` FHIR package:
+  - `Library-FHIR-ModelInfo.json` - contains base64-encoded XML ModelInfo
+  - `Library-FHIRHelpers.json` - contains CQL, ELM+XML, and ELM+JSON for conversion functions
+  
+  **Architecture**:
+  
+  ```
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  FHIR Package: fhir.cqf.common@4.0.1                                        │
+  │  └── Library-FHIR-ModelInfo.json                                            │
+  │      └── content[].data (base64 XML)                                        │
+  │          └── <modelInfo>                                                    │
+  │              ├── <typeInfo> (ClassInfo for each FHIR type)                  │
+  │              └── <conversionInfo> (implicit conversion declarations)        │
+  │                  ├── fromType="FHIR.Coding" toType="System.Code"            │
+  │                  │   functionName="FHIRHelpers.ToCode"                      │
+  │                  ├── fromType="FHIR.CodeableConcept" toType="System.Concept"│
+  │                  │   functionName="FHIRHelpers.ToConcept"                   │
+  │                  ├── fromType="FHIR.Period" toType="Interval<System.DateTime>│
+  │                  │   functionName="FHIRHelpers.ToInterval"                  │
+  │                  └── ... (many FHIR.* → System.String via FHIRHelpers.ToString)
+  └─────────────────────────────────────────────────────────────────────────────┘
+  
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │  Compiler Pipeline                                                          │
+  │                                                                             │
+  │  1. Load ModelInfo from FHIR package (via rh-foundation loader)             │
+  │  2. Parse XML ModelInfo → populate conversionInfo in ModelInfo struct       │
+  │  3. During type checking, identify where implicit conversion is needed      │
+  │  4. Resolve FHIRHelpers from author's `include FHIRHelpers` statement       │
+  │  5. Insert FunctionRef to FHIRHelpers.* function (libraryName + name)       │
+  └─────────────────────────────────────────────────────────────────────────────┘
+  ```
+  
+  **Important**: The CQL author must explicitly `include FHIRHelpers version '4.0.1'` 
+  in their library. The translator does NOT auto-add this include. What it does is:
+  - See that FHIRHelpers is included
+  - When a type conversion is needed, wrap the expression in a FunctionRef 
+    to the appropriate FHIRHelpers function (e.g., `FHIRHelpers.ToConcept`)
+  - If FHIRHelpers is NOT included but conversions are needed → warning/error
+  
+  **Implementation Steps**:
+  
+  - [x] **6.6a: ModelInfo XML Parsing** ✅
+    - Added `quick-xml` to workspace dependencies
+    - Created `modelinfo_xml.rs` module with XML parsing for all TypeInfo variants
+    - Handles `xsi:type` attribute for polymorphic type discrimination
+    - Parses all 264 `conversionInfo` elements from FHIR ModelInfo
+    - 7 new tests for XML parsing including real FHIR ModelInfo file
+    
+  - [x] **6.6b: FHIR Package ModelInfo Provider** ✅
+    - Added `load_modelinfo_from_package()` to load from package directories
+    - Added `load_fhir_r4_modelinfo_from_package()` for fhir.cqf.common@4.0.1
+    - Added `fhir_r4_provider_from_package()` for provider with full ModelInfo
+    - Handles base64 decoding of XML content from Library resources
+    - Falls back to built-in minimal model if package not available
+    - 7 new tests for package loading
+    
+  - [x] **6.6c: Type Inference Infrastructure** ✓
+    - Created `conversion.rs` module (578 lines)
+    - `ConversionEntry`: Struct holding from_type, to_type, function_name, library_name
+    - `ConversionRegistry`: HashMap<String, Vec<ConversionEntry>> indexed by from_type
+    - `ConversionRegistry::from_model_info()`: Loads all 264 conversionInfo entries from ModelInfo
+    - `ConversionContext`: Tracks FHIRHelpers availability and provides conversion lookup APIs
+    - `find_conversion(from_type, to_type)`: Returns ConversionEntry if available
+    - `needs_conversion(from, to)`: Checks if DataType A needs conversion to DataType B
+    - `datatype_to_conversion_key()`: Converts DataType to "FHIR.Coding" string format
+    - `conversion_key_to_datatype()`: Parses type string back to DataType
+    - 10 unit tests including real ModelInfo integration test
+    
+  - [x] **6.6d: Implicit Conversion Insertion** ✓
+    - `wrap_in_conversion(operand, entry, element_fields)`: Creates FunctionRef wrapper
+    - `ConversionResult` enum: NotNeeded, Applied, LibraryNotIncluded, NoConversionDefined
+    - `ConversionContext::try_convert()`: Full conversion workflow with library checking
+    - `ConversionContext::convert_if_needed()`: Convenience method returning (expr, bool)
+    - `LibraryBuilder` integration:
+      - Added `conversion_context: ConversionContext` field
+      - `set_conversion_registry()`: Initialize from ModelInfo
+      - `register_conversion_library()`: Track included libraries (e.g., FHIRHelpers)
+      - `apply_implicit_conversion()`: Entry point for conversion during translation
+    - Emits warnings when conversion needed but library not included
+    - 6 new tests for conversion wrapping and try_convert scenarios
+    
+  - [x] **6.6e: Conversion Validation** ✓
+    - New compiler options in `options.rs`:
+      - `DisableImplicitConversions`: Disables automatic FHIRHelpers conversion insertion
+      - `StrictConversionLibraryCheck`: Treats missing conversion library as error (not warning)
+    - Helper methods: `implicit_conversions_enabled()`, `strict_conversion_library_check()`
+    - Updated `CompilerOptions::strict()` to include conversion-related strict settings
+    - `apply_implicit_conversion()` now respects:
+      - `DisableImplicitConversions` - skips conversion entirely
+      - `StrictConversionLibraryCheck` - emits `BuilderError::SemanticError` instead of warning
+    - Added `BuilderError::SemanticError` variant for generic semantic errors
+    - `options_to_string()` and `parse_options()` updated for new options
+    - 9 new tests for conversion validation behavior
+    
+  **Key Conversion Functions** (from ModelInfo):
+  | FHIR Type | CQL Type | Converter |
+  |-----------|----------|-----------|
+  | FHIR.Coding | System.Code | FHIRHelpers.ToCode |
+  | FHIR.CodeableConcept | System.Concept | FHIRHelpers.ToConcept |
+  | FHIR.Quantity | System.Quantity | FHIRHelpers.ToQuantity |
+  | FHIR.Period | Interval<DateTime> | FHIRHelpers.ToInterval |
+  | FHIR.Range | Interval<Quantity> | FHIRHelpers.ToInterval |
+  | FHIR.Ratio | System.Ratio | FHIRHelpers.ToRatio |
+  | FHIR.* (codes/enums) | System.String | FHIRHelpers.ToString |
+  | FHIR.string | System.String | FHIRHelpers.ToString |
+  | FHIR.boolean | System.Boolean | FHIRHelpers.ToBoolean |
+  | FHIR.integer | System.Integer | FHIRHelpers.ToInteger |
+  | FHIR.decimal | System.Decimal | FHIRHelpers.ToDecimal |
+  | FHIR.date | System.Date | FHIRHelpers.ToDate |
+  | FHIR.dateTime | System.DateTime | FHIRHelpers.ToDateTime |
+  | FHIR.time | System.Time | FHIRHelpers.ToTime |
+  
+  **Compiler Options**:
+  - `EnableImplicitConversions` - Insert FHIRHelpers conversion calls (default: true for FHIR)
+
+**6.6 continued**
+  - [x] 6.6e Type conversions - FHIRHelpers.To* calls for implicit FHIR→System conversions ✓
+        - Tracks alias types in queries (HashMap<alias, Option<type>> in translator)
+        - Extracts type from Retrieve source expressions
+        - Looks up property types from ModelInfo via lookup_property_type()
+        - Applies FHIRHelpers conversion via maybe_apply_property_conversion()
+        - Requires full ModelInfo from fhir.cqf.common package for proper types
+  - [x] 6.6f CodeRef vs IdentifierRef - terminology references now use CodeRef, ValueSetRef ✓
+        - Retrieve.codes uses CodeRef for code definitions
+        - Retrieve.codes uses ValueSetRef for value set references
+  - [x] 6.6g Retrieve enhancements ✓
+        - [x] templateId from ClassInfo.identifier
+        - [x] codeProperty from ClassInfo.primary_code_path
+        - [x] codeComparator: "in" for ValueSetRef, "~" for CodeRef/other expressions
+        - [x] ToList wrapper around single CodeRef (ValueSetRef used directly)
+        - [x] Empty arrays: include, codeFilter, dateFilter, otherFilter
+  - [x] 6.6h Equivalent type coercion - ToConcept wrapper on CodeRef operands ✓
+        - CodeRef in Equivalent/NotEquivalent comparisons wrapped in ToConcept
+        - Uses built-in CQL ToConcept (not FHIRHelpers) for Code→Concept conversion
+  - [x] 6.6i Implicit Patient definition - generates `define "Patient": SingletonFrom([Patient])` ✓
+  - [x] 6.6j System using - always added first with uri urn:hl7-org:elm-types:r1 ✓
+  
+  **Remaining Type System Work** (future enhancements):
+  - [x] 6.6k ExpressionRef type tracking ✓
+        - Track result types of definitions via `expression_result_types` HashMap
+        - Infer FHIR type from `as` type casts (e.g., `.value as Quantity`)
+        - For comparison operators, apply FHIRHelpers conversion on ExpressionRef operands
+        - Example: `"Most Recent Tumor Size Quantity" > 1 'cm'` wraps left side in `FHIRHelpers.ToQuantity`
+  - [ ] 6.6l Extended type inference
+        - First/Last unwrapping list element types
+        - Query return clause type inference
+        - Retrieve source type propagation
+
+
 ### Phase 7: WASM & Integration
 **Goal**: WASM build and JavaScript API
 

@@ -130,6 +130,10 @@ pub struct ExpressionTranslator {
     local_id_counter: u32,
     /// Compiler options controlling translation behavior.
     options: std::sync::Arc<crate::options::CompilerOptions>,
+    /// Stack of query alias scopes for tracking in-scope query aliases.
+    /// Each level represents a query context; inner queries push new scopes.
+    /// Maps alias name to optional type name (e.g., "ER" -> Some("Observation")).
+    query_alias_scopes: Vec<std::collections::HashMap<String, Option<String>>>,
 }
 
 impl Default for ExpressionTranslator {
@@ -144,6 +148,7 @@ impl ExpressionTranslator {
         Self {
             local_id_counter: 0,
             options: std::sync::Arc::new(crate::options::CompilerOptions::default()),
+            query_alias_scopes: Vec::new(),
         }
     }
 
@@ -152,6 +157,7 @@ impl ExpressionTranslator {
         Self {
             local_id_counter: 0,
             options: std::sync::Arc::new(options),
+            query_alias_scopes: Vec::new(),
         }
     }
 
@@ -160,6 +166,7 @@ impl ExpressionTranslator {
         Self {
             local_id_counter: 0,
             options,
+            query_alias_scopes: Vec::new(),
         }
     }
 
@@ -181,8 +188,64 @@ impl ExpressionTranslator {
         &self.options
     }
 
+    // ========================================================================
+    // Query Scope Management
+    // ========================================================================
+
+    /// Push a new query scope with the given aliases (without type info).
+    ///
+    /// Called when entering a query context to track which identifiers
+    /// should resolve to query aliases (using `scope` attribute) vs other references.
+    pub fn push_query_scope(&mut self, aliases: impl IntoIterator<Item = String>) {
+        self.query_alias_scopes
+            .push(aliases.into_iter().map(|a| (a, None)).collect());
+    }
+
+    /// Push a new query scope with the given aliases and their types.
+    ///
+    /// Called when entering a query context where we know the types of the aliases.
+    /// The type name is the simple type name (e.g., "Observation" not "FHIR.Observation").
+    pub fn push_query_scope_typed(
+        &mut self,
+        aliases: impl IntoIterator<Item = (String, Option<String>)>,
+    ) {
+        self.query_alias_scopes.push(aliases.into_iter().collect());
+    }
+
+    /// Pop the current query scope.
+    ///
+    /// Called when exiting a query context.
+    pub fn pop_query_scope(&mut self) {
+        self.query_alias_scopes.pop();
+    }
+
+    /// Check if an identifier is a query alias in the current scope.
+    ///
+    /// Returns true if the identifier matches any alias in any active query scope.
+    pub fn is_query_alias(&self, name: &str) -> bool {
+        self.query_alias_scopes
+            .iter()
+            .any(|scope| scope.contains_key(name))
+    }
+
+    /// Get the type of a query alias in the current scope.
+    ///
+    /// Returns the type name if the alias exists and has a known type.
+    pub fn get_query_alias_type(&self, name: &str) -> Option<&str> {
+        for scope in self.query_alias_scopes.iter().rev() {
+            if let Some(type_opt) = scope.get(name) {
+                return type_opt.as_deref();
+            }
+        }
+        None
+    }
+
+    // ========================================================================
+    // Local ID and Element Fields
+    // ========================================================================
+
     /// Generate a new local ID if annotations are enabled.
-    fn next_local_id(&mut self) -> Option<String> {
+    pub fn next_local_id(&mut self) -> Option<String> {
         if self.options.annotations_enabled() {
             self.local_id_counter += 1;
             Some(self.local_id_counter.to_string())
@@ -191,18 +254,63 @@ impl ExpressionTranslator {
         }
     }
 
+    /// Format a source location as a locator string.
+    ///
+    /// The format is "line:column" for a single point, matching ELM spec.
+    pub fn format_locator(loc: &crate::parser::span::SourceLocation) -> String {
+        format!("{}:{}", loc.line, loc.column)
+    }
+
     /// Create element fields with optional local ID.
-    fn element_fields(&mut self) -> elm::ElementFields {
+    pub fn element_fields(&mut self) -> elm::ElementFields {
         elm::ElementFields {
             local_id: self.next_local_id(),
             ..Default::default()
         }
     }
 
-    /// Create element fields with a result type.
-    fn element_fields_typed(&mut self, result_type: &DataType) -> elm::ElementFields {
+    /// Create element fields with a locator.
+    pub fn element_fields_with_locator(
+        &mut self,
+        location: Option<&crate::parser::span::SourceLocation>,
+    ) -> elm::ElementFields {
         elm::ElementFields {
             local_id: self.next_local_id(),
+            locator: if self.options.locators_enabled() {
+                location.map(Self::format_locator)
+            } else {
+                None
+            },
+            ..Default::default()
+        }
+    }
+
+    /// Create element fields with a result type.
+    pub fn element_fields_typed(&mut self, result_type: &DataType) -> elm::ElementFields {
+        elm::ElementFields {
+            local_id: self.next_local_id(),
+            result_type_name: if self.options.result_types_enabled() {
+                Some(datatype_to_qname(result_type))
+            } else {
+                None
+            },
+            ..Default::default()
+        }
+    }
+
+    /// Create element fields with a result type and locator.
+    pub fn element_fields_typed_with_locator(
+        &mut self,
+        result_type: &DataType,
+        location: Option<&crate::parser::span::SourceLocation>,
+    ) -> elm::ElementFields {
+        elm::ElementFields {
+            local_id: self.next_local_id(),
+            locator: if self.options.locators_enabled() {
+                location.map(Self::format_locator)
+            } else {
+                None
+            },
             result_type_name: if self.options.result_types_enabled() {
                 Some(datatype_to_qname(result_type))
             } else {
@@ -418,8 +526,25 @@ impl ExpressionTranslator {
     /// Translate a member invocation (property access).
     ///
     /// CQL syntax: `expr.member` → Property expression
+    ///
+    /// When the source is a simple identifier that matches a query alias,
+    /// uses the `scope` attribute instead of a nested `source` expression.
+    /// This produces more compact ELM that matches the reference translator.
     fn translate_member_invocation(&mut self, member: &ast::MemberInvocation) -> elm::Expression {
-        // Translate the source expression
+        // Check if source is a simple identifier that's a query alias
+        if let ast::Expression::IdentifierRef(ident_ref) = &*member.source {
+            if self.is_query_alias(&ident_ref.name) {
+                // Use scope attribute for query alias references
+                return elm::Expression::Property(elm::Property {
+                    element: self.element_fields(),
+                    source: None,
+                    path: Some(member.name.clone()),
+                    scope: Some(ident_ref.name.clone()),
+                });
+            }
+        }
+
+        // Default: translate source expression normally
         let source = self.translate_expression(&member.source);
 
         // Create Property expression for member access
@@ -904,6 +1029,29 @@ impl ExpressionTranslator {
         }
     }
 
+    /// Wrap a CodeRef expression in ToConcept for type coercion.
+    ///
+    /// This is used to convert Code to Concept for Equivalent comparisons.
+    /// Unlike FHIRHelpers.ToConcept (which converts FHIR types), this is
+    /// the built-in CQL conversion from Code to Concept.
+    fn maybe_wrap_code_in_to_concept(&mut self, expr: elm::Expression) -> elm::Expression {
+        if matches!(expr, elm::Expression::CodeRef(_)) {
+            let local_id = self.next_local_id();
+            elm::Expression::ToConcept(elm::UnaryExpression {
+                element: elm::ElementFields {
+                    local_id,
+                    locator: None,
+                    result_type_name: None,
+                    result_type_specifier: None,
+                },
+                operand: Some(Box::new(expr)),
+                signature: Vec::new(),
+            })
+        } else {
+            expr
+        }
+    }
+
     /// Translate an AST binary expression to an ELM expression.
     ///
     /// This translates both operands and wraps them in the appropriate ELM operator.
@@ -913,6 +1061,7 @@ impl ExpressionTranslator {
         left: elm::Expression,
         right: elm::Expression,
         result_type: Option<&DataType>,
+        precision: Option<&ast::DateTimePrecision>,
     ) -> elm::Expression {
         let element = match result_type {
             Some(dt) => self.element_fields_typed(dt),
@@ -925,11 +1074,22 @@ impl ExpressionTranslator {
             signature: Vec::new(),
         };
 
+        let precision_str = precision.map(|p| match p {
+            ast::DateTimePrecision::Year => "Year".to_string(),
+            ast::DateTimePrecision::Month => "Month".to_string(),
+            ast::DateTimePrecision::Week => "Week".to_string(),
+            ast::DateTimePrecision::Day => "Day".to_string(),
+            ast::DateTimePrecision::Hour => "Hour".to_string(),
+            ast::DateTimePrecision::Minute => "Minute".to_string(),
+            ast::DateTimePrecision::Second => "Second".to_string(),
+            ast::DateTimePrecision::Millisecond => "Millisecond".to_string(),
+        });
+
         let time_binary = || elm::TimeBinaryExpression {
             element: element.clone(),
             operand: vec![left.clone(), right.clone()],
             signature: Vec::new(),
-            precision: None,
+            precision: precision_str.clone(),
         };
 
         match operator {
@@ -946,7 +1106,17 @@ impl ExpressionTranslator {
             // Comparison
             ast::BinaryOperator::Equal => elm::Expression::Equal(binary),
             ast::BinaryOperator::NotEqual => elm::Expression::NotEqual(binary),
-            ast::BinaryOperator::Equivalent => elm::Expression::Equivalent(binary),
+            ast::BinaryOperator::Equivalent => {
+                // For Equivalent comparisons, wrap CodeRef operands in ToConcept
+                // to convert Code to Concept for proper comparison
+                let left_wrapped = self.maybe_wrap_code_in_to_concept(left);
+                let right_wrapped = self.maybe_wrap_code_in_to_concept(right);
+                elm::Expression::Equivalent(elm::BinaryExpression {
+                    element,
+                    operand: vec![left_wrapped, right_wrapped],
+                    signature: Vec::new(),
+                })
+            }
             ast::BinaryOperator::NotEquivalent => {
                 // Not equivalent is not(equivalent)
                 let equiv = elm::Expression::Equivalent(binary);
@@ -983,7 +1153,7 @@ impl ExpressionTranslator {
             }),
 
             // Membership
-            ast::BinaryOperator::In => elm::Expression::In(binary),
+            ast::BinaryOperator::In => elm::Expression::In(time_binary()),
             ast::BinaryOperator::Contains => elm::Expression::Contains(binary),
 
             // Interval
@@ -1121,7 +1291,7 @@ impl ExpressionTranslator {
     ) -> elm::Expression {
         let left = translate_expr(self, &expr.left);
         let right = translate_expr(self, &expr.right);
-        self.translate_binary_operator(expr.operator, left, right, None)
+        self.translate_binary_operator(expr.operator, left, right, None, expr.precision.as_ref())
     }
 
     /// Translate an AST ternary expression using a callback to translate operands.
@@ -1157,12 +1327,51 @@ impl ExpressionTranslator {
         translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
         result_type: Option<&DataType>,
     ) -> elm::Expression {
+        // Call the typed version with empty type map
+        self.translate_query_with_types(
+            query,
+            translate_expr,
+            result_type,
+            &std::collections::HashMap::new(),
+        )
+    }
+
+    /// Translate a CQL AST query to an ELM Query expression with alias type info.
+    ///
+    /// The `alias_types` parameter maps alias names to their FHIR type names
+    /// (e.g., "ER" -> "Observation"). This allows property access on aliases
+    /// to have type information for implicit conversions.
+    pub fn translate_query_with_types(
+        &mut self,
+        query: &ast::Query,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+        result_type: Option<&DataType>,
+        alias_types: &std::collections::HashMap<String, String>,
+    ) -> elm::Expression {
         let element = match result_type {
             Some(dt) => self.element_fields_typed(dt),
             None => self.element_fields(),
         };
 
-        // Translate sources
+        // Collect all aliases from sources and let clauses for scope tracking
+        // Include type info if available from alias_types
+        let mut typed_aliases: Vec<(String, Option<String>)> = query
+            .sources
+            .iter()
+            .map(|s| {
+                let type_name = alias_types.get(&s.alias).cloned();
+                (s.alias.clone(), type_name)
+            })
+            .collect();
+
+        for lc in &query.let_clauses {
+            typed_aliases.push((lc.identifier.clone(), None));
+        }
+
+        // Push query scope with typed aliases before translating query body
+        self.push_query_scope_typed(typed_aliases);
+
+        // Translate sources (note: source expressions are evaluated BEFORE entering scope)
         let sources: Vec<elm::AliasedQuerySource> = query
             .sources
             .iter()
@@ -1201,6 +1410,9 @@ impl ExpressionTranslator {
             .as_ref()
             .map(|s| self.translate_sort_clause(s, &translate_expr));
 
+        // Pop query scope after translating
+        self.pop_query_scope();
+
         elm::Expression::Query(elm::Query {
             element,
             source: sources,
@@ -1238,6 +1450,8 @@ impl ExpressionTranslator {
     }
 
     /// Translate a relationship clause (with/without).
+    ///
+    /// The relationship alias is added to the query scope for the `such_that` condition.
     pub fn translate_relationship_clause(
         &mut self,
         rel: &ast::RelationshipClause,
@@ -1248,14 +1462,25 @@ impl ExpressionTranslator {
             ast::RelationshipKind::Without => Some("Without".to_string()),
         };
 
+        // Translate the source expression (before alias is in scope)
+        let expression = translate_expr(self, &rel.source.expression);
+
+        // Push the relationship alias for the such_that condition
+        self.push_query_scope(std::iter::once(rel.source.alias.clone()));
+
+        let such_that = rel
+            .such_that
+            .as_ref()
+            .map(|st| Box::new(translate_expr(self, st)));
+
+        // Pop the relationship alias
+        self.pop_query_scope();
+
         elm::RelationshipClause {
             relationship_type,
             alias: Some(rel.source.alias.clone()),
-            expression: Some(Box::new(translate_expr(self, &rel.source.expression))),
-            such_that: rel
-                .such_that
-                .as_ref()
-                .map(|st| Box::new(translate_expr(self, st))),
+            expression: Some(Box::new(expression)),
+            such_that,
         }
     }
 
@@ -1304,7 +1529,23 @@ impl ExpressionTranslator {
         // Try to extract a simple path from the expression
         let path = extract_sort_path(&item.expression);
 
-        elm::SortByItem { direction, path }
+        // Determine the type based on the expression
+        // ByColumn is used for simple path references
+        // ByDirection would be used for sort by direction only (no path)
+        // ByExpression would be used for complex expressions
+        let sort_by_type = if path.is_some() {
+            Some("ByColumn".to_string())
+        } else {
+            // For complex expressions without a simple path, we'd use ByExpression
+            // For now, default to ByColumn to match reference implementation
+            Some("ByColumn".to_string())
+        };
+
+        elm::SortByItem {
+            sort_by_type,
+            direction,
+            path,
+        }
     }
 }
 
@@ -1376,6 +1617,10 @@ impl ExpressionTranslator {
             codes,
             date_property: retrieve.date_path.clone(),
             date_range,
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 
@@ -1402,6 +1647,10 @@ impl ExpressionTranslator {
             codes: None,
             date_property: None,
             date_range: None,
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 
@@ -1430,6 +1679,10 @@ impl ExpressionTranslator {
             codes: Some(Box::new(codes)),
             date_property: None,
             date_range: None,
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 
@@ -1458,6 +1711,10 @@ impl ExpressionTranslator {
             codes: None,
             date_property: Some(date_path.to_string()),
             date_range: Some(Box::new(date_range)),
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 
@@ -1488,6 +1745,10 @@ impl ExpressionTranslator {
             codes: Some(Box::new(codes)),
             date_property: Some(date_path.to_string()),
             date_range: Some(Box::new(date_range)),
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 
@@ -1515,12 +1776,16 @@ impl ExpressionTranslator {
             codes: None,
             date_property: None,
             date_range: None,
+            include: Vec::new(),
+            code_filter: Vec::new(),
+            date_filter: Vec::new(),
+            other_filter: Vec::new(),
         })
     }
 }
 
 /// Convert an AST TypeSpecifier to an ELM QName.
-fn type_specifier_to_qname(ts: &ast::TypeSpecifier) -> elm::QName {
+pub fn type_specifier_to_qname(ts: &ast::TypeSpecifier) -> elm::QName {
     match ts {
         ast::TypeSpecifier::Named(named) => {
             if let Some(ns) = &named.namespace {
@@ -2045,7 +2310,7 @@ impl ExpressionTranslator {
 
     /// Convert an AST TypeSpecifier to an ELM TypeSpecifier.
     #[allow(clippy::only_used_in_recursion)]
-    fn type_specifier_to_elm(&self, ts: &ast::TypeSpecifier) -> elm::TypeSpecifier {
+    pub fn type_specifier_to_elm(&self, ts: &ast::TypeSpecifier) -> elm::TypeSpecifier {
         match ts {
             ast::TypeSpecifier::Named(named) => {
                 // Convert AST NamedTypeSpecifier to ELM QName format
@@ -2103,6 +2368,11 @@ impl ExpressionTranslator {
                 })
             }
         }
+    }
+
+    /// Convert an AST TypeSpecifier to an ELM QName string.
+    pub fn type_specifier_to_qname(&self, ts: &ast::TypeSpecifier) -> elm::QName {
+        type_specifier_to_qname(ts)
     }
 
     /// Convert an ELM TypeSpecifier back to a DataType (for result typing).
@@ -2624,10 +2894,11 @@ impl ExpressionTranslator {
                     operand: vec![left, right],
                     signature: Vec::new(),
                 })),
-                "In" => Some(elm::Expression::In(elm::BinaryExpression {
+                "In" => Some(elm::Expression::In(elm::TimeBinaryExpression {
                     element,
                     operand: vec![left, right],
                     signature: Vec::new(),
+                    precision: None,
                 })),
                 "Includes" => Some(elm::Expression::Includes(elm::BinaryExpression {
                     element,
@@ -4126,6 +4397,7 @@ mod tests {
             left,
             right,
             Some(&DataType::integer()),
+            None,
         );
         if let elm::Expression::Add(binary) = result {
             assert_eq!(binary.operand.len(), 2);
@@ -4144,6 +4416,7 @@ mod tests {
             left,
             right,
             Some(&DataType::integer()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Subtract(_)));
     }
@@ -4158,6 +4431,7 @@ mod tests {
             left,
             right,
             Some(&DataType::integer()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Multiply(_)));
     }
@@ -4172,6 +4446,7 @@ mod tests {
             left,
             right,
             Some(&DataType::decimal()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Divide(_)));
     }
@@ -4186,6 +4461,7 @@ mod tests {
             left,
             right,
             Some(&DataType::integer()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Modulo(_)));
     }
@@ -4200,6 +4476,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Equal(_)));
     }
@@ -4214,6 +4491,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::NotEqual(_)));
     }
@@ -4228,6 +4506,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Less(_)));
     }
@@ -4242,6 +4521,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Greater(_)));
     }
@@ -4256,6 +4536,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::LessOrEqual(_)));
     }
@@ -4270,6 +4551,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::GreaterOrEqual(_)));
     }
@@ -4284,6 +4566,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::And(_)));
     }
@@ -4298,6 +4581,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Or(_)));
     }
@@ -4312,6 +4596,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Xor(_)));
     }
@@ -4326,6 +4611,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Implies(_)));
     }
@@ -4340,6 +4626,7 @@ mod tests {
             left,
             right,
             Some(&DataType::string()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Concatenate(_)));
     }
@@ -4349,8 +4636,13 @@ mod tests {
         let mut translator = ExpressionTranslator::new();
         let left = translator.translate_literal(&ast::Literal::Null);
         let right = translator.translate_literal(&ast::Literal::Null);
-        let result =
-            translator.translate_binary_operator(ast::BinaryOperator::Union, left, right, None);
+        let result = translator.translate_binary_operator(
+            ast::BinaryOperator::Union,
+            left,
+            right,
+            None,
+            None,
+        );
         assert!(matches!(result, elm::Expression::Union(_)));
     }
 
@@ -4359,8 +4651,13 @@ mod tests {
         let mut translator = ExpressionTranslator::new();
         let left = translator.translate_literal(&ast::Literal::Null);
         let right = translator.translate_literal(&ast::Literal::Null);
-        let result =
-            translator.translate_binary_operator(ast::BinaryOperator::Intersect, left, right, None);
+        let result = translator.translate_binary_operator(
+            ast::BinaryOperator::Intersect,
+            left,
+            right,
+            None,
+            None,
+        );
         assert!(matches!(result, elm::Expression::Intersect(_)));
     }
 
@@ -4369,8 +4666,13 @@ mod tests {
         let mut translator = ExpressionTranslator::new();
         let left = translator.translate_literal(&ast::Literal::Null);
         let right = translator.translate_literal(&ast::Literal::Null);
-        let result =
-            translator.translate_binary_operator(ast::BinaryOperator::Except, left, right, None);
+        let result = translator.translate_binary_operator(
+            ast::BinaryOperator::Except,
+            left,
+            right,
+            None,
+            None,
+        );
         assert!(matches!(result, elm::Expression::Except(_)));
     }
 
@@ -4384,6 +4686,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Contains(_)));
     }
@@ -4398,6 +4701,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::In(_)));
     }
@@ -4412,6 +4716,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Includes(_)));
     }
@@ -4426,6 +4731,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::IncludedIn(_)));
     }
@@ -4440,6 +4746,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::ProperIncludes(_)));
     }
@@ -4454,6 +4761,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::ProperIncludedIn(_)));
     }
@@ -4468,6 +4776,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Overlaps(_)));
     }
@@ -4482,6 +4791,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Meets(_)));
     }
@@ -4548,6 +4858,7 @@ mod tests {
             operator: ast::BinaryOperator::Add,
             left: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
             right: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+            precision: None,
             location: None,
         };
         let result = translator.translate_ast_binary_expression(&ast_binary, |t, expr| {
@@ -4595,6 +4906,7 @@ mod tests {
             base,
             exponent,
             Some(&DataType::integer()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Power(_)));
     }
@@ -4609,6 +4921,7 @@ mod tests {
             left,
             right,
             Some(&DataType::integer()),
+            None,
         );
         assert!(matches!(result, elm::Expression::TruncatedDivide(_)));
     }
@@ -4623,6 +4936,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Equivalent(_)));
     }
@@ -4637,6 +4951,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Starts(_)));
     }
@@ -4651,6 +4966,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Ends(_)));
     }
@@ -4665,6 +4981,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::SameAs(_)));
     }
@@ -4679,6 +4996,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::Before(_)));
     }
@@ -4693,6 +5011,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::After(_)));
     }
@@ -4707,6 +5026,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::SameOrBefore(_)));
     }
@@ -4721,6 +5041,7 @@ mod tests {
             left,
             right,
             Some(&DataType::boolean()),
+            None,
         );
         assert!(matches!(result, elm::Expression::SameOrAfter(_)));
     }
@@ -4755,7 +5076,7 @@ mod tests {
         let left = translator.translate_literal(&ast::Literal::Integer(100));
         let right = translator.translate_literal(&ast::Literal::Integer(10));
         let result =
-            translator.translate_binary_operator(ast::BinaryOperator::Log, left, right, None);
+            translator.translate_binary_operator(ast::BinaryOperator::Log, left, right, None, None);
         assert!(matches!(result, elm::Expression::Log(_)));
     }
 
@@ -4764,8 +5085,13 @@ mod tests {
         let mut translator = ExpressionTranslator::new();
         let left = translator.translate_literal(&ast::Literal::Null);
         let right = translator.translate_literal(&ast::Literal::Integer(1));
-        let result =
-            translator.translate_binary_operator(ast::BinaryOperator::IndexOf, left, right, None);
+        let result = translator.translate_binary_operator(
+            ast::BinaryOperator::IndexOf,
+            left,
+            right,
+            None,
+            None,
+        );
         assert!(matches!(result, elm::Expression::Indexer(_)));
     }
 
@@ -4946,6 +5272,11 @@ mod tests {
         });
 
         assert_eq!(result.by.len(), 1);
+        assert_eq!(
+            result.by[0].sort_by_type,
+            Some("ByColumn".to_string()),
+            "sort by type should be ByColumn for path-based sort"
+        );
         assert_eq!(result.by[0].direction, Some(elm::SortDirection::Asc));
         assert_eq!(result.by[0].path, Some("date".to_string()));
     }
@@ -4969,6 +5300,11 @@ mod tests {
         });
 
         assert_eq!(result.by.len(), 1);
+        assert_eq!(
+            result.by[0].sort_by_type,
+            Some("ByColumn".to_string()),
+            "sort by type should be ByColumn"
+        );
         assert_eq!(result.by[0].direction, Some(elm::SortDirection::Desc));
         assert_eq!(result.by[0].path, Some("priority".to_string()));
     }
@@ -8003,6 +8339,7 @@ mod tests {
             operator: ast::BinaryOperator::Add,
             left: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
             right: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+            precision: None,
             location: None,
         });
         let result = translator.translate_expression(&expr);
@@ -8200,6 +8537,7 @@ mod tests {
                 operator: ast::BinaryOperator::Add,
                 left: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 right: Box::new(ast::Expression::Literal(ast::Literal::Integer(2))),
+                precision: None,
                 location: None,
             }),
             access: ast::AccessModifier::Public,

@@ -1,0 +1,1956 @@
+{
+   "library" : {
+      "localId" : "0",
+      "annotation" : [ {
+         "translatorOptions" : "EnableAnnotations,EnableLocators",
+         "signatureLevel" : "None",
+         "type" : "CqlToElmInfo"
+      }, {
+         "message" : "An operand identifier reference is hiding another identifier of the same name.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToInterval has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToInterval has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "An operand identifier reference is hiding another identifier of the same name.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "An operand identifier reference is hiding another identifier of the same name.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToString has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToString has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToString has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToString has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "message" : "The function FHIRHelpers.ToDateTime has multiple overloads and due to the SignatureLevel setting (None), the overload signature is not being included in the output. This may result in ambiguous function resolution at runtime, consider setting the SignatureLevel to Overloads or All to ensure that the output includes sufficient information to support correct overload selection at runtime.",
+         "errorType" : "semantic",
+         "errorSeverity" : "warning",
+         "type" : "CqlToElmError"
+      }, {
+         "type" : "Annotation",
+         "s" : {
+            "r" : "338",
+            "s" : [ {
+               "value" : [ "","library GuidelineLogic version '0.1.0'" ]
+            } ]
+         }
+      } ],
+      "identifier" : {
+         "id" : "GuidelineLogic",
+         "system" : "http://example.org/cancer-guideline/fhir",
+         "version" : "0.1.0"
+      },
+      "schemaIdentifier" : {
+         "id" : "urn:hl7-org:elm",
+         "version" : "r1"
+      },
+      "usings" : {
+         "def" : [ {
+            "localId" : "1",
+            "localIdentifier" : "System",
+            "uri" : "urn:hl7-org:elm-types:r1"
+         }, {
+            "localId" : "206",
+            "locator" : "3:1-3:26",
+            "localIdentifier" : "FHIR",
+            "uri" : "http://hl7.org/fhir",
+            "version" : "4.0.1",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "206",
+                  "s" : [ {
+                     "value" : [ "","using " ]
+                  }, {
+                     "s" : [ {
+                        "value" : [ "FHIR" ]
+                     } ]
+                  }, {
+                     "value" : [ " version '4.0.1'" ]
+                  } ]
+               }
+            } ]
+         } ]
+      },
+      "includes" : {
+         "def" : [ {
+            "localId" : "208",
+            "locator" : "5:1-5:35",
+            "localIdentifier" : "FHIRHelpers",
+            "path" : "http://hl7.org/fhir/FHIRHelpers",
+            "version" : "4.0.1",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "208",
+                  "s" : [ {
+                     "value" : [ "","include " ]
+                  }, {
+                     "s" : [ {
+                        "value" : [ "FHIRHelpers" ]
+                     } ]
+                  }, {
+                     "value" : [ " version ","'4.0.1'" ]
+                  } ]
+               }
+            } ]
+         } ]
+      },
+      "codeSystems" : {
+         "def" : [ {
+            "localId" : "210",
+            "locator" : "7:1-7:38",
+            "name" : "LOINC",
+            "id" : "http://loinc.org",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "210",
+                  "s" : [ {
+                     "value" : [ "","codesystem ","\"LOINC\"",": ","'http://loinc.org'" ]
+                  } ]
+               }
+            } ]
+         }, {
+            "localId" : "212",
+            "locator" : "8:1-8:109",
+            "name" : "Condition Clinical Status Codesystem",
+            "id" : "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "212",
+                  "s" : [ {
+                     "value" : [ "","codesystem ","\"Condition Clinical Status Codesystem\"",": ","'http://terminology.hl7.org/CodeSystem/condition-clinical'" ]
+                  } ]
+               }
+            } ]
+         }, {
+            "localId" : "214",
+            "locator" : "9:1-9:115",
+            "name" : "Condition Verification Status Codesystem",
+            "id" : "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "214",
+                  "s" : [ {
+                     "value" : [ "","codesystem ","\"Condition Verification Status Codesystem\"",": ","'http://terminology.hl7.org/CodeSystem/condition-ver-status'" ]
+                  } ]
+               }
+            } ]
+         } ]
+      },
+      "valueSets" : {
+         "def" : [ {
+            "localId" : "243",
+            "locator" : "24:1-24:98",
+            "name" : "Breast Cancer VS",
+            "id" : "http://example.org/cancer-guideline/fhir/ValueSet/BreastCancerICD10",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "243",
+                  "s" : [ {
+                     "value" : [ "","valueset ","\"Breast Cancer VS\"",": ","'http://example.org/cancer-guideline/fhir/ValueSet/BreastCancerICD10'" ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : [ ]
+         } ]
+      },
+      "codes" : {
+         "def" : [ {
+            "localId" : "216",
+            "locator" : "11:1-11:82",
+            "name" : "Active Condition Code",
+            "id" : "active",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "216",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Active Condition Code\"",": ","'active'"," from " ]
+                  }, {
+                     "r" : "217",
+                     "s" : [ {
+                        "value" : [ "\"Condition Clinical Status Codesystem\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "217",
+               "locator" : "11:45-11:82",
+               "name" : "Condition Clinical Status Codesystem"
+            }
+         }, {
+            "localId" : "219",
+            "locator" : "12:1-12:92",
+            "name" : "Confirmed Condition Code",
+            "id" : "confirmed",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "219",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Confirmed Condition Code\"",": ","'confirmed'"," from " ]
+                  }, {
+                     "r" : "220",
+                     "s" : [ {
+                        "value" : [ "\"Condition Verification Status Codesystem\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "220",
+               "locator" : "12:51-12:92",
+               "name" : "Condition Verification Status Codesystem"
+            }
+         }, {
+            "localId" : "222",
+            "locator" : "14:1-14:46",
+            "name" : "Tumor Size Code",
+            "id" : "21889-1",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "222",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Tumor Size Code\"",": ","'21889-1'"," from " ]
+                  }, {
+                     "r" : "223",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "223",
+               "locator" : "14:40-14:46",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "225",
+            "locator" : "15:1-15:48",
+            "name" : "Size.maximum Code",
+            "id" : "33728-7",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "225",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Size.maximum Code\"",": ","'33728-7'"," from " ]
+                  }, {
+                     "r" : "226",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "226",
+               "locator" : "15:42-15:48",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "228",
+            "locator" : "17:1-17:44",
+            "name" : "ERStatus Code",
+            "id" : "85337-4",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "228",
+                  "s" : [ {
+                     "value" : [ "","code ","\"ERStatus Code\"",": ","'85337-4'"," from " ]
+                  }, {
+                     "r" : "229",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "229",
+               "locator" : "17:38-17:44",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "231",
+            "locator" : "18:1-18:44",
+            "name" : "PRStatus Code",
+            "id" : "85339-0",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "231",
+                  "s" : [ {
+                     "value" : [ "","code ","\"PRStatus Code\"",": ","'85339-0'"," from " ]
+                  }, {
+                     "r" : "232",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "232",
+               "locator" : "18:38-18:44",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "234",
+            "locator" : "19:1-19:46",
+            "name" : "HER2Status Code",
+            "id" : "48676-1",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "234",
+                  "s" : [ {
+                     "value" : [ "","code ","\"HER2Status Code\"",": ","'48676-1'"," from " ]
+                  }, {
+                     "r" : "235",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "235",
+               "locator" : "19:40-19:46",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "237",
+            "locator" : "21:1-21:52",
+            "name" : "Negative Status Code",
+            "id" : "LA6577-6",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "237",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Negative Status Code\"",": ","'LA6577-6'"," from " ]
+                  }, {
+                     "r" : "238",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "238",
+               "locator" : "21:46-21:52",
+               "name" : "LOINC"
+            }
+         }, {
+            "localId" : "240",
+            "locator" : "22:1-22:52",
+            "name" : "Positive Status Code",
+            "id" : "LA6576-8",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "240",
+                  "s" : [ {
+                     "value" : [ "","code ","\"Positive Status Code\"",": ","'LA6576-8'"," from " ]
+                  }, {
+                     "r" : "241",
+                     "s" : [ {
+                        "value" : [ "\"LOINC\"" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "codeSystem" : {
+               "localId" : "241",
+               "locator" : "22:46-22:52",
+               "name" : "LOINC"
+            }
+         } ]
+      },
+      "contexts" : {
+         "def" : [ {
+            "localId" : "248",
+            "locator" : "26:1-26:15",
+            "name" : "Patient"
+         } ]
+      },
+      "statements" : {
+         "def" : [ {
+            "localId" : "246",
+            "locator" : "26:1-26:15",
+            "name" : "Patient",
+            "context" : "Patient",
+            "expression" : {
+               "localId" : "247",
+               "type" : "SingletonFrom",
+               "signature" : [ ],
+               "operand" : {
+                  "localId" : "245",
+                  "locator" : "26:1-26:15",
+                  "dataType" : "{http://hl7.org/fhir}Patient",
+                  "templateId" : "http://hl7.org/fhir/StructureDefinition/Patient",
+                  "type" : "Retrieve",
+                  "include" : [ ],
+                  "codeFilter" : [ ],
+                  "dateFilter" : [ ],
+                  "otherFilter" : [ ]
+               }
+            }
+         }, {
+            "localId" : "260",
+            "locator" : "55:1-59:34",
+            "name" : "Is ER negative",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "260",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Is ER negative\"",":\n  " ]
+                  }, {
+                     "r" : "261",
+                     "s" : [ {
+                        "r" : "290",
+                        "s" : [ {
+                           "r" : "289",
+                           "s" : [ {
+                              "value" : [ "First","(\n    " ]
+                           }, {
+                              "r" : "286",
+                              "s" : [ {
+                                 "s" : [ {
+                                    "r" : "262",
+                                    "s" : [ {
+                                       "r" : "265",
+                                       "s" : [ {
+                                          "r" : "265",
+                                          "s" : [ {
+                                             "value" : [ "[","Observation",": " ]
+                                          }, {
+                                             "s" : [ {
+                                                "value" : [ "\"ERStatus Code\"" ]
+                                             } ]
+                                          }, {
+                                             "value" : [ "]" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","ER" ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " \n      " ]
+                              }, {
+                                 "r" : "272",
+                                 "s" : [ {
+                                    "value" : [ "where " ]
+                                 }, {
+                                    "r" : "272",
+                                    "s" : [ {
+                                       "r" : "274",
+                                       "s" : [ {
+                                          "r" : "273",
+                                          "s" : [ {
+                                             "value" : [ "ER" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "274",
+                                          "s" : [ {
+                                             "value" : [ "status" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","="," " ]
+                                    }, {
+                                       "r" : "275",
+                                       "s" : [ {
+                                          "value" : [ "'final'" ]
+                                       } ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " " ]
+                              }, {
+                                 "r" : "280",
+                                 "s" : [ {
+                                    "value" : [ "sort by " ]
+                                 }, {
+                                    "r" : "279",
+                                    "s" : [ {
+                                       "r" : "278",
+                                       "s" : [ {
+                                          "value" : [ "issued" ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " descending" ]
+                                    } ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ "\n  )" ]
+                           } ]
+                        }, {
+                           "value" : [ "." ]
+                        }, {
+                           "r" : "290",
+                           "s" : [ {
+                              "value" : [ "value" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " ","~"," " ]
+                     }, {
+                        "r" : "291",
+                        "s" : [ {
+                           "value" : [ "\"Negative Status Code\"" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "261",
+               "locator" : "56:3-59:34",
+               "type" : "Equivalent",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "293",
+                  "name" : "ToConcept",
+                  "libraryName" : "FHIRHelpers",
+                  "type" : "FunctionRef",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "292",
+                     "asType" : "{http://hl7.org/fhir}CodeableConcept",
+                     "type" : "As",
+                     "signature" : [ ],
+                     "operand" : {
+                        "localId" : "290",
+                        "locator" : "56:3-59:9",
+                        "path" : "value",
+                        "type" : "Property",
+                        "source" : {
+                           "localId" : "289",
+                           "locator" : "56:3-59:3",
+                           "type" : "First",
+                           "signature" : [ ],
+                           "source" : {
+                              "localId" : "286",
+                              "locator" : "57:5-58:57",
+                              "type" : "Query",
+                              "source" : [ {
+                                 "localId" : "262",
+                                 "locator" : "57:5-57:37",
+                                 "alias" : "ER",
+                                 "expression" : {
+                                    "localId" : "265",
+                                    "locator" : "57:5-57:34",
+                                    "dataType" : "{http://hl7.org/fhir}Observation",
+                                    "templateId" : "http://hl7.org/fhir/StructureDefinition/Observation",
+                                    "codeProperty" : "code",
+                                    "codeComparator" : "~",
+                                    "type" : "Retrieve",
+                                    "codes" : {
+                                       "localId" : "270",
+                                       "type" : "ToList",
+                                       "signature" : [ ],
+                                       "operand" : {
+                                          "localId" : "264",
+                                          "locator" : "57:19-57:33",
+                                          "name" : "ERStatus Code",
+                                          "type" : "CodeRef"
+                                       }
+                                    },
+                                    "include" : [ ],
+                                    "codeFilter" : [ ],
+                                    "dateFilter" : [ ],
+                                    "otherFilter" : [ ]
+                                 }
+                              } ],
+                              "let" : [ ],
+                              "relationship" : [ ],
+                              "where" : {
+                                 "localId" : "272",
+                                 "locator" : "58:7-58:31",
+                                 "type" : "Equal",
+                                 "signature" : [ ],
+                                 "operand" : [ {
+                                    "localId" : "277",
+                                    "name" : "ToString",
+                                    "libraryName" : "FHIRHelpers",
+                                    "type" : "FunctionRef",
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "localId" : "274",
+                                       "locator" : "58:13-58:21",
+                                       "path" : "status",
+                                       "scope" : "ER",
+                                       "type" : "Property"
+                                    } ]
+                                 }, {
+                                    "localId" : "275",
+                                    "locator" : "58:25-58:31",
+                                    "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                    "value" : "final",
+                                    "type" : "Literal"
+                                 } ]
+                              },
+                              "sort" : {
+                                 "localId" : "280",
+                                 "locator" : "58:33-58:57",
+                                 "by" : [ {
+                                    "localId" : "279",
+                                    "locator" : "58:41-58:57",
+                                    "direction" : "descending",
+                                    "path" : "issued",
+                                    "type" : "ByColumn"
+                                 } ]
+                              }
+                           }
+                        }
+                     }
+                  } ]
+               }, {
+                  "localId" : "295",
+                  "type" : "ToConcept",
+                  "signature" : [ ],
+                  "operand" : {
+                     "localId" : "291",
+                     "locator" : "59:13-59:34",
+                     "name" : "Negative Status Code",
+                     "type" : "CodeRef"
+                  }
+               } ]
+            }
+         }, {
+            "localId" : "299",
+            "locator" : "61:1-65:34",
+            "name" : "Is PR negative",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "299",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Is PR negative\"",":\n  " ]
+                  }, {
+                     "r" : "300",
+                     "s" : [ {
+                        "r" : "329",
+                        "s" : [ {
+                           "r" : "328",
+                           "s" : [ {
+                              "value" : [ "First","(\n    " ]
+                           }, {
+                              "r" : "325",
+                              "s" : [ {
+                                 "s" : [ {
+                                    "r" : "301",
+                                    "s" : [ {
+                                       "r" : "304",
+                                       "s" : [ {
+                                          "r" : "304",
+                                          "s" : [ {
+                                             "value" : [ "[","Observation",": " ]
+                                          }, {
+                                             "s" : [ {
+                                                "value" : [ "\"PRStatus Code\"" ]
+                                             } ]
+                                          }, {
+                                             "value" : [ "]" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","ER" ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " \n      " ]
+                              }, {
+                                 "r" : "311",
+                                 "s" : [ {
+                                    "value" : [ "where " ]
+                                 }, {
+                                    "r" : "311",
+                                    "s" : [ {
+                                       "r" : "313",
+                                       "s" : [ {
+                                          "r" : "312",
+                                          "s" : [ {
+                                             "value" : [ "ER" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "313",
+                                          "s" : [ {
+                                             "value" : [ "status" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","="," " ]
+                                    }, {
+                                       "r" : "314",
+                                       "s" : [ {
+                                          "value" : [ "'final'" ]
+                                       } ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " " ]
+                              }, {
+                                 "r" : "319",
+                                 "s" : [ {
+                                    "value" : [ "sort by " ]
+                                 }, {
+                                    "r" : "318",
+                                    "s" : [ {
+                                       "r" : "317",
+                                       "s" : [ {
+                                          "value" : [ "issued" ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " descending" ]
+                                    } ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ "\n  )" ]
+                           } ]
+                        }, {
+                           "value" : [ "." ]
+                        }, {
+                           "r" : "329",
+                           "s" : [ {
+                              "value" : [ "value" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " ","~"," " ]
+                     }, {
+                        "r" : "330",
+                        "s" : [ {
+                           "value" : [ "\"Negative Status Code\"" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "300",
+               "locator" : "62:3-65:34",
+               "type" : "Equivalent",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "332",
+                  "name" : "ToConcept",
+                  "libraryName" : "FHIRHelpers",
+                  "type" : "FunctionRef",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "331",
+                     "asType" : "{http://hl7.org/fhir}CodeableConcept",
+                     "type" : "As",
+                     "signature" : [ ],
+                     "operand" : {
+                        "localId" : "329",
+                        "locator" : "62:3-65:9",
+                        "path" : "value",
+                        "type" : "Property",
+                        "source" : {
+                           "localId" : "328",
+                           "locator" : "62:3-65:3",
+                           "type" : "First",
+                           "signature" : [ ],
+                           "source" : {
+                              "localId" : "325",
+                              "locator" : "63:5-64:57",
+                              "type" : "Query",
+                              "source" : [ {
+                                 "localId" : "301",
+                                 "locator" : "63:5-63:37",
+                                 "alias" : "ER",
+                                 "expression" : {
+                                    "localId" : "304",
+                                    "locator" : "63:5-63:34",
+                                    "dataType" : "{http://hl7.org/fhir}Observation",
+                                    "templateId" : "http://hl7.org/fhir/StructureDefinition/Observation",
+                                    "codeProperty" : "code",
+                                    "codeComparator" : "~",
+                                    "type" : "Retrieve",
+                                    "codes" : {
+                                       "localId" : "309",
+                                       "type" : "ToList",
+                                       "signature" : [ ],
+                                       "operand" : {
+                                          "localId" : "303",
+                                          "locator" : "63:19-63:33",
+                                          "name" : "PRStatus Code",
+                                          "type" : "CodeRef"
+                                       }
+                                    },
+                                    "include" : [ ],
+                                    "codeFilter" : [ ],
+                                    "dateFilter" : [ ],
+                                    "otherFilter" : [ ]
+                                 }
+                              } ],
+                              "let" : [ ],
+                              "relationship" : [ ],
+                              "where" : {
+                                 "localId" : "311",
+                                 "locator" : "64:7-64:31",
+                                 "type" : "Equal",
+                                 "signature" : [ ],
+                                 "operand" : [ {
+                                    "localId" : "316",
+                                    "name" : "ToString",
+                                    "libraryName" : "FHIRHelpers",
+                                    "type" : "FunctionRef",
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "localId" : "313",
+                                       "locator" : "64:13-64:21",
+                                       "path" : "status",
+                                       "scope" : "ER",
+                                       "type" : "Property"
+                                    } ]
+                                 }, {
+                                    "localId" : "314",
+                                    "locator" : "64:25-64:31",
+                                    "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                    "value" : "final",
+                                    "type" : "Literal"
+                                 } ]
+                              },
+                              "sort" : {
+                                 "localId" : "319",
+                                 "locator" : "64:33-64:57",
+                                 "by" : [ {
+                                    "localId" : "318",
+                                    "locator" : "64:41-64:57",
+                                    "direction" : "descending",
+                                    "path" : "issued",
+                                    "type" : "ByColumn"
+                                 } ]
+                              }
+                           }
+                        }
+                     }
+                  } ]
+               }, {
+                  "localId" : "334",
+                  "type" : "ToConcept",
+                  "signature" : [ ],
+                  "operand" : {
+                     "localId" : "330",
+                     "locator" : "65:13-65:34",
+                     "name" : "Negative Status Code",
+                     "type" : "CodeRef"
+                  }
+               } ]
+            }
+         }, {
+            "localId" : "338",
+            "locator" : "67:1-71:34",
+            "name" : "Is HER2 negative",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "338",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Is HER2 negative\"",":\n  " ]
+                  }, {
+                     "r" : "339",
+                     "s" : [ {
+                        "r" : "368",
+                        "s" : [ {
+                           "r" : "367",
+                           "s" : [ {
+                              "value" : [ "First","(\n    " ]
+                           }, {
+                              "r" : "364",
+                              "s" : [ {
+                                 "s" : [ {
+                                    "r" : "340",
+                                    "s" : [ {
+                                       "r" : "343",
+                                       "s" : [ {
+                                          "r" : "343",
+                                          "s" : [ {
+                                             "value" : [ "[","Observation",": " ]
+                                          }, {
+                                             "s" : [ {
+                                                "value" : [ "\"HER2Status Code\"" ]
+                                             } ]
+                                          }, {
+                                             "value" : [ "]" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","ER" ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " \n      " ]
+                              }, {
+                                 "r" : "350",
+                                 "s" : [ {
+                                    "value" : [ "where " ]
+                                 }, {
+                                    "r" : "350",
+                                    "s" : [ {
+                                       "r" : "352",
+                                       "s" : [ {
+                                          "r" : "351",
+                                          "s" : [ {
+                                             "value" : [ "ER" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "352",
+                                          "s" : [ {
+                                             "value" : [ "status" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","="," " ]
+                                    }, {
+                                       "r" : "353",
+                                       "s" : [ {
+                                          "value" : [ "'final'" ]
+                                       } ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " " ]
+                              }, {
+                                 "r" : "358",
+                                 "s" : [ {
+                                    "value" : [ "sort by " ]
+                                 }, {
+                                    "r" : "357",
+                                    "s" : [ {
+                                       "r" : "356",
+                                       "s" : [ {
+                                          "value" : [ "issued" ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " descending" ]
+                                    } ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ "\n  )" ]
+                           } ]
+                        }, {
+                           "value" : [ "." ]
+                        }, {
+                           "r" : "368",
+                           "s" : [ {
+                              "value" : [ "value" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " ","~"," " ]
+                     }, {
+                        "r" : "369",
+                        "s" : [ {
+                           "value" : [ "\"Negative Status Code\"" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "339",
+               "locator" : "68:3-71:34",
+               "type" : "Equivalent",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "371",
+                  "name" : "ToConcept",
+                  "libraryName" : "FHIRHelpers",
+                  "type" : "FunctionRef",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "370",
+                     "asType" : "{http://hl7.org/fhir}CodeableConcept",
+                     "type" : "As",
+                     "signature" : [ ],
+                     "operand" : {
+                        "localId" : "368",
+                        "locator" : "68:3-71:9",
+                        "path" : "value",
+                        "type" : "Property",
+                        "source" : {
+                           "localId" : "367",
+                           "locator" : "68:3-71:3",
+                           "type" : "First",
+                           "signature" : [ ],
+                           "source" : {
+                              "localId" : "364",
+                              "locator" : "69:5-70:57",
+                              "type" : "Query",
+                              "source" : [ {
+                                 "localId" : "340",
+                                 "locator" : "69:5-69:39",
+                                 "alias" : "ER",
+                                 "expression" : {
+                                    "localId" : "343",
+                                    "locator" : "69:5-69:36",
+                                    "dataType" : "{http://hl7.org/fhir}Observation",
+                                    "templateId" : "http://hl7.org/fhir/StructureDefinition/Observation",
+                                    "codeProperty" : "code",
+                                    "codeComparator" : "~",
+                                    "type" : "Retrieve",
+                                    "codes" : {
+                                       "localId" : "348",
+                                       "type" : "ToList",
+                                       "signature" : [ ],
+                                       "operand" : {
+                                          "localId" : "342",
+                                          "locator" : "69:19-69:35",
+                                          "name" : "HER2Status Code",
+                                          "type" : "CodeRef"
+                                       }
+                                    },
+                                    "include" : [ ],
+                                    "codeFilter" : [ ],
+                                    "dateFilter" : [ ],
+                                    "otherFilter" : [ ]
+                                 }
+                              } ],
+                              "let" : [ ],
+                              "relationship" : [ ],
+                              "where" : {
+                                 "localId" : "350",
+                                 "locator" : "70:7-70:31",
+                                 "type" : "Equal",
+                                 "signature" : [ ],
+                                 "operand" : [ {
+                                    "localId" : "355",
+                                    "name" : "ToString",
+                                    "libraryName" : "FHIRHelpers",
+                                    "type" : "FunctionRef",
+                                    "signature" : [ ],
+                                    "operand" : [ {
+                                       "localId" : "352",
+                                       "locator" : "70:13-70:21",
+                                       "path" : "status",
+                                       "scope" : "ER",
+                                       "type" : "Property"
+                                    } ]
+                                 }, {
+                                    "localId" : "353",
+                                    "locator" : "70:25-70:31",
+                                    "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                                    "value" : "final",
+                                    "type" : "Literal"
+                                 } ]
+                              },
+                              "sort" : {
+                                 "localId" : "358",
+                                 "locator" : "70:33-70:57",
+                                 "by" : [ {
+                                    "localId" : "357",
+                                    "locator" : "70:41-70:57",
+                                    "direction" : "descending",
+                                    "path" : "issued",
+                                    "type" : "ByColumn"
+                                 } ]
+                              }
+                           }
+                        }
+                     }
+                  } ]
+               }, {
+                  "localId" : "373",
+                  "type" : "ToConcept",
+                  "signature" : [ ],
+                  "operand" : {
+                     "localId" : "369",
+                     "locator" : "71:13-71:34",
+                     "name" : "Negative Status Code",
+                     "type" : "CodeRef"
+                  }
+               } ]
+            }
+         }, {
+            "localId" : "255",
+            "locator" : "38:1-39:62",
+            "name" : "Is TNBC",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "255",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Is TNBC\"",":\n  " ]
+                  }, {
+                     "r" : "256",
+                     "s" : [ {
+                        "r" : "257",
+                        "s" : [ {
+                           "r" : "296",
+                           "s" : [ {
+                              "value" : [ "\"Is ER negative\"" ]
+                           } ]
+                        }, {
+                           "value" : [ " and " ]
+                        }, {
+                           "r" : "335",
+                           "s" : [ {
+                              "value" : [ "\"Is PR negative\"" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " and " ]
+                     }, {
+                        "r" : "374",
+                        "s" : [ {
+                           "value" : [ "\"Is HER2 negative\"" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "256",
+               "locator" : "39:3-39:62",
+               "type" : "And",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "257",
+                  "locator" : "39:3-39:39",
+                  "type" : "And",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "296",
+                     "locator" : "39:3-39:18",
+                     "name" : "Is ER negative",
+                     "type" : "ExpressionRef"
+                  }, {
+                     "localId" : "335",
+                     "locator" : "39:24-39:39",
+                     "name" : "Is PR negative",
+                     "type" : "ExpressionRef"
+                  } ]
+               }, {
+                  "localId" : "374",
+                  "locator" : "39:45-39:62",
+                  "name" : "Is HER2 negative",
+                  "type" : "ExpressionRef"
+               } ]
+            }
+         }, {
+            "localId" : "391",
+            "locator" : "42:1-43:63",
+            "name" : "Tumor Size",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "391",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Tumor Size\"",":\n  " ]
+                  }, {
+                     "r" : "408",
+                     "s" : [ {
+                        "s" : [ {
+                           "r" : "392",
+                           "s" : [ {
+                              "r" : "395",
+                              "s" : [ {
+                                 "r" : "395",
+                                 "s" : [ {
+                                    "value" : [ "[","Observation",": " ]
+                                 }, {
+                                    "s" : [ {
+                                       "value" : [ "\"Tumor Size Code\"" ]
+                                    } ]
+                                 }, {
+                                    "value" : [ "]" ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ " ","TS" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " " ]
+                     }, {
+                        "r" : "402",
+                        "s" : [ {
+                           "value" : [ "where " ]
+                        }, {
+                           "r" : "402",
+                           "s" : [ {
+                              "r" : "404",
+                              "s" : [ {
+                                 "r" : "403",
+                                 "s" : [ {
+                                    "value" : [ "TS" ]
+                                 } ]
+                              }, {
+                                 "value" : [ "." ]
+                              }, {
+                                 "r" : "404",
+                                 "s" : [ {
+                                    "value" : [ "status" ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ " ","="," " ]
+                           }, {
+                              "r" : "405",
+                              "s" : [ {
+                                 "value" : [ "'final'" ]
+                              } ]
+                           } ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "408",
+               "locator" : "43:3-43:63",
+               "type" : "Query",
+               "source" : [ {
+                  "localId" : "392",
+                  "locator" : "43:3-43:37",
+                  "alias" : "TS",
+                  "expression" : {
+                     "localId" : "395",
+                     "locator" : "43:3-43:34",
+                     "dataType" : "{http://hl7.org/fhir}Observation",
+                     "templateId" : "http://hl7.org/fhir/StructureDefinition/Observation",
+                     "codeProperty" : "code",
+                     "codeComparator" : "~",
+                     "type" : "Retrieve",
+                     "codes" : {
+                        "localId" : "400",
+                        "type" : "ToList",
+                        "signature" : [ ],
+                        "operand" : {
+                           "localId" : "394",
+                           "locator" : "43:17-43:33",
+                           "name" : "Tumor Size Code",
+                           "type" : "CodeRef"
+                        }
+                     },
+                     "include" : [ ],
+                     "codeFilter" : [ ],
+                     "dateFilter" : [ ],
+                     "otherFilter" : [ ]
+                  }
+               } ],
+               "let" : [ ],
+               "relationship" : [ ],
+               "where" : {
+                  "localId" : "402",
+                  "locator" : "43:39-43:63",
+                  "type" : "Equal",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "407",
+                     "name" : "ToString",
+                     "libraryName" : "FHIRHelpers",
+                     "type" : "FunctionRef",
+                     "signature" : [ ],
+                     "operand" : [ {
+                        "localId" : "404",
+                        "locator" : "43:45-43:53",
+                        "path" : "status",
+                        "scope" : "TS",
+                        "type" : "Property"
+                     } ]
+                  }, {
+                     "localId" : "405",
+                     "locator" : "43:57-43:63",
+                     "valueType" : "{urn:hl7-org:elm-types:r1}String",
+                     "value" : "final",
+                     "type" : "Literal"
+                  } ]
+               }
+            }
+         }, {
+            "localId" : "387",
+            "locator" : "45:1-46:50",
+            "name" : "Most Recent Tumor Size",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "387",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Most Recent Tumor Size\"",":\n  " ]
+                  }, {
+                     "r" : "422",
+                     "s" : [ {
+                        "value" : [ "First","(" ]
+                     }, {
+                        "r" : "419",
+                        "s" : [ {
+                           "s" : [ {
+                              "r" : "388",
+                              "s" : [ {
+                                 "r" : "409",
+                                 "s" : [ {
+                                    "s" : [ {
+                                       "value" : [ "\"Tumor Size\"" ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " ","TS" ]
+                              } ]
+                           } ]
+                        }, {
+                           "value" : [ " " ]
+                        }, {
+                           "r" : "413",
+                           "s" : [ {
+                              "value" : [ "sort by " ]
+                           }, {
+                              "r" : "412",
+                              "s" : [ {
+                                 "r" : "411",
+                                 "s" : [ {
+                                    "value" : [ "issued" ]
+                                 } ]
+                              }, {
+                                 "value" : [ " descending" ]
+                              } ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ ")" ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "422",
+               "locator" : "46:3-46:50",
+               "type" : "First",
+               "signature" : [ ],
+               "source" : {
+                  "localId" : "419",
+                  "locator" : "46:9-46:49",
+                  "type" : "Query",
+                  "source" : [ {
+                     "localId" : "388",
+                     "locator" : "46:9-46:23",
+                     "alias" : "TS",
+                     "expression" : {
+                        "localId" : "409",
+                        "locator" : "46:9-46:20",
+                        "name" : "Tumor Size",
+                        "type" : "ExpressionRef"
+                     }
+                  } ],
+                  "let" : [ ],
+                  "relationship" : [ ],
+                  "sort" : {
+                     "localId" : "413",
+                     "locator" : "46:25-46:49",
+                     "by" : [ {
+                        "localId" : "412",
+                        "locator" : "46:33-46:49",
+                        "direction" : "descending",
+                        "path" : "issued",
+                        "type" : "ByColumn"
+                     } ]
+                  }
+               }
+            }
+         }, {
+            "localId" : "382",
+            "locator" : "48:1-49:98",
+            "name" : "Most Recent Tumor Size Quantity",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "382",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Most Recent Tumor Size Quantity\"",":\n  " ]
+                  }, {
+                     "r" : "383",
+                     "s" : [ {
+                        "r" : "437",
+                        "s" : [ {
+                           "r" : "436",
+                           "s" : [ {
+                              "value" : [ "First","(" ]
+                           }, {
+                              "r" : "433",
+                              "s" : [ {
+                                 "s" : [ {
+                                    "r" : "384",
+                                    "s" : [ {
+                                       "r" : "424",
+                                       "s" : [ {
+                                          "s" : [ {
+                                             "value" : [ "\"Most Recent Tumor Size\"",".","component" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","C" ]
+                                    } ]
+                                 } ]
+                              }, {
+                                 "value" : [ " " ]
+                              }, {
+                                 "r" : "426",
+                                 "s" : [ {
+                                    "value" : [ "where " ]
+                                 }, {
+                                    "r" : "426",
+                                    "s" : [ {
+                                       "r" : "428",
+                                       "s" : [ {
+                                          "r" : "427",
+                                          "s" : [ {
+                                             "value" : [ "C" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "428",
+                                          "s" : [ {
+                                             "value" : [ "code" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","~"," " ]
+                                    }, {
+                                       "r" : "429",
+                                       "s" : [ {
+                                          "value" : [ "\"Size.maximum Code\"" ]
+                                       } ]
+                                    } ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ ")" ]
+                           } ]
+                        }, {
+                           "value" : [ "." ]
+                        }, {
+                           "r" : "437",
+                           "s" : [ {
+                              "value" : [ "value" ]
+                           } ]
+                        } ]
+                     }, {
+                        "value" : [ " as " ]
+                     }, {
+                        "r" : "438",
+                        "s" : [ {
+                           "value" : [ "Quantity" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "383",
+               "locator" : "49:3-49:98",
+               "strict" : false,
+               "type" : "As",
+               "signature" : [ ],
+               "operand" : {
+                  "localId" : "437",
+                  "locator" : "49:3-49:86",
+                  "path" : "value",
+                  "type" : "Property",
+                  "source" : {
+                     "localId" : "436",
+                     "locator" : "49:3-49:80",
+                     "type" : "First",
+                     "signature" : [ ],
+                     "source" : {
+                        "localId" : "433",
+                        "locator" : "49:9-49:79",
+                        "type" : "Query",
+                        "source" : [ {
+                           "localId" : "384",
+                           "locator" : "49:9-49:44",
+                           "alias" : "C",
+                           "expression" : {
+                              "localId" : "424",
+                              "locator" : "49:9-49:42",
+                              "path" : "component",
+                              "type" : "Property",
+                              "source" : {
+                                 "localId" : "423",
+                                 "name" : "Most Recent Tumor Size",
+                                 "type" : "ExpressionRef"
+                              }
+                           }
+                        } ],
+                        "let" : [ ],
+                        "relationship" : [ ],
+                        "where" : {
+                           "localId" : "426",
+                           "locator" : "49:46-49:79",
+                           "type" : "Equivalent",
+                           "signature" : [ ],
+                           "operand" : [ {
+                              "localId" : "430",
+                              "name" : "ToConcept",
+                              "libraryName" : "FHIRHelpers",
+                              "type" : "FunctionRef",
+                              "signature" : [ ],
+                              "operand" : [ {
+                                 "localId" : "428",
+                                 "locator" : "49:52-49:57",
+                                 "path" : "code",
+                                 "scope" : "C",
+                                 "type" : "Property"
+                              } ]
+                           }, {
+                              "localId" : "432",
+                              "type" : "ToConcept",
+                              "signature" : [ ],
+                              "operand" : {
+                                 "localId" : "429",
+                                 "locator" : "49:61-49:79",
+                                 "name" : "Size.maximum Code",
+                                 "type" : "CodeRef"
+                              }
+                           } ]
+                        }
+                     }
+                  }
+               },
+               "asTypeSpecifier" : {
+                  "localId" : "438",
+                  "locator" : "49:91-49:98",
+                  "name" : "{http://hl7.org/fhir}Quantity",
+                  "type" : "NamedTypeSpecifier"
+               }
+            }
+         }, {
+            "localId" : "378",
+            "locator" : "51:1-52:44",
+            "name" : "Is at least T1c",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "378",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Is at least T1c\"",":\n  " ]
+                  }, {
+                     "r" : "379",
+                     "s" : [ {
+                        "r" : "439",
+                        "s" : [ {
+                           "value" : [ "\"Most Recent Tumor Size Quantity\"" ]
+                        } ]
+                     }, {
+                        "value" : [ " ",">"," " ]
+                     }, {
+                        "r" : "440",
+                        "s" : [ {
+                           "value" : [ "1 ","'cm'" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "379",
+               "locator" : "52:3-52:44",
+               "type" : "Greater",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "441",
+                  "name" : "ToQuantity",
+                  "libraryName" : "FHIRHelpers",
+                  "type" : "FunctionRef",
+                  "signature" : [ ],
+                  "operand" : [ {
+                     "localId" : "439",
+                     "locator" : "52:3-52:35",
+                     "name" : "Most Recent Tumor Size Quantity",
+                     "type" : "ExpressionRef"
+                  } ]
+               }, {
+                  "localId" : "440",
+                  "locator" : "52:39-52:44",
+                  "value" : 1,
+                  "unit" : "cm",
+                  "type" : "Quantity"
+               } ]
+            }
+         }, {
+            "localId" : "251",
+            "locator" : "28:1-29:33",
+            "name" : "Has TNBC and at least T1c",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "251",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Has TNBC and at least T1c\"",":\n  " ]
+                  }, {
+                     "r" : "252",
+                     "s" : [ {
+                        "r" : "375",
+                        "s" : [ {
+                           "value" : [ "\"Is TNBC\"" ]
+                        } ]
+                     }, {
+                        "value" : [ " and " ]
+                     }, {
+                        "r" : "442",
+                        "s" : [ {
+                           "value" : [ "\"Is at least T1c\"" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "252",
+               "locator" : "29:3-29:33",
+               "type" : "And",
+               "signature" : [ ],
+               "operand" : [ {
+                  "localId" : "375",
+                  "locator" : "29:3-29:11",
+                  "name" : "Is TNBC",
+                  "type" : "ExpressionRef"
+               }, {
+                  "localId" : "442",
+                  "locator" : "29:17-29:33",
+                  "name" : "Is at least T1c",
+                  "type" : "ExpressionRef"
+               } ]
+            }
+         }, {
+            "localId" : "445",
+            "locator" : "31:1-36:3",
+            "name" : "Has breast cancer",
+            "context" : "Patient",
+            "accessLevel" : "Public",
+            "annotation" : [ {
+               "type" : "Annotation",
+               "s" : {
+                  "r" : "445",
+                  "s" : [ {
+                     "value" : [ "","define ","\"Has breast cancer\"",":\n  " ]
+                  }, {
+                     "r" : "446",
+                     "s" : [ {
+                        "value" : [ "exists" ]
+                     }, {
+                        "r" : "469",
+                        "s" : [ {
+                           "value" : [ "(\n    " ]
+                        }, {
+                           "r" : "469",
+                           "s" : [ {
+                              "s" : [ {
+                                 "r" : "447",
+                                 "s" : [ {
+                                    "r" : "450",
+                                    "s" : [ {
+                                       "r" : "450",
+                                       "s" : [ {
+                                          "value" : [ "[","Condition",": " ]
+                                       }, {
+                                          "s" : [ {
+                                             "value" : [ "\"Breast Cancer VS\"" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "]" ]
+                                       } ]
+                                    } ]
+                                 }, {
+                                    "value" : [ " ","C" ]
+                                 } ]
+                              } ]
+                           }, {
+                              "value" : [ "\n      " ]
+                           }, {
+                              "r" : "454",
+                              "s" : [ {
+                                 "value" : [ "where " ]
+                              }, {
+                                 "r" : "454",
+                                 "s" : [ {
+                                    "r" : "455",
+                                    "s" : [ {
+                                       "r" : "457",
+                                       "s" : [ {
+                                          "r" : "456",
+                                          "s" : [ {
+                                             "value" : [ "C" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "457",
+                                          "s" : [ {
+                                             "value" : [ "clinicalStatus" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","~"," " ]
+                                    }, {
+                                       "r" : "458",
+                                       "s" : [ {
+                                          "value" : [ "\"Active Condition Code\"" ]
+                                       } ]
+                                    } ]
+                                 }, {
+                                    "value" : [ "\n      and " ]
+                                 }, {
+                                    "r" : "462",
+                                    "s" : [ {
+                                       "r" : "464",
+                                       "s" : [ {
+                                          "r" : "463",
+                                          "s" : [ {
+                                             "value" : [ "C" ]
+                                          } ]
+                                       }, {
+                                          "value" : [ "." ]
+                                       }, {
+                                          "r" : "464",
+                                          "s" : [ {
+                                             "value" : [ "verificationStatus" ]
+                                          } ]
+                                       } ]
+                                    }, {
+                                       "value" : [ " ","~"," " ]
+                                    }, {
+                                       "r" : "465",
+                                       "s" : [ {
+                                          "value" : [ "\"Confirmed Condition Code\"" ]
+                                       } ]
+                                    } ]
+                                 } ]
+                              } ]
+                           } ]
+                        }, {
+                           "value" : [ "\n  )" ]
+                        } ]
+                     } ]
+                  } ]
+               }
+            } ],
+            "expression" : {
+               "localId" : "446",
+               "locator" : "32:3-36:3",
+               "type" : "Exists",
+               "signature" : [ ],
+               "operand" : {
+                  "localId" : "469",
+                  "locator" : "32:9-36:3",
+                  "type" : "Query",
+                  "source" : [ {
+                     "localId" : "447",
+                     "locator" : "33:5-33:37",
+                     "alias" : "C",
+                     "expression" : {
+                        "localId" : "450",
+                        "locator" : "33:5-33:35",
+                        "dataType" : "{http://hl7.org/fhir}Condition",
+                        "templateId" : "http://hl7.org/fhir/StructureDefinition/Condition",
+                        "codeProperty" : "code",
+                        "codeComparator" : "in",
+                        "type" : "Retrieve",
+                        "codes" : {
+                           "localId" : "449",
+                           "locator" : "33:17-33:34",
+                           "name" : "Breast Cancer VS",
+                           "preserve" : true,
+                           "type" : "ValueSetRef"
+                        },
+                        "include" : [ ],
+                        "codeFilter" : [ ],
+                        "dateFilter" : [ ],
+                        "otherFilter" : [ ]
+                     }
+                  } ],
+                  "let" : [ ],
+                  "relationship" : [ ],
+                  "where" : {
+                     "localId" : "454",
+                     "locator" : "34:7-35:59",
+                     "type" : "And",
+                     "signature" : [ ],
+                     "operand" : [ {
+                        "localId" : "455",
+                        "locator" : "34:13-34:54",
+                        "type" : "Equivalent",
+                        "signature" : [ ],
+                        "operand" : [ {
+                           "localId" : "459",
+                           "name" : "ToConcept",
+                           "libraryName" : "FHIRHelpers",
+                           "type" : "FunctionRef",
+                           "signature" : [ ],
+                           "operand" : [ {
+                              "localId" : "457",
+                              "locator" : "34:13-34:28",
+                              "path" : "clinicalStatus",
+                              "scope" : "C",
+                              "type" : "Property"
+                           } ]
+                        }, {
+                           "localId" : "461",
+                           "type" : "ToConcept",
+                           "signature" : [ ],
+                           "operand" : {
+                              "localId" : "458",
+                              "locator" : "34:32-34:54",
+                              "name" : "Active Condition Code",
+                              "type" : "CodeRef"
+                           }
+                        } ]
+                     }, {
+                        "localId" : "462",
+                        "locator" : "35:11-35:59",
+                        "type" : "Equivalent",
+                        "signature" : [ ],
+                        "operand" : [ {
+                           "localId" : "466",
+                           "name" : "ToConcept",
+                           "libraryName" : "FHIRHelpers",
+                           "type" : "FunctionRef",
+                           "signature" : [ ],
+                           "operand" : [ {
+                              "localId" : "464",
+                              "locator" : "35:11-35:30",
+                              "path" : "verificationStatus",
+                              "scope" : "C",
+                              "type" : "Property"
+                           } ]
+                        }, {
+                           "localId" : "468",
+                           "type" : "ToConcept",
+                           "signature" : [ ],
+                           "operand" : {
+                              "localId" : "465",
+                              "locator" : "35:34-35:59",
+                              "name" : "Confirmed Condition Code",
+                              "type" : "CodeRef"
+                           }
+                        } ]
+                     } ]
+                  }
+               }
+            }
+         } ]
+      }
+   }
+}

@@ -48,11 +48,13 @@
 
 pub mod builder;
 pub mod compiler;
+pub mod conversion;
 pub mod datatype;
 pub mod elm;
 pub mod error;
 pub mod library;
 pub mod modelinfo;
+mod modelinfo_xml;
 pub mod operators;
 pub mod options;
 pub mod output;
@@ -65,12 +67,17 @@ pub mod types;
 
 // Primary public API - compile CQL to ELM
 pub use compiler::{
-    compile, compile_to_json, validate, CompilationError, CompilationResult, ValidationResult,
+    compile, compile_to_json, compile_with_model, validate, CompilationError, CompilationResult,
+    ValidationResult,
 };
 
 pub use builder::{
     BuilderError, BuilderResult, FunctionSignature, LibraryBuilder, ResolvedIdentifier, Scope,
     Symbol, SymbolKind,
+};
+pub use conversion::{
+    conversion_key_to_datatype, datatype_to_conversion_key, needs_conversion, wrap_in_conversion,
+    ConversionContext, ConversionEntry, ConversionRegistry, ConversionResult,
 };
 pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
@@ -94,7 +101,9 @@ pub use preprocessor::{
     LibraryDependency, LibraryInfo, ModelDependency, ParameterInfo, Preprocessor, ValueSetInfo,
 };
 pub use provider::{
-    fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider, ModelInfoProvider,
+    fhir_r4_model_info, fhir_r4_provider, fhir_r4_provider_from_package, get_default_packages_dir,
+    get_package_dir, load_fhir_r4_modelinfo_from_package, load_modelinfo_from_package,
+    MemoryModelInfoProvider, ModelInfoProvider,
 };
 pub use reporting::{
     CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,

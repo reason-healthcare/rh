@@ -2,6 +2,9 @@
 //!
 //! Annotations provide a mechanism to attach metadata to ELM elements,
 //! including source locator information and custom tags.
+//!
+//! The primary annotation structure uses a recursive "s" (source) narrative
+//! that captures the original CQL source text with references to localIds.
 
 use serde::{Deserialize, Serialize};
 
@@ -9,25 +12,115 @@ use serde::{Deserialize, Serialize};
 ///
 /// Annotations provide a way to attach metadata to any ELM element,
 /// such as documentation, source mapping, or custom information.
+///
+/// When EnableAnnotations is set, annotations contain an "s" field with
+/// nested Narrative structures that capture the original CQL source text.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
-    /// The annotation tag type (e.g., "description", "author").
+    /// The annotation tag type (always "Annotation" for source annotations).
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub tag_type: Option<String>,
 
-    /// Custom attributes on this annotation.
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub attributes: Option<serde_json::Value>,
+    /// Source narrative structure containing original CQL text.
+    #[serde(rename = "s", skip_serializing_if = "Option::is_none")]
+    pub source: Option<Narrative>,
 }
 
-/// Narrative content for documentation purposes.
+impl Annotation {
+    /// Creates a source annotation with the given narrative.
+    pub fn source(narrative: Narrative) -> Self {
+        Self {
+            tag_type: Some("Annotation".to_string()),
+            source: Some(narrative),
+        }
+    }
+}
+
+/// Narrative content representing source CQL text.
+///
+/// The narrative structure is recursive, allowing nested segments
+/// to represent different parts of the source text with their
+/// associated localIds.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Narrative {
-    /// The narrative text content (may contain XHTML).
+    /// Reference to the localId of the associated ELM element.
     #[serde(rename = "r", skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
+    pub local_id_ref: Option<String>,
+
+    /// Nested narrative segments.
+    #[serde(rename = "s", default, skip_serializing_if = "Vec::is_empty")]
+    pub segments: Vec<NarrativeSegment>,
+}
+
+impl Narrative {
+    /// Creates a narrative with a localId reference.
+    pub fn with_ref(local_id: impl Into<String>) -> Self {
+        Self {
+            local_id_ref: Some(local_id.into()),
+            segments: Vec::new(),
+        }
+    }
+
+    /// Creates a narrative with segments.
+    pub fn with_segments(segments: Vec<NarrativeSegment>) -> Self {
+        Self {
+            local_id_ref: None,
+            segments,
+        }
+    }
+
+    /// Creates a narrative with a localId reference and segments.
+    pub fn new(local_id: impl Into<String>, segments: Vec<NarrativeSegment>) -> Self {
+        Self {
+            local_id_ref: Some(local_id.into()),
+            segments,
+        }
+    }
+}
+
+/// A segment within a narrative, either text values or nested narrative.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum NarrativeSegment {
+    /// Text values - an array of string fragments.
+    Value {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        value: Vec<String>,
+    },
+    /// Nested narrative with its own localId reference.
+    Nested {
+        #[serde(rename = "r", skip_serializing_if = "Option::is_none")]
+        local_id_ref: Option<String>,
+        #[serde(rename = "s", default, skip_serializing_if = "Vec::is_empty")]
+        segments: Vec<NarrativeSegment>,
+    },
+}
+
+impl NarrativeSegment {
+    /// Creates a value segment with the given text fragments.
+    pub fn value(fragments: Vec<impl Into<String>>) -> Self {
+        Self::Value {
+            value: fragments.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    /// Creates a nested segment with a localId reference.
+    pub fn nested(local_id: impl Into<String>, segments: Vec<NarrativeSegment>) -> Self {
+        Self::Nested {
+            local_id_ref: Some(local_id.into()),
+            segments,
+        }
+    }
+
+    /// Creates a nested segment without a localId reference.
+    pub fn nested_anonymous(segments: Vec<NarrativeSegment>) -> Self {
+        Self::Nested {
+            local_id_ref: None,
+            segments,
+        }
+    }
 }
 
 /// Tag element for CQL annotation pragmas.
@@ -92,13 +185,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_annotation_serialization() {
-        let annotation = Annotation {
-            tag_type: Some("description".into()),
-            attributes: None,
-        };
+    fn test_source_annotation_serialization() {
+        let annotation = Annotation::source(Narrative::new(
+            "206",
+            vec![NarrativeSegment::value(vec!["", "using ", "FHIR"])],
+        ));
         let json = serde_json::to_string(&annotation).unwrap();
-        assert!(json.contains("\"type\":\"description\""));
+        assert!(json.contains("\"type\":\"Annotation\""));
+        assert!(json.contains("\"r\":\"206\""));
+        assert!(json.contains("\"value\":["));
+    }
+
+    #[test]
+    fn test_narrative_with_nested_segments() {
+        let narrative = Narrative::new(
+            "208",
+            vec![
+                NarrativeSegment::value(vec!["", "include "]),
+                NarrativeSegment::nested_anonymous(vec![NarrativeSegment::value(vec![
+                    "FHIRHelpers",
+                ])]),
+                NarrativeSegment::value(vec![" version ", "'4.0.1'"]),
+            ],
+        );
+        let json = serde_json::to_string(&narrative).unwrap();
+        assert!(json.contains("\"r\":\"208\""));
+        assert!(json.contains("\"include \""));
+        assert!(json.contains("\"FHIRHelpers\""));
+    }
+
+    #[test]
+    fn test_narrative_segment_value() {
+        let segment = NarrativeSegment::value(vec!["define ", "\"TestDef\""]);
+        let json = serde_json::to_string(&segment).unwrap();
+        assert!(json.contains("\"value\":[\"define \",\"\\\"TestDef\\\"\"]"));
+    }
+
+    #[test]
+    fn test_narrative_segment_nested() {
+        let segment =
+            NarrativeSegment::nested("10", vec![NarrativeSegment::value(vec!["Patient"])]);
+        let json = serde_json::to_string(&segment).unwrap();
+        assert!(json.contains("\"r\":\"10\""));
+        assert!(json.contains("\"s\":["));
     }
 
     #[test]
@@ -136,5 +265,15 @@ mod tests {
         let json = serde_json::to_string(&error).unwrap();
         assert!(json.contains("\"message\":\"Undefined identifier\""));
         assert!(json.contains("\"startLine\":10"));
+    }
+
+    #[test]
+    fn test_deserialize_reference_annotation() {
+        let json = r#"{"type":"Annotation","s":{"r":"206","s":[{"value":["","using "]},{"s":[{"value":["FHIR"]}]},{"value":[" version '4.0.1'"]}]}}"#;
+        let annotation: Annotation = serde_json::from_str(json).unwrap();
+        assert_eq!(annotation.tag_type, Some("Annotation".to_string()));
+        let source = annotation.source.unwrap();
+        assert_eq!(source.local_id_ref, Some("206".to_string()));
+        assert_eq!(source.segments.len(), 3);
     }
 }

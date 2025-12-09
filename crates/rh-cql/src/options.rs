@@ -38,6 +38,16 @@ pub enum CompilerOption {
     RequireFromKeyword,
     /// Disable automatic loading of default model info.
     DisableDefaultModelInfoLoad,
+    /// Disable implicit type conversions from ModelInfo (e.g., FHIR.Coding → System.Code).
+    ///
+    /// When enabled, the compiler will not automatically insert FHIRHelpers conversion
+    /// function calls. This requires explicit conversion in CQL source code.
+    DisableImplicitConversions,
+    /// Treat missing conversion libraries as errors instead of warnings.
+    ///
+    /// When enabled, if a conversion is needed but the required library (e.g., FHIRHelpers)
+    /// is not included, the compiler will emit an error instead of a warning.
+    StrictConversionLibraryCheck,
 }
 
 /// Controls the level of signature information included in ELM output.
@@ -207,12 +217,16 @@ impl CompilerOptions {
     /// - DisableListDemotion
     /// - DisableListPromotion
     /// - DisableMethodInvocation
+    /// - DisableImplicitConversions
+    /// - StrictConversionLibraryCheck
     pub fn strict() -> Self {
         let mut options = std::collections::HashSet::new();
         options.insert(CompilerOption::DisableListTraversal);
         options.insert(CompilerOption::DisableListDemotion);
         options.insert(CompilerOption::DisableListPromotion);
         options.insert(CompilerOption::DisableMethodInvocation);
+        options.insert(CompilerOption::DisableImplicitConversions);
+        options.insert(CompilerOption::StrictConversionLibraryCheck);
 
         Self {
             options,
@@ -359,6 +373,24 @@ impl CompilerOptions {
         self.has_option(CompilerOption::RequireFromKeyword)
     }
 
+    /// Check if implicit type conversions are enabled.
+    ///
+    /// When enabled (default), the compiler will automatically insert FHIRHelpers
+    /// conversion function calls when type mismatches occur that can be resolved
+    /// by ModelInfo-defined conversions.
+    pub fn implicit_conversions_enabled(&self) -> bool {
+        !self.has_option(CompilerOption::DisableImplicitConversions)
+    }
+
+    /// Check if strict conversion library checking is enabled.
+    ///
+    /// When enabled, missing conversion libraries (e.g., FHIRHelpers not included
+    /// but FHIR.Coding → System.Code conversion needed) will result in errors
+    /// instead of warnings.
+    pub fn strict_conversion_library_check(&self) -> bool {
+        self.has_option(CompilerOption::StrictConversionLibraryCheck)
+    }
+
     /// Convert enabled options to a comma-separated string for serialization.
     ///
     /// This format matches the reference implementation's `translatorOptions` field.
@@ -380,6 +412,8 @@ impl CompilerOptions {
                 CompilerOption::DisableMethodInvocation => "DisableMethodInvocation",
                 CompilerOption::RequireFromKeyword => "RequireFromKeyword",
                 CompilerOption::DisableDefaultModelInfoLoad => "DisableDefaultModelInfoLoad",
+                CompilerOption::DisableImplicitConversions => "DisableImplicitConversions",
+                CompilerOption::StrictConversionLibraryCheck => "StrictConversionLibraryCheck",
             })
             .collect();
         option_names.sort();
@@ -411,6 +445,12 @@ impl CompilerOptions {
                     "RequireFromKeyword" => Some(CompilerOption::RequireFromKeyword),
                     "DisableDefaultModelInfoLoad" => {
                         Some(CompilerOption::DisableDefaultModelInfoLoad)
+                    }
+                    "DisableImplicitConversions" => {
+                        Some(CompilerOption::DisableImplicitConversions)
+                    }
+                    "StrictConversionLibraryCheck" => {
+                        Some(CompilerOption::StrictConversionLibraryCheck)
                     }
                     _ => None,
                 }
@@ -590,5 +630,57 @@ mod tests {
 
         let options = CompilerOptions::default();
         assert!(options.validate_units);
+    }
+
+    #[test]
+    fn test_implicit_conversions_enabled_by_default() {
+        let options = CompilerOptions::default();
+        assert!(options.implicit_conversions_enabled());
+        assert!(!options.strict_conversion_library_check());
+    }
+
+    #[test]
+    fn test_disable_implicit_conversions() {
+        let options =
+            CompilerOptions::new().with_option(CompilerOption::DisableImplicitConversions);
+
+        assert!(!options.implicit_conversions_enabled());
+    }
+
+    #[test]
+    fn test_strict_conversion_library_check() {
+        let options =
+            CompilerOptions::new().with_option(CompilerOption::StrictConversionLibraryCheck);
+
+        assert!(options.strict_conversion_library_check());
+    }
+
+    #[test]
+    fn test_strict_mode_includes_conversion_options() {
+        let options = CompilerOptions::strict();
+
+        assert!(!options.implicit_conversions_enabled());
+        assert!(options.strict_conversion_library_check());
+    }
+
+    #[test]
+    fn test_parse_conversion_options() {
+        let parsed = CompilerOptions::parse_options(
+            "DisableImplicitConversions,StrictConversionLibraryCheck",
+        );
+
+        assert!(parsed.contains(&CompilerOption::DisableImplicitConversions));
+        assert!(parsed.contains(&CompilerOption::StrictConversionLibraryCheck));
+    }
+
+    #[test]
+    fn test_conversion_options_to_string() {
+        let options = CompilerOptions::new()
+            .with_option(CompilerOption::DisableImplicitConversions)
+            .with_option(CompilerOption::StrictConversionLibraryCheck);
+
+        let s = options.options_to_string();
+        assert!(s.contains("DisableImplicitConversions"));
+        assert!(s.contains("StrictConversionLibraryCheck"));
     }
 }
