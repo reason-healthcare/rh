@@ -716,14 +716,52 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 })
             },
         ),
+        // "cast X as Type" expression (prefix syntax)
+        parse_cast_expression,
+        // "convert X to Type" expression (prefix syntax)
+        parse_convert_expression,
         // Type expression suffix handling
         parse_type_expression,
     ))(input)
 }
 
 // ============================================================================
-// Type Expressions (is, as, convert)
+// Type Expressions (is, as, cast, convert)
 // ============================================================================
+
+fn parse_cast_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = ws(keyword("cast"))(input)?;
+    let (input, operand) = parse_invocation_expression(input)?;
+    let (input, _) = ws(keyword("as"))(input)?;
+    let (input, type_spec) = parse_type_specifier(input)?;
+
+    Ok((
+        input,
+        Expression::TypeExpression(TypeExpression {
+            operator: TypeOperator::Cast,
+            operand: Box::new(operand),
+            type_specifier: type_spec,
+            location: None,
+        }),
+    ))
+}
+
+fn parse_convert_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = ws(keyword("convert"))(input)?;
+    let (input, operand) = parse_invocation_expression(input)?;
+    let (input, _) = ws(keyword("to"))(input)?;
+    let (input, type_spec) = parse_type_specifier(input)?;
+
+    Ok((
+        input,
+        Expression::TypeExpression(TypeExpression {
+            operator: TypeOperator::Convert,
+            operand: Box::new(operand),
+            type_specifier: type_spec,
+            location: None,
+        }),
+    ))
+}
 
 fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_invocation_expression(input)?;
