@@ -425,21 +425,26 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
 }
 
 // ============================================================================
-// Precedence Level 6: Union
+// Precedence Level 6: Union, Except, Intersect
 // ============================================================================
 
 fn parse_union_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_additive_expression(input)?;
-    let (input, rest) = many0(preceded(
-        ws(alt((char('|'), value('|', keyword("union"))))),
+    let (input, rest) = many0(tuple((
+        ws(alt((
+            value(BinaryOperator::Union, char('|')),
+            value(BinaryOperator::Union, keyword("union")),
+            value(BinaryOperator::Except, keyword("except")),
+            value(BinaryOperator::Intersect, keyword("intersect")),
+        ))),
         parse_additive_expression,
-    ))(input)?;
+    )))(input)?;
 
     Ok((
         input,
-        rest.into_iter().fold(first, |acc, expr| {
+        rest.into_iter().fold(first, |acc, (op, expr)| {
             Expression::BinaryExpression(BinaryExpression {
-                operator: BinaryOperator::Union,
+                operator: op,
                 left: Box::new(acc),
                 right: Box::new(expr),
                 precision: None,
