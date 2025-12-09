@@ -483,7 +483,7 @@ fn parse_additive_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_unary_expression(input)?;
+    let (input, first) = parse_power_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((
             value(BinaryOperator::Multiply, char('*')),
@@ -491,7 +491,7 @@ fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Express
             value(BinaryOperator::TruncatedDivide, keyword("div")),
             value(BinaryOperator::Modulo, keyword("mod")),
         ))),
-        parse_unary_expression,
+        parse_power_expression,
     )))(input)?;
 
     Ok((
@@ -499,6 +499,28 @@ fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Express
         rest.into_iter().fold(first, |acc, (op, expr)| {
             Expression::BinaryExpression(BinaryExpression {
                 operator: op,
+                left: Box::new(acc),
+                right: Box::new(expr),
+                precision: None,
+                location: None,
+            })
+        }),
+    ))
+}
+
+// ============================================================================
+// Precedence Level 8.5: Power (^) - Higher than multiplicative
+// ============================================================================
+
+fn parse_power_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, first) = parse_unary_expression(input)?;
+    let (input, rest) = many0(preceded(ws(char('^')), parse_unary_expression))(input)?;
+
+    Ok((
+        input,
+        rest.into_iter().fold(first, |acc, expr| {
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::Power,
                 left: Box::new(acc),
                 right: Box::new(expr),
                 precision: None,
@@ -572,6 +594,17 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 })
             },
         ),
+        // "collapse" expression
+        map(
+            preceded(ws(keyword("collapse")), parse_unary_expression),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Collapse,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
         // "singleton from" expression
         map(
             preceded(
@@ -581,6 +614,98 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             |operand| {
                 Expression::UnaryExpression(UnaryExpression {
                     operator: UnaryOperator::Singleton,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "predecessor of" expression
+        map(
+            preceded(
+                tuple((ws(keyword("predecessor")), ws(keyword("of")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Predecessor,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "successor of" expression
+        map(
+            preceded(
+                tuple((ws(keyword("successor")), ws(keyword("of")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Successor,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "date from" expression
+        map(
+            preceded(
+                tuple((ws(keyword("date")), ws(keyword("from")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::DateFrom,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "time from" expression
+        map(
+            preceded(
+                tuple((ws(keyword("time")), ws(keyword("from")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::TimeFrom,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "timezoneoffset from" expression
+        map(
+            preceded(
+                tuple((ws(keyword("timezoneoffset")), ws(keyword("from")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::TimezoneOffsetFrom,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // DateTime component extraction: year/month/day/hour/minute/second/millisecond from
+        map(
+            tuple((
+                ws(alt((
+                    value(DateTimePrecision::Year, keyword("year")),
+                    value(DateTimePrecision::Month, keyword("month")),
+                    value(DateTimePrecision::Day, keyword("day")),
+                    value(DateTimePrecision::Hour, keyword("hour")),
+                    value(DateTimePrecision::Minute, keyword("minute")),
+                    value(DateTimePrecision::Second, keyword("second")),
+                    value(DateTimePrecision::Millisecond, keyword("millisecond")),
+                ))),
+                preceded(ws(keyword("from")), parse_unary_expression),
+            )),
+            |(precision, operand)| {
+                Expression::DateTimeComponentFrom(DateTimeComponentFromExpr {
+                    precision,
                     operand: Box::new(operand),
                     location: None,
                 })

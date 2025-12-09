@@ -362,6 +362,9 @@ impl ExpressionTranslator {
             ast::Expression::TernaryExpression(ternary) => {
                 self.translate_ast_ternary_expression(ternary, |s, e| s.translate_expression(e))
             }
+            ast::Expression::DateTimeComponentFrom(dtc) => {
+                self.translate_datetime_component_from(dtc, |s, e| s.translate_expression(e))
+            }
 
             // Type operations
             ast::Expression::TypeExpression(type_expr) => {
@@ -1016,6 +1019,9 @@ impl ExpressionTranslator {
             ast::UnaryOperator::Collapse => elm::Expression::Collapse(unary),
             ast::UnaryOperator::Expand => unreachable!("Handled above"),
             ast::UnaryOperator::Singleton => elm::Expression::SingletonFrom(unary),
+            ast::UnaryOperator::DateFrom => elm::Expression::DateFrom(unary),
+            ast::UnaryOperator::TimeFrom => elm::Expression::TimeFrom(unary),
+            ast::UnaryOperator::TimezoneOffsetFrom => elm::Expression::TimezoneOffsetFrom(unary),
             ast::UnaryOperator::ToBoolean => elm::Expression::ToBoolean(unary),
             ast::UnaryOperator::ToInteger => elm::Expression::ToInteger(unary),
             ast::UnaryOperator::ToLong => elm::Expression::ToLong(unary),
@@ -1304,6 +1310,30 @@ impl ExpressionTranslator {
         let second = translate_expr(self, &expr.second);
         let third = translate_expr(self, &expr.third);
         self.translate_ternary_operator(expr.operator, first, second, third, None)
+    }
+
+    /// Translate a DateTime component extraction (year from, month from, etc.)
+    pub fn translate_datetime_component_from(
+        &mut self,
+        expr: &ast::DateTimeComponentFromExpr,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::Expression {
+        let operand = translate_expr(self, &expr.operand);
+        let precision_str = match expr.precision {
+            ast::DateTimePrecision::Year => "Year",
+            ast::DateTimePrecision::Month => "Month",
+            ast::DateTimePrecision::Day => "Day",
+            ast::DateTimePrecision::Hour => "Hour",
+            ast::DateTimePrecision::Minute => "Minute",
+            ast::DateTimePrecision::Second => "Second",
+            ast::DateTimePrecision::Millisecond => "Millisecond",
+            ast::DateTimePrecision::Week => "Week",
+        };
+        elm::Expression::DateTimeComponentFrom(elm::DateTimeComponentFrom {
+            element: self.element_fields(),
+            operand: Some(Box::new(operand)),
+            precision: Some(precision_str.to_string()),
+        })
     }
 
     // ========================================================================
