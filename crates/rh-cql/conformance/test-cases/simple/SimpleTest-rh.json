@@ -1,0 +1,103 @@
+{
+  "library": {
+    "localId": "8",
+    "identifier": {
+      "id": "SimpleTest",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "usings": {
+      "def": [
+        {
+          "localIdentifier": "System",
+          "uri": "urn:hl7-org:elm-types:r1"
+        },
+        {
+          "localIdentifier": "FHIR",
+          "uri": "http://hl7.org/fhir",
+          "version": "4.0.1"
+        }
+      ]
+    },
+    "contexts": {
+      "def": [
+        {
+          "name": "Patient"
+        }
+      ]
+    },
+    "statements": {
+      "def": [
+        {
+          "localId": "3",
+          "name": "Patient",
+          "context": "Patient",
+          "expression": {
+            "type": "SingletonFrom",
+            "localId": "2",
+            "operand": {
+              "type": "Retrieve",
+              "localId": "1",
+              "dataType": "{http://hl7.org/fhir}Patient",
+              "templateId": "http://hl7.org/fhir/StructureDefinition/Patient",
+              "include": [],
+              "codeFilter": [],
+              "dateFilter": [],
+              "otherFilter": []
+            }
+          },
+          "annotation": [
+            {
+              "type": "Annotation",
+              "s": {
+                "r": "3"
+              }
+            }
+          ]
+        },
+        {
+          "localId": "7",
+          "locator": "7:1",
+          "name": "TestExpression",
+          "context": "Patient",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Add",
+            "localId": "6",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "4",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "1"
+              },
+              {
+                "type": "Literal",
+                "localId": "5",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "1"
+              }
+            ]
+          },
+          "annotation": [
+            {
+              "type": "Annotation",
+              "s": {
+                "r": "7"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "annotation": [
+      {
+        "translatorVersion": "0.1.0",
+        "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+      }
+    ]
+  }
+}

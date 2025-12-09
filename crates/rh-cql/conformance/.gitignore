@@ -1,0 +1,9 @@
+# Generated tools (cloned repos, built artifacts)
+tools/
+
+# Generated comparison results
+results/
+
+# Python cache
+__pycache__/
+*.pyc
