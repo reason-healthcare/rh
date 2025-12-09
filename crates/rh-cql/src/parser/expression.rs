@@ -918,11 +918,12 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_integer_literal_expr,
             parse_string_literal_expr, // Single-quoted CQL strings
         )),
-        // Group 2: Selectors (inline tuple must come before list to handle { name: value } correctly)
+        // Group 2: Selectors (inline tuple must come before bare list to handle { name: value } correctly)
         alt((
             parse_interval_selector,
-            parse_inline_tuple_selector,
             parse_list_selector,
+            parse_inline_tuple_selector,
+            parse_bare_list_selector,
             parse_tuple_selector,
             parse_instance_selector,
         )),
@@ -1067,10 +1068,16 @@ fn parse_interval_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 }
 
 fn parse_list_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    // Optional type specifier: List<Type> or just { ... }
-    let (input, type_spec) = opt(preceded(
-        ws(keyword("List")),
-        delimited(ws(char('<')), parse_type_specifier, ws(char('>'))),
+    // Two forms:
+    // 1. List { elements } or List<Type> { elements } - keyword-prefixed
+    // 2. { elements } - bare braces (handled separately to avoid conflict with tuple)
+    let (input, _) = ws(keyword("List"))(input)?;
+
+    // Optional type specifier: <Type>
+    let (input, type_spec) = opt(delimited(
+        ws(char('<')),
+        parse_type_specifier,
+        ws(char('>')),
     ))(input)?;
 
     let (input, _) = ws(char('{'))(input)?;
@@ -1082,6 +1089,34 @@ fn parse_list_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         Expression::ListExpression(ListExpression {
             elements,
             type_specifier: type_spec,
+            location: None,
+        }),
+    ))
+}
+
+fn parse_bare_list_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Bare braces list: { elements } without List keyword
+    // Must not start with `identifier :` to avoid conflict with inline tuple
+    let (input, _) = ws(char('{'))(input)?;
+
+    // Peek ahead - if we see `identifier :`, this is a tuple, not a list
+    let result = opt(tuple((any_identifier, ws(char(':')))))(input)?;
+    if result.1.is_some() {
+        // This looks like a tuple element (name: value), not a list
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    let (input, elements) = separated_list0(ws(char(',')), expression)(input)?;
+    let (input, _) = ws(char('}'))(input)?;
+
+    Ok((
+        input,
+        Expression::ListExpression(ListExpression {
+            elements,
+            type_specifier: None,
             location: None,
         }),
     ))
@@ -1421,8 +1456,10 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
 }
 
 fn parse_query_source(input: Span<'_>) -> IResult<Span<'_>, QuerySource> {
-    let (input, expr) = expression(input)?;
-    let (input, alias) = any_identifier(input)?;
+    // For query sources, we need to parse a simple expression followed by an alias
+    // We avoid full expression parsing to prevent query-within-query issues
+    let (input, expr) = parse_simple_source_expression(input)?;
+    let (input, alias) = ws(any_identifier)(input)?;
 
     Ok((
         input,
@@ -1431,6 +1468,50 @@ fn parse_query_source(input: Span<'_>) -> IResult<Span<'_>, QuerySource> {
             alias,
             location: None,
         },
+    ))
+}
+
+/// Parse a simple expression suitable for query sources.
+/// This is a limited expression parser that doesn't include query syntax
+/// to avoid infinite recursion in multi-source queries.
+fn parse_simple_source_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Query sources can be:
+    // - Retrieves: [Type]
+    // - Identifiers: MyList or "Quoted Identifier"
+    // - Function calls: SomeFunction()
+    // - Parenthesized expressions: (expr)
+    // - Lists: { 1, 2, 3 } or List { ... }
+    let (input, _) = skip_ws_and_comments(input)?;
+
+    let (input, base) = alt((
+        parse_retrieve,
+        parse_list_selector,
+        parse_bare_list_selector,
+        map(delimited(ws(char('(')), expression, ws(char(')'))), |e| e),
+        parse_function_or_identifier,
+    ))(input)?;
+
+    // Allow member access chains on the base
+    let (input, suffixes) = many0(alt((parse_member_suffix, parse_index_suffix)))(input)?;
+
+    Ok((
+        input,
+        suffixes.into_iter().fold(base, |acc, suffix| match suffix {
+            InvocationSuffix::Member { name, .. } => {
+                Expression::MemberInvocation(MemberInvocation {
+                    source: Box::new(acc),
+                    name,
+                    location: None,
+                })
+            }
+            InvocationSuffix::Index { index, .. } => {
+                Expression::IndexInvocation(IndexInvocation {
+                    source: Box::new(acc),
+                    index: Box::new(index),
+                    location: None,
+                })
+            }
+        }),
     ))
 }
 
@@ -1998,6 +2079,23 @@ mod tests {
 
         // Test full query with sort by $this
         let expr = parse_expr("({ 1, 2, 3, 4, 5 }) X sort by $this * $this");
+        assert!(
+            matches!(expr, Expression::Query(_)),
+            "Expected Query, got {expr:?}"
+        );
+    }
+
+    #[test]
+    fn test_from_query() {
+        // Test simple from query
+        let expr = parse_expr("from X Y where Y = 1");
+        assert!(
+            matches!(expr, Expression::Query(_)),
+            "Expected Query, got {expr:?}"
+        );
+
+        // Test multi-source from query
+        let expr = parse_expr("from X A, Y B where A = B");
         assert!(
             matches!(expr, Expression::Query(_)),
             "Expected Query, got {expr:?}"
