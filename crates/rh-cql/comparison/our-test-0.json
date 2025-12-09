@@ -1,0 +1,203 @@
+{
+  "localId": "16",
+  "identifier": {
+    "id": "Test",
+    "version": "0.1.0"
+  },
+  "schemaIdentifier": {
+    "id": "urn:hl7-org:elm",
+    "version": "r1"
+  },
+  "usings": {
+    "def": [
+      {
+        "localIdentifier": "System",
+        "uri": "urn:hl7-org:elm-types:r1"
+      },
+      {
+        "localIdentifier": "FHIR",
+        "uri": "http://hl7.org/fhir",
+        "version": "4.0.1"
+      }
+    ]
+  },
+  "includes": {
+    "def": [
+      {
+        "localIdentifier": "FHIRHelpers",
+        "path": "FHIRHelpers",
+        "version": "4.0.1"
+      }
+    ]
+  },
+  "parameters": {
+    "def": [
+      {
+        "name": "Measurement Period",
+        "accessLevel": "Public",
+        "parameterTypeName": "Interval<DateTime>",
+        "parameterTypeSpecifier": {
+          "type": "IntervalTypeSpecifier",
+          "pointType": {
+            "type": "NamedTypeSpecifier",
+            "name": "DateTime"
+          }
+        }
+      }
+    ]
+  },
+  "valueSets": {
+    "def": [
+      {
+        "name": "Encounter Inpatient",
+        "id": "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.666.5.307",
+        "accessLevel": "Public"
+      }
+    ]
+  },
+  "contexts": {
+    "def": [
+      {
+        "name": "Patient"
+      }
+    ]
+  },
+  "statements": {
+    "def": [
+      {
+        "localId": "3",
+        "name": "Patient",
+        "context": "Patient",
+        "expression": {
+          "type": "SingletonFrom",
+          "localId": "2",
+          "operand": {
+            "type": "Retrieve",
+            "localId": "1",
+            "dataType": "{http://hl7.org/fhir}Patient",
+            "templateId": "http://hl7.org/fhir/StructureDefinition/Patient",
+            "include": [],
+            "codeFilter": [],
+            "dateFilter": [],
+            "otherFilter": []
+          }
+        },
+        "annotation": [
+          {
+            "type": "Annotation",
+            "s": {
+              "r": "3"
+            }
+          }
+        ]
+      },
+      {
+        "localId": "15",
+        "locator": "13:1",
+        "name": "Inpatient Encounter",
+        "context": "Patient",
+        "accessLevel": "Public",
+        "expression": {
+          "type": "Query",
+          "localId": "4",
+          "source": [
+            {
+              "alias": "EncounterInpatient",
+              "expression": {
+                "type": "Retrieve",
+                "localId": "5",
+                "dataType": "{http://hl7.org/fhir}Encounter",
+                "templateId": "http://hl7.org/fhir/StructureDefinition/Encounter",
+                "codeProperty": "type",
+                "codeComparator": "in",
+                "codes": {
+                  "type": "ValueSetRef",
+                  "localId": "6",
+                  "name": "Encounter Inpatient"
+                },
+                "include": [],
+                "codeFilter": [],
+                "dateFilter": [],
+                "otherFilter": []
+              }
+            }
+          ],
+          "where": {
+            "type": "And",
+            "localId": "14",
+            "operand": [
+              {
+                "type": "Equal",
+                "localId": "9",
+                "operand": [
+                  {
+                    "type": "FunctionRef",
+                    "name": "ToString",
+                    "libraryName": "FHIRHelpers",
+                    "operand": [
+                      {
+                        "type": "Property",
+                        "localId": "7",
+                        "path": "status",
+                        "scope": "EncounterInpatient"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Literal",
+                    "localId": "8",
+                    "valueType": "{urn:hl7-org:elm-types:r1}String",
+                    "value": "finished"
+                  }
+                ]
+              },
+              {
+                "type": "In",
+                "localId": "13",
+                "operand": [
+                  {
+                    "type": "End",
+                    "localId": "11",
+                    "operand": {
+                      "type": "FunctionRef",
+                      "name": "ToInterval",
+                      "libraryName": "FHIRHelpers",
+                      "operand": [
+                        {
+                          "type": "Property",
+                          "localId": "10",
+                          "path": "period",
+                          "scope": "EncounterInpatient"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "ParameterRef",
+                    "localId": "12",
+                    "name": "Measurement Period"
+                  }
+                ],
+                "precision": "Day"
+              }
+            ]
+          }
+        },
+        "annotation": [
+          {
+            "type": "Annotation",
+            "s": {
+              "r": "15"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "annotation": [
+    {
+      "translatorVersion": "0.1.0",
+      "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+    }
+  ]
+}

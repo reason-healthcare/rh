@@ -8,9 +8,18 @@
 
 use crate::elm::{CqlToElmInfo, Library, LibraryAnnotation, VersionedIdentifier};
 use crate::options::{CompilerOptions, OutputFormat};
+use serde::Serialize;
 
 /// Version of this translator implementation.
 pub const TRANSLATOR_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Wrapper struct for ELM library output.
+///
+/// The ELM specification wraps the library in a `{"library": ...}` object.
+#[derive(Debug, Clone, Serialize)]
+pub struct LibraryWrapper {
+    pub library: Library,
+}
 
 /// ELM output writer for generating serialized ELM.
 ///
@@ -57,24 +66,27 @@ impl<'a> ElmWriter<'a> {
     /// Generate JSON output from an ELM library.
     ///
     /// This adds translator metadata if annotations are enabled.
+    /// The output is wrapped in `{"library": ...}` per the ELM specification.
     pub fn to_json(&self, library: &Library) -> Result<String, OutputError> {
         let library = self.prepare_library(library);
+        let wrapper = LibraryWrapper { library };
 
         if self.pretty_print {
-            serde_json::to_string_pretty(&library).map_err(OutputError::JsonSerialization)
+            serde_json::to_string_pretty(&wrapper).map_err(OutputError::JsonSerialization)
         } else {
-            serde_json::to_string(&library).map_err(OutputError::JsonSerialization)
+            serde_json::to_string(&wrapper).map_err(OutputError::JsonSerialization)
         }
     }
 
     /// Generate JSON output as bytes.
     pub fn to_json_bytes(&self, library: &Library) -> Result<Vec<u8>, OutputError> {
         let library = self.prepare_library(library);
+        let wrapper = LibraryWrapper { library };
 
         if self.pretty_print {
-            serde_json::to_vec_pretty(&library).map_err(OutputError::JsonSerialization)
+            serde_json::to_vec_pretty(&wrapper).map_err(OutputError::JsonSerialization)
         } else {
-            serde_json::to_vec(&library).map_err(OutputError::JsonSerialization)
+            serde_json::to_vec(&wrapper).map_err(OutputError::JsonSerialization)
         }
     }
 
@@ -85,11 +97,12 @@ impl<'a> ElmWriter<'a> {
         writer: W,
     ) -> Result<(), OutputError> {
         let library = self.prepare_library(library);
+        let wrapper = LibraryWrapper { library };
 
         if self.pretty_print {
-            serde_json::to_writer_pretty(writer, &library).map_err(OutputError::JsonSerialization)
+            serde_json::to_writer_pretty(writer, &wrapper).map_err(OutputError::JsonSerialization)
         } else {
-            serde_json::to_writer(writer, &library).map_err(OutputError::JsonSerialization)
+            serde_json::to_writer(writer, &wrapper).map_err(OutputError::JsonSerialization)
         }
     }
 
