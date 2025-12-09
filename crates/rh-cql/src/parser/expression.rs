@@ -899,7 +899,11 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_retrieve,
         )),
         // Group 5: Others
-        alt((parse_parenthesized, parse_function_or_identifier)),
+        alt((
+            parse_parenthesized,
+            parse_special_identifier,
+            parse_function_or_identifier,
+        )),
     ))(input)
 }
 
@@ -1631,6 +1635,20 @@ fn parse_parenthesized(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     )(input)
 }
 
+fn parse_special_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, _) = char('$')(input)?;
+    let (input, name) = any_identifier(input)?;
+
+    Ok((
+        input,
+        Expression::IdentifierRef(IdentifierRef {
+            name: format!("${name}"),
+            location: None,
+        }),
+    ))
+}
+
 fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = skip_ws_and_comments(input)?;
 
@@ -1914,5 +1932,37 @@ mod tests {
     fn test_index_access() {
         let expr = parse_expr("items[0]");
         assert!(matches!(expr, Expression::IndexInvocation(_)));
+    }
+
+    #[test]
+    fn test_special_identifiers() {
+        let expr = parse_expr("$this");
+        match expr {
+            Expression::IdentifierRef(ref id) => assert_eq!(id.name, "$this"),
+            _ => panic!("Expected IdentifierRef for $this, got {expr:?}"),
+        }
+
+        let expr = parse_expr("$index");
+        match expr {
+            Expression::IdentifierRef(ref id) => assert_eq!(id.name, "$index"),
+            _ => panic!("Expected IdentifierRef for $index, got {expr:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sort_by_this() {
+        // Test `$this * $this` expression
+        let expr = parse_expr("$this * $this");
+        assert!(
+            matches!(expr, Expression::BinaryExpression(_)),
+            "Expected BinaryExpression, got {expr:?}"
+        );
+
+        // Test full query with sort by $this
+        let expr = parse_expr("({ 1, 2, 3, 4, 5 }) X sort by $this * $this");
+        assert!(
+            matches!(expr, Expression::Query(_)),
+            "Expected Query, got {expr:?}"
+        );
     }
 }
