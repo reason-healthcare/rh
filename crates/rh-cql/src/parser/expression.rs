@@ -880,9 +880,10 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_integer_literal_expr,
             parse_string_literal_expr, // Single-quoted CQL strings
         )),
-        // Group 2: Selectors
+        // Group 2: Selectors (inline tuple must come before list to handle { name: value } correctly)
         alt((
             parse_interval_selector,
+            parse_inline_tuple_selector,
             parse_list_selector,
             parse_tuple_selector,
             parse_instance_selector,
@@ -1039,6 +1040,22 @@ fn parse_list_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         Expression::ListExpression(ListExpression {
             elements,
             type_specifier: type_spec,
+            location: None,
+        }),
+    ))
+}
+
+fn parse_inline_tuple_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Inline tuple: { name: value, ... } without the Tuple keyword
+    // Must have at least one element to distinguish from empty list {}
+    let (input, _) = ws(char('{'))(input)?;
+    let (input, elements) = separated_list1(ws(char(',')), parse_tuple_element)(input)?;
+    let (input, _) = ws(char('}'))(input)?;
+
+    Ok((
+        input,
+        Expression::TupleExpression(TupleExpression {
+            elements,
             location: None,
         }),
     ))
