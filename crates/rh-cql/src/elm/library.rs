@@ -2,11 +2,41 @@
 //!
 //! The Library is the top-level container for CQL/ELM content.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::{
     AccessModifier, Annotation, CqlToElmError, CqlToElmInfo, Expression, QName, TypeSpecifier,
 };
+
+/// Serialize Option<VersionedIdentifier> - always outputs, even if None (as empty object).
+fn serialize_optional_identifier<S>(
+    value: &Option<VersionedIdentifier>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match value {
+        Some(id) => id.serialize(serializer),
+        None => VersionedIdentifier::default().serialize(serializer),
+    }
+}
+
+/// Deserialize Option<VersionedIdentifier> - empty object becomes None.
+fn deserialize_optional_identifier<'de, D>(
+    deserializer: D,
+) -> Result<Option<VersionedIdentifier>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let id = VersionedIdentifier::deserialize(deserializer)?;
+    // If all fields are None, treat as None
+    if id.id.is_none() && id.system.is_none() && id.version.is_none() {
+        Ok(None)
+    } else {
+        Ok(Some(id))
+    }
+}
 
 /// An ELM Library - the top-level container for CQL content.
 ///
@@ -26,7 +56,12 @@ pub struct Library {
     pub local_id: Option<String>,
 
     /// Library identifier (name and version).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Always serialized, even if None (as empty object).
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_identifier",
+        deserialize_with = "deserialize_optional_identifier"
+    )]
     pub identifier: Option<VersionedIdentifier>,
 
     /// Schema identifier for this ELM version.

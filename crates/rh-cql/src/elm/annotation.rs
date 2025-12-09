@@ -139,6 +139,11 @@ pub struct Tag {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CqlToElmInfo {
+    /// Type discriminator for the annotation.
+    /// Always "CqlToElmInfo" for this type.
+    #[serde(rename = "type", default = "CqlToElmInfo::type_name")]
+    pub annotation_type: String,
+
     /// Version of the CQL-to-ELM translator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub translator_version: Option<String>,
@@ -146,6 +151,22 @@ pub struct CqlToElmInfo {
     /// Translation options used.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub translator_options: Option<String>,
+}
+
+impl CqlToElmInfo {
+    /// Returns the type name for this annotation.
+    pub fn type_name() -> String {
+        "CqlToElmInfo".to_string()
+    }
+
+    /// Create a new CqlToElmInfo with required fields.
+    pub fn new() -> Self {
+        Self {
+            annotation_type: Self::type_name(),
+            translator_version: None,
+            translator_options: None,
+        }
+    }
 }
 
 /// Error information from CQL translation.
@@ -243,11 +264,11 @@ mod tests {
 
     #[test]
     fn test_cql_to_elm_info_serialization() {
-        let info = CqlToElmInfo {
-            translator_version: Some("2.11.0".into()),
-            translator_options: Some("EnableAnnotations".into()),
-        };
+        let mut info = CqlToElmInfo::new();
+        info.translator_version = Some("2.11.0".into());
+        info.translator_options = Some("EnableAnnotations".into());
         let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("\"type\":\"CqlToElmInfo\""));
         assert!(json.contains("\"translatorVersion\":\"2.11.0\""));
     }
 
