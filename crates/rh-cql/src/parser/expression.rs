@@ -892,6 +892,7 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         // Group 4: Queries and retrieves
         alt((
             parse_query,
+            parse_parenthesized_source_query,
             parse_identifier_source_query,
             parse_single_source_query,
             parse_retrieve,
@@ -1223,6 +1224,57 @@ fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 
     let source = QuerySource {
         expression: Box::new(retrieve),
+        alias,
+        location: None,
+    };
+
+    Ok((
+        input,
+        Expression::Query(Query {
+            sources: vec![source],
+            let_clauses,
+            relationships,
+            where_clause: where_clause.map(Box::new),
+            return_clause,
+            sort_clause,
+            location: None,
+        }),
+    ))
+}
+
+/// Parse a single-source query with a parenthesized expression as source
+/// This handles: `({ 1, 2, 3 }) X sort desc`
+fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Parse a parenthesized expression
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, source_expr) = delimited(ws(char('(')), expression, ws(char(')')))(input)?;
+
+    // Then look for an alias (with whitespace handling)
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, alias) = any_identifier(input)?;
+
+    // Now parse query clauses
+    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, relationships) = many0(parse_relationship_clause)(input)?;
+    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
+    let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, sort_clause) = opt(parse_sort_clause)(input)?;
+
+    // Must have at least one clause to be a query
+    if let_clauses.is_empty()
+        && relationships.is_empty()
+        && where_clause.is_none()
+        && return_clause.is_none()
+        && sort_clause.is_none()
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    let source = QuerySource {
+        expression: Box::new(source_expr),
         alias,
         location: None,
     };
