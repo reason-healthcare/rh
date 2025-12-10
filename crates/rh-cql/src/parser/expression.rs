@@ -18,9 +18,9 @@
 
 use super::ast::*;
 use super::lexer::{
-    any_identifier, date_literal, datetime_literal, decimal_literal, integer_literal, keyword,
-    long_literal, quantity_literal, quoted_identifier, skip_ws_and_comments, string_literal,
-    time_literal, ws,
+    any_identifier, date_literal, datetime_literal, decimal_literal, identifier, integer_literal,
+    keyword, long_literal, quantity_literal, quoted_identifier, skip_ws_and_comments,
+    string_literal, time_literal, ws,
 };
 use super::span::{SourceLocation, Span};
 use nom::{
@@ -963,6 +963,7 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_parenthesized_source_query,
             parse_identifier_source_query,
             parse_single_source_query,
+            parse_unquoted_identifier_source_query,
             parse_retrieve,
         )),
         // Group 5: Others
@@ -1483,6 +1484,75 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
     ))
 }
 
+/// Parse a single-source query with an unquoted identifier as source
+/// This handles: `DefinitionName alias where ...` or `Src.property alias where ...`
+fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = skip_ws_and_comments(input)?;
+
+    // Parse a regular (unquoted) identifier
+    let (input, name) = identifier(input)?;
+
+    let mut source_expr = Expression::IdentifierRef(IdentifierRef {
+        name,
+        location: None,
+    });
+
+    // Check for property access chain (.property)
+    let (input, properties) = many0(preceded(ws(char('.')), any_identifier))(input)?;
+
+    // Build property access chain
+    for prop in properties {
+        source_expr = Expression::MemberInvocation(MemberInvocation {
+            source: Box::new(source_expr),
+            name: prop,
+            location: None,
+        });
+    }
+
+    // Then look for an alias (with whitespace handling)
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, alias) = any_identifier(input)?;
+
+    // Now parse query clauses
+    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, relationships) = many0(parse_relationship_clause)(input)?;
+    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
+    let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, sort_clause) = opt(parse_sort_clause)(input)?;
+
+    // Must have at least one clause to be a query
+    if let_clauses.is_empty()
+        && relationships.is_empty()
+        && where_clause.is_none()
+        && return_clause.is_none()
+        && sort_clause.is_none()
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    let source = QuerySource {
+        expression: Box::new(source_expr),
+        alias,
+        location: None,
+    };
+
+    Ok((
+        input,
+        Expression::Query(Query {
+            sources: vec![source],
+            let_clauses,
+            relationships,
+            where_clause: where_clause.map(Box::new),
+            return_clause,
+            sort_clause,
+            location: None,
+        }),
+    ))
+}
+
 fn parse_query_source(input: Span<'_>) -> IResult<Span<'_>, QuerySource> {
     // For query sources, we need to parse a simple expression followed by an alias
     // We avoid full expression parsing to prevent query-within-query issues
@@ -1532,13 +1602,11 @@ fn parse_simple_source_expression(input: Span<'_>) -> IResult<Span<'_>, Expressi
                     location: None,
                 })
             }
-            InvocationSuffix::Index { index, .. } => {
-                Expression::IndexInvocation(IndexInvocation {
-                    source: Box::new(acc),
-                    index: Box::new(index),
-                    location: None,
-                })
-            }
+            InvocationSuffix::Index { index, .. } => Expression::IndexInvocation(IndexInvocation {
+                source: Box::new(acc),
+                index: Box::new(index),
+                location: None,
+            }),
         }),
     ))
 }
