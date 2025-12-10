@@ -652,6 +652,34 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 })
             },
         ),
+        // "start of" expression (interval boundary)
+        map(
+            preceded(
+                tuple((ws(keyword("start")), ws(keyword("of")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Start,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
+        // "end of" expression (interval boundary)
+        map(
+            preceded(
+                tuple((ws(keyword("end")), ws(keyword("of")))),
+                parse_unary_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::End,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
         // "date from" expression
         map(
             preceded(
