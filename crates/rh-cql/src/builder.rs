@@ -910,6 +910,9 @@ impl<'a> LibraryBuilder<'a> {
             // Recursively handle parenthesized expressions
             ast::Expression::Parenthesized(inner) => self.infer_fhir_result_type(inner),
 
+            // Timing expressions return Boolean
+            ast::Expression::TimingExpression(_) => None,
+
             _ => None,
         }
     }
@@ -1541,6 +1544,9 @@ impl<'a> LibraryBuilder<'a> {
             ast::Expression::Parenthesized(inner) => {
                 self.translate_expr_recursive(inner, translator)
             }
+
+            ast::Expression::TimingExpression(timing) => translator
+                .translate_timing_expression(timing, |s, e| self.translate_expr_recursive(e, s)),
         }
     }
 

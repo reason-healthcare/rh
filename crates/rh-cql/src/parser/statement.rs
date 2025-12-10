@@ -295,13 +295,14 @@ pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef>
 // Function Definition
 // ============================================================================
 
-/// Parse function definition: `define function Name(params) returns Type: body`
+/// Parse function definition: `define [fluent] function Name(params) returns Type: body`
 pub fn parse_function_def(input: Span<'_>) -> IResult<Span<'_>, FunctionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, access) = parse_access_modifier(input)?;
-    let (input, fluent) = opt(keyword("fluent"))(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("define")(input)?;
+    let (input, _) = skip_ws_and_comments(input)?;
+    let (input, fluent) = opt(keyword("fluent"))(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("function")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
@@ -704,7 +705,7 @@ mod tests {
     #[test]
     fn test_function_def_fluent() {
         let (_, func) = parse_function_def(span(
-            "fluent define function toAge(birthDate Date) returns Integer: 0",
+            "define fluent function toAge(birthDate Date) returns Integer: 0",
         ))
         .unwrap();
         assert_eq!(func.name, "toAge");

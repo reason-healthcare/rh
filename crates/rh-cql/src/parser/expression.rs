@@ -251,6 +251,15 @@ enum IntervalOp {
     },
     /// during/before/after with precision
     WithPrecision(BinaryOperator, DateTimePrecision),
+    /// includes/included in with optional precision and right boundary
+    /// e.g., "includes day of start B" or "includes start B"
+    WithPrecisionAndRightBoundary {
+        operator: BinaryOperator,
+        precision: Option<DateTimePrecision>,
+        right_boundary: Option<UnaryOperator>, // Start or End applied to right operand
+    },
+    /// Timing phrase (complex relative timing)
+    Timing(TimingPhrase),
 }
 
 fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
@@ -302,12 +311,45 @@ fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expr
                     location: None,
                 })
             }
+            IntervalOp::WithPrecisionAndRightBoundary {
+                operator,
+                precision,
+                right_boundary,
+            } => {
+                // "X includes start Y" => Includes(X, Start(Y))
+                let right_expr = match right_boundary {
+                    Some(boundary) => Expression::UnaryExpression(UnaryExpression {
+                        operator: boundary,
+                        operand: Box::new(expr),
+                        location: None,
+                    }),
+                    None => expr,
+                };
+                Expression::BinaryExpression(BinaryExpression {
+                    operator,
+                    left: Box::new(acc),
+                    right: Box::new(right_expr),
+                    precision,
+                    location: None,
+                })
+            }
+            IntervalOp::Timing(timing) => Expression::TimingExpression(TimingExpression {
+                left: Box::new(acc),
+                right: Box::new(expr),
+                timing,
+                location: None,
+            }),
         }),
     ))
 }
 
 /// Parse a single interval operator followed by its operand
 fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (IntervalOp, Expression)> {
+    // Try timing phrases first (most complex)
+    if let Ok((remaining, (timing, expr))) = parse_timing_phrase_with_operand(input) {
+        return Ok((remaining, (IntervalOp::Timing(timing), expr)));
+    }
+
     // First, try to parse compound operators: "starts/ends during/before/after [precision of]"
     let compound_result = opt(tuple((
         ws(alt((
@@ -338,9 +380,59 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
             ))
         }
         (_, None) => {
-            // Try temporal operators with precision: "during/before/after [precision of]"
+            // Try "includes" family operators: [properly] includes [precision of] [start|end]
+            let includes_result = opt(tuple((
+                ws(alt((
+                    value(
+                        BinaryOperator::ProperlyIncludes,
+                        tuple((keyword("properly"), ws(keyword("includes")))),
+                    ),
+                    value(BinaryOperator::Includes, keyword("includes")),
+                ))),
+                opt(tuple((parse_precision, ws(keyword("of"))))),
+                opt(ws(alt((
+                    value(UnaryOperator::Start, keyword("start")),
+                    value(UnaryOperator::End, keyword("end")),
+                )))),
+            )))(input)?;
+
+            if let (remaining, Some((op, precision_opt, boundary))) = includes_result {
+                let precision = precision_opt.map(|(p, _)| p);
+                // Only use this variant if we have precision or boundary
+                if precision.is_some() || boundary.is_some() {
+                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    return Ok((
+                        remaining,
+                        (
+                            IntervalOp::WithPrecisionAndRightBoundary {
+                                operator: op,
+                                precision,
+                                right_boundary: boundary,
+                            },
+                            expr,
+                        ),
+                    ));
+                }
+                // Fall through to simple parsing if no precision or boundary
+            }
+
+            // Try temporal operators with precision: "operator precision of"
+            // This includes: during, before, after, included in, properly included in
             let temporal_with_precision = opt(tuple((
                 ws(alt((
+                    // Longer matches first
+                    value(
+                        BinaryOperator::ProperlyIncludedIn,
+                        tuple((
+                            keyword("properly"),
+                            ws(keyword("included")),
+                            ws(keyword("in")),
+                        )),
+                    ),
+                    value(
+                        BinaryOperator::IncludedIn,
+                        tuple((keyword("included"), ws(keyword("in")))),
+                    ),
                     value(BinaryOperator::During, keyword("during")),
                     value(BinaryOperator::Before, keyword("before")),
                     value(BinaryOperator::After, keyword("after")),
@@ -422,6 +514,325 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
             }
         }
     }
+}
+
+/// Parse timing phrase with its right operand
+///
+/// Handles:
+/// - `[starts|ends|occurs] [offset [qualifier]] direction [precision of] [boundary] operand`
+/// - `[starts|ends|occurs] [properly] within offset of [boundary] operand`
+/// - `[starts|ends|occurs] same [precision] (as|or before|or after) [boundary] operand`
+fn parse_timing_phrase_with_operand(
+    input: Span<'_>,
+) -> IResult<Span<'_>, (TimingPhrase, Expression)> {
+    // Try "same" timing first
+    if let Ok(result) = parse_same_timing(input) {
+        return Ok(result);
+    }
+
+    // Try "within" timing
+    if let Ok(result) = parse_within_timing(input) {
+        return Ok(result);
+    }
+
+    // Try relative timing (before/after variants)
+    parse_relative_timing(input)
+}
+
+/// Parse "same" timing phrase
+/// Patterns: `[starts|ends|occurs] same [precision] (as|or before|or after) [start|end] operand`
+fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expression)> {
+    // Optional left boundary: starts/ends/occurs
+    let (input, left_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("starts")),
+        value(IntervalBoundary::End, keyword("ends")),
+        value(IntervalBoundary::Start, keyword("occurs")),
+    ))))(input)?;
+
+    // "same" keyword is required
+    let (input, _) = ws(keyword("same"))(input)?;
+
+    // Optional precision: day, month, year, etc.
+    let (input, precision) = opt(ws(parse_precision))(input)?;
+
+    // Direction: "as", "or before", "or after"
+    let (input, direction) = ws(alt((
+        value(
+            SameDirection::OrBefore,
+            tuple((keyword("or"), ws(keyword("before")))),
+        ),
+        value(
+            SameDirection::OrAfter,
+            tuple((keyword("or"), ws(keyword("after")))),
+        ),
+        value(SameDirection::As, keyword("as")),
+    )))(input)?;
+
+    // Optional right boundary: start/end
+    let (input, right_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("start")),
+        value(IntervalBoundary::End, keyword("end")),
+    ))))(input)?;
+
+    let (input, expr) = parse_union_expression(input)?;
+
+    Ok((
+        input,
+        (
+            TimingPhrase::SameTiming {
+                left_boundary,
+                precision,
+                direction,
+                right_boundary,
+            },
+            expr,
+        ),
+    ))
+}
+
+/// Parse "within" timing phrase
+fn parse_within_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expression)> {
+    let (input, left_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("starts")),
+        value(IntervalBoundary::End, keyword("ends")),
+        value(IntervalBoundary::Start, keyword("occurs")), // occurs uses start by convention
+    ))))(input)?;
+
+    let (input, properly) = opt(ws(keyword("properly")))(input)?;
+    let (input, _) = ws(keyword("within"))(input)?;
+    let (input, quantity) = ws(parse_duration_quantity)(input)?;
+    let (input, _) = ws(keyword("of"))(input)?;
+
+    let (input, right_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("start")),
+        value(IntervalBoundary::End, keyword("end")),
+    ))))(input)?;
+
+    let (input, expr) = parse_union_expression(input)?;
+
+    let offset = TimingOffset {
+        quantity: QuantityValue {
+            value: quantity.0,
+            unit: quantity.1,
+        },
+        qualifier: None,
+    };
+
+    Ok((
+        input,
+        (
+            TimingPhrase::WithinTiming {
+                left_boundary,
+                properly: properly.is_some(),
+                offset,
+                right_boundary,
+            },
+            expr,
+        ),
+    ))
+}
+
+/// Parse relative timing (before/after variants)
+fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expression)> {
+    // Optional left boundary: starts/ends/occurs
+    let (input, left_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("starts")),
+        value(IntervalBoundary::End, keyword("ends")),
+        value(IntervalBoundary::Start, keyword("occurs")),
+    ))))(input)?;
+
+    // Try to parse offset with optional qualifier
+    // Patterns:
+    // - <quantity> [or less|or more] before/after
+    // - less than <quantity> before/after
+    // - more than <quantity> before/after
+    let (input, offset) = parse_timing_offset(input)?;
+
+    // Parse direction - must have at least offset or boundary to trigger timing phrase parsing
+    // If we have neither, this isn't a timing phrase
+    if offset.is_none() && left_boundary.is_none() {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
+    // We need an offset for timing phrases (simple before/after without offset is handled elsewhere)
+    let offset = match offset {
+        Some(o) => o,
+        None => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
+        }
+    };
+
+    let (input, direction) = ws(parse_timing_direction)(input)?;
+
+    // Optional precision: day of, hour of, etc.
+    let (input, precision) = parse_optional_precision_of(input)?;
+
+    // Optional right boundary: start/end
+    let (input, right_boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("start")),
+        value(IntervalBoundary::End, keyword("end")),
+    ))))(input)?;
+
+    let (input, expr) = parse_union_expression(input)?;
+
+    Ok((
+        input,
+        (
+            TimingPhrase::RelativeTiming {
+                left_boundary,
+                offset: Some(offset),
+                direction,
+                precision,
+                right_boundary,
+            },
+            expr,
+        ),
+    ))
+}
+
+/// Parse timing offset with optional qualifier
+fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset>> {
+    // Try "less than <quantity>" or "more than <quantity>" first
+    let less_than = opt(tuple((
+        ws(keyword("less")),
+        ws(keyword("than")),
+        ws(parse_duration_quantity),
+    )))(input)?;
+
+    if let (remaining, Some((_, _, quantity))) = less_than {
+        return Ok((
+            remaining,
+            Some(TimingOffset {
+                quantity: QuantityValue {
+                    value: quantity.0,
+                    unit: quantity.1,
+                },
+                qualifier: Some(TimingQualifier::LessThan),
+            }),
+        ));
+    }
+
+    let more_than = opt(tuple((
+        ws(keyword("more")),
+        ws(keyword("than")),
+        ws(parse_duration_quantity),
+    )))(input)?;
+
+    if let (remaining, Some((_, _, quantity))) = more_than {
+        return Ok((
+            remaining,
+            Some(TimingOffset {
+                quantity: QuantityValue {
+                    value: quantity.0,
+                    unit: quantity.1,
+                },
+                qualifier: Some(TimingQualifier::MoreThan),
+            }),
+        ));
+    }
+
+    // Try "<quantity> [or less|or more]"
+    let quantity_result = opt(ws(parse_duration_quantity))(input)?;
+
+    match quantity_result {
+        (remaining, Some(quantity)) => {
+            // Check for "or less" / "or more"
+            let (remaining, qualifier) = opt(ws(alt((
+                value(
+                    TimingQualifier::OrLess,
+                    tuple((keyword("or"), ws(keyword("less")))),
+                ),
+                value(
+                    TimingQualifier::OrMore,
+                    tuple((keyword("or"), ws(keyword("more")))),
+                ),
+            ))))(remaining)?;
+
+            Ok((
+                remaining,
+                Some(TimingOffset {
+                    quantity: QuantityValue {
+                        value: quantity.0,
+                        unit: quantity.1,
+                    },
+                    qualifier,
+                }),
+            ))
+        }
+        (remaining, None) => Ok((remaining, None)),
+    }
+}
+
+/// Parse a duration quantity (number with temporal unit keyword)
+/// Handles: 3 days, 1 year, 2 weeks, etc.
+fn parse_duration_quantity(input: Span<'_>) -> IResult<Span<'_>, (f64, String)> {
+    let (input, value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
+    let (input, unit) = ws(parse_duration_unit)(input)?;
+    Ok((input, (value, unit)))
+}
+
+/// Parse a temporal unit keyword
+fn parse_duration_unit(input: Span<'_>) -> IResult<Span<'_>, String> {
+    alt((
+        // Singular and plural forms
+        map(alt((keyword("years"), keyword("year"))), |_| {
+            "years".to_string()
+        }),
+        map(alt((keyword("months"), keyword("month"))), |_| {
+            "months".to_string()
+        }),
+        map(alt((keyword("weeks"), keyword("week"))), |_| {
+            "weeks".to_string()
+        }),
+        map(alt((keyword("days"), keyword("day"))), |_| {
+            "days".to_string()
+        }),
+        map(alt((keyword("hours"), keyword("hour"))), |_| {
+            "hours".to_string()
+        }),
+        map(alt((keyword("minutes"), keyword("minute"))), |_| {
+            "minutes".to_string()
+        }),
+        map(alt((keyword("seconds"), keyword("second"))), |_| {
+            "seconds".to_string()
+        }),
+        map(
+            alt((keyword("milliseconds"), keyword("millisecond"))),
+            |_| "milliseconds".to_string(),
+        ),
+    ))(input)
+}
+
+/// Parse timing direction keyword
+fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection> {
+    alt((
+        // Multi-word variants first (longer match)
+        value(
+            TimingDirection::OnOrBefore,
+            tuple((keyword("on"), ws(keyword("or")), ws(keyword("before")))),
+        ),
+        value(
+            TimingDirection::OnOrAfter,
+            tuple((keyword("on"), ws(keyword("or")), ws(keyword("after")))),
+        ),
+        value(
+            TimingDirection::BeforeOrOn,
+            tuple((keyword("before"), ws(keyword("or")), ws(keyword("on")))),
+        ),
+        value(
+            TimingDirection::AfterOrOn,
+            tuple((keyword("after"), ws(keyword("or")), ws(keyword("on")))),
+        ),
+        // Simple variants
+        value(TimingDirection::Before, keyword("before")),
+        value(TimingDirection::After, keyword("after")),
+    ))(input)
 }
 
 // ============================================================================
@@ -2196,5 +2607,92 @@ mod tests {
             matches!(expr, Expression::Query(_)),
             "Expected Query, got {expr:?}"
         );
+    }
+
+    #[test]
+    fn test_includes_with_start() {
+        // Test "A includes start B" - boundary without precision
+        let expr = parse_expr("A includes start B");
+        if let Expression::BinaryExpression(BinaryExpression {
+            operator,
+            right,
+            precision,
+            ..
+        }) = expr
+        {
+            assert_eq!(operator, BinaryOperator::Includes);
+            assert!(precision.is_none());
+            // right should be Start(B)
+            assert!(
+                matches!(
+                    *right,
+                    Expression::UnaryExpression(UnaryExpression {
+                        operator: UnaryOperator::Start,
+                        ..
+                    })
+                ),
+                "Expected Start(B), got {right:?}"
+            );
+        } else {
+            panic!("Expected BinaryExpression with Includes");
+        }
+    }
+
+    #[test]
+    fn test_includes_with_precision_and_start() {
+        // Test "A includes day of start B" - precision + boundary
+        let expr = parse_expr("A includes day of start B");
+        if let Expression::BinaryExpression(BinaryExpression {
+            operator,
+            right,
+            precision,
+            ..
+        }) = expr
+        {
+            assert_eq!(operator, BinaryOperator::Includes);
+            assert_eq!(precision, Some(DateTimePrecision::Day));
+            // right should be Start(B)
+            assert!(
+                matches!(
+                    *right,
+                    Expression::UnaryExpression(UnaryExpression {
+                        operator: UnaryOperator::Start,
+                        ..
+                    })
+                ),
+                "Expected Start(B), got {right:?}"
+            );
+        } else {
+            panic!("Expected BinaryExpression with Includes");
+        }
+    }
+
+    #[test]
+    fn test_properly_includes_with_end() {
+        // Test "A properly includes end B"
+        let expr = parse_expr("A properly includes end B");
+        if let Expression::BinaryExpression(BinaryExpression {
+            operator,
+            right,
+            precision,
+            ..
+        }) = expr
+        {
+            assert_eq!(operator, BinaryOperator::ProperlyIncludes);
+            assert!(precision.is_none());
+            // right should be End(B)
+            assert!(
+                matches!(
+                    *right,
+                    Expression::UnaryExpression(UnaryExpression {
+                        operator: UnaryOperator::End,
+                        ..
+                    })
+                ),
+                "Expected End(B), got {right:?}"
+            );
+        } else {
+            panic!("Expected BinaryExpression with ProperlyIncludes");
+        }
     }
 }

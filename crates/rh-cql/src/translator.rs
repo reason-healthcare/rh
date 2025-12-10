@@ -407,6 +407,11 @@ impl ExpressionTranslator {
             // Let
             ast::Expression::Let(let_clause) => self.translate_let_expression(let_clause),
 
+            // Timing phrases
+            ast::Expression::TimingExpression(timing) => {
+                self.translate_timing_expression(timing, |s, e| s.translate_expression(e))
+            }
+
             // Parenthesized - unwrap and translate inner expression
             ast::Expression::Parenthesized(inner) => self.translate_expression(inner),
         }
@@ -1163,10 +1168,12 @@ impl ExpressionTranslator {
             ast::BinaryOperator::Contains => elm::Expression::Contains(binary),
 
             // Interval
-            ast::BinaryOperator::Includes => elm::Expression::Includes(binary),
-            ast::BinaryOperator::IncludedIn => elm::Expression::IncludedIn(binary),
-            ast::BinaryOperator::ProperlyIncludes => elm::Expression::ProperIncludes(binary),
-            ast::BinaryOperator::ProperlyIncludedIn => elm::Expression::ProperIncludedIn(binary),
+            ast::BinaryOperator::Includes => elm::Expression::Includes(time_binary()),
+            ast::BinaryOperator::IncludedIn => elm::Expression::IncludedIn(time_binary()),
+            ast::BinaryOperator::ProperlyIncludes => elm::Expression::ProperIncludes(time_binary()),
+            ast::BinaryOperator::ProperlyIncludedIn => {
+                elm::Expression::ProperIncludedIn(time_binary())
+            }
             ast::BinaryOperator::Overlaps => elm::Expression::Overlaps(time_binary()),
             ast::BinaryOperator::OverlapsBefore => elm::Expression::OverlapsBefore(time_binary()),
             ast::BinaryOperator::OverlapsAfter => elm::Expression::OverlapsAfter(time_binary()),
@@ -1177,7 +1184,7 @@ impl ExpressionTranslator {
             ast::BinaryOperator::Ends => elm::Expression::Ends(time_binary()),
             ast::BinaryOperator::During => {
                 // During is IncludedIn for intervals
-                elm::Expression::IncludedIn(binary)
+                elm::Expression::IncludedIn(time_binary())
             }
             ast::BinaryOperator::Before => elm::Expression::Before(time_binary()),
             ast::BinaryOperator::After => elm::Expression::After(time_binary()),
@@ -1187,7 +1194,7 @@ impl ExpressionTranslator {
             ast::BinaryOperator::Within => {
                 // Within X of Y - this needs special handling with quantity
                 // For now, translate as IncludedIn
-                elm::Expression::IncludedIn(binary)
+                elm::Expression::IncludedIn(time_binary())
             }
 
             // List
@@ -2200,6 +2207,616 @@ impl ExpressionTranslator {
         })
     }
 
+    // ========================================================================
+    // Timing Expression Translation
+    // ========================================================================
+
+    /// Translate a timing expression to ELM.
+    ///
+    /// Handles complex timing phrases like:
+    /// - `A 3 days before B`
+    /// - `A 3 days or less before B`
+    /// - `A within 3 days of B`
+    pub fn translate_timing_expression(
+        &mut self,
+        timing: &ast::TimingExpression,
+        translate_expr: impl Fn(&mut Self, &ast::Expression) -> elm::Expression,
+    ) -> elm::Expression {
+        let left = translate_expr(self, &timing.left);
+        let right = translate_expr(self, &timing.right);
+
+        match &timing.timing {
+            ast::TimingPhrase::RelativeTiming {
+                left_boundary,
+                offset,
+                direction,
+                precision,
+                right_boundary,
+            } => self.translate_relative_timing(
+                left,
+                right,
+                left_boundary,
+                offset,
+                direction,
+                precision,
+                right_boundary,
+            ),
+            ast::TimingPhrase::WithinTiming {
+                left_boundary,
+                properly,
+                offset,
+                right_boundary,
+            } => self.translate_within_timing(
+                left,
+                right,
+                left_boundary,
+                *properly,
+                offset,
+                right_boundary,
+            ),
+            ast::TimingPhrase::SameTiming {
+                left_boundary,
+                precision,
+                direction,
+                right_boundary,
+            } => self.translate_same_timing(
+                left,
+                right,
+                left_boundary,
+                precision,
+                direction,
+                right_boundary,
+            ),
+        }
+    }
+
+    /// Translate relative timing (before/after variants)
+    #[allow(clippy::too_many_arguments)]
+    fn translate_relative_timing(
+        &mut self,
+        left: elm::Expression,
+        right: elm::Expression,
+        left_boundary: &Option<ast::IntervalBoundary>,
+        offset: &Option<ast::TimingOffset>,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+        right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let left_expr = self.apply_boundary(left.clone(), left_boundary, true);
+
+        let right_base = self.apply_boundary(right.clone(), right_boundary, false);
+
+        let offset = match offset {
+            Some(o) => o,
+            None => {
+                return self
+                    .create_direction_expression(left_expr, right_base, direction, precision);
+            }
+        };
+
+        let quantity = self.translate_quantity_value(&offset.quantity);
+
+        let offset_right = self.apply_offset_to_right(&right_base, &quantity, direction);
+
+        match &offset.qualifier {
+            None => self.create_same_as_offset(left_expr, offset_right, precision, right_boundary),
+            Some(ast::TimingQualifier::OrLess) => self.create_or_less_expression(
+                left_expr,
+                right_base,
+                &quantity,
+                direction,
+                precision,
+                right_boundary,
+            ),
+            Some(ast::TimingQualifier::OrMore) => self.create_or_more_expression(
+                left_expr,
+                offset_right,
+                direction,
+                precision,
+                right_boundary,
+            ),
+            Some(ast::TimingQualifier::LessThan) => self.create_less_than_expression(
+                left_expr,
+                right_base,
+                &quantity,
+                direction,
+                precision,
+                right_boundary,
+            ),
+            Some(ast::TimingQualifier::MoreThan) => self.create_more_than_expression(
+                left_expr,
+                offset_right,
+                direction,
+                precision,
+                right_boundary,
+            ),
+        }
+    }
+
+    /// Translate same timing (same [precision] as/or before/or after)
+    fn translate_same_timing(
+        &mut self,
+        left: elm::Expression,
+        right: elm::Expression,
+        left_boundary: &Option<ast::IntervalBoundary>,
+        precision: &Option<ast::DateTimePrecision>,
+        direction: &ast::SameDirection,
+        right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let left_expr = self.apply_boundary(left, left_boundary, true);
+        let right_expr = self.apply_boundary(right, right_boundary, false);
+
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+
+        match direction {
+            ast::SameDirection::As => elm::Expression::SameAs(elm::TimeBinaryExpression {
+                element,
+                precision: prec,
+                operand: vec![left_expr, right_expr],
+                signature: Vec::new(),
+            }),
+            ast::SameDirection::OrBefore => {
+                elm::Expression::SameOrBefore(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left_expr, right_expr],
+                    signature: Vec::new(),
+                })
+            }
+            ast::SameDirection::OrAfter => {
+                elm::Expression::SameOrAfter(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left_expr, right_expr],
+                    signature: Vec::new(),
+                })
+            }
+        }
+    }
+
+    /// Apply boundary extraction (Start or End) to an expression
+    fn apply_boundary(
+        &mut self,
+        expr: elm::Expression,
+        boundary: &Option<ast::IntervalBoundary>,
+        is_left: bool,
+    ) -> elm::Expression {
+        match boundary {
+            Some(ast::IntervalBoundary::Start) => self.create_start(expr),
+            Some(ast::IntervalBoundary::End) => self.create_end(expr),
+            None => {
+                if is_left {
+                    self.create_end(expr)
+                } else {
+                    self.create_start(expr)
+                }
+            }
+        }
+    }
+
+    /// Create a Start unary expression
+    fn create_start(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields();
+        elm::Expression::Start(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create an End unary expression
+    fn create_end(&mut self, operand: elm::Expression) -> elm::Expression {
+        let element = self.element_fields();
+        elm::Expression::End(elm::UnaryExpression {
+            element,
+            operand: Some(Box::new(operand)),
+            signature: Vec::new(),
+        })
+    }
+
+    /// Translate quantity value to ELM
+    fn translate_quantity_value(&mut self, qv: &ast::QuantityValue) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Quantity));
+        elm::Expression::Quantity(elm::QuantityExpr {
+            element,
+            value: Some(qv.value),
+            unit: Some(qv.unit.clone()),
+        })
+    }
+
+    /// Apply offset to right operand based on direction
+    fn apply_offset_to_right(
+        &mut self,
+        right: &elm::Expression,
+        quantity: &elm::Expression,
+        direction: &ast::TimingDirection,
+    ) -> elm::Expression {
+        let element = self.element_fields();
+        match direction {
+            ast::TimingDirection::Before
+            | ast::TimingDirection::OnOrBefore
+            | ast::TimingDirection::BeforeOrOn => {
+                elm::Expression::Subtract(elm::BinaryExpression {
+                    element,
+                    operand: vec![right.clone(), quantity.clone()],
+                    signature: Vec::new(),
+                })
+            }
+            ast::TimingDirection::After
+            | ast::TimingDirection::OnOrAfter
+            | ast::TimingDirection::AfterOrOn => elm::Expression::Add(elm::BinaryExpression {
+                element,
+                operand: vec![right.clone(), quantity.clone()],
+                signature: Vec::new(),
+            }),
+        }
+    }
+
+    /// Create direction expression (Before, After, SameOrBefore, SameOrAfter)
+    fn create_direction_expression(
+        &mut self,
+        left: elm::Expression,
+        right: elm::Expression,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+
+        match direction {
+            ast::TimingDirection::Before => elm::Expression::Before(elm::TimeBinaryExpression {
+                element,
+                precision: prec,
+                operand: vec![left, right],
+                signature: Vec::new(),
+            }),
+            ast::TimingDirection::After => elm::Expression::After(elm::TimeBinaryExpression {
+                element,
+                precision: prec,
+                operand: vec![left, right],
+                signature: Vec::new(),
+            }),
+            ast::TimingDirection::OnOrBefore | ast::TimingDirection::BeforeOrOn => {
+                elm::Expression::SameOrBefore(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })
+            }
+            ast::TimingDirection::OnOrAfter | ast::TimingDirection::AfterOrOn => {
+                elm::Expression::SameOrAfter(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, right],
+                    signature: Vec::new(),
+                })
+            }
+        }
+    }
+
+    /// Convert DateTimePrecision to string for ELM
+    fn datetime_precision_to_string(&self, precision: ast::DateTimePrecision) -> String {
+        match precision {
+            ast::DateTimePrecision::Year => "Year".to_string(),
+            ast::DateTimePrecision::Month => "Month".to_string(),
+            ast::DateTimePrecision::Week => "Week".to_string(),
+            ast::DateTimePrecision::Day => "Day".to_string(),
+            ast::DateTimePrecision::Hour => "Hour".to_string(),
+            ast::DateTimePrecision::Minute => "Minute".to_string(),
+            ast::DateTimePrecision::Second => "Second".to_string(),
+            ast::DateTimePrecision::Millisecond => "Millisecond".to_string(),
+        }
+    }
+
+    /// Create SameAs expression for exact offset timing
+    fn create_same_as_offset(
+        &mut self,
+        left: elm::Expression,
+        offset_right: elm::Expression,
+        precision: &Option<ast::DateTimePrecision>,
+        _right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+
+        elm::Expression::SameAs(elm::TimeBinaryExpression {
+            element,
+            precision: prec,
+            operand: vec![left, offset_right],
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create "or less" timing expression: In(left, Interval[offset, right])
+    fn create_or_less_expression(
+        &mut self,
+        left: elm::Expression,
+        right_base: elm::Expression,
+        quantity: &elm::Expression,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+        right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields();
+        let low = elm::Expression::Subtract(elm::BinaryExpression {
+            element: element.clone(),
+            operand: vec![right_base.clone(), quantity.clone()],
+            signature: Vec::new(),
+        });
+
+        let (interval_low, interval_high, low_closed, high_closed) = match direction {
+            ast::TimingDirection::Before => {
+                (low, right_base.clone(), true, right_boundary.is_none())
+            }
+            ast::TimingDirection::OnOrBefore | ast::TimingDirection::BeforeOrOn => {
+                (low, right_base.clone(), true, true)
+            }
+            ast::TimingDirection::After => {
+                let high = elm::Expression::Add(elm::BinaryExpression {
+                    element: element.clone(),
+                    operand: vec![right_base.clone(), quantity.clone()],
+                    signature: Vec::new(),
+                });
+                (right_base.clone(), high, right_boundary.is_none(), true)
+            }
+            ast::TimingDirection::OnOrAfter | ast::TimingDirection::AfterOrOn => {
+                let high = elm::Expression::Add(elm::BinaryExpression {
+                    element: element.clone(),
+                    operand: vec![right_base.clone(), quantity.clone()],
+                    signature: Vec::new(),
+                });
+                (right_base.clone(), high, true, true)
+            }
+        };
+
+        let interval = elm::Expression::Interval(elm::IntervalExpr {
+            element: element.clone(),
+            low: Some(Box::new(interval_low)),
+            low_closed_expression: None,
+            high: Some(Box::new(interval_high)),
+            high_closed_expression: None,
+            low_closed: Some(low_closed),
+            high_closed: Some(high_closed),
+        });
+
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+        let in_expr = elm::Expression::In(elm::TimeBinaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            precision: prec,
+            operand: vec![left, interval],
+            signature: Vec::new(),
+        });
+
+        let null_check = elm::Expression::Not(elm::UnaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            operand: Some(Box::new(elm::Expression::IsNull(elm::UnaryExpression {
+                element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+                operand: Some(Box::new(right_base)),
+                signature: Vec::new(),
+            }))),
+            signature: Vec::new(),
+        });
+
+        elm::Expression::And(elm::NaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            operand: vec![in_expr, null_check],
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create "or more" timing expression: SameOrBefore/After(left, offset_right)
+    fn create_or_more_expression(
+        &mut self,
+        left: elm::Expression,
+        offset_right: elm::Expression,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+        _right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+
+        match direction {
+            ast::TimingDirection::Before
+            | ast::TimingDirection::OnOrBefore
+            | ast::TimingDirection::BeforeOrOn => {
+                elm::Expression::SameOrBefore(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, offset_right],
+                    signature: Vec::new(),
+                })
+            }
+            ast::TimingDirection::After
+            | ast::TimingDirection::OnOrAfter
+            | ast::TimingDirection::AfterOrOn => {
+                elm::Expression::SameOrAfter(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, offset_right],
+                    signature: Vec::new(),
+                })
+            }
+        }
+    }
+
+    /// Create "less than" timing expression: In(left, Interval(offset, right))
+    fn create_less_than_expression(
+        &mut self,
+        left: elm::Expression,
+        right_base: elm::Expression,
+        quantity: &elm::Expression,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+        right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields();
+        let low = elm::Expression::Subtract(elm::BinaryExpression {
+            element: element.clone(),
+            operand: vec![right_base.clone(), quantity.clone()],
+            signature: Vec::new(),
+        });
+
+        let (interval_low, interval_high, low_closed, high_closed) = match direction {
+            ast::TimingDirection::Before => {
+                (low, right_base.clone(), false, right_boundary.is_none())
+            }
+            ast::TimingDirection::OnOrBefore | ast::TimingDirection::BeforeOrOn => {
+                (low, right_base.clone(), false, true)
+            }
+            ast::TimingDirection::After => {
+                let high = elm::Expression::Add(elm::BinaryExpression {
+                    element: element.clone(),
+                    operand: vec![right_base.clone(), quantity.clone()],
+                    signature: Vec::new(),
+                });
+                (right_base.clone(), high, right_boundary.is_none(), false)
+            }
+            ast::TimingDirection::OnOrAfter | ast::TimingDirection::AfterOrOn => {
+                let high = elm::Expression::Add(elm::BinaryExpression {
+                    element: element.clone(),
+                    operand: vec![right_base.clone(), quantity.clone()],
+                    signature: Vec::new(),
+                });
+                (right_base.clone(), high, true, false)
+            }
+        };
+
+        let interval = elm::Expression::Interval(elm::IntervalExpr {
+            element: element.clone(),
+            low: Some(Box::new(interval_low)),
+            low_closed_expression: None,
+            high: Some(Box::new(interval_high)),
+            high_closed_expression: None,
+            low_closed: Some(low_closed),
+            high_closed: Some(high_closed),
+        });
+
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+        let in_expr = elm::Expression::In(elm::TimeBinaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            precision: prec,
+            operand: vec![left, interval],
+            signature: Vec::new(),
+        });
+
+        let null_check = elm::Expression::Not(elm::UnaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            operand: Some(Box::new(elm::Expression::IsNull(elm::UnaryExpression {
+                element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+                operand: Some(Box::new(right_base)),
+                signature: Vec::new(),
+            }))),
+            signature: Vec::new(),
+        });
+
+        elm::Expression::And(elm::NaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            operand: vec![in_expr, null_check],
+            signature: Vec::new(),
+        })
+    }
+
+    /// Create "more than" timing expression: Before/After(left, offset_right)
+    fn create_more_than_expression(
+        &mut self,
+        left: elm::Expression,
+        offset_right: elm::Expression,
+        direction: &ast::TimingDirection,
+        precision: &Option<ast::DateTimePrecision>,
+        _right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields_typed(&DataType::System(SystemType::Boolean));
+        let prec = precision.map(|p| self.datetime_precision_to_string(p));
+
+        match direction {
+            ast::TimingDirection::Before
+            | ast::TimingDirection::OnOrBefore
+            | ast::TimingDirection::BeforeOrOn => {
+                elm::Expression::Before(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, offset_right],
+                    signature: Vec::new(),
+                })
+            }
+            ast::TimingDirection::After
+            | ast::TimingDirection::OnOrAfter
+            | ast::TimingDirection::AfterOrOn => {
+                elm::Expression::After(elm::TimeBinaryExpression {
+                    element,
+                    precision: prec,
+                    operand: vec![left, offset_right],
+                    signature: Vec::new(),
+                })
+            }
+        }
+    }
+
+    /// Translate "within" timing expression
+    fn translate_within_timing(
+        &mut self,
+        left: elm::Expression,
+        right: elm::Expression,
+        left_boundary: &Option<ast::IntervalBoundary>,
+        properly: bool,
+        offset: &ast::TimingOffset,
+        right_boundary: &Option<ast::IntervalBoundary>,
+    ) -> elm::Expression {
+        let element = self.element_fields();
+
+        let left_expr = match left_boundary {
+            Some(ast::IntervalBoundary::Start) => self.create_start(left),
+            Some(ast::IntervalBoundary::End) => self.create_end(left),
+            None => left,
+        };
+
+        let (right_start, right_end) = match right_boundary {
+            Some(ast::IntervalBoundary::Start) => {
+                let s = self.create_start(right);
+                (s.clone(), s)
+            }
+            Some(ast::IntervalBoundary::End) => {
+                let e = self.create_end(right);
+                (e.clone(), e)
+            }
+            None => (self.create_start(right.clone()), self.create_end(right)),
+        };
+
+        let quantity = self.translate_quantity_value(&offset.quantity);
+
+        let low = elm::Expression::Subtract(elm::BinaryExpression {
+            element: element.clone(),
+            operand: vec![right_start, quantity.clone()],
+            signature: Vec::new(),
+        });
+
+        let high = elm::Expression::Add(elm::BinaryExpression {
+            element: element.clone(),
+            operand: vec![right_end, quantity],
+            signature: Vec::new(),
+        });
+
+        let interval = elm::Expression::Interval(elm::IntervalExpr {
+            element: element.clone(),
+            low: Some(Box::new(low)),
+            low_closed_expression: None,
+            high: Some(Box::new(high)),
+            high_closed_expression: None,
+            low_closed: Some(!properly),
+            high_closed: Some(!properly),
+        });
+
+        elm::Expression::In(elm::TimeBinaryExpression {
+            element: self.element_fields_typed(&DataType::System(SystemType::Boolean)),
+            precision: None,
+            operand: vec![left_expr, interval],
+            signature: Vec::new(),
+        })
+    }
+
     /// Create an ELM ToInteger conversion.
     pub fn translate_to_integer(&mut self, operand: elm::Expression) -> elm::Expression {
         let element = self.element_fields_typed(&DataType::System(SystemType::Integer));
@@ -2931,15 +3548,17 @@ impl ExpressionTranslator {
                     signature: Vec::new(),
                     precision: None,
                 })),
-                "Includes" => Some(elm::Expression::Includes(elm::BinaryExpression {
+                "Includes" => Some(elm::Expression::Includes(elm::TimeBinaryExpression {
                     element,
                     operand: vec![left, right],
                     signature: Vec::new(),
+                    precision: None,
                 })),
-                "IncludedIn" => Some(elm::Expression::IncludedIn(elm::BinaryExpression {
+                "IncludedIn" => Some(elm::Expression::IncludedIn(elm::TimeBinaryExpression {
                     element,
                     operand: vec![left, right],
                     signature: Vec::new(),
+                    precision: None,
                 })),
                 "ProperContains" => Some(elm::Expression::ProperContains(elm::BinaryExpression {
                     element,
@@ -2951,18 +3570,22 @@ impl ExpressionTranslator {
                     operand: vec![left, right],
                     signature: Vec::new(),
                 })),
-                "ProperIncludes" => Some(elm::Expression::ProperIncludes(elm::BinaryExpression {
-                    element,
-                    operand: vec![left, right],
-                    signature: Vec::new(),
-                })),
-                "ProperIncludedIn" => {
-                    Some(elm::Expression::ProperIncludedIn(elm::BinaryExpression {
+                "ProperIncludes" => {
+                    Some(elm::Expression::ProperIncludes(elm::TimeBinaryExpression {
                         element,
                         operand: vec![left, right],
                         signature: Vec::new(),
+                        precision: None,
                     }))
                 }
+                "ProperIncludedIn" => Some(elm::Expression::ProperIncludedIn(
+                    elm::TimeBinaryExpression {
+                        element,
+                        operand: vec![left, right],
+                        signature: Vec::new(),
+                        precision: None,
+                    },
+                )),
                 "Meets" => Some(elm::Expression::Meets(elm::BinaryExpression {
                     element,
                     operand: vec![left, right],

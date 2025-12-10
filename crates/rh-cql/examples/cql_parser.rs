@@ -172,6 +172,7 @@ fn expression_kind(expr: &Expression) -> &'static str {
         Expression::BinaryExpression(_) => "BinaryExpression",
         Expression::TernaryExpression(_) => "TernaryExpression",
         Expression::TypeExpression(_) => "TypeExpression",
+        Expression::TimingExpression(_) => "TimingExpression",
         Expression::FunctionInvocation(_) => "FunctionInvocation",
         Expression::MemberInvocation(_) => "MemberInvocation",
         Expression::IndexInvocation(_) => "IndexInvocation",

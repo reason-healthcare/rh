@@ -319,6 +319,9 @@ pub enum Expression {
     // Type operations
     TypeExpression(TypeExpression),
 
+    // Timing expressions (relative timing phrases)
+    TimingExpression(TimingExpression),
+
     // Function/invocation
     FunctionInvocation(FunctionInvocation),
     MemberInvocation(MemberInvocation),
@@ -546,6 +549,96 @@ impl BinaryOperator {
                 | BinaryOperator::GreaterOrEqual
         )
     }
+}
+
+/// Timing expression for relative timing phrases
+///
+/// Represents CQL timing phrases like:
+/// - `A 3 days before B`
+/// - `A starts 3 days or less after B`
+/// - `A occurs within 3 days of start B`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TimingExpression {
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+    pub timing: TimingPhrase,
+    pub location: Option<SourceLocation>,
+}
+
+/// Timing phrase components
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TimingPhrase {
+    /// Before/After timing: `[starts/ends/occurs] [offset [qualifier]] before/after [precision of] [boundary]`
+    RelativeTiming {
+        left_boundary: Option<IntervalBoundary>,
+        offset: Option<TimingOffset>,
+        direction: TimingDirection,
+        precision: Option<DateTimePrecision>,
+        right_boundary: Option<IntervalBoundary>,
+    },
+    /// Within timing: `[starts/ends/occurs] [properly] within offset of [boundary]`
+    WithinTiming {
+        left_boundary: Option<IntervalBoundary>,
+        properly: bool,
+        offset: TimingOffset,
+        right_boundary: Option<IntervalBoundary>,
+    },
+    /// Same timing: `[starts/ends/occurs] same [precision] (as|or before|or after) [boundary]`
+    SameTiming {
+        left_boundary: Option<IntervalBoundary>,
+        precision: Option<DateTimePrecision>,
+        direction: SameDirection,
+        right_boundary: Option<IntervalBoundary>,
+    },
+}
+
+/// Same direction (as, or before, or after)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SameDirection {
+    As,
+    OrBefore,
+    OrAfter,
+}
+
+/// Timing direction (before/after variants)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TimingDirection {
+    Before,
+    After,
+    OnOrBefore,
+    OnOrAfter,
+    BeforeOrOn,
+    AfterOrOn,
+}
+
+/// Timing offset with optional qualifier
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TimingOffset {
+    pub quantity: QuantityValue,
+    pub qualifier: Option<TimingQualifier>,
+}
+
+/// Quantity value for timing offsets
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct QuantityValue {
+    pub value: f64,
+    pub unit: String,
+}
+
+/// Timing qualifier (or less, or more, less than, more than)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TimingQualifier {
+    OrLess,
+    OrMore,
+    LessThan,
+    MoreThan,
+}
+
+/// Interval boundary (start/end)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum IntervalBoundary {
+    Start,
+    End,
 }
 
 /// Ternary expression (between)
