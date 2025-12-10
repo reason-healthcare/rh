@@ -8,8 +8,8 @@
 use rh_cql::elm::{
     AccessModifier, CodeDef, CodeDefRef, CodeDefs, CodeSystemDef, CodeSystemDefRef, CodeSystemDefs,
     ConceptDef, ConceptDefs, ContextDef, ContextDefs, ExpressionDef, ExpressionDefs, IncludeDef,
-    IncludeDefs, Library, ParameterDef, ParameterDefs, UsingDef, UsingDefs, ValueSetDef,
-    ValueSetDefs, VersionedIdentifier,
+    IncludeDefs, Library, ParameterDef, ParameterDefs, StatementDef, UsingDef, UsingDefs,
+    ValueSetDef, ValueSetDefs, VersionedIdentifier,
 };
 use rh_cql::library::{CompiledLibrary, DefinitionRef};
 
@@ -314,30 +314,30 @@ fn create_sample_library() -> Library {
         }),
         statements: Some(ExpressionDefs {
             defs: vec![
-                ExpressionDef {
+                StatementDef::Expression(ExpressionDef {
                     name: Some("InInitialPopulation".to_string()),
                     context: Some("Patient".to_string()),
                     access_level: Some(AccessModifier::Public),
                     ..Default::default()
-                },
-                ExpressionDef {
+                }),
+                StatementDef::Expression(ExpressionDef {
                     name: Some("InDenominator".to_string()),
                     context: Some("Patient".to_string()),
                     access_level: Some(AccessModifier::Public),
                     ..Default::default()
-                },
-                ExpressionDef {
+                }),
+                StatementDef::Expression(ExpressionDef {
                     name: Some("InNumerator".to_string()),
                     context: Some("Patient".to_string()),
                     access_level: Some(AccessModifier::Public),
                     ..Default::default()
-                },
-                ExpressionDef {
+                }),
+                StatementDef::Expression(ExpressionDef {
                     name: Some("HelperFunction".to_string()),
                     context: Some("Patient".to_string()),
                     access_level: Some(AccessModifier::Private),
                     ..Default::default()
-                },
+                }),
             ],
         }),
         ..Default::default()

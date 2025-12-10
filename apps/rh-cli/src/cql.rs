@@ -385,15 +385,26 @@ fn show_info(input: &str) -> Result<()> {
         if !stmts.defs.is_empty() {
             println!("Definitions ({}):", stmts.defs.len());
             for def in &stmts.defs {
-                let name = def.name.as_deref().unwrap_or("?");
-                let is_private = matches!(def.access_level, Some(AccessModifier::Private));
-                let ctx = def
-                    .context
-                    .as_deref()
-                    .map(|c| format!(" [{c}]"))
-                    .unwrap_or_default();
-                let access_marker = if is_private { " (private)" } else { "" };
-                println!("  {name}{ctx}{access_marker}");
+                match def {
+                    rh_cql::elm::StatementDef::Expression(expr) => {
+                        let name = expr.name.as_deref().unwrap_or("?");
+                        let is_private = matches!(expr.access_level, Some(AccessModifier::Private));
+                        let ctx = expr
+                            .context
+                            .as_deref()
+                            .map(|c| format!(" [{c}]"))
+                            .unwrap_or_default();
+                        let access_marker = if is_private { " (private)" } else { "" };
+                        println!("  {name}{ctx}{access_marker}");
+                    }
+                    rh_cql::elm::StatementDef::Function(func) => {
+                        let name = func.name.as_deref().unwrap_or("?");
+                        let is_private = matches!(func.access_level, Some(AccessModifier::Private));
+                        let param_count = func.operand.len();
+                        let access_marker = if is_private { " (private)" } else { "" };
+                        println!("  {name}({param_count} params){access_marker}");
+                    }
+                }
             }
         }
     }

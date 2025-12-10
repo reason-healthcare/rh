@@ -253,16 +253,16 @@ fn included_library_example() {
         }),
         statements: Some(elm::ExpressionDefs {
             defs: vec![
-                elm::ExpressionDef {
+                elm::StatementDef::Expression(elm::ExpressionDef {
                     name: Some("ToQuantity".to_string()),
                     access_level: Some(elm::AccessModifier::Public),
                     ..Default::default()
-                },
-                elm::ExpressionDef {
+                }),
+                elm::StatementDef::Expression(elm::ExpressionDef {
                     name: Some("ToString".to_string()),
                     access_level: Some(elm::AccessModifier::Public),
                     ..Default::default()
-                },
+                }),
             ],
         }),
         ..Default::default()

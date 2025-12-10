@@ -3,7 +3,7 @@
 //! Shows how to serialize ELM libraries to JSON with various options.
 
 use rh_cql::elm::{
-    Expression, ExpressionDef, ExpressionDefs, Library, Literal, UsingDef, UsingDefs,
+    Expression, ExpressionDef, ExpressionDefs, Library, Literal, StatementDef, UsingDef, UsingDefs,
     VersionedIdentifier,
 };
 use rh_cql::options::{CompilerOption, CompilerOptions, SignatureLevel};
@@ -80,7 +80,7 @@ fn create_sample_library() -> Library {
         }),
         statements: Some(ExpressionDefs {
             defs: vec![
-                ExpressionDef {
+                StatementDef::Expression(ExpressionDef {
                     name: Some("IsAdult".to_string()),
                     context: Some("Patient".to_string()),
                     expression: Some(Box::new(Expression::Literal(Literal {
@@ -89,8 +89,8 @@ fn create_sample_library() -> Library {
                         ..Default::default()
                     }))),
                     ..Default::default()
-                },
-                ExpressionDef {
+                }),
+                StatementDef::Expression(ExpressionDef {
                     name: Some("Age".to_string()),
                     context: Some("Patient".to_string()),
                     expression: Some(Box::new(Expression::Literal(Literal {
@@ -99,7 +99,7 @@ fn create_sample_library() -> Library {
                         ..Default::default()
                     }))),
                     ..Default::default()
-                },
+                }),
             ],
         }),
         ..Default::default()

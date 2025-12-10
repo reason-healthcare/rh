@@ -5,7 +5,8 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::{
-    AccessModifier, Annotation, CqlToElmError, CqlToElmInfo, Expression, QName, TypeSpecifier,
+    AccessModifier, Annotation, CqlToElmError, CqlToElmInfo, Expression, FunctionDef, QName,
+    TypeSpecifier,
 };
 
 /// Serialize Option<VersionedIdentifier> - always outputs, even if None (as empty object).
@@ -388,12 +389,22 @@ pub struct ContextDef {
     pub name: Option<String>,
 }
 
-/// Container for expression definitions.
+/// Container for statement definitions (expressions and functions).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpressionDefs {
     #[serde(rename = "def", default, skip_serializing_if = "Vec::is_empty")]
-    pub defs: Vec<ExpressionDef>,
+    pub defs: Vec<StatementDef>,
+}
+
+/// A statement definition (expression or function).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StatementDef {
+    /// An expression definition.
+    Expression(ExpressionDef),
+    /// A function definition.
+    Function(FunctionDef),
 }
 
 /// An expression definition (CQL define statement).

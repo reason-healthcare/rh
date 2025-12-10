@@ -222,7 +222,9 @@ pub fn library_to_compact_json(library: &Library) -> Result<String, OutputError>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elm::{Expression, ExpressionDef, ExpressionDefs, Literal, UsingDef, UsingDefs};
+    use crate::elm::{
+        Expression, ExpressionDef, ExpressionDefs, Literal, StatementDef, UsingDef, UsingDefs,
+    };
 
     fn create_test_library() -> Library {
         Library {
@@ -239,7 +241,7 @@ mod tests {
                 }],
             }),
             statements: Some(ExpressionDefs {
-                defs: vec![ExpressionDef {
+                defs: vec![StatementDef::Expression(ExpressionDef {
                     name: Some("TestExpression".to_string()),
                     expression: Some(Box::new(Expression::Literal(Literal {
                         value: Some("42".to_string()),
@@ -247,7 +249,7 @@ mod tests {
                         ..Default::default()
                     }))),
                     ..Default::default()
-                }],
+                })],
             }),
             ..Default::default()
         }

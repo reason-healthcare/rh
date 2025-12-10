@@ -2083,7 +2083,7 @@ impl<'a> LibraryBuilder<'a> {
                     Vec::new()
                 };
 
-                expression_defs.push(elm::ExpressionDef {
+                expression_defs.push(elm::StatementDef::Expression(elm::ExpressionDef {
                     local_id: def_local_id,
                     locator: None,
                     name: Some(ctx_name.to_string()),
@@ -2093,7 +2093,7 @@ impl<'a> LibraryBuilder<'a> {
                     result_type_specifier: None,
                     expression: Some(Box::new(elm::Expression::SingletonFrom(singleton))),
                     annotation,
-                });
+                }));
             }
 
             for stmt in &ast_library.statements {
@@ -2148,7 +2148,7 @@ impl<'a> LibraryBuilder<'a> {
                                 .unwrap_or_else(|| "Unfiltered".to_string()),
                         );
 
-                        expression_defs.push(elm::ExpressionDef {
+                        expression_defs.push(elm::StatementDef::Expression(elm::ExpressionDef {
                             local_id,
                             locator,
                             name: Some(expr_def.name.clone()),
@@ -2158,15 +2158,13 @@ impl<'a> LibraryBuilder<'a> {
                             result_type_specifier: None,
                             expression,
                             annotation,
-                        });
+                        }));
                     }
                     ast::Statement::FunctionDef(func_def) => {
-                        // Functions are translated separately
-                        // For now, we skip them as ELM Library.statements only holds ExpressionDefs
-                        // In a full implementation, functions would go in a separate field
-                        let _ = translator.translate_function_def(func_def, |t, e| {
+                        let function = translator.translate_function_def(func_def, |t, e| {
                             self.translate_expr_recursive(e, t)
                         });
+                        expression_defs.push(elm::StatementDef::Function(function));
                     }
                 }
             }
@@ -2357,12 +2355,14 @@ impl<'a> LibraryBuilder<'a> {
             for stmt in &ast_library.statements {
                 match stmt {
                     ast::Statement::ExpressionDef(expr_def) => {
-                        expression_defs
-                            .push(translator.translate_expression_def(expr_def, current_context));
+                        let expr_def_result =
+                            translator.translate_expression_def(expr_def, current_context);
+                        expression_defs.push(elm::StatementDef::Expression(expr_def_result));
                     }
                     ast::Statement::FunctionDef(func_def) => {
-                        let _ = translator
+                        let function = translator
                             .translate_function_def(func_def, |t, e| t.translate_expression(e));
+                        expression_defs.push(elm::StatementDef::Function(function));
                     }
                 }
             }
@@ -2818,12 +2818,20 @@ mod tests {
         assert_eq!(statements.defs.len(), 2); // Implicit Patient + X
 
         // First definition is implicit Patient
-        assert_eq!(statements.defs[0].name, Some("Patient".to_string()));
-        assert_eq!(statements.defs[0].context, Some("Patient".to_string()));
+        let def0 = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def0.name, Some("Patient".to_string()));
+        assert_eq!(def0.context, Some("Patient".to_string()));
 
         // Second definition is our explicit X
-        assert_eq!(statements.defs[1].name, Some("X".to_string()));
-        assert_eq!(statements.defs[1].context, Some("Patient".to_string()));
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def1.name, Some("X".to_string()));
+        assert_eq!(def1.context, Some("Patient".to_string()));
     }
 
     #[test]
@@ -2985,14 +2993,34 @@ mod tests {
 
         // All should have Patient context
         for def in &statements.defs {
-            assert_eq!(def.context, Some("Patient".to_string()));
+            let context = match def {
+                elm::StatementDef::Expression(expr) => &expr.context,
+                elm::StatementDef::Function(func) => &func.context,
+            };
+            assert_eq!(context, &Some("Patient".to_string()));
         }
 
         // Check names (first is implicit Patient)
-        assert_eq!(statements.defs[0].name, Some("Patient".to_string()));
-        assert_eq!(statements.defs[1].name, Some("Is Adult".to_string()));
-        assert_eq!(statements.defs[2].name, Some("Is Minor".to_string()));
-        assert_eq!(statements.defs[3].name, Some("Helper".to_string()));
+        let def0 = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def0.name, Some("Patient".to_string()));
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def1.name, Some("Is Adult".to_string()));
+        let def2 = match &statements.defs[2] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def2.name, Some("Is Minor".to_string()));
+        let def3 = match &statements.defs[3] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(def3.name, Some("Helper".to_string()));
     }
 
     // ========================================================================
@@ -3017,7 +3045,11 @@ mod tests {
         assert_eq!(statements.defs.len(), 2);
 
         // The second expression should reference the first via ExpressionRef
-        let ref_expr = &statements.defs[1].expression;
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let ref_expr = &def1.expression;
         assert!(ref_expr.is_some());
 
         // Check it's an ExpressionRef, not IdentifierRef
@@ -3047,7 +3079,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is Test
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Should have ValueSetRef in the Retrieve codes
@@ -3077,7 +3113,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is Test
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Should have CodeRef in the Retrieve codes
@@ -3106,7 +3146,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is Test
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Query alias property access should use scope attribute, not source+IdentifierRef
@@ -3146,12 +3190,20 @@ mod tests {
 
         // defs[0] is implicit Patient, defs[1] is HasCondition, defs[2] is Final
         // First explicit expression should have ValueSetRef
-        let expr1 = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr1 = def1.expression.as_ref().unwrap();
         let json1 = serde_json::to_string(expr1).unwrap();
         assert!(json1.contains(r#""type":"ValueSetRef""#));
 
         // Second explicit expression should have ExpressionRef and CodeRef
-        let expr2 = statements.defs[2].expression.as_ref().unwrap();
+        let def2 = match &statements.defs[2] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr2 = def2.expression.as_ref().unwrap();
         let json2 = serde_json::to_string(expr2).unwrap();
         assert!(json2.contains(r#""type":"ExpressionRef""#));
         assert!(json2.contains(r#""type":"CodeRef""#));
@@ -3182,7 +3234,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is Conditions
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Should have templateId from model info
@@ -3226,7 +3282,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is BPs
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Observation should have its own templateId
@@ -3256,7 +3316,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is AllConditions
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Should have templateId even without codes
@@ -3290,7 +3354,11 @@ mod tests {
 
         let statements = elm.statements.unwrap();
         // defs[0] is implicit Patient, defs[1] is Conditions
-        let expr = statements.defs[1].expression.as_ref().unwrap();
+        let def1 = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let expr = def1.expression.as_ref().unwrap();
         let json = serde_json::to_string(expr).unwrap();
 
         // Should have codeComparator "in" for ValueSetRef
@@ -3320,7 +3388,11 @@ mod tests {
         let elm = builder.build(&ast);
 
         let statements = elm.statements.unwrap();
-        let locator = statements.defs[0].locator.as_ref();
+        let def0 = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let locator = def0.locator.as_ref();
         assert!(locator.is_some(), "Should have locator when enabled");
         assert!(
             locator.unwrap().contains(":"),
@@ -3334,7 +3406,11 @@ mod tests {
         let elm2 = builder2.build(&ast);
 
         let statements2 = elm2.statements.unwrap();
-        let locator2 = statements2.defs[0].locator.as_ref();
+        let def0_2 = match &statements2.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        let locator2 = def0_2.locator.as_ref();
         assert!(locator2.is_none(), "Should not have locator when disabled");
     }
 
@@ -3358,7 +3434,10 @@ mod tests {
         let elm = builder.build(&ast);
 
         let statements = elm.statements.unwrap();
-        let def = &statements.defs[0];
+        let def = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
 
         // Should have localId
         assert!(
@@ -3387,7 +3466,10 @@ mod tests {
         let elm2 = builder2.build(&ast);
 
         let statements2 = elm2.statements.unwrap();
-        let def2 = &statements2.defs[0];
+        let def2 = match &statements2.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
 
         // Should not have annotation
         assert!(
@@ -3415,7 +3497,10 @@ mod tests {
 
         // First definition should be implicit Patient
         assert_eq!(statements.defs.len(), 2);
-        let patient_def = &statements.defs[0];
+        let patient_def = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
         assert_eq!(patient_def.name, Some("Patient".to_string()));
         assert_eq!(patient_def.context, Some("Patient".to_string()));
         assert!(
@@ -3432,7 +3517,10 @@ mod tests {
         assert!(json.contains(r#""templateId":"http://hl7.org/fhir/StructureDefinition/Patient""#));
 
         // Second definition should be the explicit one
-        let test_def = &statements.defs[1];
+        let test_def = match &statements.defs[1] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
         assert_eq!(test_def.name, Some("TestExpr".to_string()));
     }
 
@@ -3453,7 +3541,11 @@ mod tests {
 
         // Should only have one definition (no implicit Patient)
         assert_eq!(statements.defs.len(), 1);
-        assert_eq!(statements.defs[0].name, Some("TestExpr".to_string()));
+        let test_def = match &statements.defs[0] {
+            elm::StatementDef::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+        assert_eq!(test_def.name, Some("TestExpr".to_string()));
     }
 
     #[test]

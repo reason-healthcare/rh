@@ -103,11 +103,23 @@ fn main() -> anyhow::Result<()> {
     if let Some(statements) = &library.statements {
         println!("\nExpression definitions:");
         for def in &statements.defs {
-            println!(
-                "  - {} (context: {})",
-                def.name.as_deref().unwrap_or("?"),
-                def.context.as_deref().unwrap_or("Unfiltered")
-            );
+            match def {
+                rh_cql::elm::StatementDef::Expression(expr) => {
+                    println!(
+                        "  - {} (context: {})",
+                        expr.name.as_deref().unwrap_or("?"),
+                        expr.context.as_deref().unwrap_or("Unfiltered")
+                    );
+                }
+                rh_cql::elm::StatementDef::Function(func) => {
+                    let param_count = func.operand.len();
+                    println!(
+                        "  - {}({} params)",
+                        func.name.as_deref().unwrap_or("?"),
+                        param_count
+                    );
+                }
+            }
         }
     }
 

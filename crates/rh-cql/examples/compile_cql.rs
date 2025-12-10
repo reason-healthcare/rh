@@ -57,8 +57,18 @@ fn simple_compilation() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(stmts) = &lib.statements {
             println!("  Definitions: {}", stmts.defs.len());
             for def in &stmts.defs {
-                if let Some(name) = &def.name {
-                    println!("    - {name}");
+                match def {
+                    rh_cql::elm::StatementDef::Expression(expr) => {
+                        if let Some(name) = &expr.name {
+                            println!("    - {name}");
+                        }
+                    }
+                    rh_cql::elm::StatementDef::Function(func) => {
+                        if let Some(name) = &func.name {
+                            let param_count = func.operand.len();
+                            println!("    - {name}({param_count} params)");
+                        }
+                    }
                 }
             }
         }

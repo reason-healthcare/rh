@@ -534,7 +534,8 @@ impl LibrarySourceProvider for CompositeLibrarySourceProvider {
 
 use crate::elm::{
     AccessModifier, CodeDef, CodeSystemDef, ConceptDef, ContextDef, ExpressionDef, FunctionDef,
-    IncludeDef, Library, OperandDef, ParameterDef, UsingDef, ValueSetDef, VersionedIdentifier,
+    IncludeDef, Library, OperandDef, ParameterDef, StatementDef, UsingDef, ValueSetDef,
+    VersionedIdentifier,
 };
 
 /// A compiled CQL library with convenient lookup methods.
@@ -804,25 +805,33 @@ impl CompiledLibrary {
     // =========================================================================
 
     /// Get all expression definitions (statements).
-    pub fn expressions(&self) -> &[ExpressionDef] {
+    pub fn expressions(&self) -> Vec<&ExpressionDef> {
         self.library
             .statements
             .as_ref()
-            .map(|s| s.defs.as_slice())
-            .unwrap_or(&[])
+            .map(|s| {
+                s.defs
+                    .iter()
+                    .filter_map(|stmt| match stmt {
+                        StatementDef::Expression(expr) => Some(expr),
+                        StatementDef::Function(_) => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
     /// Get an expression definition by name.
     pub fn get_expression(&self, name: &str) -> Option<&ExpressionDef> {
         self.expressions()
-            .iter()
+            .into_iter()
             .find(|e| e.name.as_deref() == Some(name))
     }
 
     /// Get all public expression definitions.
     pub fn public_expressions(&self) -> Vec<&ExpressionDef> {
         self.expressions()
-            .iter()
+            .into_iter()
             .filter(|e| e.access_level != Some(AccessModifier::Private))
             .collect()
     }
@@ -830,7 +839,7 @@ impl CompiledLibrary {
     /// Get all expression definitions for a specific context.
     pub fn expressions_for_context(&self, context: &str) -> Vec<&ExpressionDef> {
         self.expressions()
-            .iter()
+            .into_iter()
             .filter(|e| e.context.as_deref() == Some(context))
             .collect()
     }
@@ -1966,24 +1975,24 @@ mod tests {
             }),
             statements: Some(ExpressionDefs {
                 defs: vec![
-                    ExpressionDef {
+                    StatementDef::Expression(ExpressionDef {
                         name: Some("InPopulation".to_string()),
                         context: Some("Patient".to_string()),
                         access_level: Some(AccessModifier::Public),
                         ..Default::default()
-                    },
-                    ExpressionDef {
+                    }),
+                    StatementDef::Expression(ExpressionDef {
                         name: Some("PrivateHelper".to_string()),
                         context: Some("Patient".to_string()),
                         access_level: Some(AccessModifier::Private),
                         ..Default::default()
-                    },
-                    ExpressionDef {
+                    }),
+                    StatementDef::Expression(ExpressionDef {
                         name: Some("UnfilteredExpression".to_string()),
                         context: Some("Unfiltered".to_string()),
                         access_level: Some(AccessModifier::Public),
                         ..Default::default()
-                    },
+                    }),
                 ],
             }),
             ..Default::default()
