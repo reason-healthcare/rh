@@ -1067,7 +1067,7 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         map(
             preceded(
                 tuple((ws(keyword("start")), ws(keyword("of")))),
-                parse_unary_expression,
+                parse_invocation_expression,
             ),
             |operand| {
                 Expression::UnaryExpression(UnaryExpression {
@@ -1081,7 +1081,7 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         map(
             preceded(
                 tuple((ws(keyword("end")), ws(keyword("of")))),
-                parse_unary_expression,
+                parse_invocation_expression,
             ),
             |operand| {
                 Expression::UnaryExpression(UnaryExpression {
