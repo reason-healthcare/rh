@@ -1765,29 +1765,59 @@ fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     // First parse the retrieve
     let (input, retrieve) = parse_retrieve(input)?;
 
-    // Then look for an alias - this is what distinguishes a query from a plain retrieve
-    let (input, alias) = any_identifier(input)?;
+    // Try to parse an alias (this is what distinguishes a query from a plain retrieve)
+    // Use opt to avoid consuming tokens if it fails
+    let (input, alias_opt) = opt(any_identifier)(input)?;
 
-    // Now we must have at least one query clause (where, return, sort, let, with, without)
-    // Otherwise this would just be a retrieve with an erroneous identifier after it
+    // If no alias, fail - this should be handled as a plain retrieve
+    let alias = match alias_opt {
+        Some(a) => {
+            // Reject statement-level and query keywords as aliases
+            let lower = a.to_lowercase();
+            if matches!(
+                lower.as_str(),
+                "define"
+                    | "context"
+                    | "using"
+                    | "include"
+                    | "codesystem"
+                    | "valueset"
+                    | "code"
+                    | "concept"
+                    | "parameter"
+                    | "library"
+                    | "let"
+                    | "where"
+                    | "return"
+                    | "sort"
+                    | "with"
+                    | "without"
+                    | "from"
+                    | "select"
+                    | "distinct"
+                    | "flatten"
+            ) {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    nom::error::ErrorKind::Tag,
+                )));
+            }
+            a
+        }
+        None => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
+        }
+    };
+
+    // Now parse optional query clauses
     let (input, let_clauses) = many0(parse_let_clause)(input)?;
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
-
-    // Must have at least one clause to be a query
-    if let_clauses.is_empty()
-        && relationships.is_empty()
-        && where_clause.is_none()
-        && return_clause.is_none()
-        && sort_clause.is_none()
-    {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
-    }
 
     let source = QuerySource {
         expression: Box::new(retrieve),
