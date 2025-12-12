@@ -1205,6 +1205,24 @@ fn parse_convert_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_invocation_expression(input)?;
 
+    // Check for 'is not' (negated type check)
+    if let Ok((input2, _)) = tuple((ws(keyword("is")), ws(keyword("not"))))(input) {
+        let (input, type_spec) = parse_type_specifier(input2)?;
+        return Ok((
+            input,
+            Expression::UnaryExpression(UnaryExpression {
+                operator: UnaryOperator::Not,
+                operand: Box::new(Expression::TypeExpression(TypeExpression {
+                    operator: TypeOperator::Is,
+                    operand: Box::new(first),
+                    type_specifier: type_spec,
+                    location: None,
+                })),
+                location: None,
+            }),
+        ));
+    }
+
     // Check for type operator suffix
     let (input, type_op) = opt(tuple((
         ws(alt((
@@ -1664,10 +1682,25 @@ fn parse_if_then_else(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 fn parse_case(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("case"))(input)?;
 
-    // Optional comparand for simple case
-    let (input, comparand) = opt(terminated(expression, peek(ws(keyword("when")))))(input)?;
+    // Try to parse case items starting with 'when' first (searched case without comparand)
+    // If that works, we have no comparand. Otherwise, parse comparand + when clauses.
+    let (input, comparand, items) = if let Ok((input2, items)) = many0(parse_case_item)(input) {
+        if !items.is_empty() {
+            // Successfully parsed when clauses without comparand
+            (input2, None, items)
+        } else {
+            // No when clauses found, try parsing comparand
+            let (input, expr) = expression(input)?;
+            let (input, items) = many0(parse_case_item)(input)?;
+            (input, Some(expr), items)
+        }
+    } else {
+        // Failed to parse when clauses, try comparand
+        let (input, expr) = expression(input)?;
+        let (input, items) = many0(parse_case_item)(input)?;
+        (input, Some(expr), items)
+    };
 
-    let (input, items) = many0(parse_case_item)(input)?;
     let (input, _) = ws(keyword("else"))(input)?;
     let (input, else_expr) = expression(input)?;
     let (input, _) = ws(keyword("end"))(input)?;
