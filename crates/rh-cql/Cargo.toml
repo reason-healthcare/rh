@@ -19,5 +19,9 @@ rh-foundation = { path = "../rh-foundation" }
 
 [dev-dependencies]
 
+[[bin]]
+name = "cql-test-parse"
+path = "src/bin/test_parse.rs"
+
 [features]
 default = []
