@@ -1,3 +1,4 @@
+//! FHIR resource validation library.
 pub mod fhir_version;
 pub mod profile;
 pub mod questionnaire;
