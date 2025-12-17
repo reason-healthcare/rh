@@ -16,6 +16,9 @@ keywords = [
 ]
 categories = ["parsing", "data-structures", "healthcare"]
 
+[lib]
+doctest = false
+
 [features]
 default = []
 fhir-test-cases = ["zip"]
