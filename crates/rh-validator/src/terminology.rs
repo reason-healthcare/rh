@@ -944,14 +944,6 @@ impl TerminologyConfig {
     }
 }
 
-/// Cache entry for terminology lookups
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct CacheEntry<T> {
-    value: T,
-    #[allow(dead_code)]
-    timestamp: u64,
-}
-
 /// Persistent disk cache for terminology service results
 ///
 /// This service wraps any `TerminologyService` and caches results to disk,
