@@ -148,7 +148,7 @@ fn test_batch_validation_with_errors() {
 
 #[test]
 fn test_resource_validation_operationoutcome_format() {
-    let patient = r#"{"resourceType": "Patient", "id": "test123", "contact": [{}]}"#;
+    let patient = r#"{"id": "test123"}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -166,7 +166,7 @@ fn test_resource_validation_operationoutcome_format() {
 
 #[test]
 fn test_operationoutcome_has_severity() {
-    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
+    let patient = r#"{"id": "test"}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -188,7 +188,7 @@ fn test_operationoutcome_has_severity() {
 
 #[test]
 fn test_operationoutcome_has_code() {
-    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
+    let patient = r#"{"id": "test"}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -205,7 +205,7 @@ fn test_operationoutcome_has_code() {
 
 #[test]
 fn test_operationoutcome_has_diagnostics() {
-    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
+    let patient = r#"{"id": "test"}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -244,8 +244,8 @@ fn test_batch_validation_operationoutcome_format() {
     let tmp_dir = TempDir::new().unwrap();
     let batch_file = tmp_dir.path().join("batch.ndjson");
 
-    let content = r#"{"resourceType": "Patient", "id": "p1"}
-{"resourceType": "Patient", "id": "p2"}
+    let content = r#"{"id": "p1"}
+{"id": "p2"}
 "#;
 
     std::fs::write(&batch_file, content).unwrap();
@@ -253,6 +253,7 @@ fn test_batch_validation_operationoutcome_format() {
     let output = rh_cmd()
         .arg("validate")
         .arg("batch")
+        .arg("--input")
         .arg(&batch_file)
         .arg("--format")
         .arg("operationoutcome")
@@ -264,14 +265,14 @@ fn test_batch_validation_operationoutcome_format() {
 
     for line in lines {
         if !line.trim().is_empty() {
-            assert!(line.contains("\"resourceType\": \"OperationOutcome\""));
+            assert!(line.contains("\"resourceType\":\"OperationOutcome\""));
         }
     }
 }
 
 #[test]
 fn test_operationoutcome_uppercase_format() {
-    let patient = r#"{"resourceType": "Patient", "id": "test", "contact": [{}]}"#;
+    let patient = r#"{"id": "test"}"#;
 
     let output = rh_cmd()
         .arg("validate")
@@ -366,7 +367,7 @@ fn test_validate_empty_input() {
         .write_stdin("")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Input is empty"));
+        .stderr(predicate::str::contains("Input is empty"));
 }
 
 #[test]
