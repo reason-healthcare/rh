@@ -150,6 +150,39 @@ fn test_multiple_extension_instances() -> Result<()> {
 fn test_resource_level_invariant() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
 
+    // Register a minimal Questionnaire profile with the invariant to ensure the test passes
+    // even if the FHIR core package is not installed in the environment.
+    let questionnaire_profile = json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/StructureDefinition/Questionnaire",
+        "name": "Questionnaire",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Questionnaire",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/DomainResource",
+        "derivation": "specialization",
+        "snapshot": {
+            "element": [
+                {
+                    "id": "Questionnaire",
+                    "path": "Questionnaire",
+                    "min": 0,
+                    "max": "*",
+                    "constraint": [
+                        {
+                            "key": "que-2",
+                            "severity": "error",
+                            "human": "The linkIds for groups and questions must be unique",
+                            "expression": "descendants().linkId.isDistinct()"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+    validator.register_profile(&questionnaire_profile);
+
     let invalid_questionnaire = json!({
         "resourceType": "Questionnaire",
         "status": "draft",
