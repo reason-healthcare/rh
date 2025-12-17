@@ -60,10 +60,12 @@ async fn main() -> Result<()> {
     // Initialize tracing
     let subscriber = if cli.verbose {
         tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
             .with_max_level(tracing::Level::DEBUG)
             .finish()
     } else {
         tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
             .with_max_level(tracing::Level::INFO)
             .finish()
     };
