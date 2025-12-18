@@ -24,22 +24,27 @@ use std::path::Path;
 ///
 /// ```no_run
 /// use rh_foundation::cli::read_input;
+/// use std::path::PathBuf;
 ///
-/// # async fn example() -> anyhow::Result<()> {
+/// # fn example() -> anyhow::Result<()> {
 /// // Read from file
-/// let content = read_input(Some("input.txt"), None).await?;
+/// let content = read_input(Some("input.txt"), None)?;
+///
+/// // Read from PathBuf
+/// let path = PathBuf::from("input.txt");
+/// let content = read_input(Some(&path), None)?;
 ///
 /// // Read from inline argument
-/// let content = read_input(None, Some("inline data".to_string())).await?;
+/// let content = read_input::<&str>(None, Some("inline data".to_string()))?;
 ///
 /// // Read from stdin
-/// let content = read_input(None, None).await?;
+/// let content = read_input::<&str>(None, None)?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn read_input(file: Option<&str>, inline: Option<String>) -> Result<String> {
+pub fn read_input<P: AsRef<Path>>(file: Option<P>, inline: Option<String>) -> Result<String> {
     if let Some(filename) = file {
-        let path = Path::new(filename);
+        let path = filename.as_ref();
         fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read file"))
     } else if let Some(content) = inline {
         Ok(content)
@@ -49,39 +54,6 @@ pub async fn read_input(file: Option<&str>, inline: Option<String>) -> Result<St
             .read_to_string(&mut buffer)
             .map_err(|e| FoundationError::Io(e).with_context("Failed to read from stdin"))?;
         Ok(buffer)
-    }
-}
-
-/// Reads input from a PathBuf or stdin.
-///
-/// This is a convenience wrapper for cases where you have an `Option<PathBuf>`
-/// from clap and want to read either from that file or stdin.
-///
-/// # Examples
-///
-/// ```no_run
-/// use rh_foundation::cli::read_input_from_path;
-/// use std::path::PathBuf;
-///
-/// # fn example() -> anyhow::Result<()> {
-/// let path: Option<PathBuf> = Some(PathBuf::from("input.json"));
-/// let content = read_input_from_path(&path)?;
-/// # Ok(())
-/// # }
-/// ```
-pub fn read_input_from_path(path: &Option<impl AsRef<Path>>) -> Result<String> {
-    match path {
-        Some(file_path) => {
-            let path = file_path.as_ref();
-            fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read file"))
-        }
-        None => {
-            let mut buffer = String::new();
-            io::stdin()
-                .read_to_string(&mut buffer)
-                .map_err(|e| FoundationError::Io(e).with_context("Failed to read from stdin"))?;
-            Ok(buffer)
-        }
     }
 }
 

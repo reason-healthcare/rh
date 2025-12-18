@@ -201,7 +201,7 @@ fn read_input(path: &Option<PathBuf>) -> Result<String> {
     } else {
         info!("Reading from stdin");
     }
-    cli::read_input_from_path(path).map_err(Into::into)
+    cli::read_input(path.as_deref(), None).map_err(Into::into)
 }
 
 fn print_single_result_text(result: &rh_validator::ValidationResult, resource: &serde_json::Value) {

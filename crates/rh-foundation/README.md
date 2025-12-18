@@ -135,13 +135,13 @@ use rh_foundation::cli;
 use std::path::PathBuf;
 
 // Read input from file, inline string, or stdin
-let content = cli::read_input(Some("input.txt"), None).await?;
-let content = cli::read_input(None, Some("inline data".to_string())).await?;
-let content = cli::read_input(None, None).await?; // from stdin
+let content = cli::read_input(Some("input.txt"), None)?;
+let content = cli::read_input::<&str>(None, Some("inline data".to_string()))?;
+let content = cli::read_input::<&str>(None, None)?; // from stdin
 
 // Read from PathBuf or stdin (common in clap CLIs)
 let path: Option<PathBuf> = Some(PathBuf::from("data.json"));
-let content = cli::read_input_from_path(&path)?;
+let content = cli::read_input(path.as_deref(), None)?;
 
 // Read and parse JSON
 let data: MyType = cli::read_json("config.json")?;

@@ -80,7 +80,7 @@ async fn handle_parse(
     file: Option<String>,
     pretty: bool,
 ) -> Result<()> {
-    let input = get_input(expression, file).await?;
+    let input = get_input(expression, file)?;
 
     match parse_start(&input) {
         Ok((rest, ast)) => {
@@ -109,7 +109,7 @@ async fn handle_translate(
     compact: bool,
     show_ast: bool,
 ) -> Result<()> {
-    let input = get_input(expression, file).await?;
+    let input = get_input(expression, file)?;
 
     match parse_start(&input) {
         Ok((rest, ast)) => {
@@ -300,6 +300,6 @@ fn print_repl_help() {
     println!();
 }
 
-async fn get_input(expression: Option<String>, file: Option<String>) -> Result<String> {
-    cli::read_input(file.as_deref(), expression).await.map_err(Into::into)
+fn get_input(expression: Option<String>, file: Option<String>) -> Result<String> {
+    cli::read_input(file.as_deref(), expression).map_err(Into::into)
 }
