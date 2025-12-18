@@ -13,7 +13,22 @@ impl ElementPath {
         }
     }
 
-    fn from_parts(parts: Vec<String>) -> Self {
+    /// Constructs an `ElementPath` from a vector of parts.
+    ///
+    /// This is more efficient than `new()` when you already have the parts vector,
+    /// as it avoids the split operation. Useful when converting from `parent()` results.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rh_foundation::snapshot::ElementPath;
+    ///
+    /// let path = ElementPath::new("Patient.name.given");
+    /// let parent_parts = path.parent().unwrap();
+    /// let parent_path = ElementPath::from_parts(parent_parts.to_vec());
+    /// assert_eq!(parent_path.as_str(), "Patient.name");
+    /// ```
+    pub fn from_parts(parts: Vec<String>) -> Self {
         let original = parts.join(".");
         Self { parts, original }
     }
@@ -52,6 +67,29 @@ impl ElementPath {
         self.depth() == parent.depth() + 1 && self.is_child_of(parent)
     }
 
+    /// Returns a slice view of the parent path's parts.
+    ///
+    /// This is a zero-allocation operation that returns a borrowed slice.
+    /// If you need an `ElementPath` instance, use `ElementPath::from_parts(parent.to_vec())`.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&[String])` - A slice containing the parent's path parts
+    /// - `None` - If this is a root element (depth <= 1)
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rh_foundation::snapshot::ElementPath;
+    ///
+    /// let path = ElementPath::new("Patient.name.given");
+    /// let parent_parts = path.parent().unwrap();
+    /// assert_eq!(parent_parts, &["Patient", "name"]);
+    ///
+    /// // Convert to ElementPath if needed
+    /// let parent_path = ElementPath::from_parts(parent_parts.to_vec());
+    /// assert_eq!(parent_path.as_str(), "Patient.name");
+    /// ```
     pub fn parent(&self) -> Option<&[String]> {
         if self.parts.len() <= 1 {
             return None;
@@ -277,16 +315,21 @@ mod tests {
     fn test_parent_chain() {
         let path = ElementPath::new("Patient.name.given.extension");
 
+        // Test single parent access
         let parent1 = path.parent().unwrap();
         assert_eq!(parent1, &["Patient", "name", "given"]);
 
-        let parent2 = &parent1[0..parent1.len() - 1];
+        // For chaining, convert back to ElementPath
+        let parent1_path = ElementPath::from_parts(parent1.to_vec());
+        let parent2 = parent1_path.parent().unwrap();
         assert_eq!(parent2, &["Patient", "name"]);
 
-        let parent3 = &parent2[0..parent2.len() - 1];
+        let parent2_path = ElementPath::from_parts(parent2.to_vec());
+        let parent3 = parent2_path.parent().unwrap();
         assert_eq!(parent3, &["Patient"]);
 
-        assert!(parent3.len() <= 1);
+        let parent3_path = ElementPath::from_parts(parent3.to_vec());
+        assert!(parent3_path.parent().is_none());
     }
 
     #[test]
