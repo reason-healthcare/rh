@@ -37,10 +37,6 @@ pub enum FoundationError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
-    /// JSON serialization/deserialization error (alias)
-    #[error("JSON error: {0}")]
-    Serde(serde_json::Error),
-
     /// Generic error with context
     #[error("Error: {0}")]
     Other(#[from] anyhow::Error),
