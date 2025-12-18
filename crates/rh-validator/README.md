@@ -11,7 +11,7 @@ A high-performance FHIR (Fast Healthcare Interoperability Resources) validation 
 
 #### Core Validation (Phases 0-8)
 - **Profile-based validation** - US Core, IPS, QI-Core, custom profiles
-- **Hybrid architecture** - Leverages proven `rh-snapshot` library (100% FHIR compliant)
+- **Hybrid architecture** - Leverages proven `rh-foundation::snapshot` module (100% FHIR compliant)
 - **Cardinality checking** - Min/max occurrence validation with detailed paths
 - **Type validation** - FHIR primitives and complex types
 - **FHIRPath invariants** - Full FHIRPath 2.0 support with context tracking

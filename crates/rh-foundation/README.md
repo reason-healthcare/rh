@@ -10,8 +10,8 @@ Foundation crate providing common utilities, error handling, and shared function
 - **Configuration**: Traits and utilities for configuration management
 - **I/O Operations**: File reading/writing with JSON support
 - **HTTP Client**: Optional HTTP utilities with async support (feature: `http`)
-- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`) - [📖 Documentation](LOADER.md)
-- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging - [📖 Documentation](SNAPSHOT.md)
+- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`, module: `loader`) - [📖 Documentation](LOADER.md)
+- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging (module: `snapshot`) - [📖 Documentation](SNAPSHOT.md)
 - **JSON Utilities**: Convenient JSON parsing and serialization
 - **CLI Utilities**: Common CLI patterns for input/output and formatting
 - **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
