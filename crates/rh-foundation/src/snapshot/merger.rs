@@ -63,32 +63,33 @@ impl ElementMerger {
     ) {
         let mut new_elements = Vec::new();
 
-        let slices: Vec<_> = element_map
+        // Cache ElementPaths for base elements to avoid repeated parsing
+        let base_elements: Vec<(&String, ElementPath, &ElementDefinition)> = element_map
             .iter()
-            .filter(|((_path, slice_name), _elem)| slice_name.is_some())
-            .map(|((path, slice_name), elem)| (path.clone(), slice_name.clone(), elem.clone()))
+            .filter(|((_, sn), _)| sn.is_none())
+            .map(|((path, _), elem)| (path, ElementPath::new(path), elem))
             .collect();
 
-        for (slice_path, slice_name, _slice_elem) in slices {
-            let slice_name = slice_name.expect("slice_name should be Some");
+        // Collect slice roots
+        let slice_roots: Vec<(String, String)> = element_map
+            .keys()
+            .filter_map(|(path, slice_name)| {
+                slice_name.as_ref().map(|name| (path.clone(), name.clone()))
+            })
+            .collect();
 
-            let children: Vec<_> = element_map
-                .iter()
-                .filter(|((_p, sn), elem)| {
-                    sn.is_none() && {
-                        let elem_path = ElementPath::new(&elem.path);
-                        let slice_base_path = ElementPath::new(&slice_path);
-                        elem_path.is_child_of(&slice_base_path)
+        for (slice_path_str, slice_name) in slice_roots {
+            let slice_base_path = ElementPath::new(&slice_path_str);
+
+            for (path, elem_path, elem) in &base_elements {
+                if elem_path.is_child_of(&slice_base_path) {
+                    let slice_child_key = ((*path).clone(), Some(slice_name.clone()));
+
+                    if !element_map.contains_key(&slice_child_key) {
+                        let mut new_elem = (*elem).clone();
+                        new_elem.slice_name = Some(slice_name.clone());
+                        new_elements.push((slice_child_key, new_elem));
                     }
-                })
-                .map(|((path, _), elem)| (path.clone(), elem.clone()))
-                .collect();
-
-            for (child_path, mut child_elem) in children {
-                let slice_child_key = (child_path.clone(), Some(slice_name.clone()));
-                if !element_map.contains_key(&slice_child_key) {
-                    child_elem.slice_name = Some(slice_name.clone());
-                    new_elements.push((slice_child_key, child_elem));
                 }
             }
         }
@@ -323,5 +324,57 @@ impl ElementMerger {
             (None, Some(diff_constraints)) => Ok(Some(diff_constraints.clone())),
             (None, None) => Ok(None),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::snapshot::types::ElementDefinition;
+
+    fn create_element(path: &str, slice_name: Option<&str>) -> ElementDefinition {
+        ElementDefinition {
+            path: path.to_string(),
+            id: None,
+            min: None,
+            max: None,
+            type_: None,
+            binding: None,
+            constraint: None,
+            definition: None,
+            short: None,
+            comment: None,
+            requirements: None,
+            must_support: None,
+            is_summary: None,
+            is_modifier: None,
+            is_modifier_reason: None,
+            slicing: None,
+            slice_name: slice_name.map(|s| s.to_string()),
+        }
+    }
+
+    #[test]
+    fn test_expand_slice_children() {
+        let mut map = HashMap::new();
+
+        // Base elements
+        let base_root = create_element("Patient.identifier", None);
+        let base_child = create_element("Patient.identifier.system", None);
+
+        map.insert(("Patient.identifier".to_string(), None), base_root);
+        map.insert(("Patient.identifier.system".to_string(), None), base_child);
+
+        // Slice root
+        let slice_root = create_element("Patient.identifier", Some("MRN"));
+        map.insert(("Patient.identifier".to_string(), Some("MRN".to_string())), slice_root);
+
+        ElementMerger::expand_slice_children(&mut map);
+
+        // Check if child was copied to slice
+        assert!(map.contains_key(&("Patient.identifier.system".to_string(), Some("MRN".to_string()))));
+
+        let slice_child = map.get(&("Patient.identifier.system".to_string(), Some("MRN".to_string()))).unwrap();
+        assert_eq!(slice_child.slice_name.as_deref(), Some("MRN"));
     }
 }
