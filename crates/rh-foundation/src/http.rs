@@ -4,8 +4,45 @@
 //! sensible defaults for common operations.
 
 use crate::error::{io_error_with_path, FoundationError, Result};
+use std::future::Future;
 use std::path::Path;
 use std::time::Duration;
+
+/// Execute an async operation with linear backoff retry logic.
+///
+/// # Arguments
+///
+/// * `operation` - An async closure that returns a `Result`.
+/// * `max_retries` - Maximum number of retries before giving up.
+/// * `delay_ms` - Base delay in milliseconds (linear backoff: `delay_ms * retries`).
+pub async fn with_retry<T, F, Fut>(
+    mut operation: F,
+    max_retries: u32,
+    delay_ms: u64,
+) -> Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T>>,
+{
+    let mut retries = 0;
+    loop {
+        match operation().await {
+            Ok(value) => return Ok(value),
+            Err(e) => {
+                retries += 1;
+                if retries >= max_retries {
+                    return Err(e);
+                }
+                tracing::warn!(
+                    "Operation attempt {} failed, retrying... Error: {}",
+                    retries,
+                    e
+                );
+                tokio::time::sleep(Duration::from_millis(delay_ms * retries as u64)).await;
+            }
+        }
+    }
+}
 
 /// HTTP client with configurable timeout and retry logic.
 ///
@@ -193,5 +230,40 @@ mod tests {
     async fn test_custom_timeout() {
         let client = HttpClient::with_timeout(Duration::from_secs(10)).unwrap();
         assert_eq!(client.timeout(), Duration::from_secs(10));
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_success() {
+        let result = with_retry(|| async { Ok::<_, FoundationError>("success") }, 3, 10).await;
+        assert_eq!(result.unwrap(), "success");
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_fail_then_succeed() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let attempts_clone = attempts.clone();
+
+        let result = with_retry(
+            move || {
+                let attempts = attempts_clone.clone();
+                async move {
+                    let count = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+                    if count < 3 {
+                        Err(FoundationError::Other(anyhow::anyhow!("fail")))
+                    } else {
+                        Ok("success")
+                    }
+                }
+            },
+            5,
+            10,
+        )
+        .await;
+
+        assert_eq!(result.unwrap(), "success");
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
     }
 }
