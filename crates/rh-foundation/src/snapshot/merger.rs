@@ -367,14 +367,25 @@ mod tests {
 
         // Slice root
         let slice_root = create_element("Patient.identifier", Some("MRN"));
-        map.insert(("Patient.identifier".to_string(), Some("MRN".to_string())), slice_root);
+        map.insert(
+            ("Patient.identifier".to_string(), Some("MRN".to_string())),
+            slice_root,
+        );
 
         ElementMerger::expand_slice_children(&mut map);
 
         // Check if child was copied to slice
-        assert!(map.contains_key(&("Patient.identifier.system".to_string(), Some("MRN".to_string()))));
+        assert!(map.contains_key(&(
+            "Patient.identifier.system".to_string(),
+            Some("MRN".to_string())
+        )));
 
-        let slice_child = map.get(&("Patient.identifier.system".to_string(), Some("MRN".to_string()))).unwrap();
+        let slice_child = map
+            .get(&(
+                "Patient.identifier.system".to_string(),
+                Some("MRN".to_string()),
+            ))
+            .unwrap();
         assert_eq!(slice_child.slice_name.as_deref(), Some("MRN"));
     }
 }
