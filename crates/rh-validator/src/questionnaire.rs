@@ -183,7 +183,7 @@ impl QuestionnaireLoader {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.extension().is_some_and(|ext| ext == "json") {
+            if path.extension().is_none_or(|ext| ext != "json") {
                 continue;
             }
             let Ok(content) = std::fs::read_to_string(&path) else {
@@ -208,7 +208,7 @@ impl QuestionnaireLoader {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.extension().is_some_and(|ext| ext == "json") {
+            if path.extension().is_none_or(|ext| ext != "json") {
                 continue;
             }
             let Ok(content) = std::fs::read_to_string(&path) else {
@@ -1323,12 +1323,12 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                         .get("system")
                         .and_then(|v| v.as_str())
                         .zip(opt_coding.system.as_deref())
-                        .map_or(true, |(a, b)| a == b);
+                        .is_none_or(|(a, b)| a == b);
                     let code_match = coding
                         .get("code")
                         .and_then(|v| v.as_str())
                         .zip(opt_coding.code.as_deref())
-                        .map_or(true, |(a, b)| a == b);
+                        .is_none_or(|(a, b)| a == b);
                     if sys_match && code_match {
                         return true;
                     }
@@ -1385,12 +1385,12 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                         .get("system")
                         .and_then(|v| v.as_str())
                         .zip(opt_coding.system.as_deref())
-                        .map_or(true, |(a, b)| a == b);
+                        .is_none_or(|(a, b)| a == b);
                     let code_match = coding
                         .get("code")
                         .and_then(|v| v.as_str())
                         .zip(opt_coding.code.as_deref())
-                        .map_or(true, |(a, b)| a == b);
+                        .is_none_or(|(a, b)| a == b);
                     return sys_match
                         && code_match
                         && coding.get("code").and_then(|v| v.as_str()).is_some()

@@ -204,7 +204,7 @@ impl ElementCardinality {
 
     /// Check if the element can be an array (max > 1 or unbounded)
     pub fn is_array(&self) -> bool {
-        self.max.map_or(true, |m| m > 1)
+        self.max.is_none_or(|m| m > 1)
     }
 
     /// Format cardinality as FHIR notation (e.g., "0..1", "1..*", "0..5")
