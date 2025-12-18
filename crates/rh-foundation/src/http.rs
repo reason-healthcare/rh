@@ -197,11 +197,7 @@ impl Default for HttpClient {
 /// * `operation` - A closure that returns a Future resolving to a Result
 /// * `max_retries` - Maximum number of attempts. If set to 1, only the initial attempt is made.
 /// * `delay_ms` - Base delay in milliseconds used for linear backoff.
-pub async fn with_retry<T, F, Fut>(
-    mut operation: F,
-    max_retries: u32,
-    delay_ms: u64,
-) -> Result<T>
+pub async fn with_retry<T, F, Fut>(mut operation: F, max_retries: u32, delay_ms: u64) -> Result<T>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T>>,
