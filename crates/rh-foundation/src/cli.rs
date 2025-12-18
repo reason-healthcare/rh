@@ -109,7 +109,8 @@ pub fn read_json<T: DeserializeOwned>(path_str: &str) -> Result<T> {
     let content = fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read"))?;
 
     serde_json::from_str(&content).map_err(|e| {
-        FoundationError::Serde(e).with_context(&format!("Failed to parse JSON from {path_str}"))
+        FoundationError::Serialization(e)
+            .with_context(&format!("Failed to parse JSON from {path_str}"))
     })
 }
 
@@ -210,13 +211,15 @@ where
 {
     match format {
         OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(value)
-                .map_err(|e| FoundationError::Serde(e).with_context("Failed to serialize JSON"))?;
+            let json = serde_json::to_string_pretty(value).map_err(|e| {
+                FoundationError::Serialization(e).with_context("Failed to serialize JSON")
+            })?;
             println!("{json}");
         }
         OutputFormat::JsonCompact => {
-            let json = serde_json::to_string(value)
-                .map_err(|e| FoundationError::Serde(e).with_context("Failed to serialize JSON"))?;
+            let json = serde_json::to_string(value).map_err(|e| {
+                FoundationError::Serialization(e).with_context("Failed to serialize JSON")
+            })?;
             println!("{json}");
         }
         OutputFormat::Debug => {
