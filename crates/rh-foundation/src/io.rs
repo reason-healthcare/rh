@@ -52,8 +52,7 @@ pub fn save_config_to_file<T: Config>(config: &T, path: impl AsRef<Path>) -> Res
     config.validate()?;
     let content = serde_json::to_string_pretty(config)?;
     let path = path.as_ref();
-    std::fs::write(path, content)
-        .map_err(|e| io_error_with_path(e, path, "write config to"))?;
+    std::fs::write(path, content).map_err(|e| io_error_with_path(e, path, "write config to"))?;
     Ok(())
 }
 
@@ -63,8 +62,8 @@ where
     T: serde::de::DeserializeOwned,
 {
     let path = path.as_ref();
-    let content = std::fs::read_to_string(path)
-        .map_err(|e| io_error_with_path(e, path, "read JSON from"))?;
+    let content =
+        std::fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read JSON from"))?;
     serde_json::from_str(&content).map_err(Into::into)
 }
 
@@ -79,8 +78,7 @@ where
     } else {
         serde_json::to_string(value)?
     };
-    std::fs::write(path, content)
-        .map_err(|e| io_error_with_path(e, path, "write JSON to"))?;
+    std::fs::write(path, content).map_err(|e| io_error_with_path(e, path, "write JSON to"))?;
     Ok(())
 }
 
