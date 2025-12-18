@@ -323,27 +323,13 @@ impl PackageLoader {
     async fn download_tarball(&self, tarball_url: &str) -> LoaderResult<Vec<u8>> {
         tracing::debug!("Downloading tarball from: {}", tarball_url);
 
-        let mut retries = 0;
-        loop {
-            match self.http_client.download(tarball_url).await {
-                Ok(bytes) => {
-                    return Ok(bytes);
-                }
-                Err(e) => {
-                    retries += 1;
-                    if retries >= self.config.max_retries {
-                        return Err(LoaderError::Foundation(e));
-                    }
-                    tracing::warn!(
-                        "Download attempt {} failed, retrying... Error: {}",
-                        retries,
-                        e
-                    );
-                    tokio::time::sleep(std::time::Duration::from_millis(1000 * retries as u64))
-                        .await;
-                }
-            }
-        }
+        crate::http::with_retry(
+            || self.http_client.download(tarball_url),
+            self.config.max_retries,
+            1000,
+        )
+        .await
+        .map_err(LoaderError::Foundation)
     }
 
     fn verify_tarball_checksum(
