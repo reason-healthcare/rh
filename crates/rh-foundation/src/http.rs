@@ -3,7 +3,7 @@
 //! This module provides a simple HTTP client wrapper with
 //! sensible defaults for common operations.
 
-use crate::error::{FoundationError, Result};
+use crate::error::{io_error_with_path, FoundationError, Result};
 use std::path::Path;
 use std::time::Duration;
 
@@ -168,16 +168,8 @@ impl HttpClient {
     pub async fn download_to_file(&self, url: &str, path: impl AsRef<Path>) -> Result<()> {
         let bytes = self.download(url).await?;
         let path = path.as_ref();
-        std::fs::write(path, bytes).map_err(|e| {
-            FoundationError::Io(std::io::Error::new(
-                e.kind(),
-                format!(
-                    "Failed to write downloaded content to {}: {}",
-                    path.display(),
-                    e
-                ),
-            ))
-        })
+        std::fs::write(path, bytes)
+            .map_err(|e| io_error_with_path(e, path, "write downloaded content to"))
     }
 }
 
