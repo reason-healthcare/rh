@@ -71,6 +71,26 @@ Run the setup script to configure your development environment:
 ./setup.sh
 ```
 
+What the script does:
+
+- Verifies Rust toolchain (>= 1.70) and active `rustup` toolchain
+- Ensures `clippy` and `rustfmt` components are installed
+- Optionally installs `cargo-audit`, `cargo-watch`, and `cargo-nextest`
+- Formats the workspace and runs unified checks via `just check` (or equivalent commands if `just` is not installed)
+
+Tips:
+
+- Skip optional tool installs (useful for CI/offline):
+  ```bash
+  SKIP_INSTALL=1 ./setup.sh
+  ```
+- Install `just` for convenient tasks: https://github.com/casey/just
+- After setup, run:
+  ```bash
+  just check
+  cargo run -p rh -- --help
+  ```
+
 ### Building
 
 Build all packages in the workspace:
