@@ -121,7 +121,7 @@ impl ProfileRegistry {
 
         let profile = self.profiles.get(profile_url).unwrap().clone();
         let mut profile_with_snapshot = profile;
-        profile_with_snapshot.snapshot = Some(snapshot);
+        profile_with_snapshot.snapshot = Some((*snapshot).clone());
 
         self.snapshot_cache
             .write()

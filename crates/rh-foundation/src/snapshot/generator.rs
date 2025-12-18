@@ -3,11 +3,12 @@ use crate::snapshot::merger::ElementMerger;
 use crate::snapshot::types::{Snapshot, StructureDefinition};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 pub struct SnapshotGenerator {
     structure_definitions: HashMap<String, StructureDefinition>,
-    snapshot_cache: RefCell<HashMap<String, Snapshot>>,
+    snapshot_cache: RefCell<HashMap<String, Arc<Snapshot>>>,
 }
 
 impl SnapshotGenerator {
@@ -37,7 +38,7 @@ impl SnapshotGenerator {
         }
     }
 
-    pub fn generate_snapshot(&self, url: &str) -> SnapshotResult<Snapshot> {
+    pub fn generate_snapshot(&self, url: &str) -> SnapshotResult<Arc<Snapshot>> {
         info!("Generating snapshot for: {}", url);
         let mut visited = HashSet::new();
         self.generate_snapshot_internal(url, &mut visited)
@@ -47,7 +48,7 @@ impl SnapshotGenerator {
         &self,
         url: &str,
         visited: &mut HashSet<String>,
-    ) -> SnapshotResult<Snapshot> {
+    ) -> SnapshotResult<Arc<Snapshot>> {
         if visited.contains(url) {
             return Err(SnapshotError::CircularDependency(format!(
                 "Circular dependency detected: {url}"
@@ -76,10 +77,11 @@ impl SnapshotGenerator {
                 "Using existing snapshot with {} elements",
                 snapshot.element.len()
             );
+            let snapshot = Arc::new(snapshot.clone());
             self.snapshot_cache
                 .borrow_mut()
                 .insert(url.to_string(), snapshot.clone());
-            return Ok(snapshot.clone());
+            return Ok(snapshot);
         }
 
         let snapshot = if let Some(base_url) = &sd.base_definition {
@@ -95,7 +97,7 @@ impl SnapshotGenerator {
                 let merged =
                     ElementMerger::merge_elements(&base_snapshot.element, &differential.element)?;
                 info!("Generated snapshot with {} elements", merged.len());
-                Snapshot { element: merged }
+                Arc::new(Snapshot { element: merged })
             } else {
                 debug!("No differential, returning base snapshot");
                 base_snapshot
@@ -105,9 +107,9 @@ impl SnapshotGenerator {
                 "No base definition, using differential as snapshot ({} elements)",
                 differential.element.len()
             );
-            Snapshot {
+            Arc::new(Snapshot {
                 element: differential.element.clone(),
-            }
+            })
         } else {
             return Err(SnapshotError::InvalidStructureDefinition(format!(
                 "StructureDefinition {url} has no snapshot, differential, or base definition"
