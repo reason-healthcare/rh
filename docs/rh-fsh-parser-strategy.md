@@ -174,6 +174,268 @@ Profile: Profile = {
 
 **Effort Estimate:** Very High (complete manual implementation)
 
+I'll analyze using nom for the FSH parser and compare it to the other options. Based on my research and analysis of the FSH parser strategy document, here's a comprehensive comparison adding **nom** as an option: 
+
+## Option 5: nom (Parser Combinator Library)
+
+**Repository:** [rust-bakery/nom](https://github.com/rust-bakery/nom)
+
+### Grammar Approach with nom
+
+nom uses **parser combinators** - small parsing functions composed together to build complex parsers. Unlike pest's PEG grammar or ANTLR's grammar files, nom is pure Rust code.
+
+**Example FSH Parser with nom:**
+
+```rust
+use nom::{
+    IResult,
+    branch:: alt,
+    bytes::complete::{tag, take_while1},
+    character::complete: :{multispace0, multispace1, char},
+    combinator: :{opt, map, recognize},
+    multi::many0,
+    sequence: :{preceded, delimited, tuple, terminated},
+};
+
+// Lexer-level parsers
+fn star_delimiter(input: &str) -> IResult<&str, &str> {
+    recognize(tuple((
+        multispace0,
+        char('*'),
+        char(' '),
+    )))(input)
+}
+
+fn keyword_profile(input: &str) -> IResult<&str, &str> {
+    terminated(tag("Profile"), char(': '))(input)
+}
+
+fn sequence(input: &str) -> IResult<&str, &str> {
+    take_while1(|c:  char| ! c.is_whitespace())(input)
+}
+
+fn code(input: &str) -> IResult<&str, Code> {
+    map(
+        tuple((
+            opt(sequence),
+            char('#'),
+            alt((sequence, quoted_string)),
+        )),
+        |(system, _, code)| Code { system, code }
+    )(input)
+}
+
+// Parser-level combinators
+fn profile(input: &str) -> IResult<&str, Profile> {
+    map(
+        tuple((
+            preceded(keyword_profile, sequence),
+            many0(sd_metadata),
+            many0(preceded(star_delimiter, sd_rule)),
+        )),
+        |(name, metadata, rules)| Profile { name, metadata, rules }
+    )(input)
+}
+
+fn entity(input: &str) -> IResult<&str, Entity> {
+    alt((
+        map(alias, Entity::Alias),
+        map(profile, Entity::Profile),
+        map(extension, Entity::Extension),
+        // ...
+    ))(input)
+}
+
+fn document(input: &str) -> IResult<&str, FshDocument> {
+    map(
+        many0(preceded(multispace0, entity)),
+        |entities| FshDocument { entities }
+    )(input)
+}
+```
+
+### Pros
+
+1. **Zero external toolchain** - Pure Rust, no build-time code generation or external dependencies
+2. **Maximum flexibility** - Can implement context-sensitive parsing (FSH's mode switching) naturally
+3. **Excellent performance** - Fastest option for complex grammars, can be zero-copy
+4. **Fine-grained error control** - Custom error types, precise error recovery strategies
+5. **Incremental parsing** - Streaming parsers work with incomplete input (useful for LSP/IDE features)
+6. **Type-safe by construction** - Parsers compose with Rust's type system
+7. **Well-established** - Used by major projects (Rust compiler internals, hickory-dns, cargo-vet)
+8. **Easy debugging** - Standard Rust debugging tools work, no generated code mysteries
+9. **Integrated with ecosystem** - Works seamlessly with nom-locate for source positions, nom-supreme for better errors
+
+### Cons
+
+1. **Steepest learning curve** - Parser combinator concepts are unfamiliar to many developers
+2. **No grammar file** - Harder to compare directly with SUSHI's ANTLR grammar
+3. **Verbose for simple cases** - More boilerplate than declarative grammars for basic patterns
+4. **Error messages need work** - Default nom errors are cryptic; need nom-supreme or custom formatting
+5. **Backtracking complexity** - Must manually manage backtracking vs. committed choice
+6. **Documentation learning curve** - nom's API is powerful but takes time to master
+7. **No automatic whitespace handling** - Must explicitly handle whitespace everywhere (unlike pest)
+
+### Effort Estimate
+
+**High to Very High** (similar to hand-written, but with better abstractions)
+
+- Phase 1: Learning nom combinators (1-2 weeks)
+- Phase 2: Implementing lexical parsers (1 week)
+- Phase 3: Building parser combinators (2-3 weeks)
+- Phase 4: Error handling and testing (1-2 weeks)
+- **Total: 5-8 weeks**
+
+## Comparison Matrix
+
+| Criterion | antlr4rust | pest | LALRPOP | Hand-written | **nom** |
+|-----------|------------|------|---------|--------------|---------|
+| **Learning Curve** | Low | Medium | Medium-High | High | **High** |
+| **Performance** | Medium | Medium-High | High | Very High | **Very High** |
+| **Spec Fidelity** | Very High | Medium | Medium | Low | **Medium** |
+| **Error Messages** | Good | Good | Good | Excellent | **Good (with nom-supreme)** |
+| **Flexibility** | Low | Low | Medium | Very High | **Very High** |
+| **Toolchain** | Java required | None | None | None | **None** |
+| **Code Generation** | Yes (build time) | Yes (build time) | Yes (build time) | No | **No** |
+| **Debugging** | Hard | Medium | Medium | Easy | **Easy** |
+| **Streaming/Incremental** | No | No | No | Possible | **Yes (built-in)** |
+| **Zero-copy parsing** | No | Limited | No | Yes | **Yes** |
+| **Maintenance** | Low | Medium | Medium | High | **Medium-High** |
+
+## When to Choose nom
+
+nom is the **best choice** when:
+
+1. **Performance is critical** - You need the fastest possible parser
+2. **Context-sensitive grammar** - FSH's lexer modes are natural in nom
+3. **Streaming required** - Building an LSP server or incremental compiler
+4. **Fine-grained control** - Need precise error recovery or partial parsing
+5. **Pure Rust preference** - Want to avoid build-time code generation
+6. **Long-term maintainability** - Willing to invest upfront for better control
+
+nom is **not ideal** when:
+
+1. **Quick prototyping** - pest is faster to get started
+2. **Grammar documentation** - Need a grammar file to reference
+3. **Team unfamiliar with combinators** - Steep onboarding cost
+4. **Spec compliance priority** - antlr4rust guarantees matching SUSHI
+
+## Real-World nom Usage in Similar Projects
+
+From the search results, nom is used extensively in:
+
+- **hickory-dns** - DNS protocol parsing (complex binary formats)
+- **cargo-vet** - CLI argument parsing with complex logic
+- **yubikey. rs** - Cryptographic data structure parsing
+- **stratus** - Build-time code generation parsing
+- **idl_parser** - OMG IDL parsing (very similar to FSH!)
+
+The **idl_parser** project is particularly relevant - it parses interface definition language with nom, similar structure to FSH. 
+
+## Updated Recommendation
+
+### If Performance + Flexibility Matter Most:  **nom**
+
+For a production FSH compiler that will: 
+- Be used in LSP servers (streaming parsing)
+- Need excellent performance (parsing thousands of files)
+- Require fine-grained error recovery
+- Be maintained long-term
+
+**Choose nom** - the upfront investment pays off with: 
+- Zero build-time dependencies
+- Maximum control over parsing behavior
+- Best performance characteristics
+- Natural handling of FSH's context-sensitive lexer
+
+### If Rapid Development Matters Most: **pest**
+
+For getting a working parser quickly and iterating on FSH support, **pest remains the best choice** as originally recommended.
+
+### Migration Strategy with nom
+
+Start with **pest** for rapid prototyping, then migrate to **nom** if:
+- Performance profiling shows parsing is a bottleneck
+- LSP features require incremental parsing
+- Error recovery needs fine-tuning
+
+The AST types remain identical, making this migration path viable.
+
+## nom Implementation Sketch
+
+```rust
+// src/parser/lexer.rs
+pub mod lexer {
+    use nom::{
+        IResult,
+        bytes::complete::{tag, take_while1},
+        character::complete::{multispace0, line_ending},
+        combinator::recognize,
+        sequence::tuple,
+    };
+    
+    // Context-sensitive lexer using nom's streaming features
+    pub enum LexerMode {
+        Normal,
+        RulesetOrInsert,
+        ParamRuleset,
+        ListOfContexts,
+        ListOfCodes,
+    }
+    
+    pub struct Lexer<'a> {
+        input:  &'a str,
+        mode: LexerMode,
+    }
+    
+    impl<'a> Lexer<'a> {
+        pub fn star(&self) -> IResult<&'a str, Token<'a>> {
+            // Implement ANTLR's STAR token logic
+            map(
+                recognize(tuple((
+                    line_ending,
+                    multispace0,
+                    char('*'),
+                    char(' '),
+                ))),
+                Token::Star
+            )(self.input)
+        }
+        
+        pub fn code(&self) -> IResult<&'a str, Token<'a>> {
+            // system#code "display text"
+            // Naturally handles optional parts
+        }
+    }
+}
+
+// src/parser/combinators.rs
+pub mod combinators {
+    use super::lexer:: Lexer;
+    use nom::{IResult, multi:: many0, combinator::map};
+    
+    pub fn profile(input: &str) -> IResult<&str, Profile> {
+        let mut lexer = Lexer::new(input);
+        
+        map(
+            tuple((
+                lexer.keyword("Profile"),
+                lexer.sequence(),  // name
+                many0(sd_metadata),
+                many0(sd_rule),
+            )),
+            |(_, name, metadata, rules)| {
+                Profile { name, metadata, rules }
+            }
+        )(input)
+    }
+}
+```
+
+This gives you the **best of both worlds**: pest's development speed initially, with a clear path to nom's performance and flexibility when needed. 
+
+
+
 ## Recommendation
 
 ### Primary Recommendation: pest
