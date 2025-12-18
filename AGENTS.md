@@ -15,18 +15,15 @@ rh-cli (binary)
 ├── rh-fhirpath      # FHIRPath expression engine
 ├── rh-validator     # FHIR resource validator
 ├── rh-vcl           # ValueSet Compose Language
-├── rh-foundation    # Shared utilities (errors, HTTP, I/O)
-├── rh-snapshot      # StructureDefinition snapshots
-└── rh-loader        # FHIR package loader
+└── rh-foundation    # Shared utilities (errors, HTTP, I/O, package loader, snapshot generation)
 ```
 
 ### Key Crates
-- **rh-foundation**: Base utilities, error types, HTTP client wrappers
+- **rh-foundation**: Base utilities, error types, HTTP client wrappers, package loader, snapshot generation
 - **rh-codegen**: Generates Rust types from FHIR StructureDefinitions
 - **rh-fhirpath**: Parser and evaluator for FHIRPath expressions
 - **rh-validator**: Profile-based FHIR validation with LRU caching
 - **rh-vcl**: ValueSet Compose Language parser (WASM-compatible)
-- **rh-loader**: Loads FHIR packages from npm-style registries
 - **hl7_fhir_r4_core**: Pre-generated R4 FHIR types
 
 ## Build & Test Commands
