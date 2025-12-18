@@ -25,8 +25,8 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | 🔜 | rh-cql  | CQL tools |
 | 🚀 | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
-| 🔜 | rh-hl7_fhir_r5_core  | **Generated** R4 FHIR for Rust |
-| 🔜 | rh-hl7_fhir_r6_core  | **Generated** R4 FHIR for Rust |
+| 🔜 | rh-hl7_fhir_r5_core  | **Generated** R5 FHIR for Rust |
+| 🔜 | rh-hl7_fhir_r6_core  | **Generated** R6 FHIR for Rust |
 
 ## Quick Start
 
