@@ -18,15 +18,15 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
 | 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
-| 🚀 | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, loader, snapshot) |
+| 🚀 | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, package loader, snapshot generation) |
 | 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
-| 🔜 | rh-snapshot  | StructureDefinition snapshot generator (part of rh-foundation) |
-| 🔜 | rh-loader  | FHIR package loader (part of rh-foundation) |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | 🔜 | rh-cql  | CQL tools |
 | 🚀 | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
+| 🔜 | rh-hl7_fhir_r5_core  | **Generated** R4 FHIR for Rust |
+| 🔜 | rh-hl7_fhir_r6_core  | **Generated** R4 FHIR for Rust |
 
 ## Quick Start
 
