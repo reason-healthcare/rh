@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ## Development Setup
 
-1. Ensure you have Rust 1.70 or later installed
+1. Ensure you have Rust 1.91 or later installed
 2. Run the setup script: `./setup.sh`
 3. Verify everything works: `cargo test`
 

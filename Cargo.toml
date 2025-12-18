@@ -60,4 +60,4 @@ authors = ["Your Name <your.email@example.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yourusername/your-monorepo"
-rust-version = "1.70"
+rust-version = "1.91"
