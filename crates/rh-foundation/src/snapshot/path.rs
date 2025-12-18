@@ -362,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_short_string() {
+    fn test_normalize_choice_type_minimum_length() {
         // "valA" -> len 4. >3. 'v' is lowercase. 'A' is upper. -> "val[x]"
         let path = ElementPath::new("Observation.valA");
         let normalized = path.normalize_choice_type();
