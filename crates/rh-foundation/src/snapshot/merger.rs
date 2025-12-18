@@ -17,11 +17,29 @@ impl ElementMerger {
             differential.len()
         );
 
-        let mut element_map: HashMap<(String, Option<String>), ElementDefinition> = base
-            .iter()
-            .map(|e| ((e.path.clone(), e.slice_name.clone()), e.clone()))
-            .collect();
+        let mut element_map = Self::create_element_map(base);
+        Self::apply_differential(&mut element_map, differential)?;
+        Self::expand_slice_children(&mut element_map);
 
+        let mut result: Vec<ElementDefinition> = element_map.into_values().collect();
+        Self::sort_elements_by_path(&mut result);
+
+        debug!("Merge complete: {} elements in result", result.len());
+        Ok(result)
+    }
+
+    fn create_element_map(
+        base: &[ElementDefinition],
+    ) -> HashMap<(String, Option<String>), ElementDefinition> {
+        base.iter()
+            .map(|e| ((e.path.clone(), e.slice_name.clone()), e.clone()))
+            .collect()
+    }
+
+    fn apply_differential(
+        element_map: &mut HashMap<(String, Option<String>), ElementDefinition>,
+        differential: &[ElementDefinition],
+    ) -> SnapshotResult<()> {
         for diff_element in differential {
             let key = (diff_element.path.clone(), diff_element.slice_name.clone());
 
@@ -40,11 +58,11 @@ impl ElementMerger {
                 element_map.insert(key, diff_element.clone());
             }
         }
+        Ok(())
+    }
 
-        Self::expand_slice_children(&mut element_map);
-
-        let mut result: Vec<ElementDefinition> = element_map.into_values().collect();
-        result.sort_by(|a, b| match a.path.cmp(&b.path) {
+    fn sort_elements_by_path(elements: &mut [ElementDefinition]) {
+        elements.sort_by(|a, b| match a.path.cmp(&b.path) {
             std::cmp::Ordering::Equal => match (&a.slice_name, &b.slice_name) {
                 (None, None) => std::cmp::Ordering::Equal,
                 (None, Some(_)) => std::cmp::Ordering::Less,
@@ -53,9 +71,6 @@ impl ElementMerger {
             },
             other => other,
         });
-
-        debug!("Merge complete: {} elements in result", result.len());
-        Ok(result)
     }
 
     fn expand_slice_children(
@@ -352,6 +367,19 @@ mod tests {
             slicing: None,
             slice_name: slice_name.map(|s| s.to_string()),
         }
+    }
+
+    #[test]
+    fn test_merge_elements_basic() {
+        let base_elem = create_element("Patient", None);
+        let diff_elem = create_element("Patient", None);
+
+        let base = vec![base_elem];
+        let diff = vec![diff_elem];
+
+        let result = ElementMerger::merge_elements(&base, &diff).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].path, "Patient");
     }
 
     #[test]
