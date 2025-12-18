@@ -15,11 +15,7 @@ use std::time::Duration;
 /// * `operation` - An async closure that returns a `Result`.
 /// * `max_retries` - Maximum number of retries before giving up.
 /// * `delay_ms` - Base delay in milliseconds (linear backoff: `delay_ms * retries`).
-pub async fn with_retry<T, F, Fut>(
-    mut operation: F,
-    max_retries: u32,
-    delay_ms: u64,
-) -> Result<T>
+pub async fn with_retry<T, F, Fut>(mut operation: F, max_retries: u32, delay_ms: u64) -> Result<T>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T>>,
