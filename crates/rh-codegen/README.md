@@ -400,7 +400,7 @@ The crate is organized into modular components with specialized generators:
   - `NameGenerator`: Rust-idiomatic naming conventions
   - `TypeUtilities`: Type analysis and mapping utilities
 
-- **`rh-loader`**: Package downloading functionality (separate crate)
+- **`rh-foundation::loader`**: Package downloading functionality (module in rh-foundation)
   - `PackageLoader`: HTTP client for registry interaction
   - `LoaderConfig`: Configuration for registry access
   - Tarball download and extraction

@@ -109,7 +109,7 @@ cargo run -p rh -- codegen batch -c codegen.json
 
 ## Package Management (`rh download`)
 
-Download and manage FHIR packages from npm-style registries using the rh-loader crate.
+Download and manage FHIR packages from npm-style registries using the loader module from rh-foundation.
 
 ### Download Packages
 
@@ -651,9 +651,9 @@ The CLI leverages these workspace crates:
 
 - **`rh-codegen`** - FHIR code generation from StructureDefinitions
 - **`rh-fhirpath`** - FHIRPath parsing and evaluation
-- **`rh-validator`** - JSON syntax and FHIR resource validation
-- **`rh-loader`** - FHIR package downloading from npm-style registries
-- **`rh-common`** - Shared utilities and error handling
+- **`rh-validator`** - FHIR resource validation
+- **`rh-vcl`** - ValueSet Compose Language parsing and translation
+- **`rh-foundation`** - Foundation utilities (errors, I/O, HTTP, loader, snapshot)
 
 ## Performance
 
@@ -781,7 +781,8 @@ cargo test -p rh test_codegen_commands
 - **[FHIR Code Generation](../../crates/rh-codegen/README.md)** - Library documentation for code generation
 - **[FHIRPath](../../crates/rh-fhirpath/README.md)** - Library documentation for FHIRPath operations
 - **[FHIR Validator](../../crates/rh-validator/README.md)** - Library documentation for validation
-- **[FHIR Loader](../../crates/rh-loader/README.md)** - Library documentation for package downloading
+- **[VCL Parser](../../crates/rh-vcl/README.md)** - Library documentation for ValueSet Compose Language
+- **[Foundation](../../crates/rh-foundation/README.md)** - Foundation utilities including loader and snapshot
 - **[Workspace Overview](../../README.md)** - Main project documentation
 
 ## Contributing

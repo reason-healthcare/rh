@@ -395,4 +395,4 @@ This crate is part of the [Rust Healthcare Toolkit](https://github.com/reason-he
 - **rh-codegen** - FHIR code generation from StructureDefinitions
 - **rh-fhirpath** - FHIRPath expression evaluation
 - **rh-validator** - FHIR resource validation
-- **rh-loader** - FHIR package and resource loading
+- **rh-foundation** - Foundation utilities including FHIR package loading and snapshot generation

@@ -18,9 +18,10 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
 | 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
 | 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
-| 🚀 | [rh-snapshot](crates/rh-snapshot/README.md)  | StructureDefinition snapshot generator |
-| 🔜 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
-| 🚀 | [rh-loader](crates/rh-loader/README.md)  | FHIR package loader from npm-style registries |
+| 🚀 | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, loader, snapshot) |
+| 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
+| 🔜 | rh-snapshot  | StructureDefinition snapshot generator (part of rh-foundation) |
+| 🔜 | rh-loader  | FHIR package loader (part of rh-foundation) |
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
@@ -32,7 +33,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 ```bash
 # Clone and build the entire workspace
 git clone <repo-url>
-cd research
+cd rh
 cargo build
 ```
 
@@ -44,11 +45,11 @@ cargo build
 ├── Cargo.toml              # Workspace root configuration
 ├── crates/                 # Library crates
 │   ├── rh-codegen/            # FHIR code generation library
-│   ├── rh-foundation/         # Foundation utilities (errors, HTTP, I/O, CLI helpers)
+│   ├── rh-foundation/         # Foundation utilities (errors, HTTP, I/O, CLI, loader, snapshot)
 │   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
-│   ├── rh-loader/             # FHIR package loader from npm-style registries
 │   ├── rh-validator/          # FHIR resource validation library
-│   └── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
+│   ├── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
+│   └── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
 ├── apps/                   # Executable applications
 │   └── rh-cli/                # Unified cross-platform CLI for FHIR
 ├── setup.sh                # Development setup script
@@ -148,7 +149,7 @@ cargo clippy --all-features
 Run tests:
 
 ```bash
-cargo tes
+cargo test
 ```
 
 ## Dependency Management
