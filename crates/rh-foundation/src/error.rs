@@ -76,6 +76,35 @@ impl FoundationError {
 /// Result type alias using FoundationError
 pub type Result<T> = std::result::Result<T, FoundationError>;
 
+/// Helper to wrap IO errors with path context.
+///
+/// Creates a new IO error that preserves the original error kind but adds
+/// descriptive context including the action being performed and the file path.
+///
+/// # Example
+/// ```
+/// use rh_foundation::error::io_error_with_path;
+/// use std::path::Path;
+///
+/// fn example() -> rh_foundation::Result<()> {
+///     let path = Path::new("config.json");
+///     std::fs::read_to_string(path).map_err(|e| {
+///         io_error_with_path(e, path, "read config from")
+///     })?;
+///     Ok(())
+/// }
+/// ```
+pub fn io_error_with_path(
+    err: std::io::Error,
+    path: &std::path::Path,
+    action: &str,
+) -> FoundationError {
+    FoundationError::Io(std::io::Error::new(
+        err.kind(),
+        format!("Failed to {action} {}: {err}", path.display()),
+    ))
+}
+
 /// Trait for adding context to errors.
 ///
 /// This trait allows chaining contextual information to errors,

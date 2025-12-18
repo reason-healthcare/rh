@@ -6,7 +6,7 @@
 //! - Formatting and printing results with different output formats
 //! - Error handling and exit codes
 
-use crate::error::{FoundationError, Result};
+use crate::error::{io_error_with_path, FoundationError, Result};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fs;
@@ -39,9 +39,8 @@ use std::path::Path;
 /// ```
 pub async fn read_input(file: Option<&str>, inline: Option<String>) -> Result<String> {
     if let Some(filename) = file {
-        fs::read_to_string(filename).map_err(|e| {
-            FoundationError::Io(e).with_context(&format!("Failed to read file: {filename}"))
-        })
+        let path = Path::new(filename);
+        fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read file"))
     } else if let Some(content) = inline {
         Ok(content)
     } else {
@@ -73,10 +72,8 @@ pub async fn read_input(file: Option<&str>, inline: Option<String>) -> Result<St
 pub fn read_input_from_path(path: &Option<impl AsRef<Path>>) -> Result<String> {
     match path {
         Some(file_path) => {
-            let path_str = file_path.as_ref().display().to_string();
-            fs::read_to_string(file_path).map_err(|e| {
-                FoundationError::Io(e).with_context(&format!("Failed to read file: {path_str}"))
-            })
+            let path = file_path.as_ref();
+            fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read file"))
         }
         None => {
             let mut buffer = String::new();
@@ -107,12 +104,12 @@ pub fn read_input_from_path(path: &Option<impl AsRef<Path>>) -> Result<String> {
 /// # Ok(())
 /// # }
 /// ```
-pub fn read_json<T: DeserializeOwned>(path: &str) -> Result<T> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| FoundationError::Io(e).with_context(&format!("Failed to read {path}")))?;
+pub fn read_json<T: DeserializeOwned>(path_str: &str) -> Result<T> {
+    let path = Path::new(path_str);
+    let content = fs::read_to_string(path).map_err(|e| io_error_with_path(e, path, "read"))?;
 
     serde_json::from_str(&content).map_err(|e| {
-        FoundationError::Serde(e).with_context(&format!("Failed to parse JSON from {path}"))
+        FoundationError::Serde(e).with_context(&format!("Failed to parse JSON from {path_str}"))
     })
 }
 
@@ -139,10 +136,7 @@ pub fn read_json<T: DeserializeOwned>(path: &str) -> Result<T> {
 pub fn write_output(path: Option<&Path>, content: &str) -> Result<()> {
     match path {
         Some(file_path) => {
-            let path_str = file_path.display().to_string();
-            fs::write(file_path, content).map_err(|e| {
-                FoundationError::Io(e).with_context(&format!("Failed to write to {path_str}"))
-            })
+            fs::write(file_path, content).map_err(|e| io_error_with_path(e, file_path, "write to"))
         }
         None => io::stdout()
             .write_all(content.as_bytes())
