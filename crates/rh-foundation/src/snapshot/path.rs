@@ -79,10 +79,14 @@ impl ElementPath {
         }
     }
 
+    fn is_lowercase_start(s: &str) -> bool {
+        s.chars().next().is_some_and(|c| c.is_lowercase())
+    }
+
     pub fn normalize_choice_type(&self) -> ElementPath {
         let mut normalized_parts = self.parts.clone();
         if let Some(last) = normalized_parts.last_mut() {
-            if last.len() > 3 && last.chars().nth(0).unwrap().is_lowercase() {
+            if last.len() > 3 && Self::is_lowercase_start(last) {
                 for (i, c) in last.char_indices() {
                     if c.is_uppercase() {
                         let prefix = &last[..i];
@@ -346,5 +350,27 @@ mod tests {
 
         let base = slice_child.base_path();
         assert_eq!(base.as_str(), "Patient.identifier.system");
+    }
+
+    #[test]
+    fn test_is_lowercase_start() {
+        assert!(ElementPath::is_lowercase_start("abc"));
+        assert!(!ElementPath::is_lowercase_start("Abc"));
+        assert!(!ElementPath::is_lowercase_start(""));
+        assert!(!ElementPath::is_lowercase_start("123"));
+        assert!(!ElementPath::is_lowercase_start("ABC"));
+    }
+
+    #[test]
+    fn test_normalize_short_string() {
+        // "valA" -> len 4. >3. 'v' is lowercase. 'A' is upper. -> "val[x]"
+        let path = ElementPath::new("Observation.valA");
+        let normalized = path.normalize_choice_type();
+        assert_eq!(normalized.as_str(), "Observation.val[x]");
+
+        // "vaA" -> len 3. Not >3. -> "vaA"
+        let short_path = ElementPath::new("Observation.vaA");
+        let short_normalized = short_path.normalize_choice_type();
+        assert_eq!(short_normalized.as_str(), "Observation.vaA");
     }
 }
