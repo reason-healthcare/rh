@@ -3,7 +3,7 @@
 //! This module provides common file operations used across the workspace.
 
 use crate::config::Config;
-use crate::error::{FoundationError, Result};
+use crate::error::{io_error_with_path, Result};
 use std::path::Path;
 
 /// Load configuration from a JSON file.
@@ -24,12 +24,8 @@ use std::path::Path;
 /// ```
 pub fn load_config_from_file<T: Config>(path: impl AsRef<Path>) -> Result<T> {
     let path = path.as_ref();
-    let content = std::fs::read_to_string(path).map_err(|e| {
-        FoundationError::Io(std::io::Error::new(
-            e.kind(),
-            format!("Failed to read config from {}: {}", path.display(), e),
-        ))
-    })?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| io_error_with_path(e, path, "read config from"))?;
     let config: T = serde_json::from_str(&content)?;
     config.validate()?;
     Ok(config)
@@ -56,12 +52,8 @@ pub fn save_config_to_file<T: Config>(config: &T, path: impl AsRef<Path>) -> Res
     config.validate()?;
     let content = serde_json::to_string_pretty(config)?;
     let path = path.as_ref();
-    std::fs::write(path, content).map_err(|e| {
-        FoundationError::Io(std::io::Error::new(
-            e.kind(),
-            format!("Failed to write config to {}: {}", path.display(), e),
-        ))
-    })?;
+    std::fs::write(path, content)
+        .map_err(|e| io_error_with_path(e, path, "write config to"))?;
     Ok(())
 }
 
@@ -71,12 +63,8 @@ where
     T: serde::de::DeserializeOwned,
 {
     let path = path.as_ref();
-    let content = std::fs::read_to_string(path).map_err(|e| {
-        FoundationError::Io(std::io::Error::new(
-            e.kind(),
-            format!("Failed to read JSON from {}: {}", path.display(), e),
-        ))
-    })?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| io_error_with_path(e, path, "read JSON from"))?;
     serde_json::from_str(&content).map_err(Into::into)
 }
 
@@ -91,12 +79,8 @@ where
     } else {
         serde_json::to_string(value)?
     };
-    std::fs::write(path, content).map_err(|e| {
-        FoundationError::Io(std::io::Error::new(
-            e.kind(),
-            format!("Failed to write JSON to {}: {}", path.display(), e),
-        ))
-    })?;
+    std::fs::write(path, content)
+        .map_err(|e| io_error_with_path(e, path, "write JSON to"))?;
     Ok(())
 }
 
