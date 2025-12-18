@@ -4,6 +4,7 @@
 //! sensible defaults for common operations.
 
 use crate::error::{FoundationError, Result};
+use std::future::Future;
 use std::path::Path;
 use std::time::Duration;
 
@@ -187,9 +188,101 @@ impl Default for HttpClient {
     }
 }
 
+/// Execute an async operation with retry logic.
+///
+/// The retry logic uses a linear backoff strategy:
+/// `delay = delay_ms * retry_count`
+///
+/// # Arguments
+/// * `operation` - A closure that returns a Future resolving to a Result
+/// * `max_retries` - Maximum number of attempts. If set to 1, only the initial attempt is made.
+/// * `delay_ms` - Base delay in milliseconds used for linear backoff.
+pub async fn with_retry<T, F, Fut>(
+    mut operation: F,
+    max_retries: u32,
+    delay_ms: u64,
+) -> Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T>>,
+{
+    let mut retries = 0;
+    loop {
+        match operation().await {
+            Ok(value) => return Ok(value),
+            Err(e) => {
+                retries += 1;
+                if retries >= max_retries {
+                    return Err(e);
+                }
+                tracing::warn!(
+                    "Operation attempt {} failed, retrying... Error: {}",
+                    retries,
+                    e
+                );
+                tokio::time::sleep(Duration::from_millis(delay_ms * retries as u64)).await;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_with_retry_success() {
+        let result = with_retry(|| async { Ok::<_, FoundationError>(42) }, 3, 10).await;
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_fail_then_succeed() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let attempts_clone = attempts.clone();
+
+        let result = with_retry(
+            || {
+                let attempts = attempts_clone.clone();
+                async move {
+                    let count = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+                    if count < 2 {
+                        Err(FoundationError::Other(anyhow::anyhow!("fail")))
+                    } else {
+                        Ok(42)
+                    }
+                }
+            },
+            3,
+            1,
+        )
+        .await;
+        assert_eq!(result.unwrap(), 42);
+        assert_eq!(attempts.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_exhausted() {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let attempts_clone = attempts.clone();
+
+        let result = with_retry(
+            || {
+                let attempts = attempts_clone.clone();
+                async move {
+                    attempts.fetch_add(1, Ordering::SeqCst);
+                    Err::<(), _>(FoundationError::Other(anyhow::anyhow!("fail")))
+                }
+            },
+            3,
+            1,
+        )
+        .await;
+        assert!(result.is_err());
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
 
     #[tokio::test]
     async fn test_http_client_creation() {
