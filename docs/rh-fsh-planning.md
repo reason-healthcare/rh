@@ -14,7 +14,7 @@ This document outlines the planning approach for implementing `rh-fsh`, a FHIR S
 
 1. **High-performance FSH compilation** - Leverage Rust's performance characteristics
 2. **SUSHI compatibility** - Produce identical FHIR artifacts for valid FSH input
-3. **Integration with rh ecosystem** - Reuse existing crates (rh-loader, rh-validator, etc.)
+3. **Integration with rh ecosystem** - Reuse existing crates (rh-loader, rh-validator, etc.) and expose functionality via `rh-cli`
 4. **WASM compilation target** - Enable browser-based FSH tooling
 
 ## SUSHI Architecture Reference
