@@ -83,6 +83,212 @@ SUSHI Compiler Pipeline
 14. **Path** - Metadata via caret syntax
 15. **Type** - Element type constraint
 
+## Exporter Pipeline (Post-Parsing)
+
+After parsing FSH files into an AST (FSHTank), the compiler executes a multi-stage export pipeline to transform FSH entities into FHIR JSON resources and write them to disk.
+
+### Pipeline Overview
+
+```
+Export Pipeline
+===============
+
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   FSHTank   │───▶│ FHIRExporter│───▶│   Package   │───▶│ Serializer  │───▶│ fsh-generated/
+│   (AST)     │    │ (Orchestrator)   │  (In-Memory)│    │ (toJSON)    │    │  resources/ │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+          ▼               ▼               ▼
+   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+   │StructureDef │ │  ValueSet   │ │  Instance   │
+   │  Exporter   │ │  Exporter   │ │  Exporter   │
+   └─────────────┘ └─────────────┘ └─────────────┘
+```
+
+### Stage 1: Insert Rule Expansion
+
+Before export, all RuleSet references are expanded in-place:
+
+```
+applyInsertRules()
+├── Expand RuleSets in Invariants
+└── Expand RuleSets in StructureDefinitions (Profile, Extension, Logical, Resource)
+    ├── Handle parameterized RuleSets with variable substitution
+    └── Recursively expand nested RuleSet references
+```
+
+### Stage 2: Entity Export (FHIRExporter Orchestration)
+
+The `FHIRExporter` coordinates five specialized exporters in a specific order:
+
+```typescript
+// Export order matters for cross-references
+1. structureDefinitionExporter.export()  // Profiles, Extensions, Logicals, Resources
+2. codeSystemExporter.export()           // CodeSystem resources
+3. valueSetExporter.export()             // ValueSet resources  
+4. instanceExporter.export()             // Instance resources (any FHIR type)
+5. structureDefinitionExporter.applyDeferredRules()  // Handle circular refs
+6. mappingExporter.export()              // ConceptMap resources
+```
+
+### Stage 3: StructureDefinition Export (Profiles/Extensions/Logicals/Resources)
+
+The most complex exporter, handling constraint application:
+
+```
+exportStructDef(fshDefinition)
+├── getStructureDefinition()           // Clone parent SD, set baseDefinition/url/type
+├── resetParentElements()              // Adjust element ids/paths for Logical/Resource
+├── setMetadata()                      // id, name, title, description, status, etc.
+├── preprocessStructureDefinition()    // Infer extension value[x]/extension constraints
+├── setRules()                         // Apply each FSH rule to elements
+│   ├── AddElementRule                 // New elements (Logical/Resource only)
+│   ├── CardRule                       // Cardinality constraints
+│   ├── AssignmentRule                 // Fixed/pattern values
+│   ├── FlagRule                       // MS, SU, ?!, N, TU, D
+│   ├── OnlyRule                       // Type constraints
+│   ├── BindingRule                    // ValueSet bindings
+│   ├── ContainsRule                   // Slicing (extensions or other arrays)
+│   ├── CaretValueRule                 // Direct element/SD property assignment
+│   └── ObeysRule                      // Invariant application
+├── setContext() (Extensions only)     // Extension context constraints
+├── cleanResource()                    // Remove internal properties
+└── validate()                         // Check for errors
+```
+
+### Stage 4: Package Population
+
+Each exporter populates typed arrays in the `Package` object:
+
+```typescript
+class Package {
+  profiles: StructureDefinition[]      // Profile SDs
+  extensions: StructureDefinition[]    // Extension SDs
+  logicals: StructureDefinition[]      // Logical Model SDs
+  resources: StructureDefinition[]     // Custom Resource SDs
+  instances: InstanceDefinition[]      // Any FHIR resource instance
+  valueSets: ValueSet[]                // ValueSet resources
+  codeSystems: CodeSystem[]            // CodeSystem resources
+  
+  fshMap: Map<string, SourceInfo>      // Tracks FSH source → output file mapping
+}
+```
+
+### Stage 5: JSON Serialization
+
+Each FHIR type class implements serialization methods:
+
+```typescript
+interface Exportable {
+  getFileName(): string;    // e.g., "StructureDefinition-MyProfile.json"
+  toJSON(snapshot?: boolean): any;  // FHIR-compliant JSON representation
+}
+```
+
+**StructureDefinition.toJSON(snapshot)**:
+- Generates `differential` (always) - only changed elements
+- Optionally generates `snapshot` (full element tree)
+- Orders properties per FHIR specification
+- Removes internal tracking properties
+
+**ValueSet/CodeSystem.toJSON()**:
+- Deep clones the object with property ordering
+- Removes undefined/null properties
+
+**InstanceDefinition.toJSON()**:
+- Returns clean FHIR resource JSON
+- Removes `_instanceMeta` tracking object
+
+### Stage 6: File Output (writeFHIRResources)
+
+The final stage writes all resources to disk:
+
+```
+writeFHIRResources(outDir, package, defs, snapshot)
+├── Create output directory: {outDir}/fsh-generated/resources/
+├── Skip predefined resources (avoid duplicates)
+├── For each resource category:
+│   ├── profiles[]
+│   ├── extensions[]
+│   ├── logicals[]
+│   ├── resources[]
+│   ├── valueSets[]
+│   ├── codeSystems[]
+│   └── instances[] (excluding Inline usage)
+│       ├── checkNullValuesOnArray()     // Warn about sparse arrays
+│       ├── resource.getFileName()        // Generate filename
+│       ├── resource.toJSON(snapshot)     // Serialize to JSON
+│       └── fs.outputJSONSync()           // Write with 2-space indent
+└── Generate index files:
+    ├── fsh-generated/fsh-index.txt       // Human-readable mapping
+    └── fsh-generated/data/fsh-index.json // Machine-readable mapping
+```
+
+### Output Directory Structure
+
+```
+{project}/
+├── input/
+│   └── fsh/
+│       └── *.fsh                         # Source FSH files
+└── fsh-generated/
+    ├── resources/
+    │   ├── StructureDefinition-*.json    # Profiles, Extensions, Logicals, Resources
+    │   ├── ValueSet-*.json               # ValueSets
+    │   ├── CodeSystem-*.json             # CodeSystems
+    │   └── {ResourceType}-*.json         # Instances
+    ├── fsh-index.txt                     # Source mapping (text)
+    └── data/
+        └── fsh-index.json                # Source mapping (JSON)
+```
+
+### File Naming Convention
+
+| Resource Type | Filename Pattern |
+|---------------|------------------|
+| StructureDefinition | `StructureDefinition-{id}.json` |
+| ValueSet | `ValueSet-{id}.json` |
+| CodeSystem | `CodeSystem-{id}.json` |
+| Instance | `{resourceType}-{id}.json` |
+
+### FSH Index Format
+
+The `fsh-index.json` maps outputs back to FSH sources:
+
+```json
+[
+  {
+    "outputFile": "StructureDefinition-MyProfile.json",
+    "fshName": "MyProfile",
+    "fshType": "Profile",
+    "fshFile": "profiles.fsh",
+    "startLine": 1,
+    "endLine": 15
+  }
+]
+```
+
+### Deferred Rule Processing
+
+Some rules require deferred processing due to circular dependencies:
+
+1. **Instance Assignments** - Instances may reference SDs still being exported
+2. **Inline ValueSet Bindings** - Contained ValueSets processed after instances
+3. **Caret Rules on Contained Resources** - Must wait for container to exist
+
+```
+applyDeferredRules()
+├── Process deferred CaretValueRules
+│   ├── Fish for Instance definitions
+│   ├── Apply instance assignments
+│   └── Re-clean modified contained resources
+└── Resolve inline ValueSet bindings
+    ├── Find contained ValueSet by id
+    └── Update binding to relative reference (#id)
+```
+
 ## Proposed rh-fsh Architecture
 
 ```
@@ -172,6 +378,54 @@ rh-fsh
 - FSH Finder repository testing
 - Performance benchmarking
 
+## rh-fsh Exporter Design Considerations
+
+### FHIR Type Representations
+
+For the Rust implementation, we need representations for:
+
+| FHIR Type | rh-fsh Approach |
+|-----------|-----------------|
+| StructureDefinition | Custom struct with element tree management |
+| ElementDefinition | Custom struct supporting all constraint methods |
+| ValueSet | Use `hl7_fhir_r4_core::ValueSet` with extension trait |
+| CodeSystem | Use `hl7_fhir_r4_core::CodeSystem` with extension trait |
+| Instance | `serde_json::Value` with metadata wrapper |
+
+### Serialization Strategy
+
+```rust
+// Each exportable type implements:
+trait FhirExportable {
+    fn get_filename(&self) -> String;
+    fn to_json(&self, include_snapshot: bool) -> Result<serde_json::Value>;
+}
+
+// StructureDefinition needs special handling for:
+// - Differential generation (compare to captured original)
+// - Optional snapshot generation
+// - Element ordering per FHIR spec
+// - Removal of internal tracking fields
+```
+
+### Output Writer Module
+
+```rust
+// Proposed module structure
+mod output {
+    pub struct FhirWriter {
+        output_dir: PathBuf,
+        predefined_resources: HashSet<ResourceKey>,
+    }
+    
+    impl FhirWriter {
+        pub fn write_package(&self, pkg: &Package) -> Result<WriteStats>;
+        pub fn write_resource<T: FhirExportable>(&self, resource: &T) -> Result<()>;
+        pub fn write_fsh_index(&self, pkg: &Package, input_dir: &Path) -> Result<()>;
+    }
+}
+```
+
 ## Key Technical Decisions
 
 ### Decision 1: Parser Strategy
@@ -191,7 +445,21 @@ See [rh-fsh-parser-strategy.md](./rh-fsh-parser-strategy.md) for detailed analys
 
 **Recommendation:** Hybrid approach - FSH-specific types for compilation, convert to `hl7_fhir_r4_core` for output.
 
-### Decision 3: Testing Strategy
+### Decision 3: Differential/Snapshot Generation
+
+For StructureDefinition export, we must generate:
+
+1. **Differential** (required) - Only elements that differ from parent
+2. **Snapshot** (optional) - Complete element tree with inherited elements
+
+**Options:**
+1. Port SUSHI's element capture/comparison approach
+2. Leverage `rh-snapshot` crate for snapshot generation
+3. Implement dedicated diff algorithm
+
+**Recommendation:** Use `rh-snapshot` for snapshot generation, implement lightweight differential tracking during rule application.
+
+### Decision 4: Testing Strategy
 See the regression testing section for the recommended approach based on SUSHI's practices.
 
 ## Related Documents
