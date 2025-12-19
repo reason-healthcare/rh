@@ -4,6 +4,12 @@
 
 Beyond correctness testing, rh-fsh needs dedicated performance benchmarks using very large synthetic IGs to validate scalability, memory efficiency, and compilation speed.
 
+**Key Testing Requirements:**
+- Test fixtures must include all three FHIR usage types: `#example`, `#definition`, `#inline`
+- Definitional resources (Questionnaires, ActivityDefinitions, PlanDefinitions, Libraries, Measures) use `Usage: #definition`
+- Example instances use `Usage: #example`
+- Inline instances use `Usage: #inline` (typically for contained resources or intermediate representations)
+
 ## Synthetic IG Generation
 
 Create test IGs at different scales to stress-test the compiler:
@@ -22,8 +28,10 @@ struct PerfIgConfig {
     valueset_count: usize,
     /// Number of code systems
     codesystem_count: usize,
-    /// Number of instances/examples
-    instance_count: usize,
+    /// Number of instances with Usage: #example
+    example_count: usize,
+    /// Number of instances with Usage: #inline
+    inline_count: usize,
     /// Number of questionnaires (definitional resources using profiles)
     questionnaire_count: usize,
     /// Number of activity definitions (definitional resources)
@@ -49,7 +57,8 @@ impl PerfIgConfig {
             extension_count: 50,
             valueset_count: 50,
             codesystem_count: 10,
-            instance_count: 200,
+            example_count: 150,
+            inline_count: 50,
             questionnaire_count: 20,
             activitydefinition_count: 15,
             plandefinition_count: 10,
@@ -67,7 +76,8 @@ impl PerfIgConfig {
             extension_count: 200,
             valueset_count: 200,
             codesystem_count: 50,
-            instance_count: 1000,
+            example_count: 750,
+            inline_count: 250,
             questionnaire_count: 100,
             activitydefinition_count: 75,
             plandefinition_count: 50,
@@ -85,7 +95,8 @@ impl PerfIgConfig {
             extension_count: 800,
             valueset_count: 800,
             codesystem_count: 200,
-            instance_count: 5000,
+            example_count: 3750,
+            inline_count: 1250,
             questionnaire_count: 400,
             activitydefinition_count: 300,
             plandefinition_count: 200,
@@ -103,7 +114,8 @@ impl PerfIgConfig {
             extension_count: 4000,
             valueset_count: 4000,
             codesystem_count: 1000,
-            instance_count: 25000,
+            example_count: 18750,
+            inline_count: 6250,
             questionnaire_count: 2000,
             activitydefinition_count: 1500,
             plandefinition_count: 1000,
@@ -183,15 +195,28 @@ Description: "Generated code system for performance testing"
         }
     }
 
-    // Generate instances
-    for i in 0..config.instance_count {
+    // Generate example instances (Usage: #example)
+    for i in 0..config.example_count {
         let profile_ref = i % config.profile_count;
         fsh_content.push_str(&format!(r#"
-Instance: PerfInstance{i}
+Instance: PerfExample{i}
 InstanceOf: PerfProfile{profile_ref}
 Usage: #example
-Title: "Performance Instance {i}"
-Description: "Generated instance for performance testing"
+Title: "Performance Example Instance {i}"
+Description: "Generated example instance for performance testing"
+* status = #active
+"#));
+    }
+
+    // Generate inline instances (Usage: #inline)
+    for i in 0..config.inline_count {
+        let profile_ref = i % config.profile_count;
+        fsh_content.push_str(&format!(r#"
+Instance: PerfInline{i}
+InstanceOf: PerfProfile{profile_ref}
+Usage: #inline
+Title: "Performance Inline Instance {i}"
+Description: "Generated inline instance for performance testing"
 * status = #active
 "#));
     }
@@ -461,24 +486,26 @@ criterion_main!(benches);
 
 ```
 perf-test-data/
-├── ig-small/          # 100 profiles, 65 definitional resources, ~20MB FSH
+├── ig-small/          # 100 profiles, 65 #definition, 150 #example, 50 #inline, ~20MB FSH
 │   ├── input/fsh/
 │   │   ├── profiles.fsh
 │   │   ├── extensions.fsh
 │   │   ├── valuesets.fsh
-│   │   ├── questionnaires.fsh
+│   │   ├── examples.fsh          # Usage: #example
+│   │   ├── inline.fsh            # Usage: #inline
+│   │   ├── questionnaires.fsh    # Usage: #definition
 │   │   ├── activitydefinitions.fsh
 │   │   ├── plandefinitions.fsh
 │   │   ├── libraries.fsh
 │   │   └── measures.fsh
 │   └── sushi-config.yaml
-├── ig-medium/         # 500 profiles, 325 definitional resources, ~100MB FSH
+├── ig-medium/         # 500 profiles, 325 #definition, 750 #example, 250 #inline, ~100MB FSH
 │   ├── input/fsh/
 │   └── sushi-config.yaml
-├── ig-large/          # 2000 profiles, 1300 definitional resources, ~400MB FSH
+├── ig-large/          # 2000 profiles, 1300 #definition, 3750 #example, 1250 #inline, ~400MB FSH
 │   ├── input/fsh/
 │   └── sushi-config.yaml
-├── ig-xl/             # 10000 profiles, 6500 definitional resources, ~2GB FSH
+├── ig-xl/             # 10000 profiles, 6500 #definition, 18750 #example, 6250 #inline, ~2GB FSH
 │   ├── input/fsh/
 │   └── sushi-config.yaml
 └── README.md

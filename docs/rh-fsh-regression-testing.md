@@ -131,7 +131,12 @@ ValueSet: MyValueSet
 
 ### Level 2: SUSHI Test Fixtures
 
-Port SUSHI's test fixtures from `test/` directory:
+Port SUSHI's test fixtures from `test/` directory.
+
+**Important:** Ensure test fixtures include all three FHIR usage types:
+- `Usage: #example` - Example instances for documentation
+- `Usage: #definition` - Definitional resources (Questionnaires, ActivityDefinitions, etc.)
+- `Usage: #inline` - Inline instances (contained resources, intermediate representations)
 
 ```
 SUSHI Test Files (Partial List)
