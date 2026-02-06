@@ -5,6 +5,10 @@
 default:
     @just --list
 
+# Initial workspace setup (install tools, run checks)
+setup:
+    ./setup.sh
+
 # Run all tests (skipping doctests due to incremental compilation issues)
 test:
     cargo test --workspace --all-features --lib --bins --tests

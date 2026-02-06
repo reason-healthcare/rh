@@ -52,8 +52,8 @@ cargo build
 │   └── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
 ├── apps/                   # Executable applications
 │   └── rh-cli/                # Unified cross-platform CLI for FHIR
-├── setup.sh                # Development setup script
-└── build.sh                # Build script for CI/CD
+├── justfile                # Task runner commands
+└── setup.sh                # Development setup script
 ```
 
 ## Getting Started
@@ -68,7 +68,7 @@ cargo build
 Run the setup script to configure your development environment:
 
 ```bash
-./setup.sh
+./setup.sh  # or: just setup
 ```
 
 What the script does:
@@ -204,11 +204,11 @@ regex = "1.0"
 
 ## Development Workflow
 
-1. **Setup**: Run `./setup.sh` once to configure your environment
+1. **Setup**: Run `./setup.sh` (or `just setup`) once to configure your environment
 2. **Development**: Work in individual crates with full workspace support
-3. **Testing**: `cargo test` runs all tests across the workspace
-4. **Building**: `cargo build` builds everything with optimized dependencies
-5. **Linting**: `cargo clippy` checks all code for best practices
+3. **Testing**: `just test` (or `cargo test`) runs all tests across the workspace
+4. **Building**: `just build` (or `cargo build`) builds everything with optimized dependencies
+5. **Linting**: `just check` (or `cargo clippy`) checks all code for best practices
 
 ## Release Management
 

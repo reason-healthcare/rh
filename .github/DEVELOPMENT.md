@@ -1,10 +1,29 @@
 # Development Guide
 
+## Getting Started
+
+This project uses [just](https://github.com/casey/just) as the primary task runner. All common development tasks are defined in the `justfile`.
+
+### Initial Setup
+
+```bash
+./setup.sh  # or: just setup
+```
+
+This will:
+- Verify Rust installation (>= 1.70.0)
+- Install development tools (clippy, rustfmt, cargo-audit, cargo-watch, cargo-nextest)
+- Run initial formatting and checks
+
+### Available Commands
+
+Run `just` or `just --list` to see all available commands.
+
 ## Build & Test Commands
 
-- **Build All**: `cargo build` (or `just build`)
+- **Build All**: `just build` (or `cargo build`)
 - **Build Package**: `cargo build -p <package-name>`
-- **Test All**: `cargo test --workspace --all-features` (or `just test`)
+- **Test All**: `just test` (or `cargo test --workspace --all-features`)
 - **Test Package**: `cargo test -p <package-name>`
 - **Test Single**: `cargo test -p <package-name> <test-name>`
 - **FHIR Validation Tests**:
