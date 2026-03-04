@@ -21,6 +21,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 rustyline = { workspace = true }
+glob = "0.3"
 
 # Local workspace crates
 rh-foundation = { path = "../../crates/rh-foundation", features = ["http"] }

@@ -378,3 +378,154 @@ fn test_validate_empty_input_strict() {
         .assert()
         .failure();
 }
+
+#[test]
+fn test_validate_resource_glob_input() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_a = temp_dir.path().join("patient-a.json");
+    let file_b = temp_dir.path().join("patient-b.json");
+
+    let patient_a = r#"{
+        "resourceType": "Patient",
+        "id": "a",
+        "name": [{"family": "Smith", "given": ["John"]}],
+        "gender": "male"
+    }"#;
+
+    let patient_b = r#"{
+        "resourceType": "Patient",
+        "id": "b",
+        "name": [{"family": "Jones", "given": ["Jane"]}],
+        "gender": "female"
+    }"#;
+
+    fs::write(&file_a, patient_a).unwrap();
+    fs::write(&file_b, patient_b).unwrap();
+
+    let pattern = format!("{}/*.json", temp_dir.path().display());
+
+    rh_cmd()
+        .args(["validate", "resource", "--input", &pattern])
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .stdout(predicate::str::contains("Total resources: 2"));
+}
+
+#[test]
+fn test_validate_resource_mixed_input_dedupes_matches() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_a = temp_dir.path().join("patient-a.json");
+    let file_b = temp_dir.path().join("patient-b.json");
+
+    let patient = r#"{
+        "resourceType": "Patient",
+        "id": "example",
+        "name": [{"family": "Smith", "given": ["John"]}],
+        "gender": "male"
+    }"#;
+
+    fs::write(&file_a, patient).unwrap();
+    fs::write(&file_b, patient).unwrap();
+
+    let pattern = format!("{}/*.json", temp_dir.path().display());
+
+    rh_cmd()
+        .arg("validate")
+        .arg("resource")
+        .arg("--input")
+        .arg(file_a.to_str().unwrap())
+        .arg("--input")
+        .arg(&pattern)
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .stdout(predicate::str::contains("Total resources: 2"));
+}
+
+#[test]
+fn test_validate_resource_no_match_glob_fails() {
+    let temp_dir = TempDir::new().unwrap();
+    let pattern = format!("{}/*.missing", temp_dir.path().display());
+
+    rh_cmd()
+        .args(["validate", "resource", "--input", &pattern])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Input pattern matched no files"))
+        .stderr(predicate::str::contains(&pattern));
+}
+
+#[test]
+fn test_validate_resource_recursive_glob_input() {
+    let temp_dir = TempDir::new().unwrap();
+    let nested_dir = temp_dir.path().join("nested");
+    fs::create_dir_all(&nested_dir).unwrap();
+
+    let root_file = temp_dir.path().join("patient-root.json");
+    let nested_file = nested_dir.join("patient-nested.json");
+
+    let patient_root = r#"{
+        "resourceType": "Patient",
+        "id": "root",
+        "name": [{"family": "Root", "given": ["Case"]}],
+        "gender": "male"
+    }"#;
+
+    let patient_nested = r#"{
+        "resourceType": "Patient",
+        "id": "nested",
+        "name": [{"family": "Nested", "given": ["Case"]}],
+        "gender": "female"
+    }"#;
+
+    fs::write(&root_file, patient_root).unwrap();
+    fs::write(&nested_file, patient_nested).unwrap();
+
+    let pattern = format!("{}/**/*.json", temp_dir.path().display());
+
+    rh_cmd()
+        .args(["validate", "resource", "--input", &pattern])
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .stdout(predicate::str::contains("Total resources: 2"));
+}
+
+#[test]
+fn test_validate_resource_glob_output_order_is_stable() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_b = temp_dir.path().join("b-patient.json");
+    let file_a = temp_dir.path().join("a-patient.json");
+
+    let patient = r#"{
+        "resourceType": "Patient",
+        "id": "stable-order",
+        "name": [{"family": "Stable", "given": ["Order"]}],
+        "gender": "male"
+    }"#;
+
+    fs::write(&file_b, patient).unwrap();
+    fs::write(&file_a, patient).unwrap();
+
+    let pattern = format!("{}/*.json", temp_dir.path().display());
+
+    let first = rh_cmd()
+        .args([
+            "validate", "resource", "--input", &pattern, "--format", "json",
+        ])
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .get_output()
+        .stdout
+        .clone();
+
+    let second = rh_cmd()
+        .args([
+            "validate", "resource", "--input", &pattern, "--format", "json",
+        ])
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .get_output()
+        .stdout
+        .clone();
+
+    assert_eq!(first, second);
+}

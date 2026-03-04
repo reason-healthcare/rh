@@ -2,11 +2,14 @@
 //!
 //! This module provides command-line interface for FHIR resource validation.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand};
-use rh_foundation::cli;
+use glob::glob;
 use rh_validator::{FhirValidator, Severity};
-use std::path::PathBuf;
+use std::collections::BTreeSet;
+use std::fs;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
 #[derive(Subcommand)]
@@ -19,9 +22,9 @@ pub enum ValidatorCommands {
 
 #[derive(Args)]
 pub struct ResourceArgs {
-    /// Input file path (reads from stdin if not provided)
+    /// Input file path(s) or glob pattern(s) (reads from stdin if not provided)
     #[clap(short, long)]
-    input: Option<PathBuf>,
+    input: Vec<String>,
 
     /// Output format (text, json)
     #[clap(short, long, default_value = "text")]
@@ -42,9 +45,9 @@ pub struct ResourceArgs {
 
 #[derive(Args)]
 pub struct BatchArgs {
-    /// Input NDJSON file path (reads from stdin if not provided)
+    /// Input NDJSON file path(s) or glob pattern(s) (reads from stdin if not provided)
     #[clap(short, long)]
-    input: Option<PathBuf>,
+    input: Vec<String>,
 
     /// Output format (text, json)
     #[clap(short, long, default_value = "text")]
@@ -112,7 +115,63 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
 
     let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
 
-    let content = read_input(&args.input).context("Failed to read input")?;
+    let input_paths = resolve_input_paths(&args.input)?;
+
+    if !input_paths.is_empty() {
+        let mut results = Vec::new();
+        for path in &input_paths {
+            let content = read_input_from_file(path)
+                .with_context(|| format!("Failed to read input file: {}", path.display()))?;
+
+            if content.trim().is_empty() {
+                warn!("Input is empty: {}", path.display());
+                continue;
+            }
+
+            let resource: serde_json::Value = serde_json::from_str(&content)
+                .with_context(|| format!("Failed to parse JSON in {}", path.display()))?;
+
+            let result = validator.validate_auto(&resource).with_context(|| {
+                format!("Failed to validate FHIR resource in {}", path.display())
+            })?;
+
+            results.push((path.display().to_string(), resource, result));
+        }
+
+        if results.is_empty() {
+            warn!("Input is empty");
+            if args.strict {
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
+
+        if results.len() == 1 {
+            let (_, resource, result) = &results[0];
+            match args.format {
+                OutputFormat::Text => print_single_result_text(result, resource),
+                OutputFormat::Json => print_single_result_json(result, resource)?,
+                OutputFormat::OperationOutcome => print_operation_outcome(result)?,
+            }
+        } else {
+            match args.format {
+                OutputFormat::Text => print_labeled_batch_results_text(&results, false),
+                OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
+            }
+        }
+
+        let has_errors = results.iter().any(|(_, _, r)| !r.valid);
+        let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
+
+        if has_errors || has_issues {
+            std::process::exit(1);
+        }
+
+        return Ok(());
+    }
+
+    let content = read_input_from_stdin().context("Failed to read input")?;
 
     if content.trim().is_empty() {
         warn!("Input is empty");
@@ -156,7 +215,74 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
 
     let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
 
-    let content = read_input(&args.input).context("Failed to read input")?;
+    let input_paths = resolve_input_paths(&args.input)?;
+
+    if !input_paths.is_empty() {
+        let mut results = Vec::new();
+        for path in &input_paths {
+            let content = read_input_from_file(path)
+                .with_context(|| format!("Failed to read input file: {}", path.display()))?;
+
+            if content.trim().is_empty() {
+                warn!("Input is empty: {}", path.display());
+                continue;
+            }
+
+            for (line_num, line) in content.lines().enumerate() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+
+                let resource: serde_json::Value =
+                    serde_json::from_str(line).with_context(|| {
+                        format!(
+                            "Failed to parse JSON in {} at line {}",
+                            path.display(),
+                            line_num + 1
+                        )
+                    })?;
+
+                let result = validator.validate_auto(&resource).with_context(|| {
+                    format!(
+                        "Failed to validate resource in {} at line {}",
+                        path.display(),
+                        line_num + 1
+                    )
+                })?;
+
+                results.push((
+                    format!("{}:{}", path.display(), line_num + 1),
+                    resource,
+                    result,
+                ));
+            }
+        }
+
+        if results.is_empty() {
+            warn!("Input is empty");
+            if args.strict {
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
+
+        match args.format {
+            OutputFormat::Text => print_labeled_batch_results_text(&results, args.summary_only),
+            OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+            OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
+        }
+
+        let has_errors = results.iter().any(|(_, _, r)| !r.valid);
+        let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
+
+        if has_errors || has_issues {
+            std::process::exit(1);
+        }
+
+        return Ok(());
+    }
+
+    let content = read_input_from_stdin().context("Failed to read input")?;
 
     if content.trim().is_empty() {
         warn!("Input is empty");
@@ -195,13 +321,61 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
     Ok(())
 }
 
-fn read_input(path: &Option<PathBuf>) -> Result<String> {
-    if path.is_some() {
-        info!("Reading from file: {}", path.as_ref().unwrap().display());
-    } else {
-        info!("Reading from stdin");
+fn read_input_from_stdin() -> Result<String> {
+    info!("Reading from stdin");
+    let mut buffer = String::new();
+    std::io::stdin()
+        .read_to_string(&mut buffer)
+        .context("Failed to read from stdin")?;
+    Ok(buffer)
+}
+
+fn read_input_from_file(path: &Path) -> Result<String> {
+    info!("Reading from file: {}", path.display());
+    fs::read_to_string(path).with_context(|| format!("Failed to read file: {}", path.display()))
+}
+
+fn resolve_input_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
+    if inputs.is_empty() {
+        return Ok(Vec::new());
     }
-    cli::read_input(path.as_deref(), None).map_err(Into::into)
+
+    let mut resolved = BTreeSet::new();
+    let mut unmatched_patterns = Vec::new();
+
+    for input in inputs {
+        let path = PathBuf::from(input);
+        if path.exists() {
+            resolved.insert(path);
+            continue;
+        }
+
+        let mut matched_any = false;
+        let entries = glob(input).with_context(|| format!("Invalid glob pattern: '{input}'"))?;
+
+        for entry in entries {
+            let entry = entry.with_context(|| format!("Invalid path for pattern: '{input}'"))?;
+            if entry.is_file() {
+                matched_any = true;
+                resolved.insert(entry);
+            }
+        }
+
+        if !matched_any {
+            unmatched_patterns.push(input.clone());
+        }
+    }
+
+    if !unmatched_patterns.is_empty() {
+        let joined = unmatched_patterns
+            .iter()
+            .map(|pattern| format!("'{pattern}'"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        bail!("Input pattern matched no files: {joined}");
+    }
+
+    Ok(resolved.into_iter().collect())
 }
 
 fn print_single_result_text(result: &rh_validator::ValidationResult, resource: &serde_json::Value) {
@@ -378,6 +552,96 @@ fn print_batch_results_json(
     Ok(())
 }
 
+fn print_labeled_batch_results_text(
+    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
+    summary_only: bool,
+) {
+    let total = results.len();
+    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+    let invalid_count = total - valid_count;
+    let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
+    let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
+
+    println!("📋 Batch Validation Summary:");
+    println!("  Total resources: {total}");
+    println!("  ✅ Valid: {valid_count}");
+    println!("  ❌ Invalid: {invalid_count}");
+    println!("  Total errors: {total_errors}");
+    println!("  Total warnings: {total_warnings}");
+    println!();
+
+    if !summary_only && invalid_count > 0 {
+        println!("❌ Invalid resources:");
+        for (source, resource, result) in results.iter() {
+            if !result.valid {
+                let resource_type = resource
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let errors = result.error_count();
+                let warnings = result.warning_count();
+                println!(
+                    "  {} ({}): {} error(s), {} warning(s)",
+                    source, resource_type, errors, warnings
+                );
+                for issue in &result.issues {
+                    if issue.severity == Severity::Error {
+                        println!("    ❌ {}", issue.message);
+                        if let Some(path) = &issue.path {
+                            println!("       at {path}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn print_labeled_batch_results_json(
+    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
+) -> Result<()> {
+    let total = results.len();
+    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+
+    let json_results: Vec<_> = results
+        .iter()
+        .map(|(source, resource, result)| {
+            let resource_type = resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
+            serde_json::json!({
+                "source": source,
+                "resourceType": resource_type,
+                "valid": result.valid,
+                "errors": result.error_count(),
+                "warnings": result.warning_count(),
+                "issues": result.issues.iter().map(|issue| {
+                    serde_json::json!({
+                        "severity": issue.severity.to_string(),
+                        "code": issue.code.to_string(),
+                        "message": issue.message,
+                        "path": issue.path,
+                        "location": issue.location,
+                    })
+                }).collect::<Vec<_>>()
+            })
+        })
+        .collect();
+
+    let summary = serde_json::json!({
+        "summary": {
+            "total": total,
+            "valid": valid_count,
+            "invalid": total - valid_count
+        },
+        "results": json_results
+    });
+
+    println!("{}", serde_json::to_string_pretty(&summary)?);
+    Ok(())
+}
+
 fn print_operation_outcome(result: &rh_validator::ValidationResult) -> Result<()> {
     let operation_outcome = result.to_operation_outcome();
     println!("{}", serde_json::to_string_pretty(&operation_outcome)?);
@@ -394,9 +658,21 @@ fn print_batch_operation_outcomes(
     Ok(())
 }
 
+fn print_labeled_batch_operation_outcomes(
+    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
+) -> Result<()> {
+    for (_, _, result) in results {
+        let operation_outcome = result.to_operation_outcome();
+        println!("{}", serde_json::to_string(&operation_outcome)?);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_output_format_parsing() {
@@ -425,5 +701,68 @@ mod tests {
             OutputFormat::OperationOutcome
         ));
         assert!("invalid".parse::<OutputFormat>().is_err());
+    }
+
+    #[test]
+    fn test_resolve_input_paths_explicit_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("patient.json");
+        fs::write(&file_path, "{}").unwrap();
+
+        let resolved = resolve_input_paths(&[file_path.to_string_lossy().into_owned()]).unwrap();
+
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0], file_path);
+    }
+
+    #[test]
+    fn test_resolve_input_paths_glob_matches() {
+        let temp_dir = TempDir::new().unwrap();
+        fs::write(temp_dir.path().join("a.json"), "{}").unwrap();
+        fs::write(temp_dir.path().join("b.json"), "{}").unwrap();
+
+        let pattern = format!("{}/*.json", temp_dir.path().display());
+        let resolved = resolve_input_paths(&[pattern]).unwrap();
+
+        assert_eq!(resolved.len(), 2);
+    }
+
+    #[test]
+    fn test_resolve_input_paths_recursive_glob() {
+        let temp_dir = TempDir::new().unwrap();
+        let nested = temp_dir.path().join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("a.json"), "{}").unwrap();
+
+        let pattern = format!("{}/**/*.json", temp_dir.path().display());
+        let resolved = resolve_input_paths(&[pattern]).unwrap();
+
+        assert_eq!(resolved.len(), 1);
+    }
+
+    #[test]
+    fn test_resolve_input_paths_mixed_and_deduped() {
+        let temp_dir = TempDir::new().unwrap();
+        let explicit = temp_dir.path().join("a.json");
+        fs::write(&explicit, "{}").unwrap();
+        fs::write(temp_dir.path().join("b.json"), "{}").unwrap();
+
+        let pattern = format!("{}/*.json", temp_dir.path().display());
+        let resolved =
+            resolve_input_paths(&[explicit.to_string_lossy().into_owned(), pattern]).unwrap();
+
+        assert_eq!(resolved.len(), 2);
+    }
+
+    #[test]
+    fn test_resolve_input_paths_no_match_error() {
+        let temp_dir = TempDir::new().unwrap();
+        let pattern = format!("{}/*.missing", temp_dir.path().display());
+
+        let err = resolve_input_paths(std::slice::from_ref(&pattern)).unwrap_err();
+        let message = err.to_string();
+
+        assert!(message.contains("Input pattern matched no files"));
+        assert!(message.contains(&pattern));
     }
 }

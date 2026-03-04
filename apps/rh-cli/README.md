@@ -417,6 +417,13 @@ Validate a single FHIR resource:
 # Validate from file
 cargo run -p rh -- validate resource --input patient.json
 
+# Validate multiple files using glob patterns (quote patterns to avoid shell expansion)
+cargo run -p rh -- validate resource --input '*.json'
+cargo run -p rh -- validate resource --input 'fixtures/**/*.json'
+
+# Mix explicit paths and globs
+cargo run -p rh -- validate resource --input patient.json --input 'fixtures/*.json'
+
 # Validate from stdin
 cat patient.json | cargo run -p rh -- validate resource
 
@@ -441,6 +448,9 @@ Validate multiple FHIR resources from NDJSON:
 # Validate NDJSON file
 cargo run -p rh -- validate batch --input patients.ndjson
 
+# Validate multiple NDJSON files via glob
+cargo run -p rh -- validate batch --input 'data/**/*.ndjson'
+
 # Summary only (hide individual issues)
 cargo run -p rh -- validate batch --input patients.ndjson --summary-only
 
@@ -454,11 +464,13 @@ cargo run -p rh -- validate batch --input patients.ndjson --skip-invariants --sk
 ### Validation Options
 
 **Common Options:**
-- `--input, -i`: Input file path (reads from stdin if not provided)
+- `--input, -i`: Input file path(s) or glob pattern(s); repeat flag to pass multiple values (reads from stdin if not provided)
 - `--format, -f`: Output format (`text` or `json`)
 - `--skip-invariants`: Skip FHIRPath invariant validation (structural only)
 - `--skip-bindings`: Skip ValueSet binding validation
 - `--strict`: Exit with non-zero code on any issues (including warnings)
+
+When `--input` is used with glob patterns, `rh` expands patterns internally, deduplicates overlapping matches, and processes matched files in deterministic order. If a pattern matches no files, validation fails with an explicit error listing unmatched pattern(s).
 
 **Batch-Specific Options:**
 - `--threads`: Number of threads for parallel validation (default: 4)
