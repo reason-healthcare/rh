@@ -70,6 +70,7 @@ fhir-clean:
     #!/usr/bin/env bash
     echo "Cleaning FHIR test case cache..."
     rm -rf ../../target/fhir-test-cases/
+    rm -rf "$HOME/Library/Caches/rh/fhir-test-cases"
     echo "✓ Cache cleaned"
 
 # Run benchmarks
