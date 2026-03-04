@@ -229,6 +229,73 @@ fn test_validate_with_unknown_profile() -> Result<()> {
 }
 
 #[test]
+fn test_unknown_profile_still_reports_base_profile_errors() -> Result<()> {
+    let Some(validator) = setup_validator() else {
+        println!("Skipping test: Base R4 package not found");
+        return Ok(());
+    };
+
+    let resource = json!({
+        "resourceType": "ValueSet",
+        "id": "lipid-panel",
+        "meta": {
+            "profile": [
+                "http://hl7.org/fhir/uv/crmi/StructureDefinition/crmi-shareablevalueset",
+                "http://hl7.org/fhir/uv/crmi/StructureDefinition/crmi-computablevalueset"
+            ]
+        },
+        "url": "http://example.org/fhir/ValueSet/lipid-panel",
+        "version": "1.0.0",
+        "name": "LipidPanel",
+        "title": "Lipid Panel",
+        "statusX": "active",
+        "experimental": false,
+        "date": "2026-02-27",
+        "publisher": "Example Organization",
+        "description": "LOINC lipid panel codes",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://loinc.org",
+                    "concept": [
+                        {
+                            "code": "24331-1",
+                            "display": "Lipid 1996 panel - Serum or Plasma"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate_auto(&resource)?;
+
+    let has_profile_not_found_warning = result.issues.iter().any(|issue| {
+        issue.severity == rh_validator::Severity::Warning
+            && issue
+                .message
+                .contains("Profile reference has not been checked")
+    });
+    assert!(
+        has_profile_not_found_warning,
+        "Expected warning when referenced profile cannot be resolved"
+    );
+
+    let has_missing_status_error = result.issues.iter().any(|issue| {
+        issue.severity == rh_validator::Severity::Error
+            && (issue.path.as_deref() == Some("ValueSet.status")
+                || issue.message.to_lowercase().contains("valueset.status")
+                || issue.message.to_lowercase().contains("status"))
+    });
+    assert!(
+        has_missing_status_error,
+        "Expected base ValueSet required-element error for missing status"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_multiple_profiles_merge_results() -> Result<()> {
     let Some(validator) = setup_validator_with_us_core() else {
         println!("Skipping test: US Core package not found");

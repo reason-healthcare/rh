@@ -448,6 +448,19 @@ impl FhirValidator {
     ) -> Result<ValidationResult> {
         let mut result = self.validate(resource)?;
 
+        let profile_result = self.validate_profile_rules(resource, profile_url)?;
+        result.merge(profile_result);
+
+        Ok(result)
+    }
+
+    fn validate_profile_rules(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+    ) -> Result<ValidationResult> {
+        let mut result = ValidationResult::valid();
+
         let snapshot = self
             .profile_registry
             .get_snapshot(profile_url)
@@ -893,7 +906,28 @@ impl FhirValidator {
         }
 
         // Validate against all specified profiles and merge results
-        self.validate_with_profiles(resource, &profile_urls)
+        let mut result = self.validate_with_profiles(resource, &profile_urls)?;
+
+        // Always validate against base resource profile as well.
+        // This ensures core required elements are still checked even when
+        // custom profiles cannot be resolved.
+        if let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) {
+            let base_profile_url =
+                format!("http://hl7.org/fhir/StructureDefinition/{resource_type}");
+
+            if !profile_urls.iter().any(|url| url == &base_profile_url) {
+                let base_profile_result =
+                    self.validate_profile_rules(resource, &base_profile_url)?;
+                for mut issue in base_profile_result.issues {
+                    if !issue.message.contains("Profile:") {
+                        issue.message = format!("[Profile: {base_profile_url}] {}", issue.message);
+                    }
+                    result = result.with_issue(issue);
+                }
+            }
+        }
+
+        Ok(result)
     }
 
     /// Validate a resource against multiple profiles and merge results.
@@ -906,7 +940,7 @@ impl FhirValidator {
         let mut merged_result = self.validate(resource)?;
 
         for profile_url in profile_urls {
-            let profile_result = self.validate_with_profile(resource, profile_url)?;
+            let profile_result = self.validate_profile_rules(resource, profile_url)?;
 
             // Add all issues from this profile, annotated with which profile they came from
             for mut issue in profile_result.issues {
