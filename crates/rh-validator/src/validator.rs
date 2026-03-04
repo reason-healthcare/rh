@@ -1297,10 +1297,11 @@ fn validate_string_security(value: &Value, current_path: &str) -> Vec<Validation
         }
         Value::String(s) => {
             // Check for HTML-like content in strings
-            // Look for patterns like <script>, <style>, <iframe>, etc.
-            // Note: Java validator has a "security-checks" option that controls
-            // whether this is an error (true) or information (false/default).
-            // Without that option, we default to error to be conservative.
+            // TODO: Implement security-checks option from FHIR test cases
+            // - When security-checks=false (default): Report as INFORMATION
+            // - When security-checks=true: Report as ERROR
+            // For now, we report as ERROR to be conservative and match the strict behavior.
+            // This affects tests like pat-security-good2 (should be INFO) vs pat-security-bad-string (should be ERROR).
             if contains_html_tags(s) {
                 issues.push(
                     ValidationIssue::error(
