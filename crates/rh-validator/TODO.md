@@ -119,18 +119,18 @@ Re-ran test suite after ext-1 fix: 70/100 (70%) - 15% improvement (Feb 6, 2026).
 
 **Success:** Complete roadmap established. Validator has no known bugs. Path to 85-95% clear.
 
-### Phase 15a: Security-Checks Configuration Option 🚧 CURRENT
+### Phase 15a: Security-Checks Configuration Option ✅ IMPLEMENTED
 **Why:** Enable proper handling of HTML tag validation based on context.  
 **Priority:** Medium (affects 2 tests: pat-security-good2, pat-security-bad-string)  
 **Impact:** +2% pass rate (72/100)  
 **Tasks:**
-- Add security_checks: bool field to FhirValidator config
-- Update test runner to read security-checks from manifest.json
-- Modify validate_string_security() to check security_checks flag
-- When security_checks=false (default): Report HTML tags as INFORMATION
-- When security_checks=true: Report HTML tags as ERROR
-- Update tests to verify both behaviors
-- Document security-checks option in README
+- ✅ Add `security_checks` runtime option to validator configuration
+- ⏳ Update test runner to read security-checks from manifest.json
+- ✅ Modify `validate_string_security()` to check security checks mode
+- ✅ When security checks disabled (default): report HTML tags as INFORMATION
+- ✅ When security checks enabled: report HTML tags as ERROR
+- ✅ Add tests to verify both behaviors
+- ✅ Document security-checks option in README/CLI docs
 
 **Estimated:** 3-5 days  
 **Success Criteria:** pat-security-good2 passes (VALID), pat-security-bad-string passes (INVALID), 72/100 tests passing.
@@ -146,13 +146,14 @@ Re-ran test suite after ext-1 fix: 70/100 (70%) - 15% improvement (Feb 6, 2026).
 **Estimated:** 6-8 hours  
 **Success Criteria:** All invariant_scoping_test.rs tests passing, proper context resolution in nested elements.
 
-### Phase 17: CI/CD Integration
+### Phase 17: CI/CD Integration 🚧 IN PROGRESS
 **Why:** Automate testing and performance monitoring.  
 **Tasks:**
-- Add validator benchmarks to GitHub Actions
-- Set up performance regression detection
-- Run FHIR test suite in CI
-- Track pass rate trends over time
+- ⏳ Add validator benchmarks to GitHub Actions
+- ⏳ Set up performance regression detection
+- ✅ Run selected validator conformance subset in CI (`conformance_quick_wins_test`)
+- ✅ Publish per-run conformance summaries/artifacts (no trend tooling in this wave)
+- ✅ Add staged gating toggle via `RH_CONFORMANCE_BLOCKING`
 
 **Estimated:** 4-6 hours  
 **Success Criteria:** Automated test runs, performance alerts, test pass rate dashboard.

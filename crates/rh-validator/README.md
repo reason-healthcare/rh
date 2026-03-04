@@ -184,7 +184,7 @@ let validator = FhirValidator::with_terminology(
 
 **Cache location:** By default, `with_default_cache()` stores cache files in `~/.fhir/terminology-cache/`.
 
-**Note:** Without a terminology service configured, display name validation is skipped. This is the default behavior to avoid slow external API calls during basic validation.
+**Note:** Without a terminology service configured, terminology-backed checks are skipped. This includes display-name validation and UCUM/unit quick-win validation, which emits informational skip notes when terminology is unavailable.
 
 #### Postponed Terminology Features
 

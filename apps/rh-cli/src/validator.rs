@@ -5,7 +5,7 @@
 use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand};
 use glob::glob;
-use rh_validator::{FhirValidator, Severity};
+use rh_validator::{FhirValidator, Severity, TerminologyConfig, ValidationOptions};
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::Read;
@@ -41,6 +41,14 @@ pub struct ResourceArgs {
     /// Exit with non-zero code if validation fails (warnings count as failure)
     #[clap(long)]
     strict: bool,
+
+    /// Enable strict HTML/script security checks (disabled by default)
+    #[clap(long)]
+    security_checks: bool,
+
+    /// Optional terminology server endpoint (e.g. https://tx.fhir.org/r4)
+    #[clap(long)]
+    terminology_server: Option<String>,
 }
 
 #[derive(Args)]
@@ -72,6 +80,14 @@ pub struct BatchArgs {
     /// Exit with non-zero code if validation fails (warnings count as failure)
     #[clap(long)]
     strict: bool,
+
+    /// Enable strict HTML/script security checks (disabled by default)
+    #[clap(long)]
+    security_checks: bool,
+
+    /// Optional terminology server endpoint (e.g. https://tx.fhir.org/r4)
+    #[clap(long)]
+    terminology_server: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -105,40 +121,79 @@ pub async fn handle_command(cmd: ValidatorCommands) -> Result<()> {
 }
 
 async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
-    // Note: skip_invariants and skip_bindings are not yet supported in the new API
-    if args.skip_invariants {
-        warn!("--skip-invariants flag is not yet implemented");
-    }
-    if args.skip_bindings {
-        warn!("--skip-bindings flag is not yet implemented");
-    }
-
-    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
-
-    let input_paths = resolve_input_paths(&args.input)?;
-
-    if !input_paths.is_empty() {
-        let mut results = Vec::new();
-        for path in &input_paths {
-            let content = read_input_from_file(path)
-                .with_context(|| format!("Failed to read input file: {}", path.display()))?;
-
-            if content.trim().is_empty() {
-                warn!("Input is empty: {}", path.display());
-                continue;
-            }
-
-            let resource: serde_json::Value = serde_json::from_str(&content)
-                .with_context(|| format!("Failed to parse JSON in {}", path.display()))?;
-
-            let result = validator.validate_auto(&resource).with_context(|| {
-                format!("Failed to validate FHIR resource in {}", path.display())
-            })?;
-
-            results.push((path.display().to_string(), resource, result));
+    tokio::task::spawn_blocking(move || {
+        // Note: skip_invariants and skip_bindings are not yet supported in the new API
+        if args.skip_invariants {
+            warn!("--skip-invariants flag is not yet implemented");
+        }
+        if args.skip_bindings {
+            warn!("--skip-bindings flag is not yet implemented");
         }
 
-        if results.is_empty() {
+        let validator = build_validator(args.security_checks, args.terminology_server.as_deref())?;
+        report_effective_runtime_options(args.security_checks, args.terminology_server.as_deref());
+
+        let input_paths = resolve_input_paths(&args.input)?;
+
+        if !input_paths.is_empty() {
+            let mut results = Vec::new();
+            for path in &input_paths {
+                let content = read_input_from_file(path)
+                    .with_context(|| format!("Failed to read input file: {}", path.display()))?;
+
+                if content.trim().is_empty() {
+                    warn!("Input is empty: {}", path.display());
+                    continue;
+                }
+
+                let resource: serde_json::Value = serde_json::from_str(&content)
+                    .with_context(|| format!("Failed to parse JSON in {}", path.display()))?;
+
+                let result = validator.validate_auto(&resource).with_context(|| {
+                    format!("Failed to validate FHIR resource in {}", path.display())
+                })?;
+
+                results.push((path.display().to_string(), resource, result));
+            }
+
+            if results.is_empty() {
+                warn!("Input is empty");
+                if args.strict {
+                    std::process::exit(1);
+                }
+                return Ok(());
+            }
+
+            if results.len() == 1 {
+                let (_, resource, result) = &results[0];
+                match args.format {
+                    OutputFormat::Text => print_single_result_text(result, resource),
+                    OutputFormat::Json => print_single_result_json(result, resource)?,
+                    OutputFormat::OperationOutcome => print_operation_outcome(result)?,
+                }
+            } else {
+                match args.format {
+                    OutputFormat::Text => print_labeled_batch_results_text(&results, false),
+                    OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                    OutputFormat::OperationOutcome => {
+                        print_labeled_batch_operation_outcomes(&results)?
+                    }
+                }
+            }
+
+            let has_errors = results.iter().any(|(_, _, r)| !r.valid);
+            let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
+
+            if has_errors || has_issues {
+                std::process::exit(1);
+            }
+
+            return Ok(());
+        }
+
+        let content = read_input_from_stdin().context("Failed to read input")?;
+
+        if content.trim().is_empty() {
             warn!("Input is empty");
             if args.strict {
                 std::process::exit(1);
@@ -146,119 +201,115 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
             return Ok(());
         }
 
-        if results.len() == 1 {
-            let (_, resource, result) = &results[0];
-            match args.format {
-                OutputFormat::Text => print_single_result_text(result, resource),
-                OutputFormat::Json => print_single_result_json(result, resource)?,
-                OutputFormat::OperationOutcome => print_operation_outcome(result)?,
-            }
-        } else {
-            match args.format {
-                OutputFormat::Text => print_labeled_batch_results_text(&results, false),
-                OutputFormat::Json => print_labeled_batch_results_json(&results)?,
-                OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
-            }
+        let resource: serde_json::Value =
+            serde_json::from_str(&content).context("Failed to parse JSON")?;
+
+        let result = validator
+            .validate_auto(&resource)
+            .context("Failed to validate FHIR resource")?;
+
+        match args.format {
+            OutputFormat::Text => print_single_result_text(&result, &resource),
+            OutputFormat::Json => print_single_result_json(&result, &resource)?,
+            OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
         }
 
-        let has_errors = results.iter().any(|(_, _, r)| !r.valid);
-        let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
+        let has_errors = !result.valid;
+        let has_issues = args.strict && !result.issues.is_empty();
 
         if has_errors || has_issues {
             std::process::exit(1);
         }
 
-        return Ok(());
-    }
-
-    let content = read_input_from_stdin().context("Failed to read input")?;
-
-    if content.trim().is_empty() {
-        warn!("Input is empty");
-        if args.strict {
-            std::process::exit(1);
-        }
-        return Ok(());
-    }
-
-    let resource: serde_json::Value =
-        serde_json::from_str(&content).context("Failed to parse JSON")?;
-
-    let result = validator
-        .validate_auto(&resource)
-        .context("Failed to validate FHIR resource")?;
-
-    match args.format {
-        OutputFormat::Text => print_single_result_text(&result, &resource),
-        OutputFormat::Json => print_single_result_json(&result, &resource)?,
-        OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
-    }
-
-    let has_errors = !result.valid;
-    let has_issues = args.strict && !result.issues.is_empty();
-
-    if has_errors || has_issues {
-        std::process::exit(1);
-    }
-
-    Ok(())
+        Ok(())
+    })
+    .await
+    .context("Resource validation task failed")?
 }
 
 async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
-    // Note: skip_invariants and skip_bindings are not yet supported in the new API
-    if args.skip_invariants {
-        warn!("--skip-invariants flag is not yet implemented");
-    }
-    if args.skip_bindings {
-        warn!("--skip-bindings flag is not yet implemented");
-    }
+    tokio::task::spawn_blocking(move || {
+        // Note: skip_invariants and skip_bindings are not yet supported in the new API
+        if args.skip_invariants {
+            warn!("--skip-invariants flag is not yet implemented");
+        }
+        if args.skip_bindings {
+            warn!("--skip-bindings flag is not yet implemented");
+        }
 
-    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None)?;
+        let validator = build_validator(args.security_checks, args.terminology_server.as_deref())?;
+        report_effective_runtime_options(args.security_checks, args.terminology_server.as_deref());
 
-    let input_paths = resolve_input_paths(&args.input)?;
+        let input_paths = resolve_input_paths(&args.input)?;
 
-    if !input_paths.is_empty() {
-        let mut results = Vec::new();
-        for path in &input_paths {
-            let content = read_input_from_file(path)
-                .with_context(|| format!("Failed to read input file: {}", path.display()))?;
+        if !input_paths.is_empty() {
+            let mut results = Vec::new();
+            for path in &input_paths {
+                let content = read_input_from_file(path)
+                    .with_context(|| format!("Failed to read input file: {}", path.display()))?;
 
-            if content.trim().is_empty() {
-                warn!("Input is empty: {}", path.display());
-                continue;
-            }
-
-            for (line_num, line) in content.lines().enumerate() {
-                if line.trim().is_empty() {
+                if content.trim().is_empty() {
+                    warn!("Input is empty: {}", path.display());
                     continue;
                 }
 
-                let resource: serde_json::Value =
-                    serde_json::from_str(line).with_context(|| {
+                for (line_num, line) in content.lines().enumerate() {
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+
+                    let resource: serde_json::Value =
+                        serde_json::from_str(line).with_context(|| {
+                            format!(
+                                "Failed to parse JSON in {} at line {}",
+                                path.display(),
+                                line_num + 1
+                            )
+                        })?;
+
+                    let result = validator.validate_auto(&resource).with_context(|| {
                         format!(
-                            "Failed to parse JSON in {} at line {}",
+                            "Failed to validate resource in {} at line {}",
                             path.display(),
                             line_num + 1
                         )
                     })?;
 
-                let result = validator.validate_auto(&resource).with_context(|| {
-                    format!(
-                        "Failed to validate resource in {} at line {}",
-                        path.display(),
-                        line_num + 1
-                    )
-                })?;
-
-                results.push((
-                    format!("{}:{}", path.display(), line_num + 1),
-                    resource,
-                    result,
-                ));
+                    results.push((
+                        format!("{}:{}", path.display(), line_num + 1),
+                        resource,
+                        result,
+                    ));
+                }
             }
+
+            if results.is_empty() {
+                warn!("Input is empty");
+                if args.strict {
+                    std::process::exit(1);
+                }
+                return Ok(());
+            }
+
+            match args.format {
+                OutputFormat::Text => print_labeled_batch_results_text(&results, args.summary_only),
+                OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
+            }
+
+            let has_errors = results.iter().any(|(_, _, r)| !r.valid);
+            let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
+
+            if has_errors || has_issues {
+                std::process::exit(1);
+            }
+
+            return Ok(());
         }
 
-        if results.is_empty() {
+        let content = read_input_from_stdin().context("Failed to read input")?;
+
+        if content.trim().is_empty() {
             warn!("Input is empty");
             if args.strict {
                 std::process::exit(1);
@@ -266,10 +317,23 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
             return Ok(());
         }
 
+        let mut results = Vec::new();
+        for (line_num, line) in content.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let resource: serde_json::Value = serde_json::from_str(line)
+                .with_context(|| format!("Failed to parse JSON at line {}", line_num + 1))?;
+            let result = validator
+                .validate_auto(&resource)
+                .with_context(|| format!("Failed to validate resource at line {}", line_num + 1))?;
+            results.push((line_num, resource, result));
+        }
+
         match args.format {
-            OutputFormat::Text => print_labeled_batch_results_text(&results, args.summary_only),
-            OutputFormat::Json => print_labeled_batch_results_json(&results)?,
-            OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
+            OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
+            OutputFormat::Json => print_batch_results_json(&results)?,
+            OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
         }
 
         let has_errors = results.iter().any(|(_, _, r)| !r.valid);
@@ -279,46 +343,34 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
             std::process::exit(1);
         }
 
-        return Ok(());
-    }
+        Ok(())
+    })
+    .await
+    .context("Batch validation task failed")?
+}
 
-    let content = read_input_from_stdin().context("Failed to read input")?;
+fn build_validator(
+    security_checks: bool,
+    terminology_server: Option<&str>,
+) -> Result<FhirValidator> {
+    let options = ValidationOptions { security_checks };
+    let terminology_config = terminology_server.map(TerminologyConfig::with_server);
 
-    if content.trim().is_empty() {
-        warn!("Input is empty");
-        if args.strict {
-            std::process::exit(1);
-        }
-        return Ok(());
-    }
+    FhirValidator::with_options(
+        rh_validator::FhirVersion::R4,
+        None,
+        terminology_config,
+        options,
+    )
+}
 
-    let mut results = Vec::new();
-    for (line_num, line) in content.lines().enumerate() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let resource: serde_json::Value = serde_json::from_str(line)
-            .with_context(|| format!("Failed to parse JSON at line {}", line_num + 1))?;
-        let result = validator
-            .validate_auto(&resource)
-            .with_context(|| format!("Failed to validate resource at line {}", line_num + 1))?;
-        results.push((line_num, resource, result));
-    }
-
-    match args.format {
-        OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
-        OutputFormat::Json => print_batch_results_json(&results)?,
-        OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
-    }
-
-    let has_errors = results.iter().any(|(_, _, r)| !r.valid);
-    let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
-
-    if has_errors || has_issues {
-        std::process::exit(1);
-    }
-
-    Ok(())
+fn report_effective_runtime_options(security_checks: bool, terminology_server: Option<&str>) {
+    info!(
+        security_checks,
+        terminology_configured = terminology_server.is_some(),
+        terminology_server = terminology_server.unwrap_or("<none>"),
+        "Validator runtime options"
+    );
 }
 
 fn read_input_from_stdin() -> Result<String> {

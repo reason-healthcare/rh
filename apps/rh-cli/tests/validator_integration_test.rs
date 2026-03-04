@@ -127,6 +127,49 @@ fn test_validate_resource_with_cli_flags() {
 }
 
 #[test]
+fn test_validate_resource_with_security_checks_flag() {
+    let patient = r#"{
+        "resourceType": "Patient",
+        "id": "example",
+        "text": "<script>alert('x')</script>"
+    }"#;
+
+    rh_cmd()
+        .args(["validate", "resource", "--security-checks"])
+        .write_stdin(patient)
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .stderr(predicate::str::contains("Validator runtime options"))
+        .stderr(predicate::str::contains("security_checks"));
+}
+
+#[test]
+fn test_validate_resource_with_terminology_server_flag() {
+    let patient = r#"{
+        "resourceType": "Patient",
+        "id": "example",
+        "name": [{
+            "family": "Smith",
+            "given": ["John"]
+        }],
+        "gender": "male"
+    }"#;
+
+    rh_cmd()
+        .args([
+            "validate",
+            "resource",
+            "--terminology-server",
+            "https://tx.fhir.org/r4",
+        ])
+        .write_stdin(patient)
+        .assert()
+        .code(predicate::in_iter([0, 1]))
+        .stderr(predicate::str::contains("Validator runtime options"))
+        .stderr(predicate::str::contains("terminology_configured"));
+}
+
+#[test]
 fn test_batch_validation_with_errors() {
     let tmp_dir = TempDir::new().unwrap();
     let batch_file = tmp_dir.path().join("batch.ndjson");

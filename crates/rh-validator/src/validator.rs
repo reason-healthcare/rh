@@ -53,6 +53,11 @@ use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
 
+#[derive(Debug, Clone, Default)]
+pub struct ValidationOptions {
+    pub security_checks: bool,
+}
+
 /// FHIR resource validator with profile-based validation support.
 ///
 /// `FhirValidator` validates FHIR resources against StructureDefinition profiles,
@@ -115,6 +120,7 @@ pub struct FhirValidator {
     fhirpath_parser: FhirPathParser,
     fhirpath_evaluator: FhirPathEvaluator,
     terminology_service: Option<Arc<dyn TerminologyService>>,
+    options: ValidationOptions,
     /// CodeSystem supplements: supplement_url -> base_codesystem_url
     supplements: std::sync::RwLock<std::collections::HashMap<String, String>>,
     #[allow(dead_code)]
@@ -152,7 +158,12 @@ impl FhirValidator {
         fhir_version: crate::fhir_version::FhirVersion,
         packages_dir: Option<&str>,
     ) -> Result<Self> {
-        Self::with_terminology(fhir_version, packages_dir, None)
+        Self::with_options(
+            fhir_version,
+            packages_dir,
+            None,
+            ValidationOptions::default(),
+        )
     }
 
     /// Creates a new FHIR validator with terminology service configuration.
@@ -191,6 +202,20 @@ impl FhirValidator {
         packages_dir: Option<&str>,
         terminology_config: Option<TerminologyConfig>,
     ) -> Result<Self> {
+        Self::with_options(
+            fhir_version,
+            packages_dir,
+            terminology_config,
+            ValidationOptions::default(),
+        )
+    }
+
+    pub fn with_options(
+        fhir_version: crate::fhir_version::FhirVersion,
+        packages_dir: Option<&str>,
+        terminology_config: Option<TerminologyConfig>,
+        options: ValidationOptions,
+    ) -> Result<Self> {
         let mut package_dirs = if let Some(dir) = packages_dir {
             vec![PathBuf::from(dir)]
         } else {
@@ -219,6 +244,7 @@ impl FhirValidator {
             fhirpath_parser: FhirPathParser::new(),
             fhirpath_evaluator: FhirPathEvaluator::new(),
             terminology_service,
+            options,
             supplements: std::sync::RwLock::new(std::collections::HashMap::new()),
             fhir_version,
         })
@@ -340,7 +366,8 @@ impl FhirValidator {
         }
 
         // Validate strings for HTML-like content (security check)
-        let string_security_issues = validate_string_security(resource, resource_type_name);
+        let string_security_issues =
+            validate_string_security(resource, resource_type_name, self.options.security_checks);
         for issue in string_security_issues {
             result = result.with_issue(issue);
         }
@@ -358,6 +385,11 @@ impl FhirValidator {
             for issue in terminology_issues {
                 result = result.with_issue(issue);
             }
+        }
+
+        let ucum_issues = self.validate_ucum_units(resource, resource_type_name);
+        for issue in ucum_issues {
+            result = result.with_issue(issue);
         }
 
         Ok(result)
@@ -1266,7 +1298,11 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
     issues
 }
 
-fn validate_string_security(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+fn validate_string_security(
+    value: &Value,
+    current_path: &str,
+    security_checks_enabled: bool,
+) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
     match value {
@@ -1286,30 +1322,38 @@ fn validate_string_security(value: &Value, current_path: &str) -> Vec<Validation
                     continue;
                 }
 
-                issues.extend(validate_string_security(v, &child_path));
+                issues.extend(validate_string_security(
+                    v,
+                    &child_path,
+                    security_checks_enabled,
+                ));
             }
         }
         Value::Array(arr) => {
             for (idx, item) in arr.iter().enumerate() {
                 let child_path = format!("{current_path}[{idx}]");
-                issues.extend(validate_string_security(item, &child_path));
+                issues.extend(validate_string_security(
+                    item,
+                    &child_path,
+                    security_checks_enabled,
+                ));
             }
         }
         Value::String(s) => {
             // Check for HTML-like content in strings
-            // TODO: Implement security-checks option from FHIR test cases
-            // - When security-checks=false (default): Report as INFORMATION
-            // - When security-checks=true: Report as ERROR
-            // For now, we report as ERROR to be conservative and match the strict behavior.
-            // This affects tests like pat-security-good2 (should be INFO) vs pat-security-bad-string (should be ERROR).
             if contains_html_tags(s) {
-                issues.push(
+                let issue = if security_checks_enabled {
                     ValidationIssue::error(
                         IssueCode::Invalid,
                         "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
                     )
-                    .with_path(current_path.to_string()),
-                );
+                } else {
+                    ValidationIssue::info(
+                        IssueCode::Informational,
+                        "The string value contains text that looks like embedded HTML tags. Security checks are disabled for this run, so this is informational.".to_string(),
+                    )
+                };
+                issues.push(issue.with_path(current_path.to_string()));
             }
         }
         _ => {}
@@ -1371,10 +1415,18 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
     // Track resource counts for detecting multiple matches
     let mut resource_counts: std::collections::HashMap<String, usize> =
         std::collections::HashMap::new();
+    let mut fullurl_positions: std::collections::HashMap<String, Vec<usize>> =
+        std::collections::HashMap::new();
+    let mut identity_positions: std::collections::HashMap<String, Vec<usize>> =
+        std::collections::HashMap::new();
 
-    for entry in entries {
+    for (idx, entry) in entries.iter().enumerate() {
         if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
             available_resources.insert(full_url.to_string());
+            fullurl_positions
+                .entry(full_url.to_string())
+                .or_default()
+                .push(idx);
 
             // Also add relative form: Type/id
             if let Some(resource) = entry.get("resource") {
@@ -1384,8 +1436,24 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
                 ) {
                     let relative_ref = format!("{res_type}/{res_id}");
                     available_resources.insert(relative_ref.clone());
-                    *resource_counts.entry(relative_ref).or_insert(0) += 1;
+                    *resource_counts.entry(relative_ref.clone()).or_insert(0) += 1;
+                    identity_positions
+                        .entry(relative_ref)
+                        .or_default()
+                        .push(idx);
                 }
+            }
+        } else if let Some(resource) = entry.get("resource") {
+            if let (Some(res_type), Some(res_id)) = (
+                resource.get("resourceType").and_then(|v| v.as_str()),
+                resource.get("id").and_then(|v| v.as_str()),
+            ) {
+                let relative_ref = format!("{res_type}/{res_id}");
+                *resource_counts.entry(relative_ref.clone()).or_insert(0) += 1;
+                identity_positions
+                    .entry(relative_ref)
+                    .or_default()
+                    .push(idx);
             }
         }
 
@@ -1401,16 +1469,51 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
         }
     }
 
+    let enforce_fullurl_uniqueness = matches!(
+        bundle_type,
+        "document" | "message" | "searchset" | "collection"
+    );
+
+    if enforce_fullurl_uniqueness {
+        for (full_url, positions) in &fullurl_positions {
+            if positions.len() > 1 {
+                for idx in positions {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Duplicate,
+                            format!(
+                                "Duplicate Bundle.entry.fullUrl '{full_url}' is not allowed for bundle type '{bundle_type}'"
+                            ),
+                        )
+                        .with_path(format!("Bundle.entry[{idx}].fullUrl")),
+                    );
+                }
+            }
+        }
+    }
+
+    for (identity, positions) in &identity_positions {
+        if positions.len() > 1 {
+            for idx in positions {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Duplicate,
+                        format!(
+                            "Duplicate Bundle entry resource identity '{identity}' detected in this bundle"
+                        ),
+                    )
+                    .with_path(format!("Bundle.entry[{idx}].resource.id")),
+                );
+            }
+        }
+    }
+
     // Second pass: validate each entry
     for (idx, entry) in entries.iter().enumerate() {
         let entry_path = format!("Bundle.entry[{idx}]");
 
         // Validate fullUrl
         if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
-            // Note: We don't check for duplicate fullUrls because in FHIR,
-            // duplicate fullUrls are allowed in some cases (e.g., document bundles
-            // can contain multiple versions of the same resource)
-
             // fullUrl must be absolute for most bundle types
             // Exception: transaction/batch bundles can have relative URLs
             let requires_absolute = !matches!(bundle_type, "transaction" | "batch");
@@ -2542,6 +2645,68 @@ fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
 }
 
 impl FhirValidator {
+    fn validate_ucum_units(&self, value: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+        let mut ucum_entries = Vec::new();
+        collect_ucum_codings(value, resource_type, "", &mut ucum_entries);
+
+        if ucum_entries.is_empty() {
+            return Vec::new();
+        }
+
+        let mut issues = Vec::new();
+        let terminology_service = match self.terminology_service.as_ref() {
+            Some(service) => service,
+            None => {
+                issues.push(
+                    ValidationIssue::info(
+                        IssueCode::Informational,
+                        "UCUM/unit quick-win validation was skipped because no terminology service is configured for this run"
+                            .to_string(),
+                    )
+                    .with_path(resource_type.to_string()),
+                );
+                return issues;
+            }
+        };
+
+        for (path, code, unit_display) in ucum_entries {
+            match terminology_service.validate_code_in_codesystem(
+                "http://unitsofmeasure.org",
+                &code,
+                unit_display.as_deref(),
+            ) {
+                Ok(result) => {
+                    if !result.result {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::CodeInvalid,
+                                result.message.unwrap_or_else(|| {
+                                    format!(
+                                        "UCUM code '{code}' is not valid for system http://unitsofmeasure.org"
+                                    )
+                                }),
+                            )
+                            .with_path(path),
+                        );
+                    }
+                }
+                Err(err) => {
+                    issues.push(
+                        ValidationIssue::warning(
+                            IssueCode::Processing,
+                            format!(
+                                "UCUM/unit quick-win validation could not be completed due to terminology service error: {err}"
+                            ),
+                        )
+                        .with_path(path),
+                    );
+                }
+            }
+        }
+
+        issues
+    }
+
     /// Validate display names for all Coding elements in the resource
     fn validate_coding_displays(
         &self,
@@ -2843,6 +3008,48 @@ impl FhirValidator {
                 format!("{}: {} (at {})", rule.key, rule.human, rule.path),
             )
         }
+    }
+}
+
+fn collect_ucum_codings(
+    value: &Value,
+    resource_type: &str,
+    path: &str,
+    codings: &mut Vec<(String, String, Option<String>)>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if obj.get("system").and_then(|v| v.as_str()) == Some("http://unitsofmeasure.org") {
+                if let Some(code) = obj.get("code").and_then(|v| v.as_str()) {
+                    let current_path = if path.is_empty() {
+                        format!("{resource_type}.code")
+                    } else {
+                        format!("{path}.code")
+                    };
+                    let unit_display = obj
+                        .get("unit")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    codings.push((current_path, code.to_string(), unit_display));
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    format!("{resource_type}.{key}")
+                } else {
+                    format!("{path}.{key}")
+                };
+                collect_ucum_codings(child, resource_type, &child_path, codings);
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let item_path = format!("{path}[{idx}]");
+                collect_ucum_codings(item, resource_type, &item_path, codings);
+            }
+        }
+        _ => {}
     }
 }
 

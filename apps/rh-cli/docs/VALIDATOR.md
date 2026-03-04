@@ -21,6 +21,8 @@ rh validate resource [OPTIONS]
 - `--skip-invariants` - Skip invariant validation (not yet implemented)
 - `--skip-bindings` - Skip binding validation (not yet implemented)
 - `--strict` - Exit with non-zero code if validation produces any issues (warnings count as failure)
+- `--security-checks` - Treat HTML/script-like string content as error-level security findings (default: disabled)
+- `--terminology-server <URL>` - Configure optional terminology server endpoint (example: `https://tx.fhir.org/r4`)
 
 **Exit Codes:**
 - `0` - Validation successful
@@ -40,6 +42,12 @@ rh validate resource --format json < patient.json
 
 # Strict mode (treat warnings as errors)
 rh validate resource --strict < patient.json
+
+# Enable strict security checks for embedded HTML/script-like strings
+rh validate resource --security-checks < patient.json
+
+# Use terminology-backed checks with a configured terminology server
+rh validate resource --terminology-server https://tx.fhir.org/r4 < patient.json
 
 # Use in CI/CD
 rh validate resource --input patient.json && echo "Valid!" || echo "Invalid!"
@@ -95,6 +103,8 @@ rh validate batch [OPTIONS]
 - `--skip-bindings` - Skip binding validation (not yet implemented)
 - `--summary-only` - Show summary only (hide individual issues)
 - `--strict` - Exit with non-zero code if validation produces any issues
+- `--security-checks` - Treat HTML/script-like string content as error-level security findings (default: disabled)
+- `--terminology-server <URL>` - Configure optional terminology server endpoint (example: `https://tx.fhir.org/r4`)
 
 **Exit Codes:**
 - `0` - All resources valid
@@ -158,6 +168,12 @@ rh validate batch --input batch.ndjson --strict && echo "All valid!"
   ]
 }
 ```
+
+### Runtime Configuration Reporting
+
+The validator logs effective runtime options at command start, including:
+- whether `security-checks` is enabled
+- whether a terminology server is configured and which endpoint is used
 
 ---
 

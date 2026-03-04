@@ -19,5 +19,5 @@ pub use terminology::{
     TerminologyService, ValidateCodeResult,
 };
 pub use types::{IssueCode, Location, Severity, ValidationIssue, ValidationResult};
-pub use validator::FhirValidator;
+pub use validator::{FhirValidator, ValidationOptions};
 pub use valueset::{ValueSet, ValueSetExpansion, ValueSetLoader};
