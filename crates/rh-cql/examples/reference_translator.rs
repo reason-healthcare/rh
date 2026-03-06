@@ -3,6 +3,7 @@
 //! Demonstrates translating CQL identifier and qualified references to ELM.
 //!
 //! Run with: `cargo run --example reference_translator`
+#![allow(deprecated)] // Legacy example using ExpressionTranslator API (retained for reference)
 
 use rh_cql::datatype::DataType;
 use rh_cql::elm;

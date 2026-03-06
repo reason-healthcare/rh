@@ -41,7 +41,9 @@
 //! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
 //! - [`types`]: Type resolution for CQL semantic analysis
 //! - [`operators`]: Operator resolution for CQL semantic analysis
-//! - [`translator`]: Expression translation from CQL AST to ELM
+//! - [`translator`]: Expression translation from CQL AST to ELM (deprecated — use `emit`)
+//! - [`emit`]: Multi-stage ELM emitter (new preferred pipeline)
+//! - [`semantics`]: Semantic analysis — `SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`
 //! - [`options`]: Compiler options for translation behavior
 //! - [`output`]: ELM output generation (JSON serialization)
 //! - [`reporting`]: Error reporting with source locations and severity levels
@@ -109,7 +111,19 @@ pub use provider::{
 pub use reporting::{
     CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
-pub use translator::{
-    ExpressionTranslator, StatementTranslation, TranslatorError, TranslatorResult,
-};
+#[allow(deprecated)]
+pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
+#[deprecated(
+    since = "0.1.0",
+    note = "Use the new three-stage pipeline: SemanticAnalyzer + ElmEmitter. \
+            ExpressionTranslator will be removed in a future release."
+)]
+#[allow(deprecated)]
+pub use translator::ExpressionTranslator;
+
+// New pipeline types — preferred public API
+pub use semantics::analyzer::SemanticAnalyzer;
+pub use semantics::scope::ScopeManager;
+pub use semantics::typed_ast::{NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedStatement};
+pub use emit::ElmEmitter;
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};

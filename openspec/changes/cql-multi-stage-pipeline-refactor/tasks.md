@@ -75,17 +75,17 @@
 
 ## 5. Pipeline Wiring and Migration
 
-- [ ] 5.1 Refactor `builder.rs` into thin orchestrator: `parse → analyze → emit` pipeline, delegating to `SemanticAnalyzer` and `ElmEmitter`
-- [ ] 5.2 Update `compiler.rs` `compile()` to use new three-stage pipeline
-- [ ] 5.3 Update `compiler.rs` `compile_with_model()` to use new pipeline
-- [ ] 5.4 Update `compiler.rs` `validate()` to use `SemanticAnalyzer` directly (parse + analyze, no emit)
-- [ ] 5.5 Update `compiler.rs` `compile_to_json()` to use new pipeline
-- [ ] 5.6 Run full conformance suite against new pipeline, compare with old pipeline output
-- [ ] 5.7 Remove old `translate_expr_recursive` dispatch from builder.rs
-- [ ] 5.8 Remove or significantly reduce old `translator.rs` (replaced by `src/emit/`)
-- [ ] 5.9 Update `lib.rs` re-exports: add new types (`SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`, `ElmEmitter`), deprecate or remove old re-exports (`ExpressionTranslator`)
-- [ ] 5.10 Verify all existing examples in `examples/` compile and run with updated API
-- [ ] 5.11 Reduce `builder.rs` to <500 lines (thin orchestrator + library dependency management)
+- [x] 5.1 Refactor `builder.rs` into thin orchestrator: `parse → analyze → emit` pipeline, delegating to `SemanticAnalyzer` and `ElmEmitter`
+- [x] 5.2 Update `compiler.rs` `compile()` to use new three-stage pipeline
+- [x] 5.3 Update `compiler.rs` `compile_with_model()` to use new pipeline
+- [x] 5.4 Update `compiler.rs` `validate()` to use `SemanticAnalyzer` directly (parse + analyze, no emit)
+- [x] 5.5 Update `compiler.rs` `compile_to_json()` to use new pipeline
+- [x] 5.6 Run full conformance suite against new pipeline, compare with old pipeline output
+- [x] 5.7 Remove old `translate_expr_recursive` dispatch from builder.rs
+- [x] 5.8 Remove or significantly reduce old `translator.rs` (replaced by `src/emit/`)
+- [x] 5.9 Update `lib.rs` re-exports: add new types (`SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`, `ElmEmitter`), deprecate or remove old re-exports (`ExpressionTranslator`)
+- [x] 5.10 Verify all existing examples in `examples/` compile and run with updated API
+- [x] 5.11 Reduce `builder.rs` to <500 lines (thin orchestrator + library dependency management)
 
 ## 6. Parser Conformance Improvements
 

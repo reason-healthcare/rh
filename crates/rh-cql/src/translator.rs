@@ -1,8 +1,19 @@
 //! Expression Translator for CQL-to-ELM conversion.
 //!
+//! ⚠️ **DEPRECATED** — This module is superseded by the three-stage pipeline:
+//! [`crate::semantics::analyzer::SemanticAnalyzer`] (parse → analyze) and
+//! [`crate::emit::ElmEmitter`] (typed AST → ELM). The types in this module
+//! will be removed in a future release.
+//!
+//! For new code, use [`crate::compile`] or wire `SemanticAnalyzer + ElmEmitter`
+//! directly. See `src/emit/` for the replacement implementation.
+//!
 //! This module translates CQL AST expressions to ELM expressions.
 //! The translation is done in a type-directed manner, using the
 //! LibraryBuilder for context and symbol resolution.
+
+// Allow internal use of deprecated types within this module.
+#![allow(deprecated)]
 //!
 //! # Example
 //!
@@ -125,6 +136,16 @@ pub enum QualifiedRefKind {
 /// - Operator translation (unary, binary, ternary)
 /// - Query translation
 /// - Type operations
+///
+/// # Deprecation
+///
+/// Use [`crate::semantics::analyzer::SemanticAnalyzer`] + [`crate::emit::ElmEmitter`]
+/// or the high-level [`crate::compile`] function instead.
+#[deprecated(
+    since = "0.1.0",
+    note = "Use SemanticAnalyzer + ElmEmitter (the new three-stage pipeline). \
+            ExpressionTranslator will be removed in a future release."
+)]
 pub struct ExpressionTranslator {
     /// Counter for generating local IDs.
     local_id_counter: u32,
@@ -4069,6 +4090,14 @@ fn model_name_to_uri(model_name: &str) -> String {
 }
 
 /// Result of translating a statement.
+///
+/// # Deprecation
+///
+/// Use [`crate::semantics::typed_ast::TypedStatement`] instead.
+#[deprecated(
+    since = "0.1.0",
+    note = "Use TypedStatement from the new semantics pipeline instead."
+)]
 #[derive(Debug, Clone)]
 pub enum StatementTranslation {
     /// An expression definition.

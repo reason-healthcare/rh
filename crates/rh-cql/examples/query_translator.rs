@@ -4,6 +4,7 @@
 //! covering sources, let clauses, relationships, where, return, and sort.
 //!
 //! Run with: cargo run -p rh-cql --example query_translator
+#![allow(deprecated)] // Legacy example using ExpressionTranslator API (retained for reference)
 
 use rh_cql::elm;
 use rh_cql::parser::ast;

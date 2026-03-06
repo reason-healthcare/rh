@@ -30,6 +30,7 @@ use crate::options::CompilerOptions;
 use crate::output::{library_to_compact_json, library_to_json_with_options};
 use crate::parser::CqlParser;
 use crate::reporting::{CqlCompilerException, Severity};
+use std::sync::Arc;
 
 /// The result of compiling CQL source code.
 ///
@@ -245,7 +246,8 @@ pub fn compile_to_json(
 /// Validate CQL source code without producing ELM output.
 ///
 /// This function parses and performs semantic analysis on the CQL source
-/// but only returns validation results, not the full ELM library.
+/// using `SemanticAnalyzer` directly, skipping the ELM emit step.
+/// Only validation results are returned.
 ///
 /// # Arguments
 ///
@@ -269,16 +271,28 @@ pub fn validate(
     source: &str,
     options: Option<CompilerOptions>,
 ) -> Result<ValidationResult, CompilationError> {
-    let mut options = options.unwrap_or_default();
-    options.verify_only = true;
+    let options = options.unwrap_or_default();
 
-    let result = compile(source, Some(options))?;
+    // Parse the CQL source
+    let parser = CqlParser::new();
+    let ast = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+    // Use SemanticAnalyzer directly — parse + analyze only, no ELM emit
+    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
+        Arc::new(crate::provider::fhir_r4_provider_from_package());
+    let analyzer =
+        crate::semantics::analyzer::SemanticAnalyzer::new(provider, options.clone());
+    let (_, diagnostics) = analyzer.analyze(ast);
+
+    let (errors, warnings, messages) = categorize_exceptions(&diagnostics, &options);
 
     Ok(ValidationResult {
-        is_valid: result.errors.is_empty(),
-        errors: result.errors,
-        warnings: result.warnings,
-        messages: result.messages,
+        is_valid: errors.is_empty(),
+        errors,
+        warnings,
+        messages,
     })
 }
 

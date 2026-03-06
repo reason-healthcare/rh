@@ -3,6 +3,7 @@
 //! Demonstrates translating CQL AST literals to ELM expressions.
 //!
 //! Run with: `cargo run --example literal_translator`
+#![allow(deprecated)] // Legacy example using ExpressionTranslator API (retained for reference)
 
 use rh_cql::elm;
 use rh_cql::parser::ast;

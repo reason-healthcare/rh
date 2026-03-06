@@ -4,6 +4,7 @@
 //! covering data type retrieval with code filters, date ranges, and contexts.
 //!
 //! Run with: cargo run -p rh-cql --example retrieve_translator
+#![allow(deprecated)] // Legacy example using ExpressionTranslator API (retained for reference)
 
 use rh_cql::elm;
 use rh_cql::parser::ast;

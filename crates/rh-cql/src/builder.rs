@@ -35,8 +35,20 @@ impl LibraryBuilder {
         self.options = options;
     }
 
+    /// Set the model provider using an Arc (preferred for the new pipeline).
+    pub fn set_model_provider_arc(&mut self, provider: std::sync::Arc<dyn ModelInfoProvider>) {
+        self.provider = Some(provider);
+    }
+
+    /// Set the model provider from a reference.
+    ///
+    /// NOTE: Since `&dyn ModelInfoProvider` cannot be trivially stored as `Arc<dyn>`,
+    /// this falls back to the FHIR R4 package provider. Use `set_model_provider_arc`
+    /// for a custom provider in an Arc.
     pub fn set_model_provider(&mut self, _provider: &dyn ModelInfoProvider) {
-        // stub mapping for integration API temporarily
+        self.provider = Some(std::sync::Arc::new(
+            crate::provider::fhir_r4_provider_from_package(),
+        ));
     }
 
     pub fn set_conversion_registry(&mut self, registry: ConversionRegistry) {

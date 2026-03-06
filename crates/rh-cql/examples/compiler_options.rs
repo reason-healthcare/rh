@@ -3,7 +3,6 @@
 //! Shows how to configure the CQL-to-ELM translator with various options.
 
 use rh_cql::options::{CompilerOption, CompilerOptions, ErrorSeverity, SignatureLevel};
-use rh_cql::ExpressionTranslator;
 
 fn main() {
     println!("=== CompilerOptions Example ===\n");
@@ -87,25 +86,37 @@ fn main() {
     println!("   Options String: {}", custom_options.options_to_string());
     println!();
 
-    // Demonstrate translator with options
-    println!("6. ExpressionTranslator with Options");
+    // Demonstrate new pipeline with annotation options
+    println!("6. ELM Emission with Annotation Options (new pipeline)");
 
-    // Without annotations - no local IDs
-    let mut translator_no_annotations = ExpressionTranslator::with_options(CompilerOptions::new());
-    let literal = rh_cql::parser::ast::Literal::Integer(42);
-    let elm_expr = translator_no_annotations.translate_literal(&literal);
-    if let rh_cql::elm::Expression::Literal(lit) = &elm_expr {
-        println!(
-            "   Without annotations - local_id: {:?}",
-            lit.element.local_id
-        );
+    // Without annotations — statements have no local IDs
+    let result_no_annotations = rh_cql::compile(
+        "library Test version '1.0' define X: 42",
+        Some(CompilerOptions::new()), // no annotations set
+    )
+    .unwrap();
+    if let Some(stmts) = &result_no_annotations.library.statements {
+        if let Some(rh_cql::elm::StatementDef::Expression(def)) = stmts.defs.first() {
+            println!(
+                "   Without annotations - local_id: {:?}",
+                def.local_id
+            );
+        }
     }
 
-    // With annotations - has local IDs
-    let mut translator_with_annotations = ExpressionTranslator::new(); // Default has annotations
-    let elm_expr = translator_with_annotations.translate_literal(&literal);
-    if let rh_cql::elm::Expression::Literal(lit) = &elm_expr {
-        println!("   With annotations - local_id: {:?}", lit.element.local_id);
+    // With annotations — statements get local IDs assigned by ElmEmitter
+    let result_with_annotations = rh_cql::compile(
+        "library Test version '1.0' define X: 42",
+        Some(CompilerOptions::debug()), // EnableAnnotations is set
+    )
+    .unwrap();
+    if let Some(stmts) = &result_with_annotations.library.statements {
+        if let Some(rh_cql::elm::StatementDef::Expression(def)) = stmts.defs.first() {
+            println!(
+                "   With annotations - local_id: {:?}",
+                def.local_id
+            );
+        }
     }
     println!();
 

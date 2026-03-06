@@ -4,6 +4,7 @@
 //! and their ELM representations.
 //!
 //! Run with: cargo run -p rh-cql --example conditional_translator
+#![allow(deprecated)] // Legacy example using ExpressionTranslator API (retained for reference)
 
 use rh_cql::elm;
 use rh_cql::parser::ast;
