@@ -285,7 +285,7 @@ impl OperatorResolver {
         operand: &DataType,
     ) -> OperatorResult<ResolvedOperator> {
         let name = unary_operator_name(operator);
-        self.resolve_with_operands(&name, &[operand.clone()])
+        self.resolve_with_operands(&name, std::slice::from_ref(operand))
     }
 
     /// Resolve a binary operator.

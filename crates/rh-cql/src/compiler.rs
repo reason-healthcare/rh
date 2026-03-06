@@ -314,7 +314,7 @@ impl ValidationResult {
 
 /// Categorize exceptions by severity.
 fn categorize_exceptions(
-    exceptions: &[crate::builder::BuilderError],
+    exceptions: &[crate::reporting::CqlCompilerException],
     _options: &CompilerOptions,
 ) -> (
     Vec<CqlCompilerException>,
@@ -326,7 +326,7 @@ fn categorize_exceptions(
     let mut messages = Vec::new();
 
     for err in exceptions {
-        let exception = CqlCompilerException::semantic(err.to_string());
+        let exception = err.clone();
 
         match exception.severity() {
             Severity::Error => errors.push(exception),

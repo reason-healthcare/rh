@@ -51,7 +51,9 @@ pub mod compiler;
 pub mod conversion;
 pub mod datatype;
 pub mod elm;
+pub mod emit;
 pub mod error;
+pub mod explain;
 pub mod library;
 pub mod modelinfo;
 mod modelinfo_xml;
@@ -62,6 +64,8 @@ pub mod parser;
 pub mod preprocessor;
 pub mod provider;
 pub mod reporting;
+pub mod semantics;
+pub mod sourcemap;
 pub mod translator;
 pub mod types;
 
@@ -71,10 +75,7 @@ pub use compiler::{
     ValidationResult,
 };
 
-pub use builder::{
-    BuilderError, BuilderResult, FunctionSignature, LibraryBuilder, ResolvedIdentifier, Scope,
-    Symbol, SymbolKind,
-};
+pub use builder::LibraryBuilder;
 pub use conversion::{
     conversion_key_to_datatype, datatype_to_conversion_key, needs_conversion, wrap_in_conversion,
     ConversionContext, ConversionEntry, ConversionRegistry, ConversionResult,
