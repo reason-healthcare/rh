@@ -1,0 +1,300 @@
+//! ELM expression types.
+//!
+//! This module defines the core expression types in ELM. Expressions are the
+//! fundamental building blocks of clinical logic in CQL/ELM.
+
+use serde::{Deserialize, Serialize};
+
+use super::{QName, SortDirection, TypeSpecifier};
+
+/// The main expression enum representing all possible ELM expressions.
+///
+/// This enum uses serde's internally tagged representation, where the `type`
+/// field determines which variant is being serialized/deserialized.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Expression {
+    // === Literals ===
+    Literal(Literal),
+    Null(Null),
+
+    // === References ===
+    IdentifierRef(IdentifierRef),
+    ExpressionRef(ExpressionRef),
+    FunctionRef(FunctionRef),
+    ParameterRef(ParameterRef),
+    OperandRef(OperandRef),
+    AliasRef(AliasRef),
+    QueryLetRef(QueryLetRef),
+    CodeSystemRef(CodeSystemRef),
+    ValueSetRef(ValueSetRef),
+    CodeRef(CodeRef),
+    ConceptRef(ConceptRef),
+
+    // === Property Access ===
+    Property(Property),
+
+    // === Control Flow ===
+    If(IfExpr),
+    Case(Case),
+
+    // === Logical Operators ===
+    And(NaryExpression),
+    Or(NaryExpression),
+    Xor(BinaryExpression),
+    Not(UnaryExpression),
+    Implies(BinaryExpression),
+
+    // === Nullological ===
+    IsNull(UnaryExpression),
+    IsTrue(UnaryExpression),
+    IsFalse(UnaryExpression),
+    Coalesce(NaryExpression),
+
+    // === Comparison ===
+    Equal(BinaryExpression),
+    Equivalent(BinaryExpression),
+    NotEqual(BinaryExpression),
+    Less(BinaryExpression),
+    Greater(BinaryExpression),
+    LessOrEqual(BinaryExpression),
+    GreaterOrEqual(BinaryExpression),
+
+    // === Arithmetic ===
+    Add(BinaryExpression),
+    Subtract(BinaryExpression),
+    Multiply(BinaryExpression),
+    Divide(BinaryExpression),
+    TruncatedDivide(BinaryExpression),
+    Modulo(BinaryExpression),
+    Ceiling(UnaryExpression),
+    Floor(UnaryExpression),
+    Truncate(UnaryExpression),
+    Abs(UnaryExpression),
+    Negate(UnaryExpression),
+    Round(UnaryExpression),
+    Ln(UnaryExpression),
+    Exp(UnaryExpression),
+    Log(BinaryExpression),
+    Power(BinaryExpression),
+    Successor(UnaryExpression),
+    Predecessor(UnaryExpression),
+    MinValue(TypedExpression),
+    MaxValue(TypedExpression),
+
+    // === String ===
+    Concatenate(NaryExpression),
+    Combine(Combine),
+    Split(Split),
+    SplitOnMatches(SplitOnMatches),
+    Length(UnaryExpression),
+    Upper(UnaryExpression),
+    Lower(UnaryExpression),
+    PositionOf(PositionOf),
+    LastPositionOf(PositionOf),
+    Substring(Substring),
+    StartsWith(BinaryExpression),
+    EndsWith(BinaryExpression),
+    Matches(BinaryExpression),
+    ReplaceMatches(TernaryExpression),
+
+    // === Date/Time ===
+    Today(NullaryExpression),
+    Now(NullaryExpression),
+    TimeOfDay(NullaryExpression),
+    DateTime(DateTimeExpr),
+    Date(DateExpr),
+    Time(TimeExpr),
+    DateFrom(UnaryExpression),
+    TimeFrom(UnaryExpression),
+    TimezoneOffsetFrom(UnaryExpression),
+    DateTimeComponentFrom(DateTimeComponentFrom),
+    DifferenceBetween(TimeBinaryExpression),
+    DurationBetween(TimeBinaryExpression),
+    SameAs(TimeBinaryExpression),
+    SameOrBefore(TimeBinaryExpression),
+    SameOrAfter(TimeBinaryExpression),
+
+    // === Interval ===
+    Interval(IntervalExpr),
+    Width(UnaryExpression),
+    Size(UnaryExpression),
+    Start(UnaryExpression),
+    End(UnaryExpression),
+    Contains(BinaryExpression),
+    ProperContains(BinaryExpression),
+    In(TimeBinaryExpression),
+    ProperIn(BinaryExpression),
+    Includes(TimeBinaryExpression),
+    ProperIncludes(TimeBinaryExpression),
+    IncludedIn(TimeBinaryExpression),
+    ProperIncludedIn(TimeBinaryExpression),
+    Before(TimeBinaryExpression),
+    After(TimeBinaryExpression),
+    Meets(BinaryExpression),
+    MeetsBefore(BinaryExpression),
+    MeetsAfter(BinaryExpression),
+    Overlaps(TimeBinaryExpression),
+    OverlapsBefore(TimeBinaryExpression),
+    OverlapsAfter(TimeBinaryExpression),
+    Starts(TimeBinaryExpression),
+    Ends(TimeBinaryExpression),
+    Union(BinaryExpression),
+    Intersect(BinaryExpression),
+    Except(BinaryExpression),
+    Collapse(UnaryExpression),
+    Expand(BinaryExpression),
+    PointFrom(UnaryExpression),
+
+    // === List ===
+    List(ListExpr),
+    Exists(UnaryExpression),
+    Times(BinaryExpression),
+    First(UnaryExpression),
+    Last(UnaryExpression),
+    Indexer(BinaryExpression),
+    Flatten(UnaryExpression),
+    Sort(Sort),
+    Distinct(UnaryExpression),
+    Current(Current),
+    Iteration(Iteration),
+    SingletonFrom(UnaryExpression),
+    Slice(Slice),
+    Repeat(Repeat),
+
+    // === Aggregate ===
+    Count(AggregateExpression),
+    Sum(AggregateExpression),
+    Min(AggregateExpression),
+    Max(AggregateExpression),
+    Avg(AggregateExpression),
+    Median(AggregateExpression),
+    Mode(AggregateExpression),
+    Variance(AggregateExpression),
+    StdDev(AggregateExpression),
+    PopulationVariance(AggregateExpression),
+    PopulationStdDev(AggregateExpression),
+    AllTrue(AggregateExpression),
+    AnyTrue(AggregateExpression),
+    Aggregate(AggregateClause),
+
+    // === Type Operations ===
+    As(AsExpr),
+    Convert(ConvertExpr),
+    Is(IsExpr),
+    ToBoolean(UnaryExpression),
+    ToConcept(UnaryExpression),
+    ToDateTime(UnaryExpression),
+    ToDate(UnaryExpression),
+    ToDecimal(UnaryExpression),
+    ToInteger(UnaryExpression),
+    ToLong(UnaryExpression),
+    ToQuantity(UnaryExpression),
+    ToRatio(UnaryExpression),
+    #[serde(rename = "ToString")]
+    ToStringExpr(UnaryExpression),
+    ToTime(UnaryExpression),
+    ToList(UnaryExpression),
+    ToChars(UnaryExpression),
+    CanConvert(CanConvert),
+    CanConvertQuantity(BinaryExpression),
+
+    // === Clinical ===
+    CalculateAge(UnaryExpression),
+    CalculateAgeAt(BinaryExpression),
+    InValueSet(InValueSet),
+    InCodeSystem(InCodeSystem),
+    AnyInValueSet(AnyInValueSet),
+    AnyInCodeSystem(AnyInCodeSystem),
+    Subsumes(BinaryExpression),
+    SubsumedBy(BinaryExpression),
+    ExpandValueSet(UnaryExpression),
+
+    // === Query ===
+    Query(Query),
+    Retrieve(Retrieve),
+
+    // === Structured Values ===
+    Tuple(TupleExpr),
+    Instance(Instance),
+
+    // === Quantity ===
+    Quantity(QuantityExpr),
+    Ratio(RatioExpr),
+    ConvertQuantity(BinaryExpression),
+
+    // === Code ===
+    Code(CodeExpr),
+    Concept(ConceptExpr),
+
+    // === Message ===
+    Message(Message),
+
+    // === Fallback ===
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for Expression {
+    fn default() -> Self {
+        Expression::Null(Null::default())
+    }
+}
+
+/// Common fields for all expressions.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ElementFields {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_type_name: Option<QName>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_type_specifier: Option<TypeSpecifier>,
+}
+
+/// A literal value.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Literal {
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_type: Option<QName>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+}
+
+/// A null value.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Null {
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_type: Option<QName>,
+}
+
+/// Nullary expression (no operands).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NullaryExpression {
+    #[serde(flatten)]
+    pub element: ElementFields,
+}
+
+/// Unary expression (one operand).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnaryExpression {
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operand: Option<Box<Expression>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signature: Vec<TypeSpecifier>,
+}
+
+/// Binary expression (two operands).

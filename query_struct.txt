@@ -1,0 +1,23 @@
+444:pub struct QueryLetRef {
+445-    #[serde(flatten)]
+446-    pub element: ElementFields,
+447-    #[serde(skip_serializing_if = "Option::is_none")]
+448-    pub name: Option<String>,
+449-}
+450-
+451-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+452-#[serde(rename_all = "camelCase")]
+453-pub struct CodeSystemRef {
+454-    #[serde(flatten)]
+--
+899:pub struct Query {
+900-    #[serde(flatten)]
+901-    pub element: ElementFields,
+902-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+903-    pub source: Vec<AliasedQuerySource>,
+904-    #[serde(rename = "let", default, skip_serializing_if = "Vec::is_empty")]
+905-    pub let_clause: Vec<LetClause>,
+906-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+907-    pub relationship: Vec<RelationshipClause>,
+908-    #[serde(rename = "where", skip_serializing_if = "Option::is_none")]
+909-    pub where_clause: Option<Box<Expression>>,

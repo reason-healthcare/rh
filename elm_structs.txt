@@ -1,0 +1,84 @@
+
+--- IsExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operand: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_type_specifier: Option<TypeSpecifier>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_type: Option<QName>,
+
+
+--- AsExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operand: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub as_type_specifier: Option<TypeSpecifier>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub as_type: Option<QName>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>,
+
+
+--- ConvertExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operand: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_type_specifier: Option<TypeSpecifier>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_type: Option<QName>,
+
+
+--- IntervalExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub low: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub low_closed_expression: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub high: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub high_closed_expression: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub low_closed: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub high_closed: Option<bool>,
+
+
+--- ListExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub type_specifier: Option<TypeSpecifier>,
+    #[serde(default, rename = "element", skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<Expression>,
+
+
+--- TupleExpr ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(default, rename = "element", skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<TupleElement>,
+
+
+--- Instance ---
+
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub class_type: Option<QName>,
+    #[serde(default, rename = "element", skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<InstanceElement>,
+

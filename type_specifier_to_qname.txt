@@ -1,0 +1,65 @@
+1825:pub fn type_specifier_to_qname(ts: &ast::TypeSpecifier) -> elm::QName {
+1826-    match ts {
+1827-        ast::TypeSpecifier::Named(named) => {
+1828-            if let Some(ns) = &named.namespace {
+1829-                // Qualified name like FHIR.Patient
+1830-                format!("{{{ns}}}{}", named.name)
+1831-            } else {
+1832-                // Simple name - assume FHIR namespace for common types
+1833-                format!("{{http://hl7.org/fhir}}{}", named.name)
+1834-            }
+1835-        }
+1836-        ast::TypeSpecifier::List(list) => {
+1837-            let elem = type_specifier_to_qname(&list.element_type);
+1838-            format!("{{urn:hl7-org:elm-types:r1}}List<{elem}>")
+1839-        }
+1840-        ast::TypeSpecifier::Interval(interval) => {
+1841-            let point = type_specifier_to_qname(&interval.point_type);
+1842-            format!("{{urn:hl7-org:elm-types:r1}}Interval<{point}>")
+1843-        }
+1844-        ast::TypeSpecifier::Tuple(_) => {
+1845-            // Tuple types are anonymous
+--
+3022:    pub fn type_specifier_to_qname(&self, ts: &ast::TypeSpecifier) -> elm::QName {
+3023-        type_specifier_to_qname(ts)
+3024-    }
+3025-
+3026-    /// Convert an ELM TypeSpecifier back to a DataType (for result typing).
+3027-    #[allow(clippy::only_used_in_recursion)]
+3028-    fn type_specifier_to_datatype(&self, ts: &elm::TypeSpecifier) -> Option<DataType> {
+3029-        match ts {
+3030-            elm::TypeSpecifier::Named(named) => {
+3031-                // Parse the QName to extract namespace and name
+3032-                let name = &named.name;
+3033-                if name.starts_with("{urn:hl7-org:elm-types:r1}") {
+3034-                    let type_name = name
+3035-                        .strip_prefix("{urn:hl7-org:elm-types:r1}")
+3036-                        .unwrap_or(name);
+3037-                    Some(DataType::System(string_to_system_type(type_name)))
+3038-                } else if let Some(pos) = name.rfind('}') {
+3039-                    let namespace = &name[1..pos];
+3040-                    let type_name = &name[pos + 1..];
+3041-                    Some(DataType::Model {
+3042-                        namespace: namespace.to_string(),
+--
+4081:fn type_specifier_to_qname_string(ts: &elm::TypeSpecifier) -> String {
+4082-    match ts {
+4083-        elm::TypeSpecifier::Named(named) => named.name.clone(),
+4084-        elm::TypeSpecifier::List(list) => {
+4085-            if let Some(elem) = &list.element_type {
+4086-                format!("List<{}>", type_specifier_to_qname_string(elem))
+4087-            } else {
+4088-                "List".to_string()
+4089-            }
+4090-        }
+4091-        elm::TypeSpecifier::Interval(interval) => {
+4092-            if let Some(point) = &interval.point_type {
+4093-                format!("Interval<{}>", type_specifier_to_qname_string(point))
+4094-            } else {
+4095-                "Interval".to_string()
+4096-            }
+4097-        }
+4098-        elm::TypeSpecifier::Tuple(_) => "Tuple".to_string(),
+4099-        elm::TypeSpecifier::Choice(_) => "Choice".to_string(),
+4100-        elm::TypeSpecifier::Parameter(param) => param.parameter_name.clone().unwrap_or_default(),
+4101-    }

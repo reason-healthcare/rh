@@ -1,0 +1,35 @@
+1542:        let by: Vec<elm::SortByItem> = sort
+1543-            .items
+1544-            .iter()
+1545-            .map(|item| self.translate_sort_item(item, &translate_expr))
+1546-            .collect();
+1547-
+1548-        elm::SortClause { by }
+1549-    }
+1550-
+1551-    /// Translate a sort item.
+1552-    pub fn translate_sort_item(
+--
+1556:    ) -> elm::SortByItem {
+1557-        // In ELM, sort items are typically ByExpression, ByColumn, or ByDirection
+1558-        // For simple property paths, we use ByColumn with a path
+1559-        // For complex expressions, we'd use ByExpression
+1560-
+1561-        let direction = match item.direction {
+1562-            ast::SortDirection::Ascending => Some(elm::SortDirection::Asc),
+1563-            ast::SortDirection::Descending => Some(elm::SortDirection::Desc),
+1564-        };
+1565-
+1566-        // Try to extract a simple path from the expression
+--
+1581:        elm::SortByItem {
+1582-            sort_by_type,
+1583-            direction,
+1584-            path,
+1585-        }
+1586-    }
+1587-}
+1588-
+1589-/// Extract a simple path from an expression for sorting.
+1590-/// Returns the path string for simple identifier/property references.
+1591-fn extract_sort_path(expr: &ast::Expression) -> Option<String> {

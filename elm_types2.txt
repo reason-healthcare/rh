@@ -1,0 +1,20 @@
+pub struct Instance 
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub class_type: Option<QName>,
+    #[serde(default, rename = "element", skip_serializing_if = "Vec::is_empty")]
+    pub elements: Vec<InstanceElement>,
+
+pub struct TupleElement 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Box<Expression>>,
+
+pub struct InstanceElement 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Box<Expression>>,
+

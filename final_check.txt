@@ -1,0 +1,22 @@
+    Checking rh-cql v0.1.0 (/Users/bkaney/projects/rh/crates/rh-cql)
+warning: unused variable: `node`
+  --> crates/rh-cql/src/emit/mod.rs:27:41
+   |
+27 |     pub fn element_fields<T>(&mut self, node: &crate::semantics::typed_ast::TypedNode<T>) -> crate::elm::ElementFields {
+   |                                         ^^^^ help: if this is intentional, prefix it with an underscore: `_node`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated function `zero` is never used
+  --> crates/rh-cql/src/emit/literals.rs:70:8
+   |
+68 | trait NumericLiteral: Copy + PartialOrd + std::ops::Neg<Output = Self> + std::fmt::Display {
+   |       -------------- associated function in this trait
+69 |     fn is_negative(&self) -> bool;
+70 |     fn zero() -> Self;
+   |        ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `rh-cql` (lib) generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.39s

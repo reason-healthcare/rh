@@ -1,0 +1,120 @@
+    Checking rh-cql v0.1.0 (/Users/bkaney/projects/rh/crates/rh-cql)
+error[E0603]: enum import `Literal` is private
+   --> crates/rh-cql/src/emit/literals.rs:3:35
+    |
+  3 | use crate::semantics::typed_ast::{Literal, TypedExpression, TypedNode};
+    |                                   ^^^^^^^ private enum import
+    |
+note: the enum import `Literal` is defined here...
+   --> crates/rh-cql/src/semantics/typed_ast.rs:2:41
+    |
+  2 | use crate::parser::ast::{IdentifierRef, Literal, QualifiedIdentifierRef};
+    |                                         ^^^^^^^
+note: ...and refers to the enum `Literal` which is defined here
+   --> crates/rh-cql/src/parser/ast.rs:355:1
+    |
+355 | pub enum Literal {
+    | ^^^^^^^^^^^^^^^^ you could import this directly
+help: import `Literal` directly
+    |
+  3 | use crate::semantics::typed_ast::{parser::ast::Literal, TypedExpression, TypedNode};
+    |                                   +++++++++++++
+
+error[E0631]: type mismatch in function arguments
+  --> crates/rh-cql/src/emit/literals.rs:23:79
+   |
+23 |         Literal::Decimal(d) => emit_numeric_literal(*d, "Decimal", ctx, node, format_decimal),
+   |                                --------------------                           ^^^^^^^^^^^^^^ expected due to this
+   |                                |
+   |                                required by a bound introduced by this call
+...
+55 | fn format_decimal(d: f64) -> String {
+   | ----------------------------------- found signature defined here
+   |
+   = note: expected function signature `fn(&{type error}) -> _`
+              found function signature `fn(f64) -> _`
+note: required by a bound in `emit_numeric_literal`
+  --> crates/rh-cql/src/emit/literals.rs:84:21
+   |
+79 | fn emit_numeric_literal<T: NumericLiteral>(
+   |    -------------------- required by a bound in this function
+...
+84 |     formatter: impl Fn(T) -> String,
+   |                     ^^^^^^^^^^^^^^^ required by this bound in `emit_numeric_literal`
+help: consider wrapping the function in a closure
+   |
+23 |         Literal::Decimal(d) => emit_numeric_literal(*d, "Decimal", ctx, node, |d: /* type */| format_decimal(*d)),
+   |                                                                               +++++++++++++++               ++++
+help: consider adjusting the signature so it borrows its argument
+   |
+55 | fn format_decimal(d: &f64) -> String {
+   |                      +
+
+error[E0560]: struct `elm::expression::DateExpr` has no field named `value`
+  --> crates/rh-cql/src/emit/literals.rs:31:13
+   |
+31 |             value: Some(d.clone()),
+   |             ^^^^^ `elm::expression::DateExpr` does not have this field
+   |
+   = note: available fields are: `year`, `month`, `day`
+
+error[E0560]: struct `elm::expression::DateTimeExpr` has no field named `value`
+  --> crates/rh-cql/src/emit/literals.rs:35:13
+   |
+35 |             value: Some(dt.clone()),
+   |             ^^^^^ `elm::expression::DateTimeExpr` does not have this field
+   |
+   = note: available fields are: `year`, `month`, `day`, `hour`, `minute` ... and 3 others
+
+error[E0560]: struct `elm::expression::TimeExpr` has no field named `value`
+  --> crates/rh-cql/src/emit/literals.rs:39:13
+   |
+39 |             value: Some(t.clone()),
+   |             ^^^^^ `elm::expression::TimeExpr` does not have this field
+   |
+   = note: available fields are: `hour`, `minute`, `second`, `millisecond`
+
+error[E0063]: missing field `element` in initializer of `elm::expression::CodeSystemRef`
+  --> crates/rh-cql/src/emit/literals.rs:46:45
+   |
+46 |             system: system.as_ref().map(|s| elm::CodeSystemRef {
+   |                                             ^^^^^^^^^^^^^^^^^^ missing `element`
+
+error[E0560]: struct `TypedNode<_>` has no field named `id`
+   --> crates/rh-cql/src/emit/literals.rs:140:9
+    |
+140 |         id: node.id,
+    |         ^^ `TypedNode<_>` does not have this field
+    |
+    = note: available fields are: `node_id`
+
+error[E0609]: no field `id` on type `&TypedNode<typed_ast::TypedExpression>`
+   --> crates/rh-cql/src/emit/literals.rs:140:18
+    |
+140 |         id: node.id,
+    |                  ^^ unknown field
+    |
+    = note: available fields are: `node_id`, `data_type`, `span`, `meta`, `inner`
+
+error[E0609]: no field `enable_annotations` on type `CompilerOptions`
+  --> crates/rh-cql/src/emit/mod.rs:29:26
+   |
+29 |         if self._options.enable_annotations {
+   |                          ^^^^^^^^^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `options`, `validate_units`, `verify_only`, `enable_cql_only`, `compatibility_level` ... and 4 others
+
+error[E0308]: mismatched types
+  --> crates/rh-cql/src/emit/mod.rs:33:16
+   |
+33 |         if let Some(r#type) = &node.data_type {
+   |                ^^^^^^^^^^^^   --------------- this expression has type `&DataType`
+   |                |
+   |                expected `DataType`, found `Option<_>`
+   |
+   = note: expected enum `DataType`
+              found enum `std::option::Option<_>`
+
+Some errors have detailed explanations: E0063, E0308, E0560, E0603, E0609, E0631.
+For more information about an error, try `rustc --explain E0063`.
+error: could not compile `rh-cql` (lib) due to 10 previous errors
