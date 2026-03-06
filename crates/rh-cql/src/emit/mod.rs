@@ -228,3 +228,5 @@ mod tests {
         assert_eq!(elm_lib.identifier.unwrap().id.unwrap(), "Anonymous");
     }
 }
+pub mod clinical;
+pub mod types;

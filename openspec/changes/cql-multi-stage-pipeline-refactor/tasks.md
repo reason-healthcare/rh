@@ -62,9 +62,9 @@
 - [x] 4.4 Create `src/emit/literals.rs`: emit Literal values, Quantity, Ratio — implement `Negate(Literal(n))` for negative literals
 - [x] 4.5 Create `src/emit/operators.rs`: emit unary, binary, ternary, nary operators — emit system functions (`Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power`, `Predecessor`, `Successor`) as native ELM types instead of `FunctionRef`
 - [x] 4.6 Create `src/emit/operators.rs`: implement integer division `Decimal` promotion (`ToDecimal` wrappers on operands)
-- [ ] 4.7 Create `src/emit/queries.rs`: emit Query, Retrieve, SortClause, LetClause, RelationshipClause
-- [ ] 4.8 Create `src/emit/clinical.rs`: emit CodeSystemRef, ValueSetRef, CodeRef, ConceptRef
-- [ ] 4.9 Create `src/emit/types.rs`: emit type expressions (Is, As, Convert), IntervalExpression, ListExpression, TupleExpression, Instance
+- [x] 4.7 Create `src/emit/queries.rs`: emit Query, Retrieve, SortClause, LetClause, RelationshipClause
+- [x] 4.8 Create `src/emit/clinical.rs`: emit CodeSystemRef, ValueSetRef, CodeRef, ConceptRef
+- [x] 4.9 Create `src/emit/types.rs`: emit type expressions (Is, As, Convert), IntervalExpression, ListExpression, TupleExpression, Instance
 - [ ] 4.10 Create `src/emit/conditionals.rs`: emit If, Case expressions
 - [ ] 4.11 Implement locator population from `TypedNode.span` when `EnableLocators` is set
 - [ ] 4.12 Implement `resultTypeName` population from `TypedNode.data_type` when `EnableResultTypes` is set
