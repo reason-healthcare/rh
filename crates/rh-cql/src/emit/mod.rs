@@ -23,6 +23,15 @@ impl ElmEmitter {
     }
 
     #[allow(dead_code)]
+
+    pub fn element_fields<T>(&mut self, node: &crate::semantics::typed_ast::TypedNode<T>) -> crate::elm::ElementFields {
+        let mut fields = crate::elm::ElementFields::default();
+        if self._options.annotations_enabled() {
+            fields.local_id = Some(self.generate_local_id());
+        }
+        // TODO: mapping to result_type_name or result_type_specifier based on self._options.result_types_enabled()
+        fields
+    }
     fn generate_local_id(&mut self) -> String {
         let id = self._local_id_counter;
         self._local_id_counter += 1;
