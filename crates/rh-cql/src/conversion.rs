@@ -16,11 +16,11 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use rh_cql::conversion::ConversionRegistry;
 //! use rh_cql::modelinfo::ModelInfo;
 //!
-//! let model_info = load_modelinfo_from_package(...)?;
+//! let model_info: ModelInfo = unimplemented!("load from package");
 //! let registry = ConversionRegistry::from_model_info(&model_info);
 //!
 //! // Look up a conversion
@@ -374,11 +374,11 @@ pub fn needs_conversion(actual: &DataType, expected: &DataType) -> Option<(Strin
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use rh_cql::conversion::{wrap_in_conversion, ConversionEntry};
-/// use rh_cql::elm::{Expression, Literal, ElementFields};
+/// use rh_cql::elm::{Expression, ElementFields};
 ///
-/// let operand = Expression::Literal(Literal { /* ... */ });
+/// let operand: Expression = unimplemented!("build operand expression");
 /// let entry = ConversionEntry {
 ///     from_type: "FHIR.Coding".to_string(),
 ///     to_type: "System.Code".to_string(),
