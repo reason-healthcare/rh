@@ -15,7 +15,7 @@ use crate::semantics::typed_ast::{TypedExpression, TypedLibrary, TypedNode};
 pub struct ElmEmitter {
     _local_id_counter: usize,
     _options: CompilerOptions,
-    // optional source-map builder integration could go here
+    source_map: crate::sourcemap::SourceMap,
 }
 
 impl ElmEmitter {
@@ -23,20 +23,34 @@ impl ElmEmitter {
         Self {
             _local_id_counter: 1,
             _options: options,
+            source_map: crate::sourcemap::SourceMap::new(),
         }
+    }
+
+    /// Consume the emitter and return the built source map.
+    pub fn take_source_map(self) -> crate::sourcemap::SourceMap {
+        self.source_map
     }
 
     /// Build `ElementFields` for a typed node, populating:
     /// - `local_id`        when annotations are enabled  (task 4.13)
     /// - `locator`         when locators are enabled      (task 4.11)
     /// - `result_type_name` when result types are enabled (task 4.12)
+    ///
+    /// Also records an [`ElmNodeMeta`] and (when the span is non-trivial) a
+    /// [`SourceElmMapping`] in the source-map side-channel (task 7.4).
     pub fn element_fields<T>(&mut self, node: &TypedNode<T>) -> elm::ElementFields {
         let mut fields = elm::ElementFields::default();
 
         // 4.13 – annotations enabled → assign a monotonic local id
-        if self._options.annotations_enabled() {
-            fields.local_id = Some(self.generate_local_id());
-        }
+        let elm_id = if self._options.annotations_enabled() {
+            let id = self.generate_local_id();
+            fields.local_id = Some(id.clone());
+            id
+        } else {
+            // Derive a stable id from the node's stable NodeId
+            format!("n{}", node.node_id.0)
+        };
 
         // 4.11 – locators enabled → encode the source span
         if self._options.locators_enabled() {
@@ -50,6 +64,39 @@ impl ElmEmitter {
         // 4.12 – result types enabled → derive the QName from the data type
         if self._options.result_types_enabled() {
             fields.result_type_name = Some(datatype_to_qname(&node.data_type));
+        }
+
+        // Task 7.4 – record NodeId → ElmNodeMeta in source-map side-channel
+        self.source_map
+            .elm_node_metas
+            .push(crate::sourcemap::ElmNodeMeta {
+                elm_node_id: elm_id.clone(),
+                elm_path: String::new(),
+                elm_kind: String::from("expression"),
+                parent_id: None,
+            });
+        // Only record a span mapping when the node has non-trivial source info
+        let s = &node.span;
+        if s.start.line > 0 || s.start.offset > 0 {
+            self.source_map
+                .mappings
+                .push(crate::sourcemap::SourceElmMapping {
+                    doc_id: String::new(),
+                    span: crate::sourcemap::SourceSpan {
+                        start: crate::sourcemap::SourceLocation {
+                            line: s.start.line,
+                            column: s.start.column,
+                            offset: s.start.offset,
+                        },
+                        end: crate::sourcemap::SourceLocation {
+                            line: s.end.line,
+                            column: s.end.column,
+                            offset: s.end.offset,
+                        },
+                    },
+                    role: crate::sourcemap::MappingRole::Direct,
+                    elm_node_ids: vec![elm_id],
+                });
         }
 
         fields

@@ -151,8 +151,10 @@ impl SemanticAnalyzer {
         {
             dt = res.result_type;
             meta.resolved_overload = Some(res.signature.name);
-            for conv in res.conversions.iter().flatten() {
-                meta.implicit_conversions.push(format!("{:?}", conv));
+            if self._options.implicit_conversions_enabled() {
+                for conv in res.conversions.iter().flatten() {
+                    meta.implicit_conversions.push(format!("{:?}", conv));
+                }
             }
         } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
             if let Some(f) = funcs
@@ -288,8 +290,10 @@ impl SemanticAnalyzer {
             Ok(res) => {
                 data_type = res.result_type;
                 meta.resolved_overload = Some(res.signature.name);
-                for conv in res.conversions.iter().flatten() {
-                    meta.implicit_conversions.push(format!("{:?}", conv));
+                if self._options.implicit_conversions_enabled() {
+                    for conv in res.conversions.iter().flatten() {
+                        meta.implicit_conversions.push(format!("{:?}", conv));
+                    }
                 }
             }
             Err(_err) => {
@@ -323,8 +327,10 @@ impl SemanticAnalyzer {
             Ok(res) => {
                 data_type = res.result_type;
                 meta.resolved_overload = Some(res.signature.name);
-                for conv in res.conversions.iter().flatten() {
-                    meta.implicit_conversions.push(format!("{:?}", conv));
+                if self._options.implicit_conversions_enabled() {
+                    for conv in res.conversions.iter().flatten() {
+                        meta.implicit_conversions.push(format!("{:?}", conv));
+                    }
                 }
             }
             Err(_err) => {
@@ -362,8 +368,10 @@ impl SemanticAnalyzer {
             Ok(res) => {
                 data_type = res.result_type;
                 meta.resolved_overload = Some(res.signature.name);
-                for conv in res.conversions.iter().flatten() {
-                    meta.implicit_conversions.push(format!("{:?}", conv));
+                if self._options.implicit_conversions_enabled() {
+                    for conv in res.conversions.iter().flatten() {
+                        meta.implicit_conversions.push(format!("{:?}", conv));
+                    }
                 }
             }
             Err(_err) => {
