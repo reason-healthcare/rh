@@ -98,8 +98,8 @@
 - [x] 6.7 Add `occurs` timing phrase qualifier parsing
 - [x] 6.8 Add `properly` modifier parsing for timing/interval phrases
 - [x] 6.9 Write parser unit tests for each new production
-- [ ] 6.10 Run jvmTest conformance suite, verify ≥90% pass rate (≥107/119 files)
-- [ ] 6.11 Verify no regressions in previously passing 90 test files
+- [x] 6.10 Run jvmTest conformance suite, verify ≥90% pass rate (≥107/119 files)
+- [x] 6.11 Verify no regressions in previously passing 90 test files
 
 ## 7. Source-Map Infrastructure
 
