@@ -45,14 +45,14 @@
 - [x] 3.21 Implement case analysis: analyze comparand, case items, else, unify result types
 - [x] 3.22 Implement interval expression analysis: analyze low/high bounds, resolve point type
 - [x] 3.23 Implement list expression analysis: analyze elements, resolve common element type
-- [ ] 3.24 Implement tuple expression analysis: analyze element expressions, build tuple type
-- [ ] 3.25 Implement instance expression analysis: resolve class type from model, analyze property values
-- [ ] 3.26 Implement type expression analysis (Is, As, Cast, Convert): resolve target type
-- [ ] 3.27 Implement timing expression analysis: resolve timing phrase semantics, operand types
-- [ ] 3.28 Implement DateTimeComponentFrom analysis: resolve component extraction type
-- [ ] 3.29 Replace FHIR type string-matching heuristics (`infer_fhir_result_type`) with `ModelInfoProvider`-driven type resolution
-- [ ] 3.30 Write integration tests: analyze sample CQL libraries, verify TypedLibrary output types match expectations
-- [ ] 3.31 Write integration tests: verify diagnostics emitted for undefined references, type mismatches, ambiguous overloads
+- [x] 3.24 Implement tuple expression analysis: analyze element expressions, build tuple type
+- [x] 3.25 Implement instance expression analysis: resolve class type from model, analyze property values
+- [x] 3.26 Implement type expression analysis (Is, As, Cast, Convert): resolve target type
+- [x] 3.27 Implement timing expression analysis: resolve timing phrase semantics, operand types
+- [x] 3.28 Implement DateTimeComponentFrom analysis: resolve component extraction type
+- [x] 3.29 Replace FHIR type string-matching heuristics (`infer_fhir_result_type`) with `ModelInfoProvider`-driven type resolution
+- [x] 3.30 Write integration tests: analyze sample CQL libraries, verify TypedLibrary output types match expectations
+- [x] 3.31 Write integration tests: verify diagnostics emitted for undefined references, type mismatches, ambiguous overloads
 
 ## 4. ELM Emitter Rewrite
 

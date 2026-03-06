@@ -1,8 +1,5 @@
 use crate::datatype::DataType;
-use crate::parser::ast::{
-    Case, DateTimeComponentFromExpr, IdentifierRef, Instance, IntervalExpression, Literal,
-    QualifiedIdentifierRef, Query, Retrieve, TimingExpression, TupleExpression, TypeExpression,
-};
+use crate::parser::ast::{IdentifierRef, Literal, QualifiedIdentifierRef};
 use std::hash::Hash;
 
 /// A stable, hash-based identifier for nodes in the Typed AST.
@@ -69,7 +66,7 @@ pub struct TypedQuery {
     pub where_clause: Option<Box<TypedNode<TypedExpression>>>,
     pub return_clause: Option<TypedReturnClause>,
     pub sort_clause: Option<TypedSortClause>,
-    // Removed `location` to avoid relying on private `SourceLocation` 
+    // Removed `location` to avoid relying on private `SourceLocation`
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,6 +134,44 @@ pub struct TypedIntervalExpression {
     pub high_closed: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedTupleElement {
+    pub name: String,
+    pub value: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedInstanceElement {
+    pub name: String,
+    pub value: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedInstance {
+    pub class_type: crate::parser::ast::TypeSpecifier,
+    pub elements: Vec<TypedInstanceElement>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedTypeExpression {
+    pub operator: crate::parser::ast::TypeOperator,
+    pub operand: Box<TypedNode<TypedExpression>>,
+    pub type_specifier: crate::parser::ast::TypeSpecifier,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedTimingExpression {
+    pub left: Box<TypedNode<TypedExpression>>,
+    pub right: Box<TypedNode<TypedExpression>>,
+    pub timing: crate::parser::ast::TimingPhrase,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedDateTimeComponentFrom {
+    pub precision: crate::parser::ast::DateTimePrecision,
+    pub operand: Box<TypedNode<TypedExpression>>,
+}
+
 /// An expression that has been through semantic analysis and type resolution.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedExpression {
@@ -158,9 +193,9 @@ pub enum TypedExpression {
         Box<TypedNode<TypedExpression>>,
         Box<TypedNode<TypedExpression>>,
     ),
-    DateTimeComponentFrom(DateTimeComponentFromExpr),
-    TypeExpression(TypeExpression),
-    TimingExpression(TimingExpression),
+    DateTimeComponentFrom(TypedDateTimeComponentFrom),
+    TypeExpression(TypedTypeExpression),
+    TimingExpression(TypedTimingExpression),
     FunctionInvocation(TypedFunctionInvocation),
     MemberInvocation(TypedMemberInvocation),
     IndexInvocation(TypedIndexInvocation),
@@ -174,8 +209,8 @@ pub enum TypedExpression {
     Case(TypedCase),
     IntervalExpression(TypedIntervalExpression),
     ListExpression(Vec<TypedNode<TypedExpression>>),
-    TupleExpression(TupleExpression),
-    Instance(Instance),
+    TupleExpression(Vec<TypedTupleElement>),
+    Instance(TypedInstance),
     LetClause(String, Box<TypedNode<TypedExpression>>),
     Parenthesized(Box<TypedNode<TypedExpression>>),
 }

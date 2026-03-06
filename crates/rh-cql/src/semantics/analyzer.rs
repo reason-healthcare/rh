@@ -200,7 +200,20 @@ impl SemanticAnalyzer {
                             if ci.name.as_deref() == Some(mt_name) {
                                 for el in &ci.element {
                                     if el.name.as_deref() == Some(&e.name) {
-                                        dt = DataType::any(); // Placeholder, it's hard to resolve element_type to DataType locally without type_resolver
+                                        // TODO: support full modelinfo::TypeSpecifier
+                                        if let Some(type_str) = &el.element_type {
+                                            if let Ok(res_dt) =
+                                                self.resolve_qualified_name(type_str)
+                                            {
+                                                dt = res_dt;
+                                            }
+                                        } else if let Some(type_str) = &el.type_name {
+                                            if let Ok(res_dt) =
+                                                self.resolve_qualified_name(type_str)
+                                            {
+                                                dt = res_dt;
+                                            }
+                                        }
                                         break;
                                     }
                                 }
@@ -378,6 +391,21 @@ impl SemanticAnalyzer {
         NodeId(id)
     }
 
+    fn resolve_type_specifier(
+        &self,
+        spec: &ast::TypeSpecifier,
+    ) -> Result<DataType, crate::types::TypeError> {
+        let resolver =
+            crate::types::TypeResolver::with_model_provider(self._model_provider.as_ref());
+        resolver.resolve_type_specifier(spec)
+    }
+
+    fn resolve_qualified_name(&self, name: &str) -> Result<DataType, crate::types::TypeError> {
+        let resolver =
+            crate::types::TypeResolver::with_model_provider(self._model_provider.as_ref());
+        resolver.resolve_qualified_name(name)
+    }
+
     pub fn analyze(mut self, library: ast::Library) -> (TypedLibrary, Vec<CqlCompilerException>) {
         for u in &library.usings {
             self.scope_manager.register_symbol(
@@ -509,10 +537,10 @@ impl SemanticAnalyzer {
             ast::Expression::BinaryExpression(e) => return self.analyze_binary_expression(e),
             ast::Expression::TernaryExpression(e) => return self.analyze_ternary_expression(e),
             ast::Expression::DateTimeComponentFrom(e) => {
-                TypedExpression::DateTimeComponentFrom(e.clone())
+                return self.analyze_datetime_component_from(e)
             }
-            ast::Expression::TypeExpression(e) => TypedExpression::TypeExpression(e.clone()),
-            ast::Expression::TimingExpression(e) => TypedExpression::TimingExpression(e.clone()),
+            ast::Expression::TypeExpression(e) => return self.analyze_type_expression(e),
+            ast::Expression::TimingExpression(e) => return self.analyze_timing_expression(e),
             ast::Expression::FunctionInvocation(e) => return self.analyze_function_invocation(e),
             ast::Expression::MemberInvocation(e) => return self.analyze_member_invocation(e),
             ast::Expression::IndexInvocation(e) => return self.analyze_index_invocation(e),
@@ -527,8 +555,8 @@ impl SemanticAnalyzer {
                     .map(|elem| self.analyze_expression(elem))
                     .collect(),
             ),
-            ast::Expression::TupleExpression(e) => TypedExpression::TupleExpression(e.clone()),
-            ast::Expression::Instance(e) => TypedExpression::Instance(e.clone()),
+            ast::Expression::TupleExpression(e) => return self.analyze_tuple_expression(e),
+            ast::Expression::Instance(e) => return self.analyze_instance_expression(e),
             ast::Expression::Let(e) => TypedExpression::LetClause(
                 e.identifier.clone(),
                 Box::new(self.analyze_expression(&e.expression)),
@@ -588,7 +616,10 @@ impl SemanticAnalyzer {
         let meta = SemanticMeta::default();
         let span = SourceSpan::default();
 
-        let dt = DataType::any(); // TODO: get type from ModelInfo
+        let base_dt = self
+            .resolve_type_specifier(&e.data_type)
+            .unwrap_or(DataType::any());
+        let dt = DataType::List(Box::new(base_dt));
 
         let named_type = match &e.data_type {
             ast::TypeSpecifier::Named(n) => n.clone(),
@@ -708,6 +739,156 @@ impl SemanticAnalyzer {
                 high_closed: e.high_closed,
                 low,
                 high,
+            },
+        );
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_tuple_expression(
+        &mut self,
+        e: &ast::TupleExpression,
+    ) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let mut typed_elements = Vec::new();
+        // tuple type is an aggregate of its element types. To keep things simpler we construct an Any type for now.
+        let dt = DataType::any();
+
+        for elem in &e.elements {
+            let typed_val = self.analyze_expression(&elem.value);
+            typed_elements.push(crate::semantics::typed_ast::TypedTupleElement {
+                name: elem.name.clone(),
+                value: Box::new(typed_val),
+            });
+        }
+
+        let inner = TypedExpression::TupleExpression(typed_elements);
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_instance_expression(&mut self, e: &ast::Instance) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let dt = self
+            .resolve_type_specifier(&e.class_type)
+            .unwrap_or(DataType::any());
+
+        let mut typed_elements = Vec::new();
+        for elem in &e.elements {
+            let typed_val = self.analyze_expression(&elem.value);
+            typed_elements.push(crate::semantics::typed_ast::TypedInstanceElement {
+                name: elem.name.clone(),
+                value: Box::new(typed_val),
+            });
+        }
+
+        let inner = TypedExpression::Instance(crate::semantics::typed_ast::TypedInstance {
+            class_type: e.class_type.clone(),
+            elements: typed_elements,
+        });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_type_expression(
+        &mut self,
+        e: &ast::TypeExpression,
+    ) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let typed_operand = self.analyze_expression(&e.operand);
+        let dt = match e.operator {
+            ast::TypeOperator::Is => DataType::system(crate::datatype::SystemType::Boolean),
+            _ => self
+                .resolve_type_specifier(&e.type_specifier)
+                .unwrap_or(DataType::any()),
+        };
+
+        let inner =
+            TypedExpression::TypeExpression(crate::semantics::typed_ast::TypedTypeExpression {
+                operator: e.operator,
+                operand: Box::new(typed_operand),
+                type_specifier: e.type_specifier.clone(),
+            });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_timing_expression(
+        &mut self,
+        e: &ast::TimingExpression,
+    ) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let left = self.analyze_expression(&e.left);
+        let right = self.analyze_expression(&e.right);
+        let dt = DataType::system(crate::datatype::SystemType::Boolean);
+
+        let inner =
+            TypedExpression::TimingExpression(crate::semantics::typed_ast::TypedTimingExpression {
+                left: Box::new(left),
+                right: Box::new(right),
+                timing: e.timing.clone(),
+            });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_datetime_component_from(
+        &mut self,
+        e: &ast::DateTimeComponentFromExpr,
+    ) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let operand = self.analyze_expression(&e.operand);
+        let dt = DataType::system(crate::datatype::SystemType::Integer); // component extraction is integer
+
+        let inner = TypedExpression::DateTimeComponentFrom(
+            crate::semantics::typed_ast::TypedDateTimeComponentFrom {
+                precision: e.precision,
+                operand: Box::new(operand),
             },
         );
 

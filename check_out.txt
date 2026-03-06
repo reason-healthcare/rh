@@ -1,0 +1,4 @@
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+    Checking rh-cql v0.1.0 (/Users/bkaney/projects/rh/crates/rh-cql)
+error: Recipe `lint` was terminated on line 99 by signal 2
