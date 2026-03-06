@@ -1,7 +1,7 @@
 use crate::elm;
+use crate::emit::ElmEmitter;
 use crate::parser::ast::{BinaryOperator, TernaryOperator, UnaryOperator};
 use crate::semantics::typed_ast::{TypedExpression, TypedNode};
-use crate::emit::ElmEmitter;
 
 pub fn emit_unary_operator(
     operator: &UnaryOperator,
@@ -11,7 +11,7 @@ pub fn emit_unary_operator(
     emit_expr: impl Fn(&TypedNode<TypedExpression>, &mut ElmEmitter) -> elm::Expression,
 ) -> elm::Expression {
     let element = ctx.element_fields(node);
-    
+
     // Handle Expand specially - it uses BinaryExpression even with single operand in ELM
     if matches!(operator, UnaryOperator::Expand) {
         return elm::Expression::Expand(elm::BinaryExpression {
@@ -86,7 +86,7 @@ pub fn emit_binary_operator(
         signature: Vec::new(),
         precision: None, // Filled by other paths if needed
     };
-    
+
     let nary = || elm::NaryExpression {
         element: element.clone(),
         operand: vec![left_expr.clone(), right_expr.clone()],
@@ -99,7 +99,9 @@ pub fn emit_binary_operator(
         BinaryOperator::Multiply => elm::Expression::Multiply(binary()),
         BinaryOperator::Divide => {
             let mut l_expr = left_expr.clone();
-            if left.data_type == crate::datatype::DataType::integer() || left.data_type == crate::datatype::DataType::long() {
+            if left.data_type == crate::datatype::DataType::integer()
+                || left.data_type == crate::datatype::DataType::long()
+            {
                 l_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(left),
                     operand: Some(Box::new(l_expr)),
@@ -107,7 +109,9 @@ pub fn emit_binary_operator(
                 });
             }
             let mut r_expr = right_expr.clone();
-            if right.data_type == crate::datatype::DataType::integer() || right.data_type == crate::datatype::DataType::long() {
+            if right.data_type == crate::datatype::DataType::integer()
+                || right.data_type == crate::datatype::DataType::long()
+            {
                 r_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(right),
                     operand: Some(Box::new(r_expr)),
@@ -119,7 +123,7 @@ pub fn emit_binary_operator(
                 operand: vec![l_expr, r_expr],
                 signature: Vec::new(),
             })
-        },
+        }
         BinaryOperator::TruncatedDivide => elm::Expression::TruncatedDivide(binary()),
         BinaryOperator::Modulo => elm::Expression::Modulo(binary()),
         BinaryOperator::Power => elm::Expression::Power(binary()),
@@ -127,9 +131,7 @@ pub fn emit_binary_operator(
 
         BinaryOperator::Equal => elm::Expression::Equal(binary()),
         BinaryOperator::NotEqual => elm::Expression::NotEqual(binary()),
-        BinaryOperator::Equivalent => {
-            elm::Expression::Equivalent(binary())
-        }
+        BinaryOperator::Equivalent => elm::Expression::Equivalent(binary()),
         BinaryOperator::NotEquivalent => {
             let equiv = elm::Expression::Equivalent(binary());
             elm::Expression::Not(elm::UnaryExpression {
@@ -171,7 +173,7 @@ pub fn emit_binary_operator(
         BinaryOperator::SameAs => elm::Expression::SameAs(time_binary()),
         BinaryOperator::SameOrBefore => elm::Expression::SameOrBefore(time_binary()),
         BinaryOperator::SameOrAfter => elm::Expression::SameOrAfter(time_binary()),
-        BinaryOperator::Within => elm::Expression::IncludedIn(time_binary()), 
+        BinaryOperator::Within => elm::Expression::IncludedIn(time_binary()),
 
         BinaryOperator::Union => elm::Expression::Union(binary()),
         BinaryOperator::Intersect => elm::Expression::Intersect(binary()),
@@ -198,7 +200,7 @@ pub fn emit_ternary_operator(
     match operator {
         TernaryOperator::Between => {
             let ge = elm::Expression::GreaterOrEqual(elm::BinaryExpression {
-                element: ctx.element_fields(node), 
+                element: ctx.element_fields(node),
                 operand: vec![first_expr.clone(), second_expr],
                 signature: Vec::new(),
             });
@@ -268,7 +270,7 @@ pub fn emit_system_function(
             "Power" => Some(elm::Expression::Power(binary)),
             "Round" => {
                 // Round is unary or binary depending on args. In ELM, it's defined:
-                // Actually wait... is elm::Expression::Round an Nary, Binary, or Unary? 
+                // Actually wait... is elm::Expression::Round an Nary, Binary, or Unary?
                 // Let's check `translator.rs` to see what it mapped to.
                 // Wait, if elm::Expression only has `Round(UnaryExpression)`, how does Round with precision work?
                 // Old translator didn't implement binary round, or it mapped to Round with precision?

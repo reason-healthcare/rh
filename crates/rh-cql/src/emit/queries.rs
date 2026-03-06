@@ -1,8 +1,8 @@
 use super::ElmEmitter;
 use crate::elm;
 use crate::semantics::typed_ast::{
-    TypedNode, TypedExpression, TypedQuery, TypedQuerySource, TypedLetClause,
-    TypedRelationshipClause, TypedReturnClause, TypedSortClause, TypedRetrieve, TypedSortItem
+    TypedExpression, TypedLetClause, TypedNode, TypedQuery, TypedQuerySource,
+    TypedRelationshipClause, TypedRetrieve, TypedReturnClause, TypedSortClause, TypedSortItem,
 };
 
 pub fn emit_query(
@@ -41,10 +41,7 @@ pub fn emit_query(
         .as_ref()
         .map(|r| emit_return_clause(r, ctx, &emit_expr));
 
-    let sort = query
-        .sort_clause
-        .as_ref()
-        .map(|s| emit_sort_clause(s));
+    let sort = query.sort_clause.as_ref().map(emit_sort_clause);
 
     elm::Expression::Query(elm::Query {
         element,
@@ -94,7 +91,10 @@ fn emit_relationship_clause(
         relationship_type: Some(rel_type.to_string()),
         alias: Some(rel.source.alias.clone()),
         expression: Some(Box::new(emit_expr(&rel.source.expression, ctx))),
-        such_that: rel.such_that.as_ref().map(|st| Box::new(emit_expr(st, ctx))),
+        such_that: rel
+            .such_that
+            .as_ref()
+            .map(|st| Box::new(emit_expr(st, ctx))),
     }
 }
 
@@ -109,11 +109,9 @@ fn emit_return_clause(
     }
 }
 
-fn emit_sort_clause(
-    sort: &TypedSortClause,
-) -> elm::SortClause {
+fn emit_sort_clause(sort: &TypedSortClause) -> elm::SortClause {
     elm::SortClause {
-        by: sort.items.iter().map(|item| emit_sort_item(item)).collect(),
+        by: sort.items.iter().map(emit_sort_item).collect(),
     }
 }
 
@@ -124,12 +122,14 @@ fn extract_sort_path(expr: &TypedNode<TypedExpression>) -> Option<String> {
     }
 }
 
-fn emit_sort_item(
-    item: &TypedSortItem,
-) -> elm::SortByItem {
+fn emit_sort_item(item: &TypedSortItem) -> elm::SortByItem {
     let path = extract_sort_path(&item.expression);
-    let sort_by_type = if path.is_some() { "ByColumn" } else { "ByExpression" };
-    
+    let sort_by_type = if path.is_some() {
+        "ByColumn"
+    } else {
+        "ByExpression"
+    };
+
     elm::SortByItem {
         sort_by_type: Some(sort_by_type.to_string()),
         direction: match item.direction {
@@ -148,7 +148,11 @@ pub fn emit_retrieve(
 ) -> elm::Expression {
     let element = ctx.element_fields(node);
 
-    let ns = retrieve.data_type.namespace.as_deref().unwrap_or("http://hl7.org/fhir");
+    let ns = retrieve
+        .data_type
+        .namespace
+        .as_deref()
+        .unwrap_or("http://hl7.org/fhir");
     let data_type = format!("{{{}}}{}", ns, retrieve.data_type.name);
 
     elm::Expression::Retrieve(elm::Retrieve {
@@ -160,7 +164,10 @@ pub fn emit_retrieve(
         code_comparator: None,
         codes: retrieve.codes.as_ref().map(|c| Box::new(emit_expr(c, ctx))),
         date_property: None,
-        date_range: retrieve.date_range.as_ref().map(|r| Box::new(emit_expr(r, ctx))),
+        date_range: retrieve
+            .date_range
+            .as_ref()
+            .map(|r| Box::new(emit_expr(r, ctx))),
         include: vec![],
         code_filter: vec![],
         date_filter: vec![],

@@ -113,7 +113,9 @@ impl ElmEmitter {
 
             TE::Query(q) => queries::emit_query(q, node, self, |n, ctx| ctx.emit_expression(n)),
 
-            TE::Retrieve(r) => queries::emit_retrieve(r, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::Retrieve(r) => {
+                queries::emit_retrieve(r, node, self, |n, ctx| ctx.emit_expression(n))
+            }
 
             TE::TypeExpression(te) => {
                 types::emit_type_expression(te, node, self, |n, ctx| ctx.emit_expression(n))
@@ -391,16 +393,75 @@ impl ElmEmitter {
     }
 }
 
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Convert a [`DataType`] to an ELM QName string.
+///
+/// Mirrors the logic in `translator::datatype_to_qname`.
+pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
+    match dt {
+        DataType::System(sys) => qname_system(system_type_name(sys)),
+        DataType::Model { namespace, name } => format!("{{{namespace}}}{name}"),
+        DataType::List(elem) => {
+            let inner = datatype_to_qname(elem);
+            let name = extract_type_name(&inner);
+            qname_system(&format!("List<{name}>"))
+        }
+        DataType::Interval(point) => {
+            let inner = datatype_to_qname(point);
+            let name = extract_type_name(&inner);
+            qname_system(&format!("Interval<{name}>"))
+        }
+        DataType::Tuple(_) => qname_system("Tuple"),
+        DataType::Choice(_) => qname_system("Any"),
+        DataType::TypeParameter(name) => qname_system(name),
+        DataType::Unknown => qname_system("Any"),
+    }
+}
+
+fn qname_system(name: &str) -> elm::QName {
+    format!("{{urn:hl7-org:elm-types:r1}}{name}")
+}
+
+fn extract_type_name(qname: &str) -> &str {
+    if let Some(pos) = qname.rfind('}') {
+        &qname[pos + 1..]
+    } else {
+        qname
+    }
+}
+
+fn system_type_name(sys: &SystemType) -> &'static str {
+    match sys {
+        SystemType::Any => "Any",
+        SystemType::Boolean => "Boolean",
+        SystemType::Integer => "Integer",
+        SystemType::Long => "Long",
+        SystemType::Decimal => "Decimal",
+        SystemType::String => "String",
+        SystemType::Date => "Date",
+        SystemType::DateTime => "DateTime",
+        SystemType::Time => "Time",
+        SystemType::Quantity => "Quantity",
+        SystemType::Ratio => "Ratio",
+        SystemType::Code => "Code",
+        SystemType::Concept => "Concept",
+        SystemType::Vocabulary => "Vocabulary",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::datatype::{DataType, SystemType};
     use crate::options::{CompilerOption, CompilerOptions};
-    use crate::semantics::typed_ast::{
-        NodeId, SemanticMeta, SourceLocation, SourceSpan, TypedCase, TypedCaseItem, TypedExpression,
-        TypedNode,
-    };
     use crate::parser::ast::Literal;
+    use crate::semantics::typed_ast::{
+        NodeId, SemanticMeta, SourceLocation, SourceSpan, TypedCase, TypedCaseItem,
+        TypedExpression, TypedNode,
+    };
 
     // -----------------------------------------------------------------------
     // Test helpers
@@ -426,6 +487,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     fn node_str(s: &str) -> TypedNode<TypedExpression> {
         TypedNode {
             node_id: NodeId(0),
@@ -487,8 +549,16 @@ mod tests {
     fn test_element_fields_locator_populated_when_enabled() {
         let mut node = node_int(1);
         node.span = SourceSpan {
-            start: SourceLocation { line: 3, column: 5, offset: 0 },
-            end: SourceLocation { line: 3, column: 12, offset: 0 },
+            start: SourceLocation {
+                line: 3,
+                column: 5,
+                offset: 0,
+            },
+            end: SourceLocation {
+                line: 3,
+                column: 12,
+                offset: 0,
+            },
         };
         let opts = CompilerOptions::default().with_option(CompilerOption::EnableLocators);
         let mut emitter = emitter_with_options(opts);
@@ -570,7 +640,10 @@ mod tests {
         let expr = ctx.emit_expression(&node);
         if let elm::Expression::Literal(lit) = expr {
             assert_eq!(lit.value.as_deref(), Some("42"));
-            assert_eq!(lit.value_type.as_deref(), Some("{urn:hl7-org:elm-types:r1}Integer"));
+            assert_eq!(
+                lit.value_type.as_deref(),
+                Some("{urn:hl7-org:elm-types:r1}Integer")
+            );
         } else {
             panic!("Expected Literal, got {:?}", expr);
         }
@@ -775,65 +848,5 @@ mod tests {
         } else {
             panic!("Expected ExpressionRef");
         }
-    }
-}
-
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/// Convert a [`DataType`] to an ELM QName string.
-///
-/// Mirrors the logic in `translator::datatype_to_qname`.
-pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
-    match dt {
-        DataType::System(sys) => qname_system(system_type_name(sys)),
-        DataType::Model { namespace, name } => format!("{{{namespace}}}{name}"),
-        DataType::List(elem) => {
-            let inner = datatype_to_qname(elem);
-            let name = extract_type_name(&inner);
-            qname_system(&format!("List<{name}>"))
-        }
-        DataType::Interval(point) => {
-            let inner = datatype_to_qname(point);
-            let name = extract_type_name(&inner);
-            qname_system(&format!("Interval<{name}>"))
-        }
-        DataType::Tuple(_) => qname_system("Tuple"),
-        DataType::Choice(_) => qname_system("Any"),
-        DataType::TypeParameter(name) => qname_system(name),
-        DataType::Unknown => qname_system("Any"),
-    }
-}
-
-fn qname_system(name: &str) -> elm::QName {
-    format!("{{urn:hl7-org:elm-types:r1}}{name}")
-}
-
-fn extract_type_name(qname: &str) -> &str {
-    if let Some(pos) = qname.rfind('}') {
-        &qname[pos + 1..]
-    } else {
-        qname
-    }
-}
-
-fn system_type_name(sys: &SystemType) -> &'static str {
-    match sys {
-        SystemType::Any => "Any",
-        SystemType::Boolean => "Boolean",
-        SystemType::Integer => "Integer",
-        SystemType::Long => "Long",
-        SystemType::Decimal => "Decimal",
-        SystemType::String => "String",
-        SystemType::Date => "Date",
-        SystemType::DateTime => "DateTime",
-        SystemType::Time => "Time",
-        SystemType::Quantity => "Quantity",
-        SystemType::Ratio => "Ratio",
-        SystemType::Code => "Code",
-        SystemType::Concept => "Concept",
-        SystemType::Vocabulary => "Vocabulary",
     }
 }

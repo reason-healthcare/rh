@@ -65,13 +65,13 @@
 - [x] 4.7 Create `src/emit/queries.rs`: emit Query, Retrieve, SortClause, LetClause, RelationshipClause
 - [x] 4.8 Create `src/emit/clinical.rs`: emit CodeSystemRef, ValueSetRef, CodeRef, ConceptRef
 - [x] 4.9 Create `src/emit/types.rs`: emit type expressions (Is, As, Convert), IntervalExpression, ListExpression, TupleExpression, Instance
-- [ ] 4.10 Create `src/emit/conditionals.rs`: emit If, Case expressions
-- [ ] 4.11 Implement locator population from `TypedNode.span` when `EnableLocators` is set
-- [ ] 4.12 Implement `resultTypeName` population from `TypedNode.data_type` when `EnableResultTypes` is set
-- [ ] 4.13 Implement annotation population when `EnableAnnotations` is set
-- [ ] 4.14 Verify no emitter submodule exceeds 500 lines
-- [ ] 4.15 Write unit tests for each emitter submodule against known ELM output expectations
-- [ ] 4.16 Write conformance comparison tests: emit ELM from sample CQL, compare with Java reference translator output for the 10 comparison files
+- [x] 4.10 Create `src/emit/conditionals.rs`: emit If, Case expressions
+- [x] 4.11 Implement locator population from `TypedNode.span` when `EnableLocators` is set
+- [x] 4.12 Implement `resultTypeName` population from `TypedNode.data_type` when `EnableResultTypes` is set
+- [x] 4.13 Implement annotation population when `EnableAnnotations` is set
+- [x] 4.14 Verify no emitter submodule exceeds 500 lines
+- [x] 4.15 Write unit tests for each emitter submodule against known ELM output expectations
+- [x] 4.16 Write conformance comparison tests: emit ELM from sample CQL, compare with Java reference translator output for the 10 comparison files
 
 ## 5. Pipeline Wiring and Migration
 

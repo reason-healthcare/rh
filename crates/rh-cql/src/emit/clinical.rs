@@ -1,6 +1,6 @@
 use super::ElmEmitter;
 use crate::elm;
-use crate::semantics::typed_ast::{TypedNode, TypedExpression};
+use crate::semantics::typed_ast::{TypedExpression, TypedNode};
 
 pub fn emit_code_system_ref(
     name: &str,

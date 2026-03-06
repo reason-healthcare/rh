@@ -7,8 +7,8 @@
 //! Task 4.16: Write conformance comparison tests — emit ELM from sample CQL,
 //! compare with Java reference translator output for the comparison files.
 
-use rh_cql::emit::{datatype_to_qname, ElmEmitter};
 use rh_cql::elm;
+use rh_cql::emit::{datatype_to_qname, ElmEmitter};
 use rh_cql::options::{CompilerOption, CompilerOptions};
 use rh_cql::parser::CqlParser;
 use rh_cql::provider::{MemoryModelInfoProvider, ModelInfoProvider};
@@ -20,20 +20,22 @@ use std::sync::Arc;
 // Test helpers
 // ---------------------------------------------------------------------------
 
-fn analyze(cql: &str) -> (rh_cql::semantics::typed_ast::TypedLibrary, Vec<rh_cql::CqlCompilerException>) {
+fn analyze(
+    cql: &str,
+) -> (
+    rh_cql::semantics::typed_ast::TypedLibrary,
+    Vec<rh_cql::CqlCompilerException>,
+) {
     let parser = CqlParser::new();
     let ast_lib = parser.parse(cql).expect("parse failed");
     let provider: Arc<dyn ModelInfoProvider> = Arc::new(MemoryModelInfoProvider::new());
-    let opts = CompilerOptions::new()
-        .with_option(CompilerOption::EnableResultTypes);
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
     let analyzer = SemanticAnalyzer::new(provider, opts);
     analyzer.analyze(ast_lib)
 }
 
 fn emitter_with_result_types() -> ElmEmitter {
-    ElmEmitter::new(
-        CompilerOptions::new().with_option(CompilerOption::EnableResultTypes),
-    )
+    ElmEmitter::new(CompilerOptions::new().with_option(CompilerOption::EnableResultTypes))
 }
 
 /// Extract the typed expression body of the first `ExpressionDef` statement.
@@ -55,9 +57,7 @@ fn first_expr_body(
 
 #[test]
 fn test_conformance_integer_add() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: 1 + 2\n",
-    );
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: 1 + 2\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
@@ -86,9 +86,7 @@ fn test_conformance_integer_add() {
 
 #[test]
 fn test_conformance_boolean_and() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: true and false\n",
-    );
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: true and false\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
@@ -107,9 +105,7 @@ fn test_conformance_boolean_and() {
 
 #[test]
 fn test_conformance_string_literal() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: 'hello world'\n",
-    );
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: 'hello world'\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
@@ -155,9 +151,7 @@ fn test_conformance_simple_test_add() {
 
 #[test]
 fn test_conformance_result_type_name_on_integer_literal() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: 42\n",
-    );
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: 42\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
@@ -181,9 +175,8 @@ fn test_conformance_result_type_name_on_integer_literal() {
 
 #[test]
 fn test_conformance_if_then_else_structure() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: if true then 1 else 2\n",
-    );
+    let (typed_lib, diags) =
+        analyze("library Test version '1.0'\ndefine Expr: if true then 1 else 2\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
@@ -205,9 +198,7 @@ fn test_conformance_if_then_else_structure() {
 
 #[test]
 fn test_conformance_integer_divide_promotes_to_decimal() {
-    let (typed_lib, diags) = analyze(
-        "library Test version '1.0'\ndefine Expr: 10 / 3\n",
-    );
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: 10 / 3\n");
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let body = first_expr_body(&typed_lib);
