@@ -43,6 +43,7 @@
 //! - [`operators`]: Operator resolution for CQL semantic analysis
 //! - [`translator`]: Expression translation from CQL AST to ELM (deprecated — use `emit`)
 //! - [`emit`]: Multi-stage ELM emitter (new preferred pipeline)
+//! - [`eval`]: Runtime value model, three-valued logic, and eval engine
 //! - [`semantics`]: Semantic analysis — `SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`
 //! - [`options`]: Compiler options for translation behavior
 //! - [`output`]: ELM output generation (JSON serialization)
@@ -54,6 +55,7 @@ pub mod conversion;
 pub mod datatype;
 pub mod elm;
 pub mod emit;
+pub mod eval;
 pub mod error;
 pub mod explain;
 pub mod library;
@@ -125,6 +127,8 @@ pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 
 // New pipeline types — preferred public API
 pub use emit::ElmEmitter;
+pub use eval::value::{cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
+pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use semantics::analyzer::SemanticAnalyzer;
 pub use semantics::scope::ScopeManager;
 pub use semantics::typed_ast::{

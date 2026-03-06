@@ -123,27 +123,53 @@
 
 ## 9. Eval Engine
 
-- [ ] 9.1 Create `src/eval/mod.rs` with submodule declarations
-- [ ] 9.2 Define `Value` enum with all CQL runtime value types (Null, Boolean, Integer, Long, Decimal, String, Date, DateTime, Time, Quantity, Ratio, Code, Concept, List, Tuple, Interval)
-- [ ] 9.3 Implement `Value` display, equality, and equivalence per CQL spec
-- [ ] 9.4 Implement three-valued logic (And, Or, Not, Implies, Xor with null propagation)
+### 9.A Foundation
+
+- [x] 9.1 Create `src/eval/mod.rs` with submodule declarations
+- [x] 9.2 Define `Value` enum with all CQL runtime value types (Null, Boolean, Integer, Long, Decimal, String, Date, DateTime, Time, Quantity, Ratio, Code, Concept, List, Tuple, Interval)
+- [x] 9.3 Implement `Value` display, equality, and equivalence per CQL spec
+- [x] 9.4 Implement three-valued logic (And, Or, Not, Implies, Xor with null propagation)
+
+### 9.B Context & Providers
+
 - [ ] 9.5 Define `EvalContext` struct with deterministic clock, timezone, parameter values, context value, provider references
 - [ ] 9.6 Define `DataProvider` trait with `retrieve()` method
 - [ ] 9.7 Define `TerminologyProvider` trait with `in_valueset()`, `expand_valueset()`, `lookup()` methods
 - [ ] 9.8 Implement `InMemoryDataProvider` for testing
 - [ ] 9.9 Implement `InMemoryTerminologyProvider` for testing
+
+### 9.C Arithmetic & Comparison Operators
+
 - [ ] 9.10 Create `src/eval/operators.rs`: implement arithmetic operators (Add, Subtract, Multiply, Divide, Modulo, Negate, Abs, Ceiling, Floor, Truncate, Round, Power, Ln, Exp, Log, Predecessor, Successor, MinValue, MaxValue)
 - [ ] 9.11 Create `src/eval/operators.rs`: implement comparison operators (Equal, Equivalent, Less, Greater, LessOrEqual, GreaterOrEqual) with null handling
+
+### 9.D String & Date/Time Operators
+
 - [ ] 9.12 Create `src/eval/operators.rs`: implement string operators (Concatenate, Combine, Split, Length, Upper, Lower, StartsWith, EndsWith, Matches, Indexer, PositionOf, Substring)
 - [ ] 9.13 Create `src/eval/operators.rs`: implement date/time operators (construction, component extraction, date arithmetic, SameAs, SameOrBefore, SameOrAfter, duration calculations)
+
+### 9.E Type Conversion Operators
+
 - [ ] 9.14 Create `src/eval/operators.rs`: implement type conversion operators (ToBoolean, ToInteger, ToDecimal, ToLong, ToString, ToDate, ToDateTime, ToTime, ToQuantity, ToConcept, Is, As, Convert)
+
+### 9.F Interval & List Operators
+
 - [ ] 9.15 Create `src/eval/intervals.rs`: implement interval operators (Contains, In, Includes, IncludedIn, Overlaps, Meets, Starts, Ends, Union, Intersect, Except, Width, Start, End, PointFrom, Expand, Collapse)
 - [ ] 9.16 Create `src/eval/lists.rs`: implement list operators (Exists, Count, Sum, Min, Max, Avg, First, Last, IndexOf, Contains, In, Flatten, Distinct, Sort, Filter, ForEach, SingletonFrom, Union, Intersect, Except)
+
+### 9.G Query Evaluation
+
 - [ ] 9.17 Create `src/eval/queries.rs`: implement single-source query evaluation (from, where, return, sort, let)
+
+### 9.H Evaluation Entry Points & Trace
+
 - [ ] 9.18 Implement `evaluate_elm()` entry point: accept `elm::Library`, expression name, `EvalContext`, return `Result<Value>`
 - [ ] 9.19 Implement `evaluate_elm_with_trace()`: return `(Value, Vec<TraceEvent>)` with step-by-step trace events
 - [ ] 9.20 Define `TraceEvent` struct with `event_id`, `elm_node_id`, `op`, `inputs`, `output`, `children`
 - [ ] 9.21 Wire `explain_eval()` to use `evaluate_elm_with_trace()` once the eval engine is functional
+
+### 9.I Tests
+
 - [ ] 9.22 Write unit tests for each operator family (arithmetic, comparison, string, date/time, type conversion, interval, list)
 - [ ] 9.23 Write integration tests: evaluate sample CQL expressions end-to-end (compile → eval)
 
