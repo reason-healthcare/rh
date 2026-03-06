@@ -13,12 +13,12 @@
 //! - [`tvl`]     — Three-valued logic (And, Or, Not, Implies, Xor)
 //!
 //! Future phases will add:
-//! - `context`   — [`EvalContext`], [`DataProvider`], [`TerminologyProvider`]
+//! - `context`   — `EvalContext`, `DataProvider`, `TerminologyProvider`
 //! - `operators` — Arithmetic, comparison, string, date/time operators
 //! - `intervals` — Interval operators
 //! - `lists`     — List operators
 //! - `queries`   — Query evaluation
-//! - `engine`    — [`evaluate_elm`] / [`evaluate_elm_with_trace`] entry points
+//! - `engine`    — `evaluate_elm` / `evaluate_elm_with_trace` entry points
 
 pub mod tvl;
 pub mod value;
