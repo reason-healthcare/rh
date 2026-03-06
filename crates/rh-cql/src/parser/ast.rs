@@ -348,6 +348,10 @@ pub enum Expression {
 
     // Parenthesized
     Parenthesized(Box<Expression>),
+
+    // minimum/maximum of a type (e.g., `minimum Integer`)
+    MinValue(TypeSpecifier),
+    MaxValue(TypeSpecifier),
 }
 
 /// Literal values
@@ -728,10 +732,36 @@ pub struct Query {
     pub where_clause: Option<Box<Expression>>,
     /// Return clause
     pub return_clause: Option<ReturnClause>,
+    /// Aggregate clause (instead of return clause)
+    pub aggregate_clause: Option<AggregateClause>,
     /// Sort clause
     pub sort_clause: Option<SortClause>,
     /// Source location
     pub location: Option<SourceLocation>,
+}
+
+/// Aggregate clause for query expressions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AggregateClause {
+    /// Whether to use distinct values
+    pub distinct: bool,
+    /// Accumulator identifier
+    pub identifier: String,
+    /// Optional starting value
+    pub starting: Option<AggregateStarting>,
+    /// Aggregate expression
+    pub expression: Box<Expression>,
+    /// Source location
+    pub location: Option<SourceLocation>,
+}
+
+/// Starting clause for aggregate expressions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AggregateStarting {
+    /// Whether starting value uses distinct
+    pub distinct: bool,
+    /// Starting expression
+    pub expression: Box<Expression>,
 }
 
 /// Query source

@@ -65,8 +65,17 @@ pub struct TypedQuery {
     pub relationships: Vec<TypedRelationshipClause>,
     pub where_clause: Option<Box<TypedNode<TypedExpression>>>,
     pub return_clause: Option<TypedReturnClause>,
+    pub aggregate_clause: Option<TypedAggregateClause>,
     pub sort_clause: Option<TypedSortClause>,
     // Removed `location` to avoid relying on private `SourceLocation`
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedAggregateClause {
+    pub distinct: bool,
+    pub identifier: String,
+    pub starting: Option<Box<TypedNode<TypedExpression>>>,
+    pub expression: Box<TypedNode<TypedExpression>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -213,6 +222,8 @@ pub enum TypedExpression {
     Instance(TypedInstance),
     LetClause(String, Box<TypedNode<TypedExpression>>),
     Parenthesized(Box<TypedNode<TypedExpression>>),
+    MinValue(crate::parser::ast::TypeSpecifier),
+    MaxValue(crate::parser::ast::TypeSpecifier),
 }
 
 /// A statement that has been through semantic analysis.

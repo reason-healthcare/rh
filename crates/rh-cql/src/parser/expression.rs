@@ -1155,6 +1155,16 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 })
             },
         ),
+        // "minimum <TypeSpecifier>" expression - returns minimum value for the type
+        map(
+            preceded(ws(keyword("minimum")), parse_type_specifier),
+            |ts| Expression::MinValue(ts),
+        ),
+        // "maximum <TypeSpecifier>" expression - returns maximum value for the type
+        map(
+            preceded(ws(keyword("maximum")), parse_type_specifier),
+            |ts| Expression::MaxValue(ts),
+        ),
         // "cast X as Type" expression (prefix syntax)
         parse_cast_expression,
         // "convert X to Type" expression (prefix syntax)
@@ -1739,10 +1749,14 @@ fn parse_case_item(input: Span<'_>) -> IResult<Span<'_>, CaseItem> {
 fn parse_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("from"))(input)?;
     let (input, sources) = separated_list1(ws(char(',')), parse_query_source)(input)?;
-    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, let_clauses) = {
+        let (i, groups) = many0(parse_let_clause_group)(input)?;
+        (i, groups.into_iter().flatten().collect::<Vec<_>>())
+    };
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
 
     Ok((
@@ -1753,6 +1767,7 @@ fn parse_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             relationships,
             where_clause: where_clause.map(Box::new),
             return_clause,
+            aggregate_clause,
             sort_clause,
             location: None,
         }),
@@ -1813,10 +1828,14 @@ fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     };
 
     // Now parse optional query clauses
-    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, let_clauses) = {
+        let (i, groups) = many0(parse_let_clause_group)(input)?;
+        (i, groups.into_iter().flatten().collect::<Vec<_>>())
+    };
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
 
     let source = QuerySource {
@@ -1833,6 +1852,7 @@ fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             relationships,
             where_clause: where_clause.map(Box::new),
             return_clause,
+            aggregate_clause,
             sort_clause,
             location: None,
         }),
@@ -1851,10 +1871,14 @@ fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expres
     let (input, alias) = any_identifier(input)?;
 
     // Now parse query clauses
-    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, let_clauses) = {
+        let (i, groups) = many0(parse_let_clause_group)(input)?;
+        (i, groups.into_iter().flatten().collect::<Vec<_>>())
+    };
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
 
     // Must have at least one clause to be a query
@@ -1862,6 +1886,7 @@ fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expres
         && relationships.is_empty()
         && where_clause.is_none()
         && return_clause.is_none()
+        && aggregate_clause.is_none()
         && sort_clause.is_none()
     {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -1884,6 +1909,7 @@ fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expres
             relationships,
             where_clause: where_clause.map(Box::new),
             return_clause,
+            aggregate_clause,
             sort_clause,
             location: None,
         }),
@@ -1919,10 +1945,14 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
     let (input, alias) = any_identifier(input)?;
 
     // Now parse query clauses
-    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, let_clauses) = {
+        let (i, groups) = many0(parse_let_clause_group)(input)?;
+        (i, groups.into_iter().flatten().collect::<Vec<_>>())
+    };
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
 
     // Must have at least one clause to be a query
@@ -1930,6 +1960,7 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
         && relationships.is_empty()
         && where_clause.is_none()
         && return_clause.is_none()
+        && aggregate_clause.is_none()
         && sort_clause.is_none()
     {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -1952,6 +1983,7 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
             relationships,
             where_clause: where_clause.map(Box::new),
             return_clause,
+            aggregate_clause,
             sort_clause,
             location: None,
         }),
@@ -1988,10 +2020,14 @@ fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, 
     let (input, alias) = any_identifier(input)?;
 
     // Now parse query clauses
-    let (input, let_clauses) = many0(parse_let_clause)(input)?;
+    let (input, let_clauses) = {
+        let (i, groups) = many0(parse_let_clause_group)(input)?;
+        (i, groups.into_iter().flatten().collect::<Vec<_>>())
+    };
     let (input, relationships) = many0(parse_relationship_clause)(input)?;
     let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
     let (input, return_clause) = opt(parse_return_clause)(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
     let (input, sort_clause) = opt(parse_sort_clause)(input)?;
 
     // Must have at least one clause to be a query
@@ -1999,6 +2035,7 @@ fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, 
         && relationships.is_empty()
         && where_clause.is_none()
         && return_clause.is_none()
+        && aggregate_clause.is_none()
         && sort_clause.is_none()
     {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -2021,6 +2058,7 @@ fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, 
             relationships,
             where_clause: where_clause.map(Box::new),
             return_clause,
+            aggregate_clause,
             sort_clause,
             location: None,
         }),
@@ -2085,9 +2123,8 @@ fn parse_simple_source_expression(input: Span<'_>) -> IResult<Span<'_>, Expressi
     ))
 }
 
-fn parse_let_clause(input: Span<'_>) -> IResult<Span<'_>, LetClause> {
-    let (input, _) = ws(keyword("let"))(input)?;
-    let (input, identifier) = any_identifier(input)?;
+fn parse_let_clause_item(input: Span<'_>) -> IResult<Span<'_>, LetClause> {
+    let (input, identifier) = ws(any_identifier)(input)?;
     let (input, _) = ws(char(':'))(input)?;
     let (input, expr) = expression(input)?;
 
@@ -2095,6 +2132,49 @@ fn parse_let_clause(input: Span<'_>) -> IResult<Span<'_>, LetClause> {
         input,
         LetClause {
             identifier,
+            expression: Box::new(expr),
+            location: None,
+        },
+    ))
+}
+
+/// Parse a `let` group: `let <id>: <expr> [, <id>: <expr>]*`
+fn parse_let_clause_group(input: Span<'_>) -> IResult<Span<'_>, Vec<LetClause>> {
+    let (input, _) = ws(keyword("let"))(input)?;
+    separated_list1(ws(char(',')), parse_let_clause_item)(input)
+}
+
+fn parse_aggregate_clause(input: Span<'_>) -> IResult<Span<'_>, AggregateClause> {
+    let (input, _) = ws(keyword("aggregate"))(input)?;
+    let (input, distinct) = opt(ws(alt((
+        value(true, keyword("distinct")),
+        value(false, keyword("all")),
+    ))))(input)?;
+    let (input, identifier) = ws(any_identifier)(input)?;
+    let (input, starting) = opt(|input| {
+        let (input, _) = ws(keyword("starting"))(input)?;
+        let (input, distinct_start) = opt(ws(alt((
+            value(true, keyword("distinct")),
+            value(false, keyword("all")),
+        ))))(input)?;
+        let (input, expr) = expression(input)?;
+        Ok((
+            input,
+            AggregateStarting {
+                distinct: distinct_start.unwrap_or(false),
+                expression: Box::new(expr),
+            },
+        ))
+    })(input)?;
+    let (input, _) = ws(char(':'))(input)?;
+    let (input, expr) = expression(input)?;
+
+    Ok((
+        input,
+        AggregateClause {
+            distinct: distinct.unwrap_or(false),
+            identifier,
+            starting,
             expression: Box::new(expr),
             location: None,
         },
@@ -2756,6 +2836,133 @@ mod tests {
             );
         } else {
             panic!("Expected BinaryExpression with ProperlyIncludes");
+        }
+    }
+
+    // ========================================================================
+    // Section 6.9 Parser Conformance Tests
+    // ========================================================================
+
+    #[test]
+    fn test_predecessor_of() {
+        let expr = parse_expr("predecessor of 5");
+        assert!(matches!(
+            expr,
+            Expression::UnaryExpression(UnaryExpression {
+                operator: UnaryOperator::Predecessor,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_successor_of() {
+        let expr = parse_expr("successor of x");
+        assert!(matches!(
+            expr,
+            Expression::UnaryExpression(UnaryExpression {
+                operator: UnaryOperator::Successor,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_power_operator() {
+        let expr = parse_expr("2 ^ 10");
+        if let Expression::BinaryExpression(bin) = expr {
+            assert_eq!(bin.operator, BinaryOperator::Power);
+        } else {
+            panic!("Expected BinaryExpression with Power operator");
+        }
+    }
+
+    #[test]
+    fn test_minimum_type_specifier() {
+        let expr = parse_expr("minimum Integer");
+        if let Expression::MinValue(ts) = expr {
+            assert!(matches!(ts, TypeSpecifier::Named(_)));
+        } else {
+            panic!("Expected MinValue expression, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_maximum_type_specifier() {
+        let expr = parse_expr("maximum Date");
+        if let Expression::MaxValue(ts) = expr {
+            assert!(matches!(ts, TypeSpecifier::Named(_)));
+        } else {
+            panic!("Expected MaxValue expression, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_query_with_aggregate_clause() {
+        let expr = parse_expr("from X A\n  let b: A.val\n  aggregate total: Sum(b)");
+        if let Expression::Query(q) = expr {
+            assert!(!q.let_clauses.is_empty(), "Expected let clauses");
+            assert!(q.aggregate_clause.is_some(), "Expected aggregate clause");
+            let agg = q.aggregate_clause.unwrap();
+            assert_eq!(agg.identifier, "total");
+            assert!(!agg.distinct);
+        } else {
+            panic!("Expected Query expression, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_query_with_multiple_let_items() {
+        // Multiple let items in one let clause group
+        let expr = parse_expr("from X A\n  let b: A.val, c: A.other\n  where b > 1");
+        if let Expression::Query(q) = expr {
+            assert_eq!(q.let_clauses.len(), 2, "Expected 2 let clause items");
+            assert_eq!(q.let_clauses[0].identifier, "b");
+            assert_eq!(q.let_clauses[1].identifier, "c");
+        } else {
+            panic!("Expected Query expression, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_timing_starts() {
+        let expr = parse_expr("A starts B");
+        if let Expression::BinaryExpression(bin) = expr {
+            assert_eq!(bin.operator, BinaryOperator::Starts);
+        } else {
+            panic!("Expected BinaryExpression with Starts operator, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_timing_ends() {
+        let expr = parse_expr("A ends B");
+        if let Expression::BinaryExpression(bin) = expr {
+            assert_eq!(bin.operator, BinaryOperator::Ends);
+        } else {
+            panic!("Expected BinaryExpression with Ends operator, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_timing_occurs_during() {
+        // "during" is the binary operator for inclusion
+        let expr = parse_expr("A during B");
+        if let Expression::BinaryExpression(bin) = expr {
+            assert_eq!(bin.operator, BinaryOperator::During);
+        } else {
+            panic!("Expected BinaryExpression with During operator, got: {expr:?}");
+        }
+    }
+
+    #[test]
+    fn test_timing_properly_during() {
+        // "properly included in" is the long form of properly during
+        let expr = parse_expr("A properly included in B");
+        if let Expression::BinaryExpression(bin) = expr {
+            assert_eq!(bin.operator, BinaryOperator::ProperlyIncludedIn);
+        } else {
+            panic!("Expected BinaryExpression with ProperlyIncludedIn operator, got: {expr:?}");
         }
     }
 }

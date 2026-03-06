@@ -187,5 +187,7 @@ fn expression_kind(expr: &Expression) -> &'static str {
         Expression::Let(_) => "Let",
         Expression::Parenthesized(_) => "Parenthesized",
         Expression::DateTimeComponentFrom(_) => "DateTimeComponentFrom",
+        Expression::MinValue(_) => "MinValue",
+        Expression::MaxValue(_) => "MaxValue",
     }
 }

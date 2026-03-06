@@ -89,15 +89,15 @@
 
 ## 6. Parser Conformance Improvements
 
-- [ ] 6.1 Add `predecessor of` / `successor of` keyword parsing as unary expressions
-- [ ] 6.2 Add `^` power operator in expression parser with correct precedence (above multiplicative, below unary)
-- [ ] 6.3 Add `minimum <TypeSpecifier>` / `maximum <TypeSpecifier>` expression parsing
-- [ ] 6.4 Add `aggregate` clause parsing in query expressions
-- [ ] 6.5 Fix `let` clause parsing in queries (multiple let clauses, correct scoping)
-- [ ] 6.6 Add `starts` / `ends` timing phrase qualifier parsing
-- [ ] 6.7 Add `occurs` timing phrase qualifier parsing
-- [ ] 6.8 Add `properly` modifier parsing for timing/interval phrases
-- [ ] 6.9 Write parser unit tests for each new production
+- [x] 6.1 Add `predecessor of` / `successor of` keyword parsing as unary expressions
+- [x] 6.2 Add `^` power operator in expression parser with correct precedence (above multiplicative, below unary)
+- [x] 6.3 Add `minimum <TypeSpecifier>` / `maximum <TypeSpecifier>` expression parsing
+- [x] 6.4 Add `aggregate` clause parsing in query expressions
+- [x] 6.5 Fix `let` clause parsing in queries (multiple let clauses, correct scoping)
+- [x] 6.6 Add `starts` / `ends` timing phrase qualifier parsing
+- [x] 6.7 Add `occurs` timing phrase qualifier parsing
+- [x] 6.8 Add `properly` modifier parsing for timing/interval phrases
+- [x] 6.9 Write parser unit tests for each new production
 - [ ] 6.10 Run jvmTest conformance suite, verify ≥90% pass rate (≥107/119 files)
 - [ ] 6.11 Verify no regressions in previously passing 90 test files
 

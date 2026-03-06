@@ -564,6 +564,8 @@ impl SemanticAnalyzer {
             ast::Expression::Parenthesized(e) => {
                 TypedExpression::Parenthesized(Box::new(self.analyze_expression(e)))
             }
+            ast::Expression::MinValue(ts) => TypedExpression::MinValue(ts.clone()),
+            ast::Expression::MaxValue(ts) => TypedExpression::MaxValue(ts.clone()),
         };
 
         TypedNode {
@@ -590,16 +592,78 @@ impl SemanticAnalyzer {
             });
         }
 
+        let let_clauses = e
+            .let_clauses
+            .iter()
+            .map(|lc| crate::semantics::typed_ast::TypedLetClause {
+                identifier: lc.identifier.clone(),
+                expression: Box::new(self.analyze_expression(&lc.expression)),
+            })
+            .collect();
+
+        let relationships = e
+            .relationships
+            .iter()
+            .map(|r| {
+                let source = crate::semantics::typed_ast::TypedQuerySource {
+                    alias: r.source.alias.clone(),
+                    expression: Box::new(self.analyze_expression(&r.source.expression)),
+                };
+                crate::semantics::typed_ast::TypedRelationshipClause {
+                    kind: r.kind,
+                    source,
+                    such_that: r
+                        .such_that
+                        .as_ref()
+                        .map(|st| Box::new(self.analyze_expression(st))),
+                }
+            })
+            .collect();
+
+        let return_clause = e.return_clause.as_ref().map(|rc| {
+            crate::semantics::typed_ast::TypedReturnClause {
+                distinct: rc.distinct,
+                all: rc.all,
+                expression: Box::new(self.analyze_expression(&rc.expression)),
+            }
+        });
+
+        let aggregate_clause = e.aggregate_clause.as_ref().map(|ac| {
+            crate::semantics::typed_ast::TypedAggregateClause {
+                distinct: ac.distinct,
+                identifier: ac.identifier.clone(),
+                starting: ac
+                    .starting
+                    .as_ref()
+                    .map(|s| Box::new(self.analyze_expression(&s.expression))),
+                expression: Box::new(self.analyze_expression(&ac.expression)),
+            }
+        });
+
+        let sort_clause = e.sort_clause.as_ref().map(|sc| {
+            crate::semantics::typed_ast::TypedSortClause {
+                items: sc
+                    .items
+                    .iter()
+                    .map(|item| crate::semantics::typed_ast::TypedSortItem {
+                        expression: Box::new(self.analyze_expression(&item.expression)),
+                        direction: item.direction,
+                    })
+                    .collect(),
+            }
+        });
+
         let inner = TypedExpression::Query(crate::semantics::typed_ast::TypedQuery {
             sources,
-            let_clauses: Vec::new(),   // TODO: map let clauses
-            relationships: Vec::new(), // TODO: map relationships
+            let_clauses,
+            relationships,
             where_clause: e
                 .where_clause
                 .as_ref()
                 .map(|w| Box::new(self.analyze_expression(w))),
-            return_clause: None,
-            sort_clause: None,
+            return_clause,
+            aggregate_clause,
+            sort_clause,
         });
 
         TypedNode {

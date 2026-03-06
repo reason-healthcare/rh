@@ -200,6 +200,24 @@ impl ElmEmitter {
 
             TE::Parenthesized(inner) => self.emit_expression(inner),
 
+            TE::MinValue(ts) => {
+                let element = self.element_fields(node);
+                let value_type = type_specifier_to_qname(ts);
+                elm::Expression::MinValue(elm::TypedExpression {
+                    element,
+                    value_type: Some(value_type),
+                })
+            }
+
+            TE::MaxValue(ts) => {
+                let element = self.element_fields(node);
+                let value_type = type_specifier_to_qname(ts);
+                elm::Expression::MaxValue(elm::TypedExpression {
+                    element,
+                    value_type: Some(value_type),
+                })
+            }
+
             TE::TimingExpression(te) => {
                 // Timing expressions are complex interval operations; delegate through binary
                 let element = self.element_fields(node);
@@ -397,7 +415,7 @@ impl ElmEmitter {
 // Helper Functions
 // ============================================================================
 
-/// Convert a [`DataType`] to an ELM QName string.
+/// Convert a [`DataType`] to an ELM QName string.\n
 ///
 /// Mirrors the logic in `translator::datatype_to_qname`.
 pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
@@ -423,6 +441,32 @@ pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
 
 fn qname_system(name: &str) -> elm::QName {
     format!("{{urn:hl7-org:elm-types:r1}}{name}")
+}
+
+/// Convert a CQL `TypeSpecifier` (from the parser AST) to an ELM `QName`.
+pub(crate) fn type_specifier_to_qname(ts: &crate::parser::ast::TypeSpecifier) -> elm::QName {
+    use crate::parser::ast::TypeSpecifier;
+    match ts {
+        TypeSpecifier::Named(n) => {
+            if let Some(ns) = &n.namespace {
+                format!("{{{ns}}}{}", n.name)
+            } else {
+                qname_system(&n.name)
+            }
+        }
+        TypeSpecifier::List(l) => {
+            let inner = type_specifier_to_qname(&l.element_type);
+            let name = extract_type_name(&inner);
+            qname_system(&format!("List<{name}>"))
+        }
+        TypeSpecifier::Interval(i) => {
+            let inner = type_specifier_to_qname(&i.point_type);
+            let name = extract_type_name(&inner);
+            qname_system(&format!("Interval<{name}>"))
+        }
+        TypeSpecifier::Tuple(_) => qname_system("Tuple"),
+        TypeSpecifier::Choice(_) => qname_system("Any"),
+    }
 }
 
 fn extract_type_name(qname: &str) -> &str {

@@ -1,7 +1,7 @@
 use super::ElmEmitter;
 use crate::elm;
 use crate::semantics::typed_ast::{
-    TypedExpression, TypedLetClause, TypedNode, TypedQuery, TypedQuerySource,
+    TypedAggregateClause, TypedExpression, TypedLetClause, TypedNode, TypedQuery, TypedQuerySource,
     TypedRelationshipClause, TypedRetrieve, TypedReturnClause, TypedSortClause, TypedSortItem,
 };
 
@@ -41,6 +41,11 @@ pub fn emit_query(
         .as_ref()
         .map(|r| emit_return_clause(r, ctx, &emit_expr));
 
+    let aggregate = query
+        .aggregate_clause
+        .as_ref()
+        .map(|ac| emit_aggregate_clause(ac, ctx, &emit_expr));
+
     let sort = query.sort_clause.as_ref().map(emit_sort_clause);
 
     elm::Expression::Query(elm::Query {
@@ -50,9 +55,27 @@ pub fn emit_query(
         relationship,
         where_clause,
         return_clause,
-        aggregate: None,
+        aggregate,
         sort,
     })
+}
+
+fn emit_aggregate_clause(
+    ac: &TypedAggregateClause,
+    ctx: &mut ElmEmitter,
+    emit_expr: &impl Fn(&TypedNode<TypedExpression>, &mut ElmEmitter) -> elm::Expression,
+) -> elm::AggregateClause {
+    let element = crate::elm::ElementFields::default();
+    elm::AggregateClause {
+        element,
+        identifier: Some(ac.identifier.clone()),
+        distinct: if ac.distinct { Some(true) } else { None },
+        starting: ac
+            .starting
+            .as_ref()
+            .map(|s| Box::new(emit_expr(s, ctx))),
+        expression: Some(Box::new(emit_expr(&ac.expression, ctx))),
+    }
 }
 
 fn emit_query_source(
