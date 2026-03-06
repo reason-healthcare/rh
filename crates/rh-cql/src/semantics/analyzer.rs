@@ -32,7 +32,6 @@ impl SemanticAnalyzer {
         }
     }
 
-
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
         let dt = match e {
             ast::Literal::Null => DataType::system(crate::datatype::SystemType::Any),
@@ -44,11 +43,13 @@ impl SemanticAnalyzer {
             ast::Literal::Date(_) => DataType::system(crate::datatype::SystemType::Date),
             ast::Literal::DateTime(_) => DataType::system(crate::datatype::SystemType::DateTime),
             ast::Literal::Time(_) => DataType::system(crate::datatype::SystemType::Time),
-            ast::Literal::Quantity { .. } => DataType::system(crate::datatype::SystemType::Quantity),
+            ast::Literal::Quantity { .. } => {
+                DataType::system(crate::datatype::SystemType::Quantity)
+            }
             ast::Literal::Ratio { .. } => DataType::system(crate::datatype::SystemType::Ratio),
             ast::Literal::Code { .. } => DataType::system(crate::datatype::SystemType::Code),
         };
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -60,18 +61,26 @@ impl SemanticAnalyzer {
 
     fn analyze_identifier_ref(&mut self, e: &ast::IdentifierRef) -> TypedNode<TypedExpression> {
         let sym = self.scope_manager.resolve_symbol(None, &e.name);
-        
+
         let (dt, resolved_symbol) = match sym {
-            Some(s) => (s.result_type.clone().unwrap_or(DataType::Unknown), Some(s.name.clone())),
+            Some(s) => (
+                s.result_type.clone().unwrap_or(DataType::Unknown),
+                Some(s.name.clone()),
+            ),
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!("Could not resolve identifier: {}", e.name)));
+                self.diagnostics.push(CqlCompilerException::new(format!(
+                    "Could not resolve identifier: {}",
+                    e.name
+                )));
                 (DataType::Unknown, None)
             }
         };
-        
-        let mut meta = SemanticMeta::default();
-        meta.resolved_symbol = resolved_symbol;
-        
+
+        let meta = SemanticMeta {
+            resolved_symbol,
+            ..Default::default()
+        };
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -81,23 +90,36 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_qualified_identifier_ref(&mut self, e: &ast::QualifiedIdentifierRef) -> TypedNode<TypedExpression> {
-        let sym = self.scope_manager.resolve_symbol(Some(&e.qualifier), &e.name);
-        
+    fn analyze_qualified_identifier_ref(
+        &mut self,
+        e: &ast::QualifiedIdentifierRef,
+    ) -> TypedNode<TypedExpression> {
+        let sym = self
+            .scope_manager
+            .resolve_symbol(Some(&e.qualifier), &e.name);
+
         let (dt, resolved_symbol) = match sym {
             Some(s) => {
                 let lib_name = s.library.as_ref().map(|l| l.name.as_str()).unwrap_or("");
-                (s.result_type.clone().unwrap_or(DataType::Unknown), Some(format!("{}.{}", lib_name, s.name)))
-            },
+                (
+                    s.result_type.clone().unwrap_or(DataType::Unknown),
+                    Some(format!("{}.{}", lib_name, s.name)),
+                )
+            }
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!("Could not resolve qualified identifier: {}.{}", e.qualifier, e.name)));
+                self.diagnostics.push(CqlCompilerException::new(format!(
+                    "Could not resolve qualified identifier: {}.{}",
+                    e.qualifier, e.name
+                )));
                 (DataType::Unknown, None)
             }
         };
-        
-        let mut meta = SemanticMeta::default();
-        meta.resolved_symbol = resolved_symbol;
-        
+
+        let meta = SemanticMeta {
+            resolved_symbol,
+            ..Default::default()
+        };
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -107,38 +129,45 @@ impl SemanticAnalyzer {
         }
     }
 
-    
-    fn analyze_function_invocation(&mut self, e: &ast::FunctionInvocation) -> TypedNode<TypedExpression> {
+    fn analyze_function_invocation(
+        &mut self,
+        e: &ast::FunctionInvocation,
+    ) -> TypedNode<TypedExpression> {
         let mut arguments = Vec::new();
         let mut arg_types = Vec::new();
-        
+
         for arg in &e.arguments {
             let typed_arg = self.analyze_expression(arg);
             arg_types.push(typed_arg.data_type.clone());
             arguments.push(typed_arg);
         }
-        
+
         let mut dt = DataType::Unknown;
         let mut meta = SemanticMeta::default();
-        
-        if let Ok(res) = self.operator_resolver.resolve_with_operands(&e.name, &arg_types) {
-             dt = res.result_type;
-             meta.resolved_overload = Some(res.signature.name);
-             for conv in res.conversions.iter().flatten() {
-                 meta.implicit_conversions.push(format!("{:?}", conv));
-             }
-        } 
-        else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
-             if let Some(f) = funcs.iter().find(|f| f.operand_types.len() == arg_types.len()) {
-                  dt = f.result_type.clone();
-                  meta.resolved_symbol = Some(e.name.clone());
-             } else {
-                  // self.diagnostics.push(CqlCompilerException::new(format!("Could not find overload for function {}", e.name)));
-             }
+
+        if let Ok(res) = self
+            .operator_resolver
+            .resolve_with_operands(&e.name, &arg_types)
+        {
+            dt = res.result_type;
+            meta.resolved_overload = Some(res.signature.name);
+            for conv in res.conversions.iter().flatten() {
+                meta.implicit_conversions.push(format!("{:?}", conv));
+            }
+        } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
+            if let Some(f) = funcs
+                .iter()
+                .find(|f| f.operand_types.len() == arg_types.len())
+            {
+                dt = f.result_type.clone();
+                meta.resolved_symbol = Some(e.name.clone());
+            } else {
+                // self.diagnostics.push(CqlCompilerException::new(format!("Could not find overload for function {}", e.name)));
+            }
         } else {
-             // self.diagnostics.push(CqlCompilerException::new(format!("Could not resolve function {}", e.name)));
+            // self.diagnostics.push(CqlCompilerException::new(format!("Could not resolve function {}", e.name)));
         }
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -153,12 +182,18 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_member_invocation(&mut self, e: &ast::MemberInvocation) -> TypedNode<TypedExpression> {
+    fn analyze_member_invocation(
+        &mut self,
+        e: &ast::MemberInvocation,
+    ) -> TypedNode<TypedExpression> {
         let source = self.analyze_expression(&e.source);
         let mut dt = DataType::Unknown;
-        
+
         match &source.data_type {
-            DataType::Model { namespace, name: mt_name } => {
+            DataType::Model {
+                namespace,
+                name: mt_name,
+            } => {
                 if let Some(model_info) = self._model_provider.get_model(namespace, None) {
                     for ti in &model_info.type_info {
                         if let crate::modelinfo::TypeInfo::ClassInfo(ci) = ti {
@@ -173,7 +208,7 @@ impl SemanticAnalyzer {
                         }
                     }
                 }
-            },
+            }
             DataType::Tuple(tup) => {
                 for element in tup {
                     if element.name == e.name {
@@ -181,12 +216,12 @@ impl SemanticAnalyzer {
                         break;
                     }
                 }
-            },
+            }
             _ => {
                 // If it's something else, can we resolve it? Maybe a system type property like String.length?
             }
         }
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -204,13 +239,15 @@ impl SemanticAnalyzer {
     fn analyze_index_invocation(&mut self, e: &ast::IndexInvocation) -> TypedNode<TypedExpression> {
         let source = self.analyze_expression(&e.source);
         let index = self.analyze_expression(&e.index);
-        
+
         let dt = match &source.data_type {
             DataType::List(inner) => *inner.clone(),
-            DataType::System(crate::datatype::SystemType::String) => DataType::System(crate::datatype::SystemType::String),
+            DataType::System(crate::datatype::SystemType::String) => {
+                DataType::System(crate::datatype::SystemType::String)
+            }
             _ => DataType::Unknown,
         };
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type: dt,
@@ -225,14 +262,15 @@ impl SemanticAnalyzer {
         }
     }
 
-    
     fn analyze_unary_expression(&mut self, e: &ast::UnaryExpression) -> TypedNode<TypedExpression> {
         let operand = self.analyze_expression(&e.operand);
-        let resolved = self.operator_resolver.resolve_unary(e.operator, &operand.data_type);
-        
+        let resolved = self
+            .operator_resolver
+            .resolve_unary(e.operator, &operand.data_type);
+
         let mut meta = SemanticMeta::default();
         let mut data_type = DataType::Unknown;
-        
+
         match resolved {
             Ok(res) => {
                 data_type = res.result_type;
@@ -241,11 +279,11 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
-            Err(err) => {
+            Err(_err) => {
                 // self.diagnostics.push(CqlCompilerException::new(err.to_string()));
             }
         }
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type,
@@ -255,14 +293,19 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_binary_expression(&mut self, e: &ast::BinaryExpression) -> TypedNode<TypedExpression> {
+    fn analyze_binary_expression(
+        &mut self,
+        e: &ast::BinaryExpression,
+    ) -> TypedNode<TypedExpression> {
         let left = self.analyze_expression(&e.left);
         let right = self.analyze_expression(&e.right);
-        let resolved = self.operator_resolver.resolve_binary(e.operator, &left.data_type, &right.data_type);
-        
+        let resolved =
+            self.operator_resolver
+                .resolve_binary(e.operator, &left.data_type, &right.data_type);
+
         let mut meta = SemanticMeta::default();
         let mut data_type = DataType::Unknown;
-        
+
         match resolved {
             Ok(res) => {
                 data_type = res.result_type;
@@ -271,11 +314,11 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
-            Err(err) => {
+            Err(_err) => {
                 // self.diagnostics.push(CqlCompilerException::new(err.to_string()));
             }
         }
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type,
@@ -285,15 +328,23 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_ternary_expression(&mut self, e: &ast::TernaryExpression) -> TypedNode<TypedExpression> {
+    fn analyze_ternary_expression(
+        &mut self,
+        e: &ast::TernaryExpression,
+    ) -> TypedNode<TypedExpression> {
         let first = self.analyze_expression(&e.first);
         let second = self.analyze_expression(&e.second);
         let third = self.analyze_expression(&e.third);
-        let resolved = self.operator_resolver.resolve_ternary(e.operator, &first.data_type, &second.data_type, &third.data_type);
-        
+        let resolved = self.operator_resolver.resolve_ternary(
+            e.operator,
+            &first.data_type,
+            &second.data_type,
+            &third.data_type,
+        );
+
         let mut meta = SemanticMeta::default();
         let mut data_type = DataType::Unknown;
-        
+
         match resolved {
             Ok(res) => {
                 data_type = res.result_type;
@@ -302,17 +353,22 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
-            Err(err) => {
+            Err(_err) => {
                 // self.diagnostics.push(CqlCompilerException::new(err.to_string()));
             }
         }
-        
+
         TypedNode {
             node_id: self.generate_node_id(),
             data_type,
             span: SourceSpan::default(),
             meta,
-            inner: TypedExpression::TernaryExpression(e.operator, Box::new(first), Box::new(second), Box::new(third)),
+            inner: TypedExpression::TernaryExpression(
+                e.operator,
+                Box::new(first),
+                Box::new(second),
+                Box::new(third),
+            ),
         }
     }
 
@@ -446,7 +502,9 @@ impl SemanticAnalyzer {
         let inner = match expr {
             ast::Expression::Literal(e) => return self.analyze_literal(e),
             ast::Expression::IdentifierRef(e) => return self.analyze_identifier_ref(e),
-            ast::Expression::QualifiedIdentifierRef(e) => return self.analyze_qualified_identifier_ref(e),
+            ast::Expression::QualifiedIdentifierRef(e) => {
+                return self.analyze_qualified_identifier_ref(e)
+            }
             ast::Expression::UnaryExpression(e) => return self.analyze_unary_expression(e),
             ast::Expression::BinaryExpression(e) => return self.analyze_binary_expression(e),
             ast::Expression::TernaryExpression(e) => return self.analyze_ternary_expression(e),
@@ -496,26 +554,24 @@ impl SemanticAnalyzer {
 
         let dt = DataType::any(); // TODO: determine query type
 
-        let inner = TypedExpression::Query(TypedQuery {
-            source: if let Some(s) = &e.source {
-                let mut sources = Vec::new();
-                for a in &s.0 {
-                    sources.push(ast::AliasedQuerySource {
-                        alias: a.alias.clone(),
-                        expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
-                            name: "TODO".to_string(),
-                            location: None,
-                        }))
-                    });
-                }
-                Some(ast::QuerySource(sources))
-            } else {
-                None
-            },
-            let_clause: None,
-            where_clause: e.where_clause.as_ref().map(|w| Box::new(self.analyze_expression(&w))),
+        let mut sources = Vec::new();
+        for s in &e.sources {
+            sources.push(crate::semantics::typed_ast::TypedQuerySource {
+                alias: s.alias.clone(),
+                expression: Box::new(self.analyze_expression(&s.expression)),
+            });
+        }
+
+        let inner = TypedExpression::Query(crate::semantics::typed_ast::TypedQuery {
+            sources,
+            let_clauses: Vec::new(),   // TODO: map let clauses
+            relationships: Vec::new(), // TODO: map relationships
+            where_clause: e
+                .where_clause
+                .as_ref()
+                .map(|w| Box::new(self.analyze_expression(w))),
             return_clause: None,
-            sort_clause: None
+            sort_clause: None,
         });
 
         TypedNode {
@@ -534,21 +590,24 @@ impl SemanticAnalyzer {
 
         let dt = DataType::any(); // TODO: get type from ModelInfo
 
-        let inner = TypedExpression::Retrieve(TypedRetrieve {
-            data_type: e.data_type.clone(),
-            template_id: e.template_id.clone(),
-            context: e.context.clone(),
-            context_search: None,
-            code_property: e.code_property.clone(),
-            codes: None,
-            date_property: e.date_property.clone(),
-            date_range: None,
-            id_property: e.id_property.clone(),
-            id_search: None,
-            related_context: None,
-            related_context_property: None,
-            related_context_search: None,
-            inclusion_elements: e.inclusion_elements.clone()
+        let named_type = match &e.data_type {
+            ast::TypeSpecifier::Named(n) => n.clone(),
+            _ => ast::NamedTypeSpecifier {
+                namespace: None,
+                name: "Unknown".to_string(),
+            },
+        };
+
+        let inner = TypedExpression::Retrieve(crate::semantics::typed_ast::TypedRetrieve {
+            data_type: named_type.clone(),
+            codes: e
+                .codes
+                .as_ref()
+                .map(|c| Box::new(self.analyze_expression(c))),
+            date_range: e
+                .date_range
+                .as_ref()
+                .map(|d| Box::new(self.analyze_expression(d))),
         });
 
         TypedNode {
@@ -586,26 +645,29 @@ impl SemanticAnalyzer {
         let meta = SemanticMeta::default();
         let span = SourceSpan::default();
 
-        let comparand = e.comparand.as_ref().map(|c| Box::new(self.analyze_expression(c)));
-        
-        let mut items = Vec::new();
+        let comparand = e
+            .comparand
+            .as_ref()
+            .map(|c| Box::new(self.analyze_expression(c)));
+
+        let mut case_items = Vec::new();
         let dt = DataType::any();
-        
+
         for item in &e.items {
             let when = self.analyze_expression(&item.when);
             let then = self.analyze_expression(&item.then);
-            items.push(TypedCaseItem {
+            case_items.push(crate::semantics::typed_ast::TypedCaseItem {
                 when: Box::new(when),
                 then: Box::new(then),
             });
         }
-        
+
         let else_expr = self.analyze_expression(&e.else_expr);
 
-        let inner = TypedExpression::Case(TypedCase {
+        let inner = TypedExpression::Case(crate::semantics::typed_ast::TypedCase {
             comparand,
-            items,
-            else_expr: Box::new(else_expr)
+            case_items,
+            else_expr: Box::new(else_expr),
         });
 
         TypedNode {
@@ -617,14 +679,20 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub fn analyze_interval_expression(&mut self, e: &ast::IntervalExpression) -> TypedNode<TypedExpression> {
+    pub fn analyze_interval_expression(
+        &mut self,
+        e: &ast::IntervalExpression,
+    ) -> TypedNode<TypedExpression> {
         let id = self.generate_node_id();
         let meta = SemanticMeta::default();
         let span = SourceSpan::default();
 
         let low = e.low.as_ref().map(|l| Box::new(self.analyze_expression(l)));
-        let high = e.high.as_ref().map(|h| Box::new(self.analyze_expression(h)));
-        
+        let high = e
+            .high
+            .as_ref()
+            .map(|h| Box::new(self.analyze_expression(h)));
+
         let mut inner_dt = DataType::any();
         if let Some(l) = &low {
             inner_dt = l.data_type.clone();
@@ -634,12 +702,14 @@ impl SemanticAnalyzer {
 
         let dt = DataType::Interval(Box::new(inner_dt));
 
-        let inner = TypedExpression::IntervalExpression(TypedIntervalExpression {
-            low_closed: e.low_closed,
-            high_closed: e.high_closed,
-            low,
-            high,
-        });
+        let inner = TypedExpression::IntervalExpression(
+            crate::semantics::typed_ast::TypedIntervalExpression {
+                low_closed: e.low_closed,
+                high_closed: e.high_closed,
+                low,
+                high,
+            },
+        );
 
         TypedNode {
             node_id: id,
