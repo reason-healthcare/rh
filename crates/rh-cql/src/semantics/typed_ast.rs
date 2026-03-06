@@ -61,6 +61,82 @@ pub struct TypedIndexInvocation {
     pub index: Box<TypedNode<TypedExpression>>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedQuery {
+    pub sources: Vec<TypedQuerySource>,
+    pub let_clauses: Vec<TypedLetClause>,
+    pub relationships: Vec<TypedRelationshipClause>,
+    pub where_clause: Option<Box<TypedNode<TypedExpression>>>,
+    pub return_clause: Option<TypedReturnClause>,
+    pub sort_clause: Option<TypedSortClause>,
+    // Removed `location` to avoid relying on private `SourceLocation` 
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedQuerySource {
+    pub expression: Box<TypedNode<TypedExpression>>,
+    pub alias: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedLetClause {
+    pub identifier: String,
+    pub expression: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedRelationshipClause {
+    pub kind: crate::parser::ast::RelationshipKind,
+    pub source: TypedQuerySource,
+    pub such_that: Option<Box<TypedNode<TypedExpression>>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedReturnClause {
+    pub distinct: bool,
+    pub all: bool,
+    pub expression: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedSortClause {
+    pub items: Vec<TypedSortItem>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedSortItem {
+    pub expression: Box<TypedNode<TypedExpression>>,
+    pub direction: crate::parser::ast::SortDirection,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedRetrieve {
+    pub data_type: crate::parser::ast::NamedTypeSpecifier,
+    pub codes: Option<Box<TypedNode<TypedExpression>>>,
+    pub date_range: Option<Box<TypedNode<TypedExpression>>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedCase {
+    pub comparand: Option<Box<TypedNode<TypedExpression>>>,
+    pub case_items: Vec<TypedCaseItem>,
+    pub else_expr: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedCaseItem {
+    pub when: Box<TypedNode<TypedExpression>>,
+    pub then: Box<TypedNode<TypedExpression>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedIntervalExpression {
+    pub low: Option<Box<TypedNode<TypedExpression>>>,
+    pub low_closed: bool,
+    pub high: Option<Box<TypedNode<TypedExpression>>>,
+    pub high_closed: bool,
+}
+
 /// An expression that has been through semantic analysis and type resolution.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedExpression {
@@ -88,15 +164,15 @@ pub enum TypedExpression {
     FunctionInvocation(TypedFunctionInvocation),
     MemberInvocation(TypedMemberInvocation),
     IndexInvocation(TypedIndexInvocation),
-    Query(Query),
-    Retrieve(Retrieve),
+    Query(TypedQuery),
+    Retrieve(TypedRetrieve),
     IfThenElse(
         Box<TypedNode<TypedExpression>>,
         Box<TypedNode<TypedExpression>>,
         Box<TypedNode<TypedExpression>>,
     ),
-    Case(Case),
-    IntervalExpression(IntervalExpression),
+    Case(TypedCase),
+    IntervalExpression(TypedIntervalExpression),
     ListExpression(Vec<TypedNode<TypedExpression>>),
     TupleExpression(TupleExpression),
     Instance(Instance),

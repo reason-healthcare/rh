@@ -458,17 +458,11 @@ impl SemanticAnalyzer {
             ast::Expression::FunctionInvocation(e) => return self.analyze_function_invocation(e),
             ast::Expression::MemberInvocation(e) => return self.analyze_member_invocation(e),
             ast::Expression::IndexInvocation(e) => return self.analyze_index_invocation(e),
-            ast::Expression::Query(e) => TypedExpression::Query(e.clone()),
-            ast::Expression::Retrieve(e) => TypedExpression::Retrieve(e.clone()),
-            ast::Expression::IfThenElse(e) => TypedExpression::IfThenElse(
-                Box::new(self.analyze_expression(&e.condition)),
-                Box::new(self.analyze_expression(&e.then_expr)),
-                Box::new(self.analyze_expression(&e.else_expr)),
-            ),
-            ast::Expression::Case(e) => TypedExpression::Case(e.clone()),
-            ast::Expression::IntervalExpression(e) => {
-                TypedExpression::IntervalExpression(e.clone())
-            }
+            ast::Expression::Query(e) => return self.analyze_query(e),
+            ast::Expression::Retrieve(e) => return self.analyze_retrieve(e),
+            ast::Expression::IfThenElse(e) => return self.analyze_if_then_else(e),
+            ast::Expression::Case(e) => return self.analyze_case(e),
+            ast::Expression::IntervalExpression(e) => return self.analyze_interval_expression(e),
             ast::Expression::ListExpression(e) => TypedExpression::ListExpression(
                 e.elements
                     .iter()
@@ -492,6 +486,167 @@ impl SemanticAnalyzer {
             span,
             meta,
             inner,
+        }
+    }
+
+    pub fn analyze_query(&mut self, e: &ast::Query) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let dt = DataType::any(); // TODO: determine query type
+
+        let inner = TypedExpression::Query(TypedQuery {
+            source: if let Some(s) = &e.source {
+                let mut sources = Vec::new();
+                for a in &s.0 {
+                    sources.push(ast::AliasedQuerySource {
+                        alias: a.alias.clone(),
+                        expression: Box::new(ast::Expression::IdentifierRef(ast::IdentifierRef {
+                            name: "TODO".to_string(),
+                            location: None,
+                        }))
+                    });
+                }
+                Some(ast::QuerySource(sources))
+            } else {
+                None
+            },
+            let_clause: None,
+            where_clause: e.where_clause.as_ref().map(|w| Box::new(self.analyze_expression(&w))),
+            return_clause: None,
+            sort_clause: None
+        });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_retrieve(&mut self, e: &ast::Retrieve) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let dt = DataType::any(); // TODO: get type from ModelInfo
+
+        let inner = TypedExpression::Retrieve(TypedRetrieve {
+            data_type: e.data_type.clone(),
+            template_id: e.template_id.clone(),
+            context: e.context.clone(),
+            context_search: None,
+            code_property: e.code_property.clone(),
+            codes: None,
+            date_property: e.date_property.clone(),
+            date_range: None,
+            id_property: e.id_property.clone(),
+            id_search: None,
+            related_context: None,
+            related_context_property: None,
+            related_context_search: None,
+            inclusion_elements: e.inclusion_elements.clone()
+        });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_if_then_else(&mut self, e: &ast::IfThenElse) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let cond = self.analyze_expression(&e.condition);
+        let when = self.analyze_expression(&e.then_expr);
+        let oth = self.analyze_expression(&e.else_expr);
+        let dt = when.data_type.clone(); // basic, should coerce
+
+        let inner = TypedExpression::IfThenElse(Box::new(cond), Box::new(when), Box::new(oth));
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_case(&mut self, e: &ast::Case) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let comparand = e.comparand.as_ref().map(|c| Box::new(self.analyze_expression(c)));
+        
+        let mut items = Vec::new();
+        let dt = DataType::any();
+        
+        for item in &e.items {
+            let when = self.analyze_expression(&item.when);
+            let then = self.analyze_expression(&item.then);
+            items.push(TypedCaseItem {
+                when: Box::new(when),
+                then: Box::new(then),
+            });
+        }
+        
+        let else_expr = self.analyze_expression(&e.else_expr);
+
+        let inner = TypedExpression::Case(TypedCase {
+            comparand,
+            items,
+            else_expr: Box::new(else_expr)
+        });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
+    pub fn analyze_interval_expression(&mut self, e: &ast::IntervalExpression) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let low = e.low.as_ref().map(|l| Box::new(self.analyze_expression(l)));
+        let high = e.high.as_ref().map(|h| Box::new(self.analyze_expression(h)));
+        
+        let mut inner_dt = DataType::any();
+        if let Some(l) = &low {
+            inner_dt = l.data_type.clone();
+        } else if let Some(h) = &high {
+            inner_dt = h.data_type.clone();
+        }
+
+        let dt = DataType::Interval(Box::new(inner_dt));
+
+        let inner = TypedExpression::IntervalExpression(TypedIntervalExpression {
+            low_closed: e.low_closed,
+            high_closed: e.high_closed,
+            low,
+            high,
+        });
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
         }
     }
 }
