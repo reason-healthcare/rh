@@ -39,12 +39,12 @@
 - [x] 3.15 Implement function invocation analysis: resolve function by name, match overload, apply argument conversions
 - [x] 3.16 Implement member invocation analysis: resolve property type via `ModelInfoProvider`
 - [x] 3.17 Implement index invocation analysis
-- [ ] 3.18 Implement query analysis: push query scope, analyze sources, let clauses, where clause, return clause, sort clause, relationship clauses, pop scope
-- [ ] 3.19 Implement retrieve analysis: resolve data type from model, resolve terminology references
-- [ ] 3.20 Implement if/then/else analysis: analyze condition (Boolean), then/else branches, unify result types
-- [ ] 3.21 Implement case analysis: analyze comparand, case items, else, unify result types
-- [ ] 3.22 Implement interval expression analysis: analyze low/high bounds, resolve point type
-- [ ] 3.23 Implement list expression analysis: analyze elements, resolve common element type
+- [x] 3.18 Implement query analysis: push query scope, analyze sources, let clauses, where clause, return clause, sort clause, relationship clauses, pop scope
+- [x] 3.19 Implement retrieve analysis: resolve data type from model, resolve terminology references
+- [x] 3.20 Implement if/then/else analysis: analyze condition (Boolean), then/else branches, unify result types
+- [x] 3.21 Implement case analysis: analyze comparand, case items, else, unify result types
+- [x] 3.22 Implement interval expression analysis: analyze low/high bounds, resolve point type
+- [x] 3.23 Implement list expression analysis: analyze elements, resolve common element type
 - [ ] 3.24 Implement tuple expression analysis: analyze element expressions, build tuple type
 - [ ] 3.25 Implement instance expression analysis: resolve class type from model, analyze property values
 - [ ] 3.26 Implement type expression analysis (Is, As, Cast, Convert): resolve target type
