@@ -77,6 +77,7 @@ pub use compiler::{
     explain_parse, validate, CompilationError, CompilationResult, SourceMapCompilationResult,
     ValidationResult,
 };
+pub use explain::explain_eval;
 
 pub use builder::LibraryBuilder;
 pub use conversion::{

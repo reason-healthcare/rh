@@ -478,6 +478,11 @@ impl ValidationResult {
 /// ```
 pub fn explain_parse(source: &str) -> Result<String, CompilationError> {
     let parser = CqlParser::new();
+    // NOTE: On parse failure the entire AST is unavailable — partial AST is not
+    // yet supported because the parser does not implement error-recovery.  The
+    // function therefore returns `Err(CompilationError::Parse(...))` rather than
+    // a best-effort partial tree.  See the spec note in explain/mod.rs.
+    // TODO: partial AST on parse error (requires parser recovery support)
     let ast = parser
         .parse(source)
         .map_err(|e| CompilationError::Parse(e.to_string()))?;
@@ -689,6 +694,44 @@ mod tests {
     }
 
     #[test]
+    fn test_explain_parse_walks_child_nodes() {
+        // Verifies that explain_parse recurses into expression bodies, printing
+        // child nodes with indentation rather than only top-level defs.
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let result = explain_parse(source).unwrap();
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
+        assert!(
+            result.contains("BinaryExpression(Add)"),
+            "child BinaryExpression(Add) not found — tree walk may not be working: {result}"
+        );
+        assert!(
+            result.contains("Literal(Integer: 1)"),
+            "Literal(Integer: 1) not found: {result}"
+        );
+        assert!(
+            result.contains("Literal(Integer: 2)"),
+            "Literal(Integer: 2) not found: {result}"
+        );
+    }
+
+    #[test]
+    fn test_explain_compile_source_locations() {
+        // Verifies that semantic events are prefixed with [line:col].
+        // Even if no semantic events fire, the function must not panic.
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let result = explain_compile(source, None).unwrap();
+        assert!(!result.is_empty());
+        // If any event is emitted it MUST include a [line:col] prefix.
+        if result.lines().any(|l| l.trim_start().starts_with('[')) {
+            let has_location = result.lines().any(|l| {
+                let t = l.trim_start();
+                t.starts_with('[') && t.contains(':')
+            });
+            assert!(has_location, "event line missing [line:col] prefix: {result}");
+        }
+    }
+
+    #[test]
     fn test_explain_compile_returns_expression_defs() {
         let source = "library Test version '1.0' define X: 1 + 2";
         let result = explain_compile(source, None).unwrap();
@@ -726,12 +769,15 @@ mod tests {
     #[test]
     fn test_explain_compile_records_overload_resolution() {
         // Arithmetic uses an overloaded operator — the overload should be recorded
+        // once the analyzer populates SemanticMeta.resolved_overload.  Until that
+        // field is set by the analyzer for binary operations, this test merely
+        // verifies the function does not panic and returns a well-formed string.
+        // TODO: strengthen to assert `result.contains("overload resolved")` once
+        // SemanticMeta.resolved_overload is populated by the semantic analyzer.
         let source = "library Test version '1.0' define X: 1 + 2";
         let result = explain_compile(source, None).unwrap();
-        // The `overload resolved` event may or may not appear depending on
-        // SemanticMeta population, but the function must not panic and must
-        // return a non-empty string.
         assert!(!result.is_empty());
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
     }
 
     #[test]
@@ -755,9 +801,12 @@ mod tests {
         // Integer divided by Integer with decimal promotion: the body should
         // reference a conversion wrapper (if emitted by analyzer) or at minimum
         // not panic.
+        // TODO: strengthen to assert `result.contains("implicit conversions")` once
+        // SemanticMeta.implicit_conversions is populated by the semantic analyzer.
         let source = "library Test version '1.0' define X: 5 / 2";
         let result = explain_compile(source, None).unwrap();
         assert!(!result.is_empty());
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
     }
 
     #[test]
