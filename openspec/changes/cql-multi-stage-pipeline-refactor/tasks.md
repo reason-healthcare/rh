@@ -103,14 +103,14 @@
 
 ## 7. Source-Map Infrastructure
 
-- [ ] 7.1 Create `src/sourcemap.rs` with `SourceMap`, `SourceDocument`, `ElmNodeMeta`, `SourceElmMapping` structs per PLAN.md §6.1 schema
-- [ ] 7.2 Implement stable hash-based ID generation for `doc_id` and `elm_node_id`
-- [ ] 7.3 Implement `SourceElmMapping` role variants: `direct`, `implicit-conversion`, `desugared`, `synthetic`
-- [ ] 7.4 Implement source-map builder in `ElmEmitter`: record `NodeId → ElmNodeMeta` mappings during emission
-- [ ] 7.5 Add `compile_to_elm_with_sourcemap()` API to `compiler.rs` returning `(elm::Library, SourceMap)`
-- [ ] 7.6 Implement JSON serialization/deserialization for `SourceMap` (sidecar `.elm.sourcemap.json`)
-- [ ] 7.7 Write tests verifying source-map round-trips through JSON
-- [ ] 7.8 Write tests verifying CQL span → ELM node correlation for sample expressions
+- [x] 7.1 Create `src/sourcemap.rs` with `SourceMap`, `SourceDocument`, `ElmNodeMeta`, `SourceElmMapping` structs per PLAN.md §6.1 schema
+- [x] 7.2 Implement stable hash-based ID generation for `doc_id` and `elm_node_id`
+- [x] 7.3 Implement `SourceElmMapping` role variants: `direct`, `implicit-conversion`, `desugared`, `synthetic`
+- [x] 7.4 Implement source-map builder in `ElmEmitter`: record `NodeId → ElmNodeMeta` mappings during emission
+- [x] 7.5 Add `compile_to_elm_with_sourcemap()` API to `compiler.rs` returning `(elm::Library, SourceMap)`
+- [x] 7.6 Implement JSON serialization/deserialization for `SourceMap` (sidecar `.elm.sourcemap.json`)
+- [x] 7.7 Write tests verifying source-map round-trips through JSON
+- [x] 7.8 Write tests verifying CQL span → ELM node correlation for sample expressions
 
 ## 8. Explain Infrastructure
 

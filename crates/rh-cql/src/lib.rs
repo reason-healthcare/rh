@@ -73,8 +73,8 @@ pub mod types;
 
 // Primary public API - compile CQL to ELM
 pub use compiler::{
-    compile, compile_to_json, compile_with_model, validate, CompilationError, CompilationResult,
-    ValidationResult,
+    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_model, validate,
+    CompilationError, CompilationResult, SourceMapCompilationResult, ValidationResult,
 };
 
 pub use builder::LibraryBuilder;
@@ -127,3 +127,9 @@ pub use semantics::scope::ScopeManager;
 pub use semantics::typed_ast::{NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedStatement};
 pub use emit::ElmEmitter;
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
+
+// Source-map public types
+pub use sourcemap::{
+    Confidence, ElmNodeMeta, MappingRole, SourceDocument, SourceElmMapping, SourceMap,
+    generate_doc_id, generate_elm_node_id, generate_mapping_id,
+};

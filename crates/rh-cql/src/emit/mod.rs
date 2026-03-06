@@ -78,10 +78,20 @@ impl ElmEmitter {
         // Only record a span mapping when the node has non-trivial source info
         let s = &node.span;
         if s.start.line > 0 || s.start.offset > 0 {
+            let doc_id = String::new(); // populated by compile_to_elm_with_sourcemap
+            let elm_node_ids = vec![elm_id.clone()];
+            let mapping_id = crate::sourcemap::generate_mapping_id(
+                &doc_id,
+                s.start.offset,
+                s.end.offset,
+                &elm_node_ids,
+                "direct",
+            );
             self.source_map
                 .mappings
                 .push(crate::sourcemap::SourceElmMapping {
-                    doc_id: String::new(),
+                    mapping_id,
+                    doc_id,
                     span: crate::sourcemap::SourceSpan {
                         start: crate::sourcemap::SourceLocation {
                             line: s.start.line,
@@ -95,7 +105,9 @@ impl ElmEmitter {
                         },
                     },
                     role: crate::sourcemap::MappingRole::Direct,
-                    elm_node_ids: vec![elm_id],
+                    elm_node_ids,
+                    confidence: Some(crate::sourcemap::Confidence::Exact),
+                    note: None,
                 });
         }
 

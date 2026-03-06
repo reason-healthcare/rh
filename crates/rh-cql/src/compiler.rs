@@ -243,6 +243,132 @@ pub fn compile_to_json(
     }
 }
 
+/// The result of compiling CQL with an attached source map.
+#[derive(Debug, Clone)]
+pub struct SourceMapCompilationResult {
+    /// The translated ELM library.
+    pub library: elm::Library,
+    /// Source-map correlating CQL spans to ELM nodes.
+    pub source_map: crate::sourcemap::SourceMap,
+    /// Errors that occurred during compilation.
+    pub errors: Vec<crate::reporting::CqlCompilerException>,
+    /// Warnings that occurred during compilation.
+    pub warnings: Vec<crate::reporting::CqlCompilerException>,
+    /// Informational messages from compilation.
+    pub messages: Vec<crate::reporting::CqlCompilerException>,
+}
+
+impl SourceMapCompilationResult {
+    /// Returns true if compilation completed without errors.
+    pub fn is_success(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    /// Serialize the source map to a sidecar JSON string (`*.elm.sourcemap.json`).
+    pub fn source_map_json(&self) -> Result<String, CompilationError> {
+        self.source_map
+            .to_json()
+            .map_err(|e| CompilationError::Output(e.to_string()))
+    }
+}
+
+/// Compile CQL source code to ELM and produce a source map.
+///
+/// Uses the multi-stage pipeline: parse → semantic analysis (`SemanticAnalyzer`)
+/// → ELM emission (`ElmEmitter`).  The emitter records a [`SourceMap`] as a
+/// side-channel during emission, correlating [`SourceSpan`] on each
+/// [`TypedNode`] to the ELM node ids it produces.
+///
+/// # Arguments
+///
+/// * `source` - The CQL source code to compile.
+/// * `options` - Optional compiler options. If `None`, default options are used.
+/// * `library_uri` - Optional canonical URI used to populate `doc_id` in the
+///   source map. If `None` an empty URI is used.
+///
+/// # Returns
+///
+/// Returns a [`SourceMapCompilationResult`] containing the ELM library,
+/// attached source map, and any diagnostics.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::compile_to_elm_with_sourcemap;
+///
+/// let source = "library Test version '1.0' define X: 1 + 2";
+/// let result = compile_to_elm_with_sourcemap(source, None, None).unwrap();
+/// assert!(result.is_success());
+/// // The source map is always present (may be empty when spans are absent)
+/// let _json = result.source_map_json().unwrap();
+/// ```
+pub fn compile_to_elm_with_sourcemap(
+    source: &str,
+    options: Option<CompilerOptions>,
+    library_uri: Option<&str>,
+) -> Result<SourceMapCompilationResult, CompilationError> {
+    use std::sync::Arc;
+
+    let options = options.unwrap_or_default();
+
+    // Parse
+    let parser = CqlParser::new();
+    let ast = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+    // Semantic analysis
+    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
+        Arc::new(crate::provider::fhir_r4_provider_from_package());
+    let analyzer =
+        crate::semantics::analyzer::SemanticAnalyzer::new(Arc::clone(&provider), options.clone());
+    let (typed_library, diagnostics) = analyzer.analyze(ast);
+
+    // ELM emission — builds source map as a side-channel
+    let mut emitter = crate::emit::ElmEmitter::new(options.clone());
+    let library = emitter.emit(typed_library);
+    let mut source_map = emitter.take_source_map();
+
+    // Populate doc_id in the source map now that we know the library identifier
+    let lib_id = library
+        .identifier
+        .as_ref()
+        .and_then(|i| i.id.as_deref())
+        .unwrap_or("");
+    let lib_version = library
+        .identifier
+        .as_ref()
+        .and_then(|i| i.version.as_deref())
+        .unwrap_or("");
+    let uri = library_uri.unwrap_or("");
+    let doc_id = crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
+
+    // Register the source document
+    source_map.source_documents.push(crate::sourcemap::SourceDocument {
+        doc_id: doc_id.clone(),
+        uri: uri.to_string(),
+        checksum: None,
+        line_index: None,
+    });
+
+    // Back-fill the doc_id into every mapping that was recorded with an empty one
+    for mapping in &mut source_map.mappings {
+        if mapping.doc_id.is_empty() {
+            mapping.doc_id = doc_id.clone();
+        }
+    }
+
+    let (errors, warnings, messages) = categorize_exceptions(&diagnostics, &options);
+
+    Ok(SourceMapCompilationResult {
+        library,
+        source_map,
+        errors,
+        warnings,
+        messages,
+    })
+}
+
 /// Validate CQL source code without producing ELM output.
 ///
 /// This function parses and performs semantic analysis on the CQL source
