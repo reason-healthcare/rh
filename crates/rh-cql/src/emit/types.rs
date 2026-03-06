@@ -210,3 +210,30 @@ pub fn emit_instance(
         elements: elms,
     })
 }
+/// Emit a `MinValue` expression for a given type specifier.
+pub fn emit_min_value(
+    ts: &ast::TypeSpecifier,
+    node: &TypedNode<TypedExpression>,
+    ctx: &mut ElmEmitter,
+) -> elm::Expression {
+    let element = ctx.element_fields(node);
+    let value_type = crate::emit::type_specifier_to_qname(ts);
+    elm::Expression::MinValue(elm::TypedExpression {
+        element,
+        value_type: Some(value_type),
+    })
+}
+
+/// Emit a `MaxValue` expression for a given type specifier.
+pub fn emit_max_value(
+    ts: &ast::TypeSpecifier,
+    node: &TypedNode<TypedExpression>,
+    ctx: &mut ElmEmitter,
+) -> elm::Expression {
+    let element = ctx.element_fields(node);
+    let value_type = crate::emit::type_specifier_to_qname(ts);
+    elm::Expression::MaxValue(elm::TypedExpression {
+        element,
+        value_type: Some(value_type),
+    })
+}

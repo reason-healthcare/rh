@@ -1,7 +1,9 @@
 use crate::elm;
 use crate::emit::ElmEmitter;
 use crate::parser::ast::{BinaryOperator, TernaryOperator, UnaryOperator};
-use crate::semantics::typed_ast::{TypedExpression, TypedNode};
+use crate::semantics::typed_ast::{
+    TypedDateTimeComponentFrom, TypedExpression, TypedNode, TypedTimingExpression,
+};
 
 pub fn emit_unary_operator(
     operator: &UnaryOperator,
@@ -283,4 +285,40 @@ pub fn emit_system_function(
     } else {
         None
     }
+}
+/// Emit a timing expression as an `IncludedIn` placeholder.
+///
+/// Full precision-aware timing dispatch is deferred; this placeholder
+/// preserves the two operands so round-trip tests can verify traversal.
+pub fn emit_timing_expression(
+    te: &TypedTimingExpression,
+    node: &TypedNode<TypedExpression>,
+    ctx: &mut ElmEmitter,
+    emit_expr: impl Fn(&TypedNode<TypedExpression>, &mut ElmEmitter) -> elm::Expression,
+) -> elm::Expression {
+    let element = ctx.element_fields(node);
+    let left = emit_expr(&te.left, ctx);
+    let right = emit_expr(&te.right, ctx);
+    elm::Expression::IncludedIn(elm::TimeBinaryExpression {
+        element,
+        operand: vec![left, right],
+        signature: Vec::new(),
+        precision: None,
+    })
+}
+
+/// Emit a `DateTimeComponentFrom` extraction expression.
+pub fn emit_datetime_component_from(
+    dtc: &TypedDateTimeComponentFrom,
+    node: &TypedNode<TypedExpression>,
+    ctx: &mut ElmEmitter,
+    emit_expr: impl Fn(&TypedNode<TypedExpression>, &mut ElmEmitter) -> elm::Expression,
+) -> elm::Expression {
+    let element = ctx.element_fields(node);
+    let operand = Some(Box::new(emit_expr(&dtc.operand, ctx)));
+    elm::Expression::DateTimeComponentFrom(elm::DateTimeComponentFrom {
+        element,
+        operand,
+        precision: None,
+    })
 }
