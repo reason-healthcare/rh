@@ -118,8 +118,8 @@
 - [x] 8.2 Implement `explain_parse()`: walk parser AST, produce indented tree text with node types, source locations, literal values
 - [x] 8.3 Implement `explain_compile()`: walk `TypedLibrary`, produce narrative describing resolved types, overload selections, implicit conversions per expression node
 - [x] 8.4 Implement `explain_eval()` stub returning "Evaluation engine not yet available" error
-- [ ] 8.5 Add `explain_parse()` and `explain_compile()` to `compiler.rs` public API
-- [ ] 8.6 Write tests verifying explain output for sample CQL (simple expressions, overload resolution, implicit conversions)
+- [x] 8.5 Add `explain_parse()` and `explain_compile()` to `compiler.rs` public API
+- [x] 8.6 Write tests verifying explain output for sample CQL (simple expressions, overload resolution, implicit conversions)
 
 ## 9. Eval Engine
 

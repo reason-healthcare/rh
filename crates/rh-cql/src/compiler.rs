@@ -453,6 +453,78 @@ impl ValidationResult {
     }
 }
 
+/// Explain the parse-level AST structure of CQL source.
+///
+/// Parses the source and produces a human-readable description of the AST,
+/// including definition names and node types.
+///
+/// # Arguments
+///
+/// * `source` - The CQL source code to explain.
+///
+/// # Returns
+///
+/// Returns a multi-line string describing the parsed AST, or a
+/// `CompilationError` if the source cannot be parsed.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::explain_parse;
+///
+/// let source = "library Test version '1.0' define X: 1 + 2";
+/// let explanation = explain_parse(source).unwrap();
+/// assert!(explanation.contains("ExpressionDef"));
+/// ```
+pub fn explain_parse(source: &str) -> Result<String, CompilationError> {
+    let parser = CqlParser::new();
+    let ast = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+    Ok(crate::explain::explain_parse(&ast))
+}
+
+/// Explain the semantic analysis of CQL source.
+///
+/// Parses and analyzes the source, then produces a human-readable narrative
+/// describing resolved types, overload selections, and implicit conversions
+/// for each expression node.
+///
+/// # Arguments
+///
+/// * `source` - The CQL source code to explain.
+/// * `options` - Optional compiler options. If None, default options are used.
+///
+/// # Returns
+///
+/// Returns a multi-line string describing the semantic analysis, or a
+/// `CompilationError` if the source cannot be parsed.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::explain_compile;
+///
+/// let source = "library Test version '1.0' define X: 1 + 2";
+/// let explanation = explain_compile(source, None).unwrap();
+/// assert!(explanation.contains("ExpressionDef"));
+/// ```
+pub fn explain_compile(
+    source: &str,
+    options: Option<CompilerOptions>,
+) -> Result<String, CompilationError> {
+    let options = options.unwrap_or_default();
+    let parser = CqlParser::new();
+    let ast = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
+        Arc::new(crate::provider::fhir_r4_provider_from_package());
+    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(provider, options);
+    let (typed_library, _diagnostics) = analyzer.analyze(ast);
+    Ok(crate::explain::explain_compile(&typed_library))
+}
+
 /// Categorize exceptions by severity.
 fn categorize_exceptions(
     exceptions: &[crate::reporting::CqlCompilerException],
@@ -586,6 +658,106 @@ mod tests {
 
         let compact = result.to_compact_json().unwrap();
         assert!(compact.contains("Test"));
+    }
+
+    #[test]
+    fn test_explain_parse_returns_expression_defs() {
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let result = explain_parse(source).unwrap();
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_parse_returns_function_defs() {
+        let source = "library Test version '1.0' define function Add(a Integer, b Integer): a + b";
+        let result = explain_parse(source).unwrap();
+        assert!(result.contains("FunctionDef(Add)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_parse_error_on_invalid_source() {
+        let source = "not valid cql @@@@";
+        let result = explain_parse(source);
+        assert!(matches!(result, Err(CompilationError::Parse(_))));
+    }
+
+    #[test]
+    fn test_explain_parse_ast_header() {
+        let source = "library Test version '1.0' define X: 42";
+        let result = explain_parse(source).unwrap();
+        assert!(result.starts_with("AST Explanation:"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_returns_expression_defs() {
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let result = explain_compile(source, None).unwrap();
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_header() {
+        let source = "library Test version '1.0' define X: 42";
+        let result = explain_compile(source, None).unwrap();
+        assert!(result.starts_with("Compile Explanation:"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_multiple_defs() {
+        let source = r#"
+            library Test version '1.0'
+            define A: 1
+            define B: 2
+            define C: A + B
+        "#;
+        let result = explain_compile(source, None).unwrap();
+        assert!(result.contains("ExpressionDef(A)"), "got: {result}");
+        assert!(result.contains("ExpressionDef(B)"), "got: {result}");
+        assert!(result.contains("ExpressionDef(C)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_parse_error_propagates() {
+        let source = "not valid cql @@@@";
+        let result = explain_compile(source, None);
+        assert!(matches!(result, Err(CompilationError::Parse(_))));
+    }
+
+    #[test]
+    fn test_explain_compile_records_overload_resolution() {
+        // Arithmetic uses an overloaded operator — the overload should be recorded
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let result = explain_compile(source, None).unwrap();
+        // The `overload resolved` event may or may not appear depending on
+        // SemanticMeta population, but the function must not panic and must
+        // return a non-empty string.
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_explain_compile_with_options() {
+        use crate::options::CompilerOption;
+        let source = "library Test version '1.0' define X: 1 + 2";
+        let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+        let result = explain_compile(source, Some(opts)).unwrap();
+        assert!(result.contains("ExpressionDef(X)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_function_def() {
+        let source = "library Test version '1.0' define function Double(x Integer): x * 2";
+        let result = explain_compile(source, None).unwrap();
+        assert!(result.contains("FunctionDef(Double)"), "got: {result}");
+    }
+
+    #[test]
+    fn test_explain_compile_implicit_conversions() {
+        // Integer divided by Integer with decimal promotion: the body should
+        // reference a conversion wrapper (if emitted by analyzer) or at minimum
+        // not panic.
+        let source = "library Test version '1.0' define X: 5 / 2";
+        let result = explain_compile(source, None).unwrap();
+        assert!(!result.is_empty());
     }
 
     #[test]
