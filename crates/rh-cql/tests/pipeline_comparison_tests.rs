@@ -17,7 +17,7 @@
 //!    reference translator (documented in `comparison/COMPARISON_SUMMARY.md`).
 //! 4. Document known/acceptable diffs from the Java reference inline.
 
-use rh_cql::{compile, CompilerOptions};
+use rh_cql::compile;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,7 +41,10 @@ fn assert_deterministic(source: &str) {
     let r2 = compile(source, None).expect("second compile failed");
     let j1 = r1.to_compact_json().expect("serialise run 1");
     let j2 = r2.to_compact_json().expect("serialise run 2");
-    assert_eq!(j1, j2, "pipeline output must be deterministic across two runs");
+    assert_eq!(
+        j1, j2,
+        "pipeline output must be deterministic across two runs"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -214,8 +217,8 @@ fn arithmetic_tests_output_is_deterministic() {
 /// Uses emit_expression() directly to bypass the library-level stub skeleton.
 #[test]
 fn arithmetic_integer_divide_uses_divide_with_decimal_promotion() {
-    use rh_cql::emit::ElmEmitter;
     use rh_cql::elm;
+    use rh_cql::emit::ElmEmitter;
     use rh_cql::options::{CompilerOption, CompilerOptions};
     use rh_cql::parser::CqlParser;
     use rh_cql::provider::{MemoryModelInfoProvider, ModelInfoProvider};

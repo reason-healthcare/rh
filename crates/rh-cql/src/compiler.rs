@@ -344,12 +344,14 @@ pub fn compile_to_elm_with_sourcemap(
     let doc_id = crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
 
     // Register the source document
-    source_map.source_documents.push(crate::sourcemap::SourceDocument {
-        doc_id: doc_id.clone(),
-        uri: uri.to_string(),
-        checksum: None,
-        line_index: None,
-    });
+    source_map
+        .source_documents
+        .push(crate::sourcemap::SourceDocument {
+            doc_id: doc_id.clone(),
+            uri: uri.to_string(),
+            checksum: None,
+            line_index: None,
+        });
 
     // Back-fill the doc_id into every mapping that was recorded with an empty one
     for mapping in &mut source_map.mappings {
@@ -408,8 +410,7 @@ pub fn validate(
     // Use SemanticAnalyzer directly — parse + analyze only, no ELM emit
     let provider: Arc<dyn crate::provider::ModelInfoProvider> =
         Arc::new(crate::provider::fhir_r4_provider_from_package());
-    let analyzer =
-        crate::semantics::analyzer::SemanticAnalyzer::new(provider, options.clone());
+    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(provider, options.clone());
     let (_, diagnostics) = analyzer.analyze(ast);
 
     let (errors, warnings, messages) = categorize_exceptions(&diagnostics, &options);

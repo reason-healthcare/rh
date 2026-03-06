@@ -1158,12 +1158,12 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         // "minimum <TypeSpecifier>" expression - returns minimum value for the type
         map(
             preceded(ws(keyword("minimum")), parse_type_specifier),
-            |ts| Expression::MinValue(ts),
+            Expression::MinValue,
         ),
         // "maximum <TypeSpecifier>" expression - returns maximum value for the type
         map(
             preceded(ws(keyword("maximum")), parse_type_specifier),
-            |ts| Expression::MaxValue(ts),
+            Expression::MaxValue,
         ),
         // "cast X as Type" expression (prefix syntax)
         parse_cast_expression,
@@ -1310,7 +1310,7 @@ fn parse_invocation_expression(input: Span<'_>) -> IResult<Span<'_>, Expression>
                 InvocationSuffix::Index { index, location } => {
                     Expression::IndexInvocation(IndexInvocation {
                         source: Box::new(acc),
-                        index: Box::new(index),
+                        index,
                         location,
                     })
                 }
@@ -1325,7 +1325,7 @@ enum InvocationSuffix {
         location: Option<SourceLocation>,
     },
     Index {
-        index: Expression,
+        index: Box<Expression>,
         location: Option<SourceLocation>,
     },
 }
@@ -1357,7 +1357,7 @@ fn parse_index_suffix(input: Span<'_>) -> IResult<Span<'_>, InvocationSuffix> {
     Ok((
         input,
         InvocationSuffix::Index {
-            index,
+            index: Box::new(index),
             location: None,
         },
     ))
@@ -2116,7 +2116,7 @@ fn parse_simple_source_expression(input: Span<'_>) -> IResult<Span<'_>, Expressi
             }
             InvocationSuffix::Index { index, .. } => Expression::IndexInvocation(IndexInvocation {
                 source: Box::new(acc),
-                index: Box::new(index),
+                index,
                 location: None,
             }),
         }),

@@ -70,10 +70,7 @@ fn emit_aggregate_clause(
         element,
         identifier: Some(ac.identifier.clone()),
         distinct: if ac.distinct { Some(true) } else { None },
-        starting: ac
-            .starting
-            .as_ref()
-            .map(|s| Box::new(emit_expr(s, ctx))),
+        starting: ac.starting.as_ref().map(|s| Box::new(emit_expr(s, ctx))),
         expression: Some(Box::new(emit_expr(&ac.expression, ctx))),
     }
 }

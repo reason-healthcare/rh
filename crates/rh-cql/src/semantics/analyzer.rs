@@ -628,13 +628,14 @@ impl SemanticAnalyzer {
             })
             .collect();
 
-        let return_clause = e.return_clause.as_ref().map(|rc| {
-            crate::semantics::typed_ast::TypedReturnClause {
-                distinct: rc.distinct,
-                all: rc.all,
-                expression: Box::new(self.analyze_expression(&rc.expression)),
-            }
-        });
+        let return_clause =
+            e.return_clause
+                .as_ref()
+                .map(|rc| crate::semantics::typed_ast::TypedReturnClause {
+                    distinct: rc.distinct,
+                    all: rc.all,
+                    expression: Box::new(self.analyze_expression(&rc.expression)),
+                });
 
         let aggregate_clause = e.aggregate_clause.as_ref().map(|ac| {
             crate::semantics::typed_ast::TypedAggregateClause {
@@ -648,18 +649,19 @@ impl SemanticAnalyzer {
             }
         });
 
-        let sort_clause = e.sort_clause.as_ref().map(|sc| {
-            crate::semantics::typed_ast::TypedSortClause {
-                items: sc
-                    .items
-                    .iter()
-                    .map(|item| crate::semantics::typed_ast::TypedSortItem {
-                        expression: Box::new(self.analyze_expression(&item.expression)),
-                        direction: item.direction,
-                    })
-                    .collect(),
-            }
-        });
+        let sort_clause =
+            e.sort_clause
+                .as_ref()
+                .map(|sc| crate::semantics::typed_ast::TypedSortClause {
+                    items: sc
+                        .items
+                        .iter()
+                        .map(|item| crate::semantics::typed_ast::TypedSortItem {
+                            expression: Box::new(self.analyze_expression(&item.expression)),
+                            direction: item.direction,
+                        })
+                        .collect(),
+                });
 
         let inner = TypedExpression::Query(crate::semantics::typed_ast::TypedQuery {
             sources,

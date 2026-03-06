@@ -191,7 +191,10 @@ pub fn generate_doc_id(library_id: &str, version: &str, uri: &str) -> String {
 /// The ID is derived from the ELM kind, the JSON-pointer path in the ELM
 /// document, and an optional operator signature.
 pub fn generate_elm_node_id(elm_kind: &str, elm_path: &str, operator_sig: &str) -> String {
-    format!("elm:{}", &hash_inputs(&[elm_kind, elm_path, operator_sig])[..6])
+    format!(
+        "elm:{}",
+        &hash_inputs(&[elm_kind, elm_path, operator_sig])[..6]
+    )
 }
 
 /// Produce a stable `mapping_id` for a [`SourceElmMapping`] entry.
@@ -208,7 +211,10 @@ pub fn generate_mapping_id(
     let mut sorted_ids = elm_node_ids.to_vec();
     sorted_ids.sort();
     let ids_str = sorted_ids.join(",");
-    format!("map:{}", &hash_inputs(&[doc_id, &byte_range, &ids_str, role])[..6])
+    format!(
+        "map:{}",
+        &hash_inputs(&[doc_id, &byte_range, &ids_str, role])[..6]
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -222,7 +228,13 @@ mod tests {
     fn sample_map() -> SourceMap {
         let doc_id = generate_doc_id("MyLib", "1.0.0", "library:MyLib:1.0.0");
         let elm_node_id = generate_elm_node_id("Equal", "/statements/def[0]/expression", "");
-        let mapping_id = generate_mapping_id(&doc_id, 312, 327, &[elm_node_id.clone()], "direct");
+        let mapping_id = generate_mapping_id(
+            &doc_id,
+            312,
+            327,
+            std::slice::from_ref(&elm_node_id),
+            "direct",
+        );
 
         let mut map = SourceMap::new();
         map.source_documents.push(SourceDocument {
@@ -241,8 +253,16 @@ mod tests {
             mapping_id,
             doc_id,
             span: SourceSpan {
-                start: SourceLocation { line: 14, column: 9, offset: 312 },
-                end: SourceLocation { line: 14, column: 24, offset: 327 },
+                start: SourceLocation {
+                    line: 14,
+                    column: 9,
+                    offset: 312,
+                },
+                end: SourceLocation {
+                    line: 14,
+                    column: 24,
+                    offset: 327,
+                },
             },
             role: MappingRole::Direct,
             elm_node_ids: vec![elm_node_id],
@@ -294,7 +314,10 @@ mod tests {
         let id1 = generate_elm_node_id("Equal", "/statements/def[0]/expression", "");
         let id2 = generate_elm_node_id("Equal", "/statements/def[0]/expression", "");
         assert_eq!(id1, id2, "elm_node_id must be stable");
-        assert!(id1.starts_with("elm:"), "elm_node_id must have 'elm:' prefix");
+        assert!(
+            id1.starts_with("elm:"),
+            "elm_node_id must have 'elm:' prefix"
+        );
     }
 
     #[test]
@@ -344,13 +367,19 @@ mod tests {
         assert!(!m.elm_node_ids.is_empty());
         let elm_id = &m.elm_node_ids[0];
         let meta = map.elm_node_metas.iter().find(|n| &n.elm_node_id == elm_id);
-        assert!(meta.is_some(), "ELM node referenced by mapping must exist in elm_node_metas");
+        assert!(
+            meta.is_some(),
+            "ELM node referenced by mapping must exist in elm_node_metas"
+        );
 
         // Span offsets must be consistent
         assert!(m.span.start.offset < m.span.end.offset);
 
         // The doc_id must reference a known source document
         let doc = map.source_documents.iter().find(|d| d.doc_id == m.doc_id);
-        assert!(doc.is_some(), "doc_id in mapping must reference a source document");
+        assert!(
+            doc.is_some(),
+            "doc_id in mapping must reference a source document"
+        );
     }
 }

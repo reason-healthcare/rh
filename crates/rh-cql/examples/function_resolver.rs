@@ -14,7 +14,8 @@ fn main() {
     let result = compile(
         "library Test version '1.0' define NowResult: Now() define DateResult: Today()",
         Some(CompilerOptions::debug()),
-    ).unwrap();
+    )
+    .unwrap();
     let json = result.to_json().unwrap();
     println!("Now()   -> ELM \"Now\":   {}", json.contains("\"Now\""));
     println!("Today() -> ELM \"Today\": {}", json.contains("\"Today\""));
@@ -27,12 +28,30 @@ fn main() {
         Some(CompilerOptions::debug()),
     ).unwrap();
     let json = result.to_json().unwrap();
-    println!("Sum()     -> ELM \"Sum\":      {}", json.contains("\"Sum\""));
-    println!("Count()   -> ELM \"Count\":    {}", json.contains("\"Count\""));
-    println!("Avg()     -> ELM \"Avg\":      {}", json.contains("\"Avg\""));
-    println!("First()   -> ELM \"First\":    {}", json.contains("\"First\""));
-    println!("Last()    -> ELM \"Last\":     {}", json.contains("\"Last\""));
-    println!("distinct  -> ELM \"Distinct\": {}", json.contains("\"Distinct\""));
+    println!(
+        "Sum()     -> ELM \"Sum\":      {}",
+        json.contains("\"Sum\"")
+    );
+    println!(
+        "Count()   -> ELM \"Count\":    {}",
+        json.contains("\"Count\"")
+    );
+    println!(
+        "Avg()     -> ELM \"Avg\":      {}",
+        json.contains("\"Avg\"")
+    );
+    println!(
+        "First()   -> ELM \"First\":    {}",
+        json.contains("\"First\"")
+    );
+    println!(
+        "Last()    -> ELM \"Last\":     {}",
+        json.contains("\"Last\"")
+    );
+    println!(
+        "distinct  -> ELM \"Distinct\": {}",
+        json.contains("\"Distinct\"")
+    );
     println!();
 
     // --- String Functions ---
@@ -42,9 +61,18 @@ fn main() {
         Some(CompilerOptions::debug()),
     ).unwrap();
     let json = result.to_json().unwrap();
-    println!("Length()     -> ELM \"Length\":     {}", json.contains("\"Length\""));
-    println!("Upper()      -> ELM \"Upper\":      {}", json.contains("\"Upper\""));
-    println!("StartsWith() -> ELM \"StartsWith\": {}", json.contains("\"StartsWith\""));
+    println!(
+        "Length()     -> ELM \"Length\":     {}",
+        json.contains("\"Length\"")
+    );
+    println!(
+        "Upper()      -> ELM \"Upper\":      {}",
+        json.contains("\"Upper\"")
+    );
+    println!(
+        "StartsWith() -> ELM \"StartsWith\": {}",
+        json.contains("\"StartsWith\"")
+    );
     println!();
 
     // --- Logic / Null-handling Functions ---
@@ -52,10 +80,17 @@ fn main() {
     let result = compile(
         "library Test version '1.0' define C: Coalesce(null, 42) define N: IsNull(null)",
         Some(CompilerOptions::debug()),
-    ).unwrap();
+    )
+    .unwrap();
     let json = result.to_json().unwrap();
-    println!("Coalesce() -> ELM \"Coalesce\": {}", json.contains("\"Coalesce\""));
-    println!("IsNull()   -> ELM \"IsNull\":   {}", json.contains("\"IsNull\""));
+    println!(
+        "Coalesce() -> ELM \"Coalesce\": {}",
+        json.contains("\"Coalesce\"")
+    );
+    println!(
+        "IsNull()   -> ELM \"IsNull\":   {}",
+        json.contains("\"IsNull\"")
+    );
     println!();
 
     // --- User-Defined Functions ---
@@ -65,8 +100,14 @@ fn main() {
         Some(CompilerOptions::debug()),
     ).unwrap();
     let json = result.to_json().unwrap();
-    println!("Double(21) -> FunctionRef: {}", json.contains("FunctionRef"));
-    println!("           -> \"Double\":    {}", json.contains("\"Double\""));
+    println!(
+        "Double(21) -> FunctionRef: {}",
+        json.contains("FunctionRef")
+    );
+    println!(
+        "           -> \"Double\":    {}",
+        json.contains("\"Double\"")
+    );
     println!();
 
     // --- Full compilation ---
@@ -75,10 +116,17 @@ fn main() {
         "library Sample version '1.0' define NowTs: Now() define One: 1 + 2 define function Square(n Integer): n * n define Nine: Square(3)",
         Some(CompilerOptions::default()),
     ).unwrap();
-    println!("Success: {}, Errors: {}", result.is_success(), result.errors.len());
+    println!(
+        "Success: {}, Errors: {}",
+        result.is_success(),
+        result.errors.len()
+    );
     let json = result.to_json().unwrap();
     let start = json.find("\"identifier\"").unwrap_or(0);
-    println!("ELM identifier snippet:\n{}",  &json[start..(start + 150).min(json.len())]);
+    println!(
+        "ELM identifier snippet:\n{}",
+        &json[start..(start + 150).min(json.len())]
+    );
 
     println!("\n=== Example Complete ===");
 }

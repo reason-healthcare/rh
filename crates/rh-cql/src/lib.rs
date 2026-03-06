@@ -111,8 +111,6 @@ pub use provider::{
 pub use reporting::{
     CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
-#[allow(deprecated)]
-pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 #[deprecated(
     since = "0.1.0",
     note = "Use the new three-stage pipeline: SemanticAnalyzer + ElmEmitter. \
@@ -120,16 +118,20 @@ pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 )]
 #[allow(deprecated)]
 pub use translator::ExpressionTranslator;
+#[allow(deprecated)]
+pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 
 // New pipeline types — preferred public API
+pub use emit::ElmEmitter;
 pub use semantics::analyzer::SemanticAnalyzer;
 pub use semantics::scope::ScopeManager;
-pub use semantics::typed_ast::{NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedStatement};
-pub use emit::ElmEmitter;
+pub use semantics::typed_ast::{
+    NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedStatement,
+};
 pub use types::{TypeBuilder, TypeError, TypeInference, TypeResolver, TypeResult};
 
 // Source-map public types
 pub use sourcemap::{
-    Confidence, ElmNodeMeta, MappingRole, SourceDocument, SourceElmMapping, SourceMap,
-    generate_doc_id, generate_elm_node_id, generate_mapping_id,
+    generate_doc_id, generate_elm_node_id, generate_mapping_id, Confidence, ElmNodeMeta,
+    MappingRole, SourceDocument, SourceElmMapping, SourceMap,
 };

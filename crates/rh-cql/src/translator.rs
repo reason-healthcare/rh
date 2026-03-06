@@ -113,7 +113,10 @@ pub enum QualifiedRefKind {
 // ============================================================================
 
 /// Operators that support multiple operands (n-ary).
-#[deprecated(since = "0.1.0", note = "No replacement needed outside the old translator.")]
+#[deprecated(
+    since = "0.1.0",
+    note = "No replacement needed outside the old translator."
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NaryOperator {
     /// Logical AND.
@@ -219,8 +222,9 @@ impl ExpressionTranslator {
 
     /// Build a minimal `ElementFields` value.
     pub fn element_fields(&mut self) -> elm::ElementFields {
-        let mut f = elm::ElementFields::default();
-        f.local_id = self.next_local_id();
-        f
+        elm::ElementFields {
+            local_id: self.next_local_id(),
+            ..Default::default()
+        }
     }
 }

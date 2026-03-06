@@ -64,10 +64,7 @@ fn collect_semantic_events(node: &TypedNode<TypedExpression>, events: &mut Vec<S
         ));
     }
     if let Some(ref sym) = meta.resolved_symbol {
-        events.push(format!(
-            "  symbol resolved: {} → {:?}",
-            sym, node.data_type
-        ));
+        events.push(format!("  symbol resolved: {} → {:?}", sym, node.data_type));
     }
 
     // Recurse into child nodes

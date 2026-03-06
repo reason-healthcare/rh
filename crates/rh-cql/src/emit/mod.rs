@@ -132,7 +132,9 @@ impl ElmEmitter {
 
             TE::IdentifierRef(id_ref) => references::emit_identifier_ref(id_ref, node, self),
 
-            TE::QualifiedIdentifierRef(qid) => references::emit_qualified_identifier_ref(qid, node, self),
+            TE::QualifiedIdentifierRef(qid) => {
+                references::emit_qualified_identifier_ref(qid, node, self)
+            }
 
             TE::UnaryExpression(op, operand) => {
                 operators::emit_unary_operator(op, operand, node, self, |n, ctx| {
@@ -184,13 +186,25 @@ impl ElmEmitter {
                 types::emit_instance(inst, node, self, |n, ctx| ctx.emit_expression(n))
             }
 
-            TE::FunctionInvocation(fi) => references::emit_function_invocation(fi, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::FunctionInvocation(fi) => {
+                references::emit_function_invocation(fi, node, self, |n, ctx| {
+                    ctx.emit_expression(n)
+                })
+            }
 
-            TE::MemberInvocation(mi) => references::emit_member_invocation(mi, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::MemberInvocation(mi) => {
+                references::emit_member_invocation(mi, node, self, |n, ctx| ctx.emit_expression(n))
+            }
 
-            TE::IndexInvocation(ii) => references::emit_index_invocation(ii, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::IndexInvocation(ii) => {
+                references::emit_index_invocation(ii, node, self, |n, ctx| ctx.emit_expression(n))
+            }
 
-            TE::LetClause(name, value) => references::emit_let_clause_standalone(name, value, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::LetClause(name, value) => {
+                references::emit_let_clause_standalone(name, value, node, self, |n, ctx| {
+                    ctx.emit_expression(n)
+                })
+            }
 
             TE::Parenthesized(inner) => self.emit_expression(inner),
 
@@ -198,9 +212,15 @@ impl ElmEmitter {
 
             TE::MaxValue(ts) => types::emit_max_value(ts, node, self),
 
-            TE::TimingExpression(te) => operators::emit_timing_expression(te, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::TimingExpression(te) => {
+                operators::emit_timing_expression(te, node, self, |n, ctx| ctx.emit_expression(n))
+            }
 
-            TE::DateTimeComponentFrom(dtc) => operators::emit_datetime_component_from(dtc, node, self, |n, ctx| ctx.emit_expression(n)),
+            TE::DateTimeComponentFrom(dtc) => {
+                operators::emit_datetime_component_from(dtc, node, self, |n, ctx| {
+                    ctx.emit_expression(n)
+                })
+            }
         }
     }
 

@@ -97,10 +97,7 @@ fn main() {
     .unwrap();
     if let Some(stmts) = &result_no_annotations.library.statements {
         if let Some(rh_cql::elm::StatementDef::Expression(def)) = stmts.defs.first() {
-            println!(
-                "   Without annotations - local_id: {:?}",
-                def.local_id
-            );
+            println!("   Without annotations - local_id: {:?}", def.local_id);
         }
     }
 
@@ -112,10 +109,7 @@ fn main() {
     .unwrap();
     if let Some(stmts) = &result_with_annotations.library.statements {
         if let Some(rh_cql::elm::StatementDef::Expression(def)) = stmts.defs.first() {
-            println!(
-                "   With annotations - local_id: {:?}",
-                def.local_id
-            );
+            println!("   With annotations - local_id: {:?}", def.local_id);
         }
     }
     println!();
