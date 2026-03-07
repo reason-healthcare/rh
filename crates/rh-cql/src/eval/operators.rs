@@ -432,8 +432,309 @@ pub fn log(a: &Value, base: &Value) -> Result<Value, EvalError> {
     Ok(Value::Decimal(x.log(b)))
 }
 
+// ---------------------------------------------------------------------------
+// Date/time arithmetic helpers for Predecessor / Successor
+// ---------------------------------------------------------------------------
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fn days_in_month(year: i32, month: u8) -> u8 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 => if is_leap_year(year) { 29 } else { 28 },
+        _ => 30,
+    }
+}
+
+/// Returns the CqlDate one unit before `d` at its own precision, or `None` on
+/// underflow (before year 1).
+fn date_predecessor(d: &CqlDate) -> Option<CqlDate> {
+    match (d.month, d.day) {
+        // year-precision: go back one year
+        (None, _) => {
+            if d.year <= 1 { None } else { Some(CqlDate { year: d.year - 1, month: None, day: None }) }
+        }
+        // month-precision: go back one month
+        (Some(m), None) => {
+            if m > 1 {
+                Some(CqlDate { year: d.year, month: Some(m - 1), day: None })
+            } else if d.year > 1 {
+                Some(CqlDate { year: d.year - 1, month: Some(12), day: None })
+            } else {
+                None
+            }
+        }
+        // day-precision: go back one day
+        (Some(m), Some(day)) => {
+            if day > 1 {
+                Some(CqlDate { year: d.year, month: Some(m), day: Some(day - 1) })
+            } else if m > 1 {
+                let prev_m = m - 1;
+                Some(CqlDate { year: d.year, month: Some(prev_m), day: Some(days_in_month(d.year, prev_m)) })
+            } else if d.year > 1 {
+                Some(CqlDate { year: d.year - 1, month: Some(12), day: Some(31) })
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Returns the CqlDate one unit after `d` at its own precision, or `None` on
+/// overflow (beyond year 9999).
+fn date_successor(d: &CqlDate) -> Option<CqlDate> {
+    match (d.month, d.day) {
+        (None, _) => {
+            if d.year >= 9999 { None } else { Some(CqlDate { year: d.year + 1, month: None, day: None }) }
+        }
+        (Some(m), None) => {
+            if m < 12 {
+                Some(CqlDate { year: d.year, month: Some(m + 1), day: None })
+            } else if d.year < 9999 {
+                Some(CqlDate { year: d.year + 1, month: Some(1), day: None })
+            } else {
+                None
+            }
+        }
+        (Some(m), Some(day)) => {
+            let last = days_in_month(d.year, m);
+            if day < last {
+                Some(CqlDate { year: d.year, month: Some(m), day: Some(day + 1) })
+            } else if m < 12 {
+                Some(CqlDate { year: d.year, month: Some(m + 1), day: Some(1) })
+            } else if d.year < 9999 {
+                Some(CqlDate { year: d.year + 1, month: Some(1), day: Some(1) })
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Returns the CqlTime one millisecond before `t` at its own precision, or
+/// `None` on underflow (before 00:00:00.000).
+fn time_predecessor(t: &CqlTime) -> Option<CqlTime> {
+    if let Some(ms) = t.millisecond {
+        if ms > 0 {
+            return Some(CqlTime { millisecond: Some(ms - 1), ..*t });
+        }
+        let s = t.second.unwrap_or(0);
+        if s > 0 {
+            return Some(CqlTime { second: Some(s - 1), millisecond: Some(999), ..*t });
+        }
+        let m = t.minute.unwrap_or(0);
+        if m > 0 {
+            return Some(CqlTime { minute: Some(m - 1), second: Some(59), millisecond: Some(999), ..*t });
+        }
+        if t.hour > 0 {
+            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: Some(59), millisecond: Some(999) });
+        }
+        return None; // already at 00:00:00.000
+    } else if let Some(s) = t.second {
+        if s > 0 {
+            return Some(CqlTime { second: Some(s - 1), ..*t });
+        }
+        let m = t.minute.unwrap_or(0);
+        if m > 0 {
+            return Some(CqlTime { minute: Some(m - 1), second: Some(59), ..*t });
+        }
+        if t.hour > 0 {
+            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: Some(59), millisecond: None });
+        }
+        return None;
+    } else if let Some(m) = t.minute {
+        if m > 0 {
+            return Some(CqlTime { minute: Some(m - 1), ..*t });
+        }
+        if t.hour > 0 {
+            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: None, millisecond: None });
+        }
+        return None;
+    } else {
+        // hour-only precision
+        if t.hour > 0 { Some(CqlTime { hour: t.hour - 1, minute: None, second: None, millisecond: None }) } else { None }
+    }
+}
+
+/// Returns the CqlTime one millisecond after `t` at its own precision, or
+/// `None` on overflow (beyond 23:59:59.999).
+fn time_successor(t: &CqlTime) -> Option<CqlTime> {
+    if let Some(ms) = t.millisecond {
+        if ms < 999 {
+            return Some(CqlTime { millisecond: Some(ms + 1), ..*t });
+        }
+        let s = t.second.unwrap_or(0);
+        if s < 59 {
+            return Some(CqlTime { second: Some(s + 1), millisecond: Some(0), ..*t });
+        }
+        let m = t.minute.unwrap_or(0);
+        if m < 59 {
+            return Some(CqlTime { minute: Some(m + 1), second: Some(0), millisecond: Some(0), ..*t });
+        }
+        if t.hour < 23 {
+            return Some(CqlTime { hour: t.hour + 1, minute: Some(0), second: Some(0), millisecond: Some(0) });
+        }
+        return None; // already at 23:59:59.999
+    } else if let Some(s) = t.second {
+        if s < 59 {
+            return Some(CqlTime { second: Some(s + 1), ..*t });
+        }
+        let m = t.minute.unwrap_or(0);
+        if m < 59 {
+            return Some(CqlTime { minute: Some(m + 1), second: Some(0), ..*t });
+        }
+        if t.hour < 23 {
+            return Some(CqlTime { hour: t.hour + 1, minute: Some(59), second: Some(0), millisecond: None });
+        }
+        return None;
+    } else if let Some(m) = t.minute {
+        if m < 59 {
+            return Some(CqlTime { minute: Some(m + 1), ..*t });
+        }
+        if t.hour < 23 {
+            return Some(CqlTime { hour: t.hour + 1, minute: Some(0), second: None, millisecond: None });
+        }
+        return None;
+    } else {
+        if t.hour < 23 { Some(CqlTime { hour: t.hour + 1, minute: None, second: None, millisecond: None }) } else { None }
+    }
+}
+
+/// Returns the CqlDateTime one unit before `dt` at its own precision, or
+/// `None` on underflow.
+fn datetime_predecessor(dt: &CqlDateTime) -> Option<CqlDateTime> {
+    macro_rules! with_date {
+        ($prev:expr) => {
+            CqlDateTime {
+                year: $prev.year,
+                month: $prev.month,
+                day: $prev.day,
+                hour: dt.hour,
+                minute: dt.minute,
+                second: dt.second,
+                millisecond: dt.millisecond,
+                offset_seconds: dt.offset_seconds,
+            }
+        };
+    }
+
+    let date_part = CqlDate { year: dt.year, month: dt.month, day: dt.day };
+
+    if let Some(ms) = dt.millisecond {
+        if ms > 0 { return Some(CqlDateTime { millisecond: Some(ms - 1), ..dt.clone() }); }
+        let s = dt.second.unwrap_or(0);
+        if s > 0 { return Some(CqlDateTime { second: Some(s - 1), millisecond: Some(999), ..dt.clone() }); }
+        let m = dt.minute.unwrap_or(0);
+        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), second: Some(59), millisecond: Some(999), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), second: Some(59), millisecond: Some(999), ..dt.clone() }); }
+        let prev = date_predecessor(&date_part)?;
+        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
+            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999), offset_seconds: dt.offset_seconds });
+    } else if let Some(s) = dt.second {
+        if s > 0 { return Some(CqlDateTime { second: Some(s - 1), ..dt.clone() }); }
+        let m = dt.minute.unwrap_or(0);
+        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), second: Some(59), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), second: Some(59), ..dt.clone() }); }
+        let prev = date_predecessor(&date_part)?;
+        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
+            hour: Some(23), minute: Some(59), second: Some(59), millisecond: None, offset_seconds: dt.offset_seconds });
+    } else if let Some(m) = dt.minute {
+        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), ..dt.clone() }); }
+        let prev = date_predecessor(&date_part)?;
+        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
+            hour: Some(23), minute: Some(59), second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+    } else if let Some(h) = dt.hour {
+        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), ..dt.clone() }); }
+        let prev = date_predecessor(&date_part)?;
+        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
+            hour: Some(23), minute: None, second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+    } else {
+        // date-only precision
+        let prev = date_predecessor(&date_part)?;
+        return Some(with_date!(prev));
+    }
+}
+
+/// Returns the CqlDateTime one unit after `dt` at its own precision, or `None`
+/// on overflow.
+fn datetime_successor(dt: &CqlDateTime) -> Option<CqlDateTime> {
+    macro_rules! with_date {
+        ($next:expr) => {
+            CqlDateTime {
+                year: $next.year,
+                month: $next.month,
+                day: $next.day,
+                hour: dt.hour,
+                minute: dt.minute,
+                second: dt.second,
+                millisecond: dt.millisecond,
+                offset_seconds: dt.offset_seconds,
+            }
+        };
+    }
+
+    let date_part = CqlDate { year: dt.year, month: dt.month, day: dt.day };
+
+    if let Some(ms) = dt.millisecond {
+        if ms < 999 { return Some(CqlDateTime { millisecond: Some(ms + 1), ..dt.clone() }); }
+        let s = dt.second.unwrap_or(0);
+        if s < 59 { return Some(CqlDateTime { second: Some(s + 1), millisecond: Some(0), ..dt.clone() }); }
+        let m = dt.minute.unwrap_or(0);
+        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), second: Some(0), millisecond: Some(0), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), second: Some(0), millisecond: Some(0), ..dt.clone() }); }
+        let next = date_successor(&date_part)?;
+        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
+            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0), offset_seconds: dt.offset_seconds });
+    } else if let Some(s) = dt.second {
+        if s < 59 { return Some(CqlDateTime { second: Some(s + 1), ..dt.clone() }); }
+        let m = dt.minute.unwrap_or(0);
+        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), second: Some(0), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), second: Some(0), ..dt.clone() }); }
+        let next = date_successor(&date_part)?;
+        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
+            hour: Some(0), minute: Some(0), second: Some(0), millisecond: None, offset_seconds: dt.offset_seconds });
+    } else if let Some(m) = dt.minute {
+        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), ..dt.clone() }); }
+        let h = dt.hour.unwrap_or(0);
+        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), ..dt.clone() }); }
+        let next = date_successor(&date_part)?;
+        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
+            hour: Some(0), minute: Some(0), second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+    } else if let Some(h) = dt.hour {
+        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), ..dt.clone() }); }
+        let next = date_successor(&date_part)?;
+        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
+            hour: Some(0), minute: None, second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+    } else {
+        let next = date_successor(&date_part)?;
+        return Some(with_date!(next));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Predecessor / Successor
+// ---------------------------------------------------------------------------
+
 /// CQL `Predecessor`: the value immediately before the argument.
-/// Decimal precision is 10⁻⁸ per the CQL specification.
+///
+/// For numeric types, "immediately before" means:
+/// - Integer/Long: minus one
+/// - Decimal/Quantity: minus 10⁻⁸ per the CQL specification
+///
+/// For temporal types, precision propagates from the input:
+/// - Date: minus one day (or month, or year) at the date's own precision
+/// - DateTime: minus one millisecond at the datetime's own finest precision
+/// - Time: minus one millisecond at the time's own finest precision
+///
 /// Returns `null` if the result would underflow the minimum value.
 pub fn predecessor(a: &Value) -> Result<Value, EvalError> {
     null1!(a);
@@ -448,11 +749,24 @@ pub fn predecessor(a: &Value) -> Result<Value, EvalError> {
         Value::Quantity(q) => {
             Ok(Value::Quantity(CqlQuantity { value: q.value - 1e-8, unit: q.unit.clone() }))
         }
+        Value::Date(d) => Ok(date_predecessor(d).map(Value::Date).unwrap_or(Value::Null)),
+        Value::DateTime(dt) => Ok(datetime_predecessor(dt).map(Value::DateTime).unwrap_or(Value::Null)),
+        Value::Time(t) => Ok(time_predecessor(t).map(Value::Time).unwrap_or(Value::Null)),
         _ => Err(err("Predecessor", &format!("unsupported type: {a:?}"))),
     }
 }
 
 /// CQL `Successor`: the value immediately after the argument.
+///
+/// For numeric types, "immediately after" means:
+/// - Integer/Long: plus one
+/// - Decimal/Quantity: plus 10⁻⁸ per the CQL specification
+///
+/// For temporal types, precision propagates from the input:
+/// - Date: plus one day (or month, or year) at the date's own precision
+/// - DateTime: plus one millisecond at the datetime's own finest precision
+/// - Time: plus one millisecond at the time's own finest precision
+///
 /// Returns `null` if the result would overflow the maximum value.
 pub fn successor(a: &Value) -> Result<Value, EvalError> {
     null1!(a);
@@ -467,13 +781,17 @@ pub fn successor(a: &Value) -> Result<Value, EvalError> {
         Value::Quantity(q) => {
             Ok(Value::Quantity(CqlQuantity { value: q.value + 1e-8, unit: q.unit.clone() }))
         }
+        Value::Date(d) => Ok(date_successor(d).map(Value::Date).unwrap_or(Value::Null)),
+        Value::DateTime(dt) => Ok(datetime_successor(dt).map(Value::DateTime).unwrap_or(Value::Null)),
+        Value::Time(t) => Ok(time_successor(t).map(Value::Time).unwrap_or(Value::Null)),
         _ => Err(err("Successor", &format!("unsupported type: {a:?}"))),
     }
 }
 
 /// CQL `MinValue(<T>)`: the minimum representable value for the named type.
 ///
-/// Supported type names: `"Integer"`, `"Long"`, `"Decimal"`.
+/// Supported type names: `"Integer"`, `"Long"`, `"Decimal"`, `"Date"`,
+/// `"DateTime"`, `"Time"`.
 ///
 /// ```
 /// use rh_cql::eval::operators::min_value;
@@ -486,11 +804,23 @@ pub fn min_value(type_name: &str) -> Result<Value, EvalError> {
         "Integer" => Ok(Value::Integer(i32::MIN as i64)),
         "Long" => Ok(Value::Long(i64::MIN as i128)),
         "Decimal" => Ok(Value::Decimal(f64::MIN)),
+        "Date" => Ok(Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) })),
+        "DateTime" => Ok(Value::DateTime(CqlDateTime {
+            year: 1, month: Some(1), day: Some(1),
+            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            offset_seconds: None,
+        })),
+        "Time" => Ok(Value::Time(CqlTime {
+            hour: 0, minute: Some(0), second: Some(0), millisecond: Some(0),
+        })),
         other => Err(EvalError::General(format!("MinValue: unsupported type '{other}'"))),
     }
 }
 
 /// CQL `MaxValue(<T>)`: the maximum representable value for the named type.
+///
+/// Supported type names: `"Integer"`, `"Long"`, `"Decimal"`, `"Date"`,
+/// `"DateTime"`, `"Time"`.
 ///
 /// ```
 /// use rh_cql::eval::operators::max_value;
@@ -503,6 +833,15 @@ pub fn max_value(type_name: &str) -> Result<Value, EvalError> {
         "Integer" => Ok(Value::Integer(i32::MAX as i64)),
         "Long" => Ok(Value::Long(i64::MAX as i128)),
         "Decimal" => Ok(Value::Decimal(f64::MAX)),
+        "Date" => Ok(Value::Date(CqlDate { year: 9999, month: Some(12), day: Some(31) })),
+        "DateTime" => Ok(Value::DateTime(CqlDateTime {
+            year: 9999, month: Some(12), day: Some(31),
+            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            offset_seconds: None,
+        })),
+        "Time" => Ok(Value::Time(CqlTime {
+            hour: 23, minute: Some(59), second: Some(59), millisecond: Some(999),
+        })),
         other => Err(EvalError::General(format!("MaxValue: unsupported type '{other}'"))),
     }
 }
@@ -734,5 +1073,146 @@ mod tests {
     fn compare_different_types_yields_null() {
         // Integer vs Decimal are different variant arms — not comparable, returns null
         assert_eq!(less(&Value::Integer(1), &Value::Decimal(2.0)).unwrap(), Value::Null);
+    }
+
+    // ---- Temporal comparison (S1) ------------------------------------------
+
+    #[test]
+    fn less_date_values() {
+        let earlier = Value::Date(CqlDate { year: 2020, month: Some(1), day: Some(1) });
+        let later   = Value::Date(CqlDate { year: 2020, month: Some(6), day: Some(15) });
+        assert_eq!(less(&earlier, &later).unwrap(),   Value::Boolean(true));
+        assert_eq!(less(&later, &earlier).unwrap(),   Value::Boolean(false));
+        assert_eq!(less(&earlier, &earlier).unwrap(), Value::Boolean(false));
+    }
+
+    #[test]
+    fn greater_datetime_values() {
+        let dt1 = Value::DateTime(CqlDateTime {
+            year: 2023, month: Some(3), day: Some(10),
+            hour: Some(12), minute: Some(0), second: Some(0), millisecond: Some(0),
+            offset_seconds: None,
+        });
+        let dt2 = Value::DateTime(CqlDateTime {
+            year: 2023, month: Some(3), day: Some(10),
+            hour: Some(8), minute: Some(30), second: Some(0), millisecond: Some(0),
+            offset_seconds: None,
+        });
+        assert_eq!(greater(&dt1, &dt2).unwrap(), Value::Boolean(true));
+        assert_eq!(greater(&dt2, &dt1).unwrap(), Value::Boolean(false));
+    }
+
+    // ---- Temporal predecessor / successor (W2) ------------------------------
+
+    #[test]
+    fn predecessor_date_day_precision() {
+        let d = Value::Date(CqlDate { year: 2023, month: Some(3), day: Some(1) });
+        let expected = Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(28) });
+        assert_eq!(predecessor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_date_crosses_year() {
+        let d = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
+        let expected = Value::Date(CqlDate { year: 2022, month: Some(12), day: Some(31) });
+        assert_eq!(predecessor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_date_min_yields_null() {
+        let d = Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) });
+        assert_eq!(predecessor(&d).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn successor_date_month_end() {
+        let d = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(31) });
+        let expected = Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(1) });
+        assert_eq!(successor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_date_leap_year() {
+        let d = Value::Date(CqlDate { year: 2024, month: Some(2), day: Some(28) });
+        let expected = Value::Date(CqlDate { year: 2024, month: Some(2), day: Some(29) });
+        assert_eq!(successor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_time_millisecond() {
+        let t = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(0), millisecond: Some(0) });
+        let expected = Value::Time(CqlTime { hour: 10, minute: Some(29), second: Some(59), millisecond: Some(999) });
+        assert_eq!(predecessor(&t).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_time_millisecond() {
+        let t = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(0), millisecond: Some(999) });
+        let expected = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(1), millisecond: Some(0) });
+        assert_eq!(successor(&t).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_datetime_millisecond() {
+        let dt = Value::DateTime(CqlDateTime {
+            year: 2023, month: Some(1), day: Some(1),
+            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            offset_seconds: None,
+        });
+        let expected = Value::DateTime(CqlDateTime {
+            year: 2022, month: Some(12), day: Some(31),
+            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            offset_seconds: None,
+        });
+        assert_eq!(predecessor(&dt).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_datetime_millisecond() {
+        let dt = Value::DateTime(CqlDateTime {
+            year: 2023, month: Some(12), day: Some(31),
+            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            offset_seconds: None,
+        });
+        let expected = Value::DateTime(CqlDateTime {
+            year: 2024, month: Some(1), day: Some(1),
+            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            offset_seconds: None,
+        });
+        assert_eq!(successor(&dt).unwrap(), expected);
+    }
+
+    // ---- MinValue / MaxValue for temporal types (W1) -----------------------
+
+    #[test]
+    fn min_max_value_date() {
+        assert_eq!(
+            min_value("Date").unwrap(),
+            Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) })
+        );
+        assert_eq!(
+            max_value("Date").unwrap(),
+            Value::Date(CqlDate { year: 9999, month: Some(12), day: Some(31) })
+        );
+    }
+
+    #[test]
+    fn min_max_value_time() {
+        assert_eq!(
+            min_value("Time").unwrap(),
+            Value::Time(CqlTime { hour: 0, minute: Some(0), second: Some(0), millisecond: Some(0) })
+        );
+        assert_eq!(
+            max_value("Time").unwrap(),
+            Value::Time(CqlTime { hour: 23, minute: Some(59), second: Some(59), millisecond: Some(999) })
+        );
+    }
+
+    #[test]
+    fn min_max_value_datetime() {
+        let min_dt = min_value("DateTime").unwrap();
+        let max_dt = max_value("DateTime").unwrap();
+        assert!(matches!(min_dt, Value::DateTime(ref d) if d.year == 1 && d.millisecond == Some(0)));
+        assert!(matches!(max_dt, Value::DateTime(ref d) if d.year == 9999 && d.millisecond == Some(999)));
     }
 }
