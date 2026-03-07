@@ -140,8 +140,8 @@
 
 ### 9.C Arithmetic & Comparison Operators
 
-- [ ] 9.10 Create `src/eval/operators.rs`: implement arithmetic operators (Add, Subtract, Multiply, Divide, Modulo, Negate, Abs, Ceiling, Floor, Truncate, Round, Power, Ln, Exp, Log, Predecessor, Successor, MinValue, MaxValue)
-- [ ] 9.11 Create `src/eval/operators.rs`: implement comparison operators (Equal, Equivalent, Less, Greater, LessOrEqual, GreaterOrEqual) with null handling
+- [x] 9.10 Create `src/eval/operators.rs`: implement arithmetic operators (Add, Subtract, Multiply, Divide, Modulo, Negate, Abs, Ceiling, Floor, Truncate, Round, Power, Ln, Exp, Log, Predecessor, Successor, MinValue, MaxValue)
+- [x] 9.11 Create `src/eval/operators.rs`: implement comparison operators (Equal, Equivalent, Less, Greater, LessOrEqual, GreaterOrEqual) with null handling
 
 ### 9.D String & Date/Time Operators
 

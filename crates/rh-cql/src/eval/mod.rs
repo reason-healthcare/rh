@@ -13,15 +13,16 @@
 //! - [`tvl`]     — Three-valued logic (And, Or, Not, Implies, Xor)
 //! - [`context`] — [`EvalContext`], [`DataProvider`], [`TerminologyProvider`],
 //!                 [`InMemoryDataProvider`], [`InMemoryTerminologyProvider`]
+//! - [`operators`] — Arithmetic and comparison operators (§12 / §5)
 //!
 //! Future phases will add:
-//! - `operators` — Arithmetic, comparison, string, date/time operators
 //! - `intervals` — Interval operators
 //! - `lists`     — List operators
 //! - `queries`   — Query evaluation
 //! - `engine`    — `evaluate_elm` / `evaluate_elm_with_trace` entry points
 
 pub mod context;
+pub mod operators;
 pub mod tvl;
 pub mod value;
 
@@ -31,3 +32,8 @@ pub use context::{
 };
 pub use tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use value::{CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
+pub use operators::{
+    abs, add, ceiling, divide, equal, equivalent, exp, floor, greater, greater_or_equal,
+    less, less_or_equal, ln, log, max_value, min_value, modulo, multiply, negate, power,
+    predecessor, round, subtract, successor, truncate,
+};
