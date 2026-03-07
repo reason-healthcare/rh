@@ -2527,4 +2527,101 @@ mod tests {
         let d2 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(1) });
         assert_eq!(duration_between(&d1, &d2, "day").unwrap(), Value::Integer(-14));
     }
+
+    // ---- SplitOnMatches (9.12) ---------------------------------------------
+
+    #[test]
+    fn split_on_matches_basic() {
+        let result = split_on_matches(
+            &Value::String("a1b2c3".into()),
+            &Value::String("\\d".into()),
+        ).unwrap();
+        assert_eq!(result, Value::List(vec![
+            Value::String("a".into()),
+            Value::String("b".into()),
+            Value::String("c".into()),
+            Value::String("".into()),
+        ]));
+    }
+
+    #[test]
+    fn split_on_matches_no_match_returns_single_element() {
+        let result = split_on_matches(
+            &Value::String("hello".into()),
+            &Value::String("\\d+".into()),
+        ).unwrap();
+        assert_eq!(result, Value::List(vec![Value::String("hello".into())]));
+    }
+
+    #[test]
+    fn split_on_matches_null_propagates() {
+        assert_eq!(
+            split_on_matches(&Value::Null, &Value::String("x".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            split_on_matches(&Value::String("x".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
+    }
+
+    // ---- DifferenceBetween (9.13) ------------------------------------------
+
+    #[test]
+    fn difference_between_years() {
+        let d1 = Value::Date(CqlDate { year: 2020, month: Some(6), day: Some(15) });
+        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
+        // difference truncates to whole year components (2023 - 2020 = 3)
+        assert_eq!(difference_between(&d1, &d2, "year").unwrap(), Value::Integer(3));
+    }
+
+    #[test]
+    fn difference_between_days() {
+        let d1 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
+        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(8) });
+        assert_eq!(difference_between(&d1, &d2, "day").unwrap(), Value::Integer(7));
+    }
+
+    #[test]
+    fn difference_between_null_propagates() {
+        assert_eq!(
+            difference_between(&Value::Null, &Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) }), "day").unwrap(),
+            Value::Null
+        );
+    }
+
+    // ---- Null propagation for string operators (suggestion) ----------------
+
+    #[test]
+    fn starts_with_null_propagates() {
+        assert_eq!(starts_with(&Value::Null, &Value::String("foo".into())).unwrap(), Value::Null);
+        assert_eq!(starts_with(&Value::String("foo".into()), &Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn ends_with_null_propagates() {
+        assert_eq!(ends_with(&Value::Null, &Value::String("bar".into())).unwrap(), Value::Null);
+        assert_eq!(ends_with(&Value::String("foobar".into()), &Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn upper_null_propagates() {
+        assert_eq!(upper(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn lower_null_propagates() {
+        assert_eq!(lower(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn length_str_null_propagates() {
+        assert_eq!(length_str(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn split_null_propagates() {
+        assert_eq!(split(&Value::Null, &Value::String(",".into())).unwrap(), Value::Null);
+        assert_eq!(split(&Value::String("a,b".into()), &Value::Null).unwrap(), Value::Null);
+    }
 }
