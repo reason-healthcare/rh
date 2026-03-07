@@ -145,8 +145,8 @@
 
 ### 9.D String & Date/Time Operators
 
-- [ ] 9.12 Create `src/eval/operators.rs`: implement string operators (Concatenate, Combine, Split, Length, Upper, Lower, StartsWith, EndsWith, Matches, Indexer, PositionOf, Substring)
-- [ ] 9.13 Create `src/eval/operators.rs`: implement date/time operators (construction, component extraction, date arithmetic, SameAs, SameOrBefore, SameOrAfter, duration calculations)
+- [x] 9.12 Create `src/eval/operators.rs`: implement string operators (Concatenate, Combine, Split, Length, Upper, Lower, StartsWith, EndsWith, Matches, Indexer, PositionOf, Substring)
+- [x] 9.13 Create `src/eval/operators.rs`: implement date/time operators (construction, component extraction, date arithmetic, SameAs, SameOrBefore, SameOrAfter, duration calculations)
 
 ### 9.E Type Conversion Operators
 
