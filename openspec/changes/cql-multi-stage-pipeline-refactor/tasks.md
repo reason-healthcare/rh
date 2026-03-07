@@ -132,11 +132,11 @@
 
 ### 9.B Context & Providers
 
-- [ ] 9.5 Define `EvalContext` struct with deterministic clock, timezone, parameter values, context value, provider references
-- [ ] 9.6 Define `DataProvider` trait with `retrieve()` method
-- [ ] 9.7 Define `TerminologyProvider` trait with `in_valueset()`, `expand_valueset()`, `lookup()` methods
-- [ ] 9.8 Implement `InMemoryDataProvider` for testing
-- [ ] 9.9 Implement `InMemoryTerminologyProvider` for testing
+- [x] 9.5 Define `EvalContext` struct with deterministic clock, timezone, parameter values, context value, provider references
+- [x] 9.6 Define `DataProvider` trait with `retrieve()` method
+- [x] 9.7 Define `TerminologyProvider` trait with `in_valueset()`, `expand_valueset()`, `lookup()` methods
+- [x] 9.8 Implement `InMemoryDataProvider` for testing
+- [x] 9.9 Implement `InMemoryTerminologyProvider` for testing
 
 ### 9.C Arithmetic & Comparison Operators
 
