@@ -129,6 +129,10 @@ pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 pub use emit::ElmEmitter;
 pub use eval::value::{cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
 pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
+pub use eval::context::{
+    Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError,
+    FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
+};
 pub use semantics::analyzer::SemanticAnalyzer;
 pub use semantics::scope::ScopeManager;
 pub use semantics::typed_ast::{

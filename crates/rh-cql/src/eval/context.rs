@@ -72,6 +72,7 @@ pub trait DataProvider: Send + Sync {
     /// individual resources.
     fn retrieve(
         &self,
+        context: Option<&str>,
         data_type: &str,
         code_path: Option<&str>,
         codes: Option<&Value>,
@@ -239,6 +240,7 @@ impl EvalContext {
     /// Returns `Ok(vec![])` when no provider is configured.
     pub fn retrieve(
         &self,
+        context: Option<&str>,
         data_type: &str,
         code_path: Option<&str>,
         codes: Option<&Value>,
@@ -246,7 +248,7 @@ impl EvalContext {
         date_range: Option<&Value>,
     ) -> Result<Vec<Value>, EvalError> {
         match &self.data_provider {
-            Some(p) => p.retrieve(data_type, code_path, codes, date_path, date_range),
+            Some(p) => p.retrieve(context, data_type, code_path, codes, date_path, date_range),
             None => Ok(vec![]),
         }
     }
@@ -367,7 +369,7 @@ impl EvalContextBuilder {
 ///
 /// ```rust
 /// use std::collections::BTreeMap;
-/// use rh_cql::eval::context::InMemoryDataProvider;
+/// use rh_cql::eval::context::{InMemoryDataProvider, DataProvider};
 /// use rh_cql::eval::value::Value;
 ///
 /// let mut provider = InMemoryDataProvider::new();
@@ -375,7 +377,7 @@ impl EvalContextBuilder {
 /// obs.insert("status".to_string(), Value::String("final".to_string()));
 /// provider.add_resource("Observation", Value::Tuple(obs));
 ///
-/// let results = provider.retrieve("Observation", None, None, None, None).unwrap();
+/// let results = provider.retrieve(None, "Observation", None, None, None, None).unwrap();
 /// assert_eq!(results.len(), 1);
 /// ```
 #[derive(Debug, Default, Clone)]
@@ -410,8 +412,14 @@ impl InMemoryDataProvider {
 }
 
 impl DataProvider for InMemoryDataProvider {
+    /// Returns all resources of `data_type` without applying any filters.
+    ///
+    /// `context`, `code_path`, `codes`, `date_path`, and `date_range` are
+    /// accepted but intentionally ignored — the caller (evaluation engine) is
+    /// responsible for post-filtering based on code and date constraints.
     fn retrieve(
         &self,
+        _context: Option<&str>,
         data_type: &str,
         _code_path: Option<&str>,
         _codes: Option<&Value>,
@@ -438,7 +446,7 @@ impl DataProvider for InMemoryDataProvider {
 /// # Example
 ///
 /// ```rust
-/// use rh_cql::eval::context::InMemoryTerminologyProvider;
+/// use rh_cql::eval::context::{InMemoryTerminologyProvider, TerminologyProvider};
 /// use rh_cql::eval::value::CqlCode;
 ///
 /// let mut provider = InMemoryTerminologyProvider::new();
@@ -589,7 +597,7 @@ mod tests {
         assert_eq!(ctx.today().year, 2024);
         assert_eq!(ctx.parameter("x"), None);
         // No provider → retrieve returns empty list
-        let rows = ctx.retrieve("Patient", None, None, None, None).unwrap();
+        let rows = ctx.retrieve(None, "Patient", None, None, None, None).unwrap();
         assert!(rows.is_empty());
     }
 
@@ -637,7 +645,7 @@ mod tests {
         provider.add_resource("Observation", Value::Tuple(obs));
 
         let results = provider
-            .retrieve("Observation", None, None, None, None)
+            .retrieve(None, "Observation", None, None, None, None)
             .unwrap();
         assert_eq!(results.len(), 1);
     }
@@ -646,7 +654,7 @@ mod tests {
     fn in_memory_data_provider_empty_for_unknown_type() {
         let provider = InMemoryDataProvider::new();
         let results = provider
-            .retrieve("Condition", None, None, None, None)
+            .retrieve(None, "Condition", None, None, None, None)
             .unwrap();
         assert!(results.is_empty());
     }
@@ -660,9 +668,34 @@ mod tests {
             provider.add_resource("Observation", Value::Tuple(obs));
         }
         assert_eq!(
-            provider.retrieve("Observation", None, None, None, None).unwrap().len(),
+            provider.retrieve(None, "Observation", None, None, None, None).unwrap().len(),
             3
         );
+    }
+
+    #[test]
+    fn in_memory_data_provider_passes_through_filter_args() {
+        // InMemoryDataProvider accepts but ignores code/date-range filters,
+        // returning all resources for the type.  Post-filtering on code and
+        // date constraints is delegated to the evaluation engine.
+        let mut provider = InMemoryDataProvider::new();
+        let mut obs = BTreeMap::new();
+        obs.insert("status".to_string(), Value::String("final".to_string()));
+        provider.add_resource("Observation", Value::Tuple(obs));
+
+        let code_filter = Value::String("8480-6".to_string());
+        let results = provider
+            .retrieve(
+                Some("Patient"),
+                "Observation",
+                Some("code"),
+                Some(&code_filter),
+                Some("effective"),
+                None,
+            )
+            .unwrap();
+        // All resources returned regardless of filter arguments
+        assert_eq!(results.len(), 1);
     }
 
     #[test]
@@ -676,7 +709,7 @@ mod tests {
             .data_provider(data)
             .build();
 
-        let rows = ctx.retrieve("Observation", None, None, None, None).unwrap();
+        let rows = ctx.retrieve(None, "Observation", None, None, None, None).unwrap();
         assert_eq!(rows.len(), 1);
     }
 
