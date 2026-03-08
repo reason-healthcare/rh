@@ -34,10 +34,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 5. Definition Lookup and Caching
 
-- [ ] 5.1 Add internal indexes to `CompiledLibrary` for expressions, parameters, includes, and functions
-- [ ] 5.2 Refactor evaluation lookup to use indexed access instead of repeated statement scans and expression cloning
-- [ ] 5.3 Implement function lookup APIs fully, or remove placeholder public methods until function indexing is ready
-- [ ] 5.4 Add benchmarks or targeted tests covering repeated lookup and evaluation scenarios
+- [x] 5.1 Add internal indexes to `CompiledLibrary` for expressions, parameters, includes, and functions
+- [x] 5.2 Refactor evaluation lookup to use indexed access instead of repeated statement scans and expression cloning
+- [x] 5.3 Implement function lookup APIs fully, or remove placeholder public methods until function indexing is ready
+- [x] 5.4 Add benchmarks or targeted tests covering repeated lookup and evaluation scenarios
 
 ## 6. Library Module Decomposition
 

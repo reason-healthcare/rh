@@ -5,7 +5,7 @@
 //! - [`evaluate_elm_with_trace`] — same but return step-by-step trace events
 //! - [`TraceEvent`]    — per-node evaluation record
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::context::{EvalContext, EvalError};
 use super::operators::*;
@@ -57,7 +57,7 @@ pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<
     let mut engine = Engine::new(library, ctx);
     let expr = engine.find_expression(name)?;
     let bindings = engine.build_initial_bindings();
-    engine.eval_expr(&expr, &bindings)
+    engine.eval_expr(expr, &bindings)
 }
 
 /// Evaluate a named expression and return the result plus a flat trace of
@@ -73,7 +73,7 @@ pub fn evaluate_elm_with_trace(
     let mut engine = Engine::new(library, ctx);
     let expr = engine.find_expression(name)?;
     let bindings = engine.build_initial_bindings();
-    let value = engine.eval_expr(&expr, &bindings)?;
+    let value = engine.eval_expr(expr, &bindings)?;
     let trace = std::mem::take(&mut engine.trace);
     Ok((value, trace))
 }
@@ -87,45 +87,56 @@ struct Engine<'lib, 'ctx> {
     ctx: &'ctx EvalContext,
     trace: Vec<TraceEvent>,
     next_event_id: u64,
+    /// Expression name → body, built at construction for O(1) lookup.
+    expr_index: HashMap<String, &'lib Expression>,
+    /// Set of parameter names declared in the library, for fast membership test.
+    param_names: HashSet<String>,
 }
 
 impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     fn new(library: &'lib Library, ctx: &'ctx EvalContext) -> Self {
+        // Pre-build expression and parameter indexes for O(1) lookup.
+        let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
+        let mut param_names: HashSet<String> = HashSet::new();
+
+        if let Some(stmts) = &library.statements {
+            for def in &stmts.defs {
+                if let StatementDef::Expression(ed) = def {
+                    if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
+                        expr_index.insert(name.clone(), expr.as_ref());
+                    }
+                }
+            }
+        }
+
+        if let Some(params) = &library.parameters {
+            for p in &params.defs {
+                if let Some(name) = &p.name {
+                    param_names.insert(name.clone());
+                }
+            }
+        }
+
         Self {
             library,
             ctx,
             trace: Vec::new(),
             next_event_id: 1,
+            expr_index,
+            param_names,
         }
     }
 
-    fn find_expression(&self, name: &str) -> Result<Expression, EvalError> {
-        if let Some(ref stmts) = self.library.statements {
-            for def in &stmts.defs {
-                if let StatementDef::Expression(expr_def) = def {
-                    if expr_def.name.as_deref() == Some(name) {
-                        return expr_def
-                            .expression
-                            .as_ref()
-                            .map(|e| *e.clone())
-                            .ok_or_else(|| {
-                                EvalError::General(format!("Expression '{name}' has no body"))
-                            });
-                    }
-                }
-            }
-        }
-        Err(EvalError::General(format!(
-            "Expression '{name}' not found in library"
-        )))
+    fn find_expression(&self, name: &str) -> Result<&'lib Expression, EvalError> {
+        self.expr_index
+            .get(name)
+            .copied()
+            .ok_or_else(|| EvalError::General(format!("Expression '{name}' not found in library")))
     }
 
     /// Return true if `name` is declared as a parameter in the library.
     fn is_library_parameter(&self, name: &str) -> bool {
-        if let Some(ref params) = self.library.parameters {
-            return params.defs.iter().any(|p| p.name.as_deref() == Some(name));
-        }
-        false
+        self.param_names.contains(name)
     }
 
     fn build_initial_bindings(&self) -> BTreeMap<String, Value> {
@@ -195,7 +206,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 }
                 // Otherwise evaluate from library.
                 let expr = self.find_expression(name)?;
-                let val = self.eval_expr(&expr, bindings)?;
+                let val = self.eval_expr(expr, bindings)?;
                 self.record_trace(
                     "ExpressionRef",
                     vec![],

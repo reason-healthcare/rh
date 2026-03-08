@@ -27,6 +27,7 @@
 //! assert!(source.is_some());
 //! ```
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use rh_foundation::{MemoryStore, MemoryStoreConfig, MemoryStoreStats};
@@ -538,6 +539,123 @@ use crate::elm::{
     VersionedIdentifier,
 };
 
+/// Internal lookup index for O(1) definition access by name.
+///
+/// Built once at `CompiledLibrary` construction and kept alongside the
+/// underlying ELM `Library`.  All `get_*` lookups on `CompiledLibrary` use
+/// this index instead of scanning slices on every call.
+#[derive(Debug, Clone, Default)]
+struct LibraryIndex {
+    /// Expression name → index into `library.statements.defs`.
+    expressions: HashMap<String, usize>,
+    /// Function name → indices into `library.statements.defs` (all overloads).
+    functions: HashMap<String, Vec<usize>>,
+    /// Parameter name → index into `library.parameters.defs`.
+    parameters: HashMap<String, usize>,
+    /// Using local-identifier → index into `library.usings.defs`.
+    usings: HashMap<String, usize>,
+    /// Include local-identifier → index into `library.includes.defs`.
+    includes: HashMap<String, usize>,
+    /// Code-system name → index into `library.code_systems.defs`.
+    code_systems: HashMap<String, usize>,
+    /// Value-set name → index into `library.value_sets.defs`.
+    value_sets: HashMap<String, usize>,
+    /// Code name → index into `library.codes.defs`.
+    codes: HashMap<String, usize>,
+    /// Concept name → index into `library.concepts.defs`.
+    concepts: HashMap<String, usize>,
+    /// Context name → index into `library.contexts.defs`.
+    contexts: HashMap<String, usize>,
+}
+
+/// Build a `LibraryIndex` from an ELM `Library`.
+fn build_index(library: &Library) -> LibraryIndex {
+    let mut idx = LibraryIndex::default();
+
+    if let Some(stmts) = &library.statements {
+        for (i, def) in stmts.defs.iter().enumerate() {
+            match def {
+                StatementDef::Expression(e) => {
+                    if let Some(name) = &e.name {
+                        idx.expressions.insert(name.clone(), i);
+                    }
+                }
+                StatementDef::Function(f) => {
+                    if let Some(name) = &f.name {
+                        idx.functions.entry(name.clone()).or_default().push(i);
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(params) = &library.parameters {
+        for (i, p) in params.defs.iter().enumerate() {
+            if let Some(name) = &p.name {
+                idx.parameters.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(usings) = &library.usings {
+        for (i, u) in usings.defs.iter().enumerate() {
+            if let Some(name) = &u.local_identifier {
+                idx.usings.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(includes) = &library.includes {
+        for (i, inc) in includes.defs.iter().enumerate() {
+            if let Some(name) = &inc.local_identifier {
+                idx.includes.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(css) = &library.code_systems {
+        for (i, cs) in css.defs.iter().enumerate() {
+            if let Some(name) = &cs.name {
+                idx.code_systems.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(vss) = &library.value_sets {
+        for (i, vs) in vss.defs.iter().enumerate() {
+            if let Some(name) = &vs.name {
+                idx.value_sets.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(codes) = &library.codes {
+        for (i, code) in codes.defs.iter().enumerate() {
+            if let Some(name) = &code.name {
+                idx.codes.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(concepts) = &library.concepts {
+        for (i, concept) in concepts.defs.iter().enumerate() {
+            if let Some(name) = &concept.name {
+                idx.concepts.insert(name.clone(), i);
+            }
+        }
+    }
+
+    if let Some(contexts) = &library.contexts {
+        for (i, ctx) in contexts.defs.iter().enumerate() {
+            if let Some(name) = &ctx.name {
+                idx.contexts.insert(name.clone(), i);
+            }
+        }
+    }
+
+    idx
+}
+
 /// A compiled CQL library with convenient lookup methods.
 ///
 /// `CompiledLibrary` wraps an ELM [`Library`] and provides efficient access to
@@ -565,22 +683,28 @@ pub struct CompiledLibrary {
     library: Library,
     /// Source location (file path or URI) if known.
     source_location: Option<String>,
+    /// Pre-built lookup indexes for O(1) definition access.
+    index: LibraryIndex,
 }
 
 impl CompiledLibrary {
     /// Create a new compiled library from an ELM library.
     pub fn new(library: Library) -> Self {
+        let index = build_index(&library);
         Self {
             library,
             source_location: None,
+            index,
         }
     }
 
     /// Create a compiled library with source location metadata.
     pub fn with_source_location(library: Library, location: impl Into<String>) -> Self {
+        let index = build_index(&library);
         Self {
             library,
             source_location: Some(location.into()),
+            index,
         }
     }
 
@@ -635,9 +759,8 @@ impl CompiledLibrary {
 
     /// Get a using declaration by local identifier.
     pub fn get_using(&self, local_identifier: &str) -> Option<&UsingDef> {
-        self.usings()
-            .iter()
-            .find(|u| u.local_identifier.as_deref() == Some(local_identifier))
+        let idx = self.index.usings.get(local_identifier)?;
+        self.library.usings.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -655,9 +778,8 @@ impl CompiledLibrary {
 
     /// Get an include declaration by local identifier.
     pub fn get_include(&self, local_identifier: &str) -> Option<&IncludeDef> {
-        self.includes()
-            .iter()
-            .find(|i| i.local_identifier.as_deref() == Some(local_identifier))
+        let idx = self.index.includes.get(local_identifier)?;
+        self.library.includes.as_ref()?.defs.get(*idx)
     }
 
     /// Get the library identifiers for all includes.
@@ -687,9 +809,8 @@ impl CompiledLibrary {
 
     /// Get a parameter definition by name.
     pub fn get_parameter(&self, name: &str) -> Option<&ParameterDef> {
-        self.parameters()
-            .iter()
-            .find(|p| p.name.as_deref() == Some(name))
+        let idx = self.index.parameters.get(name)?;
+        self.library.parameters.as_ref()?.defs.get(*idx)
     }
 
     /// Get all public parameter definitions.
@@ -715,9 +836,8 @@ impl CompiledLibrary {
 
     /// Get a code system definition by name.
     pub fn get_code_system(&self, name: &str) -> Option<&CodeSystemDef> {
-        self.code_systems()
-            .iter()
-            .find(|cs| cs.name.as_deref() == Some(name))
+        let idx = self.index.code_systems.get(name)?;
+        self.library.code_systems.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -735,9 +855,8 @@ impl CompiledLibrary {
 
     /// Get a value set definition by name.
     pub fn get_value_set(&self, name: &str) -> Option<&ValueSetDef> {
-        self.value_sets()
-            .iter()
-            .find(|vs| vs.name.as_deref() == Some(name))
+        let idx = self.index.value_sets.get(name)?;
+        self.library.value_sets.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -755,9 +874,8 @@ impl CompiledLibrary {
 
     /// Get a code definition by name.
     pub fn get_code(&self, name: &str) -> Option<&CodeDef> {
-        self.codes()
-            .iter()
-            .find(|c| c.name.as_deref() == Some(name))
+        let idx = self.index.codes.get(name)?;
+        self.library.codes.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -775,9 +893,8 @@ impl CompiledLibrary {
 
     /// Get a concept definition by name.
     pub fn get_concept(&self, name: &str) -> Option<&ConceptDef> {
-        self.concepts()
-            .iter()
-            .find(|c| c.name.as_deref() == Some(name))
+        let idx = self.index.concepts.get(name)?;
+        self.library.concepts.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -795,9 +912,8 @@ impl CompiledLibrary {
 
     /// Get a context definition by name.
     pub fn get_context(&self, name: &str) -> Option<&ContextDef> {
-        self.contexts()
-            .iter()
-            .find(|c| c.name.as_deref() == Some(name))
+        let idx = self.index.contexts.get(name)?;
+        self.library.contexts.as_ref()?.defs.get(*idx)
     }
 
     // =========================================================================
@@ -823,9 +939,12 @@ impl CompiledLibrary {
 
     /// Get an expression definition by name.
     pub fn get_expression(&self, name: &str) -> Option<&ExpressionDef> {
-        self.expressions()
-            .into_iter()
-            .find(|e| e.name.as_deref() == Some(name))
+        let idx = self.index.expressions.get(name)?;
+        if let StatementDef::Expression(e) = self.library.statements.as_ref()?.defs.get(*idx)? {
+            Some(e)
+        } else {
+            None
+        }
     }
 
     /// Get all public expression definitions.
@@ -850,44 +969,95 @@ impl CompiledLibrary {
 
     /// Get all function definitions.
     ///
-    /// Note: In ELM, functions are stored alongside expression definitions
-    /// in the statements section, distinguished by having operands.
-    /// This method returns definitions that have the structure of functions.
+    /// Functions are stored in the statements section alongside expression
+    /// definitions and are distinguished by the `StatementDef::Function` variant.
     pub fn functions(&self) -> Vec<FunctionRef<'_>> {
-        // In ELM JSON, FunctionDef and ExpressionDef are separate, but both
-        // can appear in statements. We need to look at the raw structure.
-        // For now, we'll return expression defs that could be functions.
-        // A more complete implementation would parse the raw JSON differently.
-        Vec::new()
+        let Some(stmts) = &self.library.statements else {
+            return Vec::new();
+        };
+        stmts
+            .defs
+            .iter()
+            .filter_map(|def| {
+                if let StatementDef::Function(f) = def {
+                    Some(FunctionRef {
+                        name: f.name.as_deref()?,
+                        operands: &f.operand,
+                        def: Some(f),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Get a function definition by name.
     ///
     /// If there are multiple overloads, returns the first match.
-    /// Use `get_function_by_signature` for specific overload resolution.
+    /// Use `get_function_overloads` to retrieve all overloads.
     pub fn get_function(&self, name: &str) -> Option<FunctionRef<'_>> {
-        // Placeholder - function lookup will be enhanced in Phase 4
-        let _ = name;
-        None
+        let indices = self.index.functions.get(name)?;
+        let first_idx = indices.first()?;
+        if let StatementDef::Function(f) = self.library.statements.as_ref()?.defs.get(*first_idx)? {
+            Some(FunctionRef {
+                name: f.name.as_deref()?,
+                operands: &f.operand,
+                def: Some(f),
+            })
+        } else {
+            None
+        }
     }
 
     /// Get a function definition by name and operand types.
     ///
-    /// This performs basic signature matching for function overload resolution.
+    /// Matches first by name, then by operand count; type names in
+    /// `operand_types` are compared against `OperandDef::operand_type_name`.
+    /// Pass an empty slice to match any single-named overload regardless of
+    /// arity.
     pub fn get_function_by_signature(
         &self,
         name: &str,
         operand_types: &[&str],
     ) -> Option<FunctionRef<'_>> {
-        // Placeholder - full signature matching requires type system integration
-        let _ = (name, operand_types);
-        None
+        let overloads = self.get_function_overloads(name);
+        if operand_types.is_empty() {
+            return overloads.into_iter().next();
+        }
+        overloads.into_iter().find(|fr| {
+            if fr.operands.len() != operand_types.len() {
+                return false;
+            }
+            fr.operands
+                .iter()
+                .zip(operand_types.iter())
+                .all(|(op, expected)| op.operand_type_name.as_deref() == Some(expected))
+        })
     }
 
     /// Get all functions with a given name (all overloads).
     pub fn get_function_overloads(&self, name: &str) -> Vec<FunctionRef<'_>> {
-        let _ = name;
-        Vec::new()
+        let Some(indices) = self.index.functions.get(name) else {
+            return Vec::new();
+        };
+        let Some(stmts) = &self.library.statements else {
+            return Vec::new();
+        };
+        indices
+            .iter()
+            .filter_map(|idx| {
+                if let StatementDef::Function(f) = stmts.defs.get(*idx)? {
+                    Some(FunctionRef {
+                        name: f.name.as_deref()?,
+                        operands: &f.operand,
+                        def: Some(f),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     // =========================================================================
@@ -2180,6 +2350,228 @@ mod tests {
         assert!(compiled.parameters().is_empty());
         assert!(compiled.expressions().is_empty());
         assert!(compiled.definition_names().is_empty());
+    }
+
+    // ===========================================
+    // Function lookup tests
+    // ===========================================
+
+    fn create_function_library() -> Library {
+        use crate::elm::{FunctionDef, OperandDef};
+
+        Library {
+            identifier: Some(VersionedIdentifier {
+                id: Some("FuncLib".to_string()),
+                version: Some("1.0.0".to_string()),
+                system: None,
+            }),
+            statements: Some(ExpressionDefs {
+                defs: vec![
+                    StatementDef::Expression(ExpressionDef {
+                        name: Some("Simple".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        ..Default::default()
+                    }),
+                    StatementDef::Function(FunctionDef {
+                        name: Some("Add".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        operand: vec![
+                            OperandDef {
+                                name: Some("a".to_string()),
+                                operand_type_name: Some(
+                                    "{urn:hl7-org:elm-types:r1}Integer".to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                            OperandDef {
+                                name: Some("b".to_string()),
+                                operand_type_name: Some(
+                                    "{urn:hl7-org:elm-types:r1}Integer".to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    }),
+                    // Second overload of Add with String operands
+                    StatementDef::Function(FunctionDef {
+                        name: Some("Add".to_string()),
+                        access_level: Some(AccessModifier::Public),
+                        operand: vec![
+                            OperandDef {
+                                name: Some("a".to_string()),
+                                operand_type_name: Some(
+                                    "{urn:hl7-org:elm-types:r1}String".to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                            OperandDef {
+                                name: Some("b".to_string()),
+                                operand_type_name: Some(
+                                    "{urn:hl7-org:elm-types:r1}String".to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    }),
+                    StatementDef::Function(FunctionDef {
+                        name: Some("Greet".to_string()),
+                        access_level: Some(AccessModifier::Private),
+                        operand: vec![OperandDef {
+                            name: Some("name".to_string()),
+                            operand_type_name: Some("{urn:hl7-org:elm-types:r1}String".to_string()),
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    }),
+                ],
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_compiled_library_functions_all() {
+        let compiled = CompiledLibrary::new(create_function_library());
+        let funcs = compiled.functions();
+        // Add (×2) + Greet = 3 functions
+        assert_eq!(funcs.len(), 3);
+        let names: Vec<&str> = funcs.iter().map(|f| f.name).collect();
+        assert_eq!(names.iter().filter(|&&n| n == "Add").count(), 2);
+        assert!(names.contains(&"Greet"));
+    }
+
+    #[test]
+    fn test_compiled_library_get_function_first_overload() {
+        let compiled = CompiledLibrary::new(create_function_library());
+        let func = compiled.get_function("Add");
+        assert!(func.is_some());
+        let fr = func.unwrap();
+        assert_eq!(fr.name, "Add");
+        assert_eq!(fr.operands.len(), 2);
+        assert!(fr.def.is_some());
+    }
+
+    #[test]
+    fn test_compiled_library_get_function_not_found() {
+        let compiled = CompiledLibrary::new(create_function_library());
+        assert!(compiled.get_function("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_get_function_overloads() {
+        let compiled = CompiledLibrary::new(create_function_library());
+        let overloads = compiled.get_function_overloads("Add");
+        assert_eq!(overloads.len(), 2);
+        // First overload has Integer operands
+        assert_eq!(
+            overloads[0].operands[0].operand_type_name.as_deref(),
+            Some("{urn:hl7-org:elm-types:r1}Integer")
+        );
+        // Second overload has String operands
+        assert_eq!(
+            overloads[1].operands[0].operand_type_name.as_deref(),
+            Some("{urn:hl7-org:elm-types:r1}String")
+        );
+    }
+
+    #[test]
+    fn test_compiled_library_get_function_overloads_not_found() {
+        let compiled = CompiledLibrary::new(create_function_library());
+        let overloads = compiled.get_function_overloads("NonExistent");
+        assert!(overloads.is_empty());
+    }
+
+    #[test]
+    fn test_compiled_library_get_function_by_signature() {
+        let compiled = CompiledLibrary::new(create_function_library());
+
+        // Match Integer overload
+        let int_add = compiled.get_function_by_signature(
+            "Add",
+            &[
+                "{urn:hl7-org:elm-types:r1}Integer",
+                "{urn:hl7-org:elm-types:r1}Integer",
+            ],
+        );
+        assert!(int_add.is_some());
+        assert_eq!(
+            int_add.unwrap().operands[0].operand_type_name.as_deref(),
+            Some("{urn:hl7-org:elm-types:r1}Integer")
+        );
+
+        // Match String overload
+        let str_add = compiled.get_function_by_signature(
+            "Add",
+            &[
+                "{urn:hl7-org:elm-types:r1}String",
+                "{urn:hl7-org:elm-types:r1}String",
+            ],
+        );
+        assert!(str_add.is_some());
+        assert_eq!(
+            str_add.unwrap().operands[0].operand_type_name.as_deref(),
+            Some("{urn:hl7-org:elm-types:r1}String")
+        );
+
+        // Wrong arity
+        let wrong_arity =
+            compiled.get_function_by_signature("Add", &["{urn:hl7-org:elm-types:r1}Integer"]);
+        assert!(wrong_arity.is_none());
+
+        // Not found
+        assert!(compiled
+            .get_function_by_signature("NoSuchFn", &[])
+            .is_none());
+    }
+
+    #[test]
+    fn test_compiled_library_functions_empty() {
+        let compiled = CompiledLibrary::new(Library::default());
+        assert!(compiled.functions().is_empty());
+        assert!(compiled.get_function("Any").is_none());
+        assert!(compiled.get_function_overloads("Any").is_empty());
+    }
+
+    #[test]
+    fn test_compiled_library_index_repeated_lookup() {
+        // Verify that repeated calls to get_* return consistent results,
+        // confirming the index doesn't get corrupted across lookups.
+        let compiled = CompiledLibrary::new(create_test_library());
+
+        for _ in 0..10 {
+            assert_eq!(
+                compiled
+                    .get_expression("InPopulation")
+                    .unwrap()
+                    .name
+                    .as_deref(),
+                Some("InPopulation")
+            );
+            assert_eq!(
+                compiled
+                    .get_parameter("MeasurementPeriod")
+                    .unwrap()
+                    .name
+                    .as_deref(),
+                Some("MeasurementPeriod")
+            );
+            assert!(compiled.get_expression("NonExistent").is_none());
+            assert!(compiled.get_parameter("NonExistent").is_none());
+        }
+    }
+
+    #[test]
+    fn test_compiled_library_functions_not_in_expressions() {
+        // Expressions and functions should be disjoint sets in the index.
+        let compiled = CompiledLibrary::new(create_function_library());
+        // "Add" is a function, not an expression
+        assert!(compiled.get_expression("Add").is_none());
+        assert!(compiled.get_function("Add").is_some());
+        // "Simple" is an expression, not a function
+        assert!(compiled.get_expression("Simple").is_some());
+        assert!(compiled.get_function("Simple").is_none());
     }
 
     // ===========================================
