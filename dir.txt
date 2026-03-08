@@ -1,2 +1,0 @@
-use super::{QName, SortDirection, TypeSpecifier};
-    pub direction: Option<SortDirection>,

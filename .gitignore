@@ -76,6 +76,10 @@ node_modules/
 tmp/
 temp/
 
+# Root-level scratch files (ad-hoc .txt and .py files from development sessions)
+/*.txt
+/*.py
+
 crates/rh-loader/packages
 
 prompts/
