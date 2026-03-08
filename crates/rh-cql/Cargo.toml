@@ -1,0 +1,28 @@
+[package]
+name = "rh-cql"
+version = "0.1.0"
+edition = "2021"
+description = "CQL (Clinical Quality Language) capabilities including CQL-to-ELM translation and execution"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/reason-healthcare/rh"
+keywords = ["cql", "elm", "fhir", "clinical-quality-language", "healthcare"]
+categories = ["science", "parser-implementations"]
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+nom = { workspace = true }
+quick-xml = { workspace = true }
+regex = { workspace = true }
+rh-foundation = { path = "../rh-foundation" }
+
+[dev-dependencies]
+
+[[bin]]
+name = "cql-test-parse"
+path = "src/bin/test_parse.rs"
+
+[features]
+default = []
