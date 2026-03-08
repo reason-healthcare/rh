@@ -48,10 +48,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 7. Warning and Dead-Code Cleanup
 
-- [ ] 7.1 Remove currently reported warnings such as redundant semicolons, unused imports, and dead helper methods
-- [ ] 7.2 Delete or wire up dead evaluation trace helpers in `src/eval/engine.rs`
-- [ ] 7.3 Run `cargo test -p rh-cql --quiet` and `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings`
-- [ ] 7.4 Keep the crate warning-free before starting larger structural refactors
+- [x] 7.1 Remove currently reported warnings such as redundant semicolons, unused imports, and dead helper methods
+- [x] 7.2 Delete or wire up dead evaluation trace helpers in `src/eval/engine.rs`
+- [x] 7.3 Run `cargo test -p rh-cql --quiet` and `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings`
+- [x] 7.4 Keep the crate warning-free before starting larger structural refactors
 
 ## 8. Documentation Refresh
 
@@ -91,7 +91,7 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## Recommended Order
 
-- [ ] A. Complete warning cleanup first so structural regressions are easier to spot
+- [x] A. Complete warning cleanup first so structural regressions are easier to spot
 - [ ] B. Consolidate the compilation pipeline before parser or evaluation refactors
 - [ ] C. Establish baseline benchmarks and golden files to protect against regressions
 - [ ] D. Refactor CLI code after the pipeline is unified
