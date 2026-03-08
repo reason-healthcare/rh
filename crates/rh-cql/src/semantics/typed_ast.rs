@@ -30,7 +30,13 @@ pub struct SemanticMeta {
     pub resolved_symbol: Option<String>,
 }
 
-/// A wrapper struct representing a typed node in the AST.
+/// A wrapper struct representing a typed node in the Typed AST.
+///
+/// `TypedNode<T>` is produced exclusively by [`SemanticAnalyzer::analyze`] and
+/// is **intended to be treated as immutable after construction**. Rust's
+/// ownership model naturally enforces this — callers hold `&TypedLibrary` and
+/// the analyzer retains no mutable reference after returning. Do not add
+/// mutation methods to this type; semantic decisions belong in the analyzer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedNode<T> {
     pub node_id: NodeId,
@@ -251,7 +257,14 @@ pub struct TypedParameterDef {
     pub access: crate::parser::ast::AccessModifier,
 }
 
-/// A library that has been through semantic analysis.
+/// A fully analyzed CQL library in Typed AST form.
+///
+/// Produced by [`SemanticAnalyzer::analyze`]. Like [`TypedNode`], this struct
+/// is **immutable after construction** — it represents a completed analysis
+/// snapshot. The [`ElmEmitter`] consumes `&TypedLibrary` (read-only) to
+/// produce [`elm::Library`]; no further mutation should occur.
+///
+/// [`ElmEmitter`]: crate::emit::ElmEmitter
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedLibrary {
     pub identifier: Option<crate::parser::ast::LibraryIdentifier>,

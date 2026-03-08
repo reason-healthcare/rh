@@ -210,13 +210,19 @@ Exit criteria:
 **Goal**: Connect crate to CLI/workflows and broaden operator coverage.
 
 Deliverables:
-- CLI plumbing (parse/compile/explain/eval commands)
+- CLI plumbing (parse/compile/explain/eval commands) ✅ Done
+- Wire primary `compile()` in `src/compiler.rs` through new `SemanticAnalyzer` +
+  `ElmEmitter` pipeline (currently still delegates to `LibraryBuilder` — see
+  Design Decision 9, step 7). Remove `builder.rs` and `translator.rs` once
+  conformance equivalence with the old pipeline is validated.
 - Compatibility matrix documenting supported CQL/ELM features
 - Incremental expansion across operator families and clinical operators
 - Performance baselines and regressions checks
+- Full jvmTest rerun to confirm parser conformance ≥ 90% after parser additions
 
 Exit criteria:
-- End-to-end user flows functional in `rh` CLI
+- End-to-end user flows functional in `rh` CLI ✅ Done
+- `compile()` routes through new three-stage pipeline
 - Published status page for coverage and known gaps
 
 ---
