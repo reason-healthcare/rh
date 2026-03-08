@@ -11,10 +11,11 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 2. CLI Structure Cleanup
 
-- [ ] 2.1 Extract reusable CQL command services from `apps/rh-cli/src/cql.rs` for compile, validate, eval, explain, and info flows
-- [ ] 2.2 Centralize compile result and diagnostic formatting instead of repeating similar output logic in each command handler
-- [ ] 2.3 Remove `std::process::exit` from helper functions and return status to the top-level CLI entrypoint
-- [ ] 2.4 Add focused CLI tests for command outcomes and exit behavior after the refactor
+- [x] 2.1 Extract reusable CQL command services from `apps/rh-cli/src/cql.rs` for compile, validate, eval, explain, and info flows
+- [x] 2.2 Centralize compile result and diagnostic formatting instead of repeating similar output logic in each command handler
+- [x] 2.3 Remove `std::process::exit` from helper functions and return status to the top-level CLI entrypoint
+- [x] 2.4 Add focused CLI tests for command outcomes and exit behavior after the refactor
+- [x] 2.5 Update the CLI README
 
 ## 3. Parser Extraction
 

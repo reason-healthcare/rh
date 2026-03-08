@@ -253,3 +253,128 @@ fn test_compile_source_map_to_stderr_when_no_output() {
         // Source map marker on stderr
         .stderr(predicate::str::contains("source map").or(predicate::str::contains("mappings")));
 }
+
+// ---------------------------------------------------------------------------
+// Fixtures for exit-behavior tests
+// ---------------------------------------------------------------------------
+
+const INVALID_CQL: &str = "this is not valid CQL !!!###";
+
+/// CQL that parses correctly but contains a semantic error (undefined reference).
+/// This causes `validate` to return a `ValidationResult` with errors rather
+/// than an API-level `Err`, so the CLI prints the errors to stdout.
+const SEMANTIC_ERROR_CQL: &str = r#"library SemanticBad version '1.0'
+define Foo: UndefinedIdent
+"#;
+
+// ---------------------------------------------------------------------------
+// validate – exit code and output behavior (task 2.4)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_validate_exits_zero_on_valid_cql() {
+    rh_cmd()
+        .args(["cql", "validate", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("✓"));
+}
+
+#[test]
+fn test_validate_exits_nonzero_on_invalid_cql() {
+    // Completely unparseable CQL → API-level error → non-zero exit
+    rh_cmd()
+        .args(["cql", "validate", "-"])
+        .write_stdin(INVALID_CQL)
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_validate_exits_nonzero_on_semantic_error() {
+    // Syntactically valid but semantically invalid CQL → ValidationResult with
+    // errors → errors printed to stdout → non-zero exit
+    rh_cmd()
+        .args(["cql", "validate", "-"])
+        .write_stdin(SEMANTIC_ERROR_CQL)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("✗"));
+}
+
+#[test]
+fn test_validate_verbose_shows_location_on_error() {
+    rh_cmd()
+        .args(["cql", "validate", "-", "--verbose"])
+        .write_stdin(SEMANTIC_ERROR_CQL)
+        .assert()
+        .failure()
+        // With --verbose, location info (line/column) should appear when available
+        .stdout(
+            predicate::str::contains("✗")
+                .and(predicate::str::contains("line").or(predicate::str::contains("✗"))),
+        );
+}
+
+// ---------------------------------------------------------------------------
+// compile – exit code behavior (task 2.4)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_compile_exits_zero_on_valid_cql() {
+    rh_cmd()
+        .args(["cql", "compile", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"library\""));
+}
+
+#[test]
+fn test_compile_exits_nonzero_on_invalid_cql() {
+    rh_cmd()
+        .args(["cql", "compile", "-"])
+        .write_stdin(INVALID_CQL)
+        .assert()
+        .failure()
+        // Error message is reported on stderr
+        .stderr(predicate::str::contains("✗").or(predicate::str::contains("error")));
+}
+
+// ---------------------------------------------------------------------------
+// info – exit code behavior (task 2.4)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_info_exits_zero_on_valid_cql() {
+    rh_cmd()
+        .args(["cql", "info", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("SimpleMath"));
+}
+
+#[test]
+fn test_info_exits_nonzero_on_invalid_cql() {
+    rh_cmd()
+        .args(["cql", "info", "-"])
+        .write_stdin(INVALID_CQL)
+        .assert()
+        .failure();
+}
+
+// ---------------------------------------------------------------------------
+// eval – exit code behavior (task 2.4)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_eval_exits_nonzero_on_invalid_cql() {
+    rh_cmd()
+        .args(["cql", "eval", "-", "--expression", "X"])
+        .write_stdin(INVALID_CQL)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("error").or(predicate::str::contains("✗")));
+}

@@ -10,7 +10,7 @@ use tracing::{error, info};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
     evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
-    CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
+    CqlCompilerException, CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
 };
 
 #[derive(Subcommand)]
@@ -113,6 +113,10 @@ pub enum CqlCommands {
     },
 }
 
+// ---------------------------------------------------------------------------
+// Command dispatcher
+// ---------------------------------------------------------------------------
+
 pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
     match cmd {
         CqlCommands::Compile {
@@ -160,6 +164,47 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Diagnostic formatting helpers
+// ---------------------------------------------------------------------------
+
+/// Print a list of compiler diagnostics to stderr.
+///
+/// `prefix` is the symbol shown before each item (e.g. "✗" or "⚠").
+/// When `with_location` is true the source location line/column is printed
+/// on a follow-up line when it is available.
+fn print_diagnostic_list(items: &[CqlCompilerException], prefix: &str, with_location: bool) {
+    for item in items {
+        eprintln!("  {prefix} {}", item.message());
+        if with_location {
+            if let Some(loc) = item.locator() {
+                eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
+            }
+        }
+    }
+}
+
+/// Print compile errors and warnings to stderr and return a formatted error.
+///
+/// Should be called when a compilation result is not successful. Returns an
+/// `anyhow::Error` so callers can propagate with `return Err(...)` or `?`.
+fn report_compile_failure(
+    errors: &[CqlCompilerException],
+    warnings: &[CqlCompilerException],
+) -> anyhow::Error {
+    eprintln!("✗ Compilation failed with {} error(s):\n", errors.len());
+    print_diagnostic_list(errors, "✗", true);
+    if !warnings.is_empty() {
+        eprintln!("\nWarnings ({}):", warnings.len());
+        print_diagnostic_list(warnings, "⚠", false);
+    }
+    anyhow::anyhow!("CQL compilation failed")
+}
+
+// ---------------------------------------------------------------------------
+// Source I/O
+// ---------------------------------------------------------------------------
+
 /// Read CQL source from file or stdin
 fn read_source(input: &str) -> Result<String> {
     if input == "-" {
@@ -172,6 +217,10 @@ fn read_source(input: &str) -> Result<String> {
         fs::read_to_string(input).with_context(|| format!("Failed to read file: {input}"))
     }
 }
+
+// ---------------------------------------------------------------------------
+// Compile service
+// ---------------------------------------------------------------------------
 
 /// Compile CQL source to ELM JSON
 #[allow(clippy::too_many_arguments)]
@@ -217,23 +266,7 @@ fn compile_cql(
         };
 
         if !result.is_success() {
-            eprintln!(
-                "✗ Compilation failed with {} error(s):\n",
-                result.errors.len()
-            );
-            for err in &result.errors {
-                eprintln!("  ✗ {}", err.message());
-                if let Some(loc) = err.locator() {
-                    eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
-                }
-            }
-            if !result.warnings.is_empty() {
-                eprintln!("\nWarnings ({}):", result.warnings.len());
-                for warning in &result.warnings {
-                    eprintln!("  ⚠ {}", warning.message());
-                }
-            }
-            anyhow::bail!("CQL compilation failed");
+            return Err(report_compile_failure(&result.errors, &result.warnings));
         }
 
         let json = if compact {
@@ -256,23 +289,7 @@ fn compile_cql(
         };
 
         if !result.is_success() {
-            eprintln!(
-                "✗ Compilation failed with {} error(s):\n",
-                result.errors.len()
-            );
-            for err in &result.errors {
-                eprintln!("  ✗ {}", err.message());
-                if let Some(loc) = err.locator() {
-                    eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
-                }
-            }
-            if !result.warnings.is_empty() {
-                eprintln!("\nWarnings ({}):", result.warnings.len());
-                for warning in &result.warnings {
-                    eprintln!("  ⚠ {}", warning.message());
-                }
-            }
-            anyhow::bail!("CQL compilation failed");
+            return Err(report_compile_failure(&result.errors, &result.warnings));
         }
 
         let json = if compact {
@@ -318,6 +335,10 @@ fn compile_cql(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Explain service
+// ---------------------------------------------------------------------------
+
 /// Explain CQL parse tree or compilation
 fn run_explain(mode: ExplainMode) -> Result<()> {
     match mode {
@@ -335,6 +356,14 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Eval service
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Eval service
+// ---------------------------------------------------------------------------
+
 /// Evaluate a named expression in a CQL library
 fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
     let source = read_source(input)?;
@@ -342,14 +371,7 @@ fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
     // Compile to ELM
     let result = compile(&source, None).context("Failed to compile CQL")?;
     if !result.is_success() {
-        eprintln!(
-            "✗ Compilation failed with {} error(s):",
-            result.errors.len()
-        );
-        for err in &result.errors {
-            eprintln!("  ✗ {}", err.message());
-        }
-        anyhow::bail!("CQL compilation failed");
+        return Err(report_compile_failure(&result.errors, &result.warnings));
     }
 
     // Build a minimal EvalContext pinned to the current system time
@@ -438,11 +460,15 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             }
         }
 
-        std::process::exit(1);
+        anyhow::bail!("CQL validation failed");
     }
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Info service
+// ---------------------------------------------------------------------------
 
 /// Show library information
 fn show_info(input: &str) -> Result<()> {
@@ -451,11 +477,7 @@ fn show_info(input: &str) -> Result<()> {
     let result = compile(&source, None).context("Failed to compile CQL")?;
 
     if !result.is_success() {
-        println!("✗ CQL has errors:");
-        for err in &result.errors {
-            println!("  {}", err.message());
-        }
-        std::process::exit(1);
+        return Err(report_compile_failure(&result.errors, &result.warnings));
     }
 
     let lib = &result.library;
@@ -620,6 +642,10 @@ fn show_info(input: &str) -> Result<()> {
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// REPL service
+// ---------------------------------------------------------------------------
 
 /// Run interactive REPL
 async fn run_repl(debug: bool) -> Result<()> {

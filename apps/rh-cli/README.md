@@ -63,10 +63,12 @@ rh
 │   ├── batch   # Batch processing
 │   └── install # Install and generate
 ├── cql         # CQL (Clinical Quality Language) operations
-│   ├── compile # Compile CQL to ELM JSON
-│   ├── validate # Validate CQL syntax
-│   ├── info    # Show CQL library metadata
-│   └── repl    # Interactive CQL shell
+│   ├── compile  # Compile CQL to ELM JSON
+│   ├── validate # Validate CQL syntax and semantics
+│   ├── info     # Show CQL library metadata
+│   ├── eval     # Evaluate a named expression
+│   ├── explain  # Show parse tree or compilation details
+│   └── repl     # Interactive CQL shell
 ├── download    # FHIR package management
 │   ├── package # Download packages from registries
 │   └── list    # List available package versions
@@ -160,9 +162,9 @@ The package manager integrates with code generation for streamlined workflows:
 cargo run -p rh -- codegen install hl7.fhir.r4.core 4.0.1 -o ./generated/
 ```
 
-## CQL Compilation (`rh cql`)
+## CQL Operations (`rh cql`)
 
-Compile, validate, and explore Clinical Quality Language (CQL) libraries with comprehensive support for CQL-to-ELM translation.
+Compile, validate, evaluate, and explore Clinical Quality Language (CQL) libraries with comprehensive support for CQL-to-ELM translation.
 
 ### Compile CQL to ELM
 
@@ -197,28 +199,33 @@ define "Has Active Condition":
   exists([Condition: status in {'active', 'recurrence'}])
 ```
 
-### Validate CQL Syntax
+### Validate CQL
 
-Check CQL files for syntax errors without generating output:
+Check CQL source for syntax and semantic errors without generating ELM output.
+Exits with code 0 on success and 1 when errors are found.
 
 ```bash
 # Validate a single file
 cargo run -p rh -- cql validate library.cql
 
-# Validate multiple files
-cargo run -p rh -- cql validate lib1.cql lib2.cql lib3.cql
+# Validate from stdin
+cat library.cql | cargo run -p rh -- cql validate -
+
+# Show line/column locations alongside errors
+cargo run -p rh -- cql validate library.cql --verbose
 ```
 
 **Example output for valid CQL:**
 ```
-✓ library.cql: Valid CQL
+✓ CQL is valid
 ```
 
 **Example output with errors:**
 ```
-✗ library.cql: Invalid CQL
-  Line 5: Expected 'define' keyword
-  Line 8: Unrecognized function 'FooBar'
+✗ CQL has errors
+
+Errors (1):
+  ✗ Could not resolve identifier UndefinedIdent
 ```
 
 ### Show Library Information
@@ -231,6 +238,50 @@ cargo run -p rh -- cql info library.cql
 
 # Show info from stdin
 cat library.cql | cargo run -p rh -- cql info -
+```
+
+### Evaluate a CQL Expression
+
+Evaluate a named expression definition in a CQL library:
+
+```bash
+# Evaluate expression "IsAdult" from a CQL file
+cargo run -p rh -- cql eval library.cql --expression IsAdult
+
+# Evaluate from stdin
+cat library.cql | cargo run -p rh -- cql eval - --expression X
+
+# Print a step-by-step evaluation trace
+cargo run -p rh -- cql eval library.cql --expression X --trace
+```
+
+**Example output:**
+```
+3
+```
+
+**Example trace output (`--trace`):**
+```
+Result: 3
+
+Trace (3 events):
+  [1] op=Literal node=1 inputs=[] output=1
+  [2] op=Literal node=2 inputs=[] output=2
+  [3] op=Add     node=3 inputs=[1, 2] output=3
+```
+
+### Explain CQL
+
+Show the parse tree or compilation details of a CQL library:
+
+```bash
+# Show the raw parse AST
+cargo run -p rh -- cql explain parse library.cql
+cargo run -p rh -- cql explain parse -   # from stdin
+
+# Show semantic analysis details (resolved types, overloads, implicit conversions)
+cargo run -p rh -- cql explain compile library.cql
+cargo run -p rh -- cql explain compile -  # from stdin
 ```
 
 **Example output:**
@@ -253,31 +304,35 @@ Definitions:
 
 ### Interactive CQL REPL
 
-Start an interactive shell for CQL experimentation:
+Start an interactive shell for CQL compilation and experimentation:
 
 ```bash
 # Start the CQL REPL
 cargo run -p rh -- cql repl
+
+# Start in debug mode (annotations, locators, result types)
+cargo run -p rh -- cql repl --debug
 ```
 
 **REPL Commands:**
-- `.help` - Show available commands
-- `.quit` or `.exit` - Exit the REPL
-- Type CQL definitions to see them parsed and analyzed
+- `:help` or `:h` — Show available commands
+- `:quit`, `:q`, or `:exit` — Exit the REPL
+- `:debug` — Toggle debug mode (annotations, locators)
+- `:compact` — Toggle compact JSON output
+- Press Enter twice to compile the current input.
 
 **Example REPL Session:**
 ```
-🔬 CQL Interactive REPL
-Type CQL definitions or expressions to parse them.
-Commands: .help, .quit
+CQL Compiler REPL
+Enter CQL source (multi-line supported, end with blank line)
+Commands: :quit, :help, :debug, :compact
 
-cql> define "Test": 2 + 2
-Parsed definition: Test
+cql> library Example version '1.0'
+  2> define X: 1 + 2
+  3>
+{ ...ELM JSON... }
 
-cql> library MyLib version '1.0'
-Parsed library declaration: MyLib v1.0
-
-cql> .quit
+cql> :quit
 Goodbye!
 ```
 
