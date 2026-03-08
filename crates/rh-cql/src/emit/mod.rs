@@ -335,19 +335,41 @@ impl ElmEmitter {
         };
 
         let mut statements = Vec::new();
-        for _s in typed_library.statements {
-            // Need actual statement translation
-            statements.push(elm::StatementDef::Expression(elm::ExpressionDef {
-                name: Some("TodoStatement".to_string()),
-                context: None,
-                access_level: Some(elm::AccessModifier::Public),
-                expression: Some(Box::new(elm::Expression::default())),
-                local_id: None,
-                locator: None,
-                result_type_name: None,
-                result_type_specifier: None,
-                annotation: vec![],
-            }));
+        for s in typed_library.statements {
+            use crate::semantics::typed_ast::TypedStatement;
+            match s.inner {
+                TypedStatement::ExpressionDef { name, body } => {
+                    let expression = self.emit_expression(&body);
+                    statements.push(elm::StatementDef::Expression(elm::ExpressionDef {
+                        name: Some(name),
+                        context: None,
+                        access_level: Some(elm::AccessModifier::Public),
+                        expression: Some(Box::new(expression)),
+                        local_id: None,
+                        locator: None,
+                        result_type_name: None,
+                        result_type_specifier: None,
+                        annotation: vec![],
+                    }));
+                }
+                TypedStatement::FunctionDef { name, parameters: _params, return_type: _ret, body, fluent: _fluent } => {
+                    let expression = body.as_ref().map(|b| Box::new(self.emit_expression(b)));
+                    statements.push(elm::StatementDef::Function(elm::FunctionDef {
+                        name: Some(name),
+                        context: None,
+                        access_level: Some(elm::AccessModifier::Public),
+                        expression,
+                        local_id: None,
+                        locator: None,
+                        result_type_name: None,
+                        result_type_specifier: None,
+                        operand: vec![],
+                        external: None,
+                        fluent: None,
+                        annotation: vec![],
+                    }));
+                }
+            }
         }
         let statements = if statements.is_empty() {
             None

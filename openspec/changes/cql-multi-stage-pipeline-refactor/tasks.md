@@ -170,8 +170,8 @@
 
 ### 9.I Tests
 
-- [ ] 9.22 Write unit tests for each operator family (arithmetic, comparison, string, date/time, type conversion, interval, list)
-- [ ] 9.23 Write integration tests: evaluate sample CQL expressions end-to-end (compile → eval)
+- [x] 9.22 Write unit tests for each operator family (arithmetic, comparison, string, date/time, type conversion, interval, list)
+- [x] 9.23 Write integration tests: evaluate sample CQL expressions end-to-end (compile → eval)
 
 ## 10. CLI Updates
 

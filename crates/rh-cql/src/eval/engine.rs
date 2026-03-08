@@ -116,6 +116,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         Err(EvalError::General(format!("Expression '{name}' not found in library")))
     }
 
+    /// Return true if `name` is declared as a parameter in the library.
+    fn is_library_parameter(&self, name: &str) -> bool {
+        if let Some(ref params) = self.library.parameters {
+            return params.defs.iter().any(|p| p.name.as_deref() == Some(name));
+        }
+        false
+    }
+
     fn build_initial_bindings(&self) -> BTreeMap<String, Value> {
         let mut bindings = BTreeMap::new();
         // Inject parameter values from context.
@@ -155,6 +163,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // Check bindings first (for query aliases / let clauses).
                 if let Some(v) = bindings.get(name) {
                     return Ok(v.clone());
+                }
+                // Check if it's a parameter from context.
+                if let Some(v) = self.ctx.parameters.get(name) {
+                    return Ok(v.clone());
+                }
+                // Parameters emitted as ExpressionRef evaluate to null if not provided.
+                if self.is_library_parameter(name) {
+                    return Ok(Value::Null);
                 }
                 // Otherwise evaluate from library.
                 let expr = self.find_expression(name)?;
@@ -562,17 +578,24 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Is(is_expr) => {
                 let v = self.eval_expr_opt(is_expr.operand.as_deref(), bindings)?;
-                let type_name = is_expr.is_type.as_deref().unwrap_or("");
+                let raw = is_expr.is_type.as_deref().unwrap_or("");
+                let type_name = strip_elm_namespace(raw);
+                // "{urn:hl7-org:elm-types:r1}null" → is null check
+                if type_name.eq_ignore_ascii_case("null") {
+                    return Ok(Value::Boolean(v == Value::Null));
+                }
                 Ok(super::operators::is_type(&v, type_name))
             }
             Expression::As(as_expr) => {
                 let v = self.eval_expr_opt(as_expr.operand.as_deref(), bindings)?;
-                let type_name = as_expr.as_type.as_deref().unwrap_or("");
+                let raw = as_expr.as_type.as_deref().unwrap_or("");
+                let type_name = strip_elm_namespace(raw);
                 Ok(super::operators::as_type(&v, type_name))
             }
             Expression::Convert(conv_expr) => {
                 let v = self.eval_expr_opt(conv_expr.operand.as_deref(), bindings)?;
-                let type_name = conv_expr.to_type.as_deref().unwrap_or("");
+                let raw = conv_expr.to_type.as_deref().unwrap_or("");
+                let type_name = strip_elm_namespace(raw);
                 super::operators::convert(&v, type_name)
             }
             Expression::CanConvert(can_conv) => {
@@ -580,7 +603,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if matches!(v, Value::Null) {
                     return Ok(Value::Null);
                 }
-                let type_name = can_conv.to_type.as_deref().unwrap_or("");
+                let raw = can_conv.to_type.as_deref().unwrap_or("");
+                let type_name = strip_elm_namespace(raw);
                 match super::operators::convert(&v, type_name) {
                     Ok(_) => Ok(Value::Boolean(true)),
                     Err(_) => Ok(Value::Boolean(false)),
@@ -1013,6 +1037,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
 
             // ----- Fallback -----
+            // ----- Built-in function dispatch -----
+            Expression::FunctionRef(func_ref) => {
+                let name = func_ref.name.as_deref().unwrap_or("");
+                let mut args = Vec::new();
+                for operand in &func_ref.operand {
+                    args.push(self.eval_expr(operand, bindings)?);
+                }
+                eval_builtin_function(name, args)
+            }
+
             other => Err(EvalError::General(format!(
                 "evaluate_elm: unsupported ELM expression type: {:?}",
                 std::mem::discriminant(other)
@@ -1087,12 +1121,61 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Strip the XML/ELM namespace prefix from a qualified type name.
+/// e.g. `"{urn:hl7-org:elm-types:r1}Integer"` → `"Integer"`.
+fn strip_elm_namespace(raw: &str) -> &str {
+    if let Some(pos) = raw.rfind('}') {
+        &raw[pos + 1..]
+    } else {
+        raw
+    }
+}
+
+/// Evaluate a built-in CQL system function referenced by name.
+///
+/// These are functions that may be emitted as `FunctionRef` by the CQL → ELM
+/// compiler (e.g. `Count`, `Sum`, `ToString`, `ToInteger`).
+fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Value, EvalError> {
+    match (name, args.as_slice()) {
+        // Aggregate
+        ("Count", [list]) => super::lists::count(list),
+        ("Sum",   [list]) => super::lists::sum(list),
+        ("Min",   [list]) => super::lists::min(list),
+        ("Max",   [list]) => super::lists::max(list),
+        ("Avg",   [list]) => super::lists::avg(list),
+        // Type conversions
+        ("ToString",  [v]) => super::operators::to_string(v),
+        ("ToInteger", [v]) => super::operators::to_integer(v),
+        ("ToLong",    [v]) => super::operators::to_long(v),
+        ("ToDecimal", [v]) => super::operators::to_decimal(v),
+        ("ToBoolean", [v]) => super::operators::to_boolean(v),
+        ("ToDate",    [v]) => super::operators::to_date(v),
+        ("ToDateTime",[v]) => super::operators::to_datetime(v),
+        ("ToTime",    [v]) => super::operators::to_time(v),
+        ("ToQuantity",[v]) => super::operators::to_quantity(v),
+        ("ToConcept", [v]) => super::operators::to_concept(v),
+        _ => Err(EvalError::General(format!(
+            "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)", args.len()
+        ))),
+    }
+}
+
 // Literal evaluation helper
 // ---------------------------------------------------------------------------
 
 fn eval_literal(lit: &crate::elm::Literal) -> Result<Value, EvalError> {
     let value_str = lit.value.as_deref().unwrap_or("");
-    let value_type = lit.value_type.as_deref().unwrap_or("");
+    let raw_type = lit.value_type.as_deref().unwrap_or("");
+    // Strip namespace prefix: "{urn:hl7-org:elm-types:r1}Integer" → "Integer"
+    let value_type = if let Some(pos) = raw_type.rfind('}') {
+        &raw_type[pos + 1..]
+    } else {
+        raw_type
+    };
 
     match value_type {
         "Boolean" => Ok(Value::Boolean(value_str == "true")),

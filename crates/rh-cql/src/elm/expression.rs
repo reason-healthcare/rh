@@ -191,6 +191,7 @@ pub enum Expression {
     ToLong(UnaryExpression),
     ToQuantity(UnaryExpression),
     ToRatio(UnaryExpression),
+    // renamed to avoid collision with the std::string::ToString trait
     #[serde(rename = "ToString")]
     ToStringExpr(UnaryExpression),
     ToTime(UnaryExpression),
