@@ -171,16 +171,17 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
 /// Print a list of compiler diagnostics to stderr.
 ///
 /// `prefix` is the symbol shown before each item (e.g. "✗" or "⚠").
-/// When `with_location` is true the source location line/column is printed
-/// on a follow-up line when it is available.
+/// When `with_location` is true the source location line/column is appended
+/// to the same line as the message when it is available.
 fn print_diagnostic_list(items: &[CqlCompilerException], prefix: &str, with_location: bool) {
     for item in items {
-        eprintln!("  {prefix} {}", item.message());
         if with_location {
             if let Some(loc) = item.locator() {
-                eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
+                eprintln!("  {prefix} {} (line {}, col {})", item.message(), loc.start_line, loc.start_char + 1);
+                continue;
             }
         }
+        eprintln!("  {prefix} {}", item.message());
     }
 }
 
@@ -432,12 +433,13 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
         if !result.warnings.is_empty() {
             println!("\nWarnings ({}):", result.warnings.len());
             for warning in &result.warnings {
-                println!("  ⚠ {}", warning.message());
                 if verbose {
                     if let Some(loc) = warning.locator() {
-                        println!("    at line {}, column {}", loc.start_line, loc.start_char);
+                        println!("  ⚠ {} (line {}, col {})", warning.message(), loc.start_line, loc.start_char + 1);
+                        continue;
                     }
                 }
+                println!("  ⚠ {}", warning.message());
             }
         }
     } else {
@@ -445,17 +447,22 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
 
         println!("Errors ({}):", result.errors.len());
         for err in &result.errors {
-            println!("  ✗ {}", err.message());
-            if verbose {
-                if let Some(loc) = err.locator() {
-                    println!("    at line {}, column {}", loc.start_line, loc.start_char);
-                }
+            if let Some(loc) = err.locator() {
+                println!("  ✗ {} (line {}, col {})", err.message(), loc.start_line, loc.start_char + 1);
+            } else {
+                println!("  ✗ {}", err.message());
             }
         }
 
         if !result.warnings.is_empty() {
             println!("\nWarnings ({}):", result.warnings.len());
             for warning in &result.warnings {
+                if verbose {
+                    if let Some(loc) = warning.locator() {
+                        println!("  ⚠ {} (line {}, col {})", warning.message(), loc.start_line, loc.start_char + 1);
+                        continue;
+                    }
+                }
                 println!("  ⚠ {}", warning.message());
             }
         }

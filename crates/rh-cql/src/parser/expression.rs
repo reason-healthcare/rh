@@ -1921,11 +1921,12 @@ fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expres
 fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     // Parse a quoted identifier (definition reference) - uses double quotes or backticks
     let (input, _) = skip_ws_and_comments(input)?;
+    let start_loc = input.location();
     let (input, name) = quoted_identifier(input)?;
 
     let mut source_expr = Expression::IdentifierRef(IdentifierRef {
         name,
-        location: None,
+        location: Some(start_loc),
     });
 
     // Check for property access chain (.property)
@@ -1994,13 +1995,14 @@ fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expressio
 /// This handles: `DefinitionName alias where ...` or `Src.property alias where ...`
 fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = skip_ws_and_comments(input)?;
+    let start_loc = input.location();
 
     // Parse a regular (unquoted) identifier
     let (input, name) = identifier(input)?;
 
     let mut source_expr = Expression::IdentifierRef(IdentifierRef {
         name,
-        location: None,
+        location: Some(start_loc),
     });
 
     // Check for property access chain (.property)
@@ -2420,6 +2422,7 @@ fn parse_special_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 
 fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = skip_ws_and_comments(input)?;
+    let start_loc = input.location();
 
     // Parse a simple identifier
     let (input, name) = any_identifier(input)?;
@@ -2439,7 +2442,7 @@ fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression
                 library: None,
                 name,
                 arguments,
-                location: None,
+                location: Some(start_loc),
             }),
         )),
         // Simple identifier reference
@@ -2447,7 +2450,7 @@ fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression
             input,
             Expression::IdentifierRef(IdentifierRef {
                 name,
-                location: None,
+                location: Some(start_loc),
             }),
         )),
     }

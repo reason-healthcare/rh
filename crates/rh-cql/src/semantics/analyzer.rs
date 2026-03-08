@@ -3,6 +3,7 @@ use crate::operators::OperatorResolver;
 use crate::options::CompilerOptions;
 use crate::parser::ast;
 use crate::provider::ModelInfoProvider;
+use crate::reporting::SourceLocator;
 use crate::semantics::scope::{ScopeManager, Symbol, SymbolKind};
 use crate::semantics::typed_ast::{
     NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedParameterDef,
@@ -68,10 +69,15 @@ impl SemanticAnalyzer {
                 Some(s.name.clone()),
             ),
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!(
+                let exc = CqlCompilerException::new(format!(
                     "Could not resolve identifier: {}",
                     e.name
-                )));
+                ));
+                let exc = match e.location {
+                    Some(loc) => exc.with_locator(SourceLocator::from(loc)),
+                    None => exc,
+                };
+                self.diagnostics.push(exc);
                 (DataType::Unknown, None)
             }
         };
@@ -107,10 +113,15 @@ impl SemanticAnalyzer {
                 )
             }
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!(
+                let exc = CqlCompilerException::new(format!(
                     "Could not resolve qualified identifier: {}.{}",
                     e.qualifier, e.name
-                )));
+                ));
+                let exc = match e.location {
+                    Some(loc) => exc.with_locator(SourceLocator::from(loc)),
+                    None => exc,
+                };
+                self.diagnostics.push(exc);
                 (DataType::Unknown, None)
             }
         };

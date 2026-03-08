@@ -191,6 +191,16 @@ impl std::fmt::Display for SourceLocator {
     }
 }
 
+impl From<crate::parser::span::SourceLocation> for SourceLocator {
+    /// Convert a parser `SourceLocation` (1-based line, 1-based column) to a
+    /// `SourceLocator` (1-based line, 0-based start_char).
+    fn from(loc: crate::parser::span::SourceLocation) -> Self {
+        let line = loc.line as i32;
+        let col = loc.column.saturating_sub(1) as i32; // convert to 0-based
+        SourceLocator::new(line, col, line, col)
+    }
+}
+
 /// A compiler exception with full diagnostic information.
 ///
 /// This is the primary type for reporting issues during CQL-to-ELM
