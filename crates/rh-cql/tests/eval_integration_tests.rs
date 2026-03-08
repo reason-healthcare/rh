@@ -434,3 +434,167 @@ fn eval_trace_event_has_inputs_and_output() {
     assert_eq!(add_event.output, Value::Integer(15));
     assert_eq!(add_event.inputs.len(), 2);
 }
+
+// ---------------------------------------------------------------------------
+// 9.23 — Query evaluation (end-to-end, spec §Query evaluation scenarios)
+// ---------------------------------------------------------------------------
+
+/// Scenario: Simple query with where
+/// A query over a list literal filters elements by a condition.
+#[test]
+fn eval_query_simple_where() {
+    // Filter a list of integers: return elements > 2
+    let cql = "library T
+define Numbers: {1, 2, 3, 4, 5}
+define X: Numbers N where N > 2";
+    let result = compile_with_model(cql, None, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+    let ctx = default_ctx();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => {
+            assert_eq!(items.len(), 3, "expected 3 items > 2, got {:?}", items);
+            assert!(items.contains(&Value::Integer(3)));
+            assert!(items.contains(&Value::Integer(4)));
+            assert!(items.contains(&Value::Integer(5)));
+        }
+        other => panic!("expected List, got {:?}", other),
+    }
+}
+
+/// Scenario: Query with return projection
+/// A query that projects a transformed value from each element.
+#[test]
+fn eval_query_return_projection() {
+    // Multiply each element by 2 in the return clause
+    let cql = "library T
+define Numbers: {1, 2, 3}
+define X: Numbers N return N * 2";
+    let result = compile_with_model(cql, None, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+    let ctx = default_ctx();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => {
+            assert_eq!(items.len(), 3, "expected 3 projected items, got {:?}", items);
+            assert!(items.contains(&Value::Integer(2)));
+            assert!(items.contains(&Value::Integer(4)));
+            assert!(items.contains(&Value::Integer(6)));
+        }
+        other => panic!("expected List, got {:?}", other),
+    }
+}
+
+/// Scenario: Query with where + return (combined)
+#[test]
+fn eval_query_where_and_return() {
+    let cql = "library T
+define Numbers: {1, 2, 3, 4, 5}
+define X: Numbers N where N >= 3 return N * 10";
+    let result = compile_with_model(cql, None, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+    let ctx = default_ctx();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => {
+            assert_eq!(items.len(), 3, "expected 3 items, got {:?}", items);
+            assert!(items.contains(&Value::Integer(30)));
+            assert!(items.contains(&Value::Integer(40)));
+            assert!(items.contains(&Value::Integer(50)));
+        }
+        other => panic!("expected List, got {:?}", other),
+    }
+}
+
+/// Scenario: Query returning empty list when no elements match
+#[test]
+fn eval_query_where_no_match_returns_empty() {
+    let cql = "library T
+define Numbers: {1, 2, 3}
+define X: Numbers N where N > 100";
+    let result = compile_with_model(cql, None, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+    let ctx = default_ctx();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => assert!(items.is_empty(), "expected empty list, got {:?}", items),
+        other => panic!("expected List, got {:?}", other),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 9.23 — Retrieve evaluation (end-to-end with InMemoryDataProvider)
+// ---------------------------------------------------------------------------
+
+/// Scenario: Retrieve returns all resources of a given type.
+#[test]
+fn eval_retrieve_returns_resources() {
+    use std::collections::BTreeMap;
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let cql = "library T
+using FHIR version '4.0.1'
+define X: [Observation]";
+
+    let result = compile(cql, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+
+    let mut provider = InMemoryDataProvider::new();
+    let mut obs1 = BTreeMap::new();
+    obs1.insert("status".to_string(), Value::String("final".to_string()));
+    obs1.insert("id".to_string(), Value::String("obs-1".to_string()));
+    provider.add_resource("Observation", Value::Tuple(obs1));
+
+    let mut obs2 = BTreeMap::new();
+    obs2.insert("status".to_string(), Value::String("preliminary".to_string()));
+    obs2.insert("id".to_string(), Value::String("obs-2".to_string()));
+    provider.add_resource("Observation", Value::Tuple(obs2));
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => {
+            assert_eq!(items.len(), 2, "expected 2 Observations, got {:?}", items);
+        }
+        other => panic!("expected List, got {:?}", other),
+    }
+}
+
+/// Scenario: Retrieve returns empty list when no resources registered.
+#[test]
+fn eval_retrieve_empty_when_no_resources() {
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let cql = "library T
+using FHIR version '4.0.1'
+define X: [Observation]";
+
+    let result = compile(cql, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+
+    let provider = InMemoryDataProvider::new();
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+    match value {
+        Value::List(items) => assert!(items.is_empty(), "expected empty list, got {:?}", items),
+        other => panic!("expected List, got {:?}", other),
+    }
+}

@@ -847,7 +847,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
             // ----- Retrieve -----
             Expression::Retrieve(r) => {
-                let data_type = r.data_type.as_deref().unwrap_or("");
+                let raw_type = r.data_type.as_deref().unwrap_or("");
+                // Strip Clark-notation namespace prefix `{uri}LocalName` → `LocalName`
+                let data_type = if let Some(pos) = raw_type.find('}') {
+                    &raw_type[pos + 1..]
+                } else {
+                    raw_type
+                };
                 let code_path = r.code_property.as_deref();
                 let date_path = r.date_property.as_deref();
                 let codes_val = match &r.codes {

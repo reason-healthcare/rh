@@ -592,20 +592,50 @@ impl SemanticAnalyzer {
 
         let dt = DataType::any(); // TODO: determine query type
 
+        // Analyze source expressions first (outside the query scope so aliases
+        // are not yet in scope for the source expressions themselves).
         let mut sources = Vec::new();
         for s in &e.sources {
-            sources.push(crate::semantics::typed_ast::TypedQuerySource {
-                alias: s.alias.clone(),
-                expression: Box::new(self.analyze_expression(&s.expression)),
-            });
+            let typed_source_expr = self.analyze_expression(&s.expression);
+            // Derive the element type for the alias: if the source has a List
+            // type, the alias refers to each element; otherwise use Any.
+            let alias_type = match &typed_source_expr.data_type {
+                DataType::List(elem) => *elem.clone(),
+                _ => DataType::any(),
+            };
+            sources.push((s.alias.clone(), typed_source_expr, alias_type));
         }
 
-        let let_clauses = e
+        // Push a new query scope and register all source aliases so that the
+        // where, return, let, aggregate, and sort clauses can resolve them.
+        self.scope_manager.push_scope();
+        for (alias, _, alias_type) in &sources {
+            self.scope_manager
+                .register_query_alias(alias.clone(), alias_type.clone());
+        }
+
+        // Convert collected sources into TypedQuerySource values.
+        let typed_sources: Vec<_> = sources
+            .into_iter()
+            .map(|(alias, expression, _)| crate::semantics::typed_ast::TypedQuerySource {
+                alias,
+                expression: Box::new(expression),
+            })
+            .collect();
+
+        let let_clauses: Vec<_> = e
             .let_clauses
             .iter()
-            .map(|lc| crate::semantics::typed_ast::TypedLetClause {
-                identifier: lc.identifier.clone(),
-                expression: Box::new(self.analyze_expression(&lc.expression)),
+            .map(|lc| {
+                let typed_expr = self.analyze_expression(&lc.expression);
+                // Register let identifier in scope so subsequent clauses can reference it.
+                let let_type = typed_expr.data_type.clone();
+                let result = crate::semantics::typed_ast::TypedLetClause {
+                    identifier: lc.identifier.clone(),
+                    expression: Box::new(typed_expr),
+                };
+                self.scope_manager.register_query_alias(lc.identifier.clone(), let_type);
+                result
             })
             .collect();
 
@@ -613,9 +643,16 @@ impl SemanticAnalyzer {
             .relationships
             .iter()
             .map(|r| {
+                let typed_rel_expr = self.analyze_expression(&r.source.expression);
+                let rel_alias_type = match &typed_rel_expr.data_type {
+                    DataType::List(elem) => *elem.clone(),
+                    _ => DataType::any(),
+                };
+                self.scope_manager
+                    .register_query_alias(r.source.alias.clone(), rel_alias_type);
                 let source = crate::semantics::typed_ast::TypedQuerySource {
                     alias: r.source.alias.clone(),
-                    expression: Box::new(self.analyze_expression(&r.source.expression)),
+                    expression: Box::new(typed_rel_expr),
                 };
                 crate::semantics::typed_ast::TypedRelationshipClause {
                     kind: r.kind,
@@ -627,6 +664,11 @@ impl SemanticAnalyzer {
                 }
             })
             .collect();
+
+        let where_clause = e
+            .where_clause
+            .as_ref()
+            .map(|w| Box::new(self.analyze_expression(w)));
 
         let return_clause =
             e.return_clause
@@ -663,14 +705,14 @@ impl SemanticAnalyzer {
                         .collect(),
                 });
 
+        // Pop the query scope — aliases are no longer visible after the query.
+        self.scope_manager.pop_scope();
+
         let inner = TypedExpression::Query(crate::semantics::typed_ast::TypedQuery {
-            sources,
+            sources: typed_sources,
             let_clauses,
             relationships,
-            where_clause: e
-                .where_clause
-                .as_ref()
-                .map(|w| Box::new(self.analyze_expression(w))),
+            where_clause,
             return_clause,
             aggregate_clause,
             sort_clause,
