@@ -65,8 +65,12 @@ fn explain_expression(expr: &ast::Expression, depth: usize, out: &mut String) {
         }
         ast::Expression::QualifiedIdentifierRef(r) => {
             let loc = format_ast_location(r.location.as_ref());
-            writeln!(out, "{indent}QualifiedIdentifierRef({}.{}){loc}", r.qualifier, r.name)
-                .unwrap();
+            writeln!(
+                out,
+                "{indent}QualifiedIdentifierRef({}.{}){loc}",
+                r.qualifier, r.name
+            )
+            .unwrap();
         }
         ast::Expression::UnaryExpression(u) => {
             let loc = format_ast_location(u.location.as_ref());
@@ -410,11 +414,7 @@ fn collect_semantic_events(node: &TypedNode<TypedExpression>, events: &mut Vec<S
 /// # Returns
 ///
 /// A formatted trace string on success, or an `EvalError` on failure.
-pub fn explain_eval(
-    library: &Library,
-    name: &str,
-    ctx: &EvalContext,
-) -> Result<String, EvalError> {
+pub fn explain_eval(library: &Library, name: &str, ctx: &EvalContext) -> Result<String, EvalError> {
     let (result, trace) = evaluate_elm_with_trace(library, name, ctx)?;
     let mut out = String::new();
     writeln!(out, "Eval Explanation for expression '{name}':").unwrap();
@@ -453,20 +453,23 @@ fn format_trace_event(event: &TraceEvent, out: &mut String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elm::{BinaryExpression, Expression, ExpressionDef, ExpressionDefs, Library, Literal, StatementDef};
+    use crate::elm::{
+        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, Library, Literal, StatementDef,
+    };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
-    use crate::eval::value::{CqlDateTime, Value};
+    use crate::eval::value::CqlDateTime;
 
     fn make_library(name: &str, expr: Expression) -> Library {
-        let mut lib = Library::default();
-        lib.statements = Some(ExpressionDefs {
-            defs: vec![StatementDef::Expression(ExpressionDef {
-                name: Some(name.to_string()),
-                expression: Some(Box::new(expr)),
-                ..Default::default()
-            })],
-        });
-        lib
+        Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some(name.to_string()),
+                    expression: Some(Box::new(expr)),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        }
     }
 
     fn fixed_ctx() -> EvalContext {
@@ -523,11 +526,14 @@ mod tests {
 
     #[test]
     fn test_explain_eval_result_contains_value() {
-        let lib = make_library("Flag", Expression::Literal(Literal {
-            value: Some("true".to_string()),
-            value_type: Some("Boolean".to_string()),
-            ..Default::default()
-        }));
+        let lib = make_library(
+            "Flag",
+            Expression::Literal(Literal {
+                value: Some("true".to_string()),
+                value_type: Some("Boolean".to_string()),
+                ..Default::default()
+            }),
+        );
         let result = explain_eval(&lib, "Flag", &fixed_ctx()).unwrap();
         assert!(result.contains("Boolean(true)"));
     }

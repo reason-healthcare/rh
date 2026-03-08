@@ -55,8 +55,8 @@ pub mod conversion;
 pub mod datatype;
 pub mod elm;
 pub mod emit;
-pub mod eval;
 pub mod error;
+pub mod eval;
 pub mod explain;
 pub mod library;
 pub mod modelinfo;
@@ -127,13 +127,16 @@ pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
 
 // New pipeline types — preferred public API
 pub use emit::ElmEmitter;
-pub use eval::value::{cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
-pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use eval::context::{
-    Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError,
-    FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
+    Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError, FixedClock,
+    InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
 pub use eval::engine::{evaluate_elm, evaluate_elm_with_trace, TraceEvent};
+pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
+pub use eval::value::{
+    cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime,
+    Value,
+};
 pub use semantics::analyzer::SemanticAnalyzer;
 pub use semantics::scope::ScopeManager;
 pub use semantics::typed_ast::{

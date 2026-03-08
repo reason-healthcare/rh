@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::value::{CqlCode, CqlDateTime, CqlDate, CqlTime, Value};
+use super::value::{CqlCode, CqlDate, CqlDateTime, CqlTime, Value};
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -334,10 +334,7 @@ impl EvalContextBuilder {
     }
 
     /// Attach a `TerminologyProvider`.
-    pub fn terminology_provider(
-        mut self,
-        provider: impl TerminologyProvider + 'static,
-    ) -> Self {
+    pub fn terminology_provider(mut self, provider: impl TerminologyProvider + 'static) -> Self {
         self.terminology_provider = Some(Arc::new(provider));
         self
     }
@@ -426,11 +423,7 @@ impl DataProvider for InMemoryDataProvider {
         _date_path: Option<&str>,
         _date_range: Option<&Value>,
     ) -> Result<Vec<Value>, EvalError> {
-        Ok(self
-            .resources
-            .get(data_type)
-            .cloned()
-            .unwrap_or_default())
+        Ok(self.resources.get(data_type).cloned().unwrap_or_default())
     }
 }
 
@@ -494,11 +487,7 @@ impl InMemoryTerminologyProvider {
     }
 
     /// Register an entire valueset at once (overwrites any existing entries).
-    pub fn register_valueset(
-        &mut self,
-        valueset_url: impl Into<String>,
-        codes: Vec<CqlCode>,
-    ) {
+    pub fn register_valueset(&mut self, valueset_url: impl Into<String>, codes: Vec<CqlCode>) {
         self.valuesets.insert(valueset_url.into(), codes);
     }
 }
@@ -510,9 +499,9 @@ impl TerminologyProvider for InMemoryTerminologyProvider {
                 "Valueset not found: '{valueset_url}'"
             ))),
             Some(codes) => {
-                let found = codes.iter().any(|c| {
-                    c.code == code.code && c.system == code.system
-                });
+                let found = codes
+                    .iter()
+                    .any(|c| c.code == code.code && c.system == code.system);
                 Ok(found)
             }
         }
@@ -597,7 +586,9 @@ mod tests {
         assert_eq!(ctx.today().year, 2024);
         assert_eq!(ctx.parameter("x"), None);
         // No provider → retrieve returns empty list
-        let rows = ctx.retrieve(None, "Patient", None, None, None, None).unwrap();
+        let rows = ctx
+            .retrieve(None, "Patient", None, None, None, None)
+            .unwrap();
         assert!(rows.is_empty());
     }
 
@@ -606,7 +597,10 @@ mod tests {
         let ctx = EvalContextBuilder::new(FixedClock::new(fixed_now()))
             .parameter("MeasurementYear", Value::Integer(2024))
             .build();
-        assert_eq!(ctx.parameter("MeasurementYear"), Some(&Value::Integer(2024)));
+        assert_eq!(
+            ctx.parameter("MeasurementYear"),
+            Some(&Value::Integer(2024))
+        );
         assert_eq!(ctx.parameter("Missing"), None);
     }
 
@@ -668,7 +662,10 @@ mod tests {
             provider.add_resource("Observation", Value::Tuple(obs));
         }
         assert_eq!(
-            provider.retrieve(None, "Observation", None, None, None, None).unwrap().len(),
+            provider
+                .retrieve(None, "Observation", None, None, None, None)
+                .unwrap()
+                .len(),
             3
         );
     }
@@ -709,7 +706,9 @@ mod tests {
             .data_provider(data)
             .build();
 
-        let rows = ctx.retrieve(None, "Observation", None, None, None, None).unwrap();
+        let rows = ctx
+            .retrieve(None, "Observation", None, None, None, None)
+            .unwrap();
         assert_eq!(rows.len(), 1);
     }
 
@@ -735,7 +734,9 @@ mod tests {
             display: None,
             version: None,
         };
-        assert!(provider.in_valueset(&code, "http://example.org/vs/bp").unwrap());
+        assert!(provider
+            .in_valueset(&code, "http://example.org/vs/bp")
+            .unwrap());
     }
 
     #[test]
@@ -756,7 +757,9 @@ mod tests {
             display: None,
             version: None,
         };
-        assert!(!provider.in_valueset(&other_code, "http://example.org/vs/bp").unwrap());
+        assert!(!provider
+            .in_valueset(&other_code, "http://example.org/vs/bp")
+            .unwrap());
     }
 
     #[test]
@@ -812,6 +815,8 @@ mod tests {
             display: None,
             version: None,
         };
-        assert!(ctx.in_valueset(&code, "http://example.org/vs/active").unwrap());
+        assert!(ctx
+            .in_valueset(&code, "http://example.org/vs/active")
+            .unwrap());
     }
 }

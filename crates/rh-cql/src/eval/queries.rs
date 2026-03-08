@@ -28,21 +28,23 @@ where
     F: FnMut(&crate::elm::Expression, &BTreeMap<String, Value>) -> Result<Value, EvalError>,
 {
     // Evaluate sources — currently supports a single aliased source.
-    let source = query.source.first().ok_or_else(|| {
-        EvalError::General("Query requires at least one source".to_string())
-    })?;
+    let source = query
+        .source
+        .first()
+        .ok_or_else(|| EvalError::General("Query requires at least one source".to_string()))?;
 
     let source_alias = source.alias.as_deref().unwrap_or("$this");
-    let source_expr = source.expression.as_ref().ok_or_else(|| {
-        EvalError::General("Query source has no expression".to_string())
-    })?;
+    let source_expr = source
+        .expression
+        .as_ref()
+        .ok_or_else(|| EvalError::General("Query source has no expression".to_string()))?;
 
-    let source_value = eval_expr(&**source_expr, bindings)?;
+    let source_value = eval_expr(source_expr, bindings)?;
 
     let rows = match source_value {
         Value::List(v) => v,
         Value::Null => return Ok(Value::List(vec![])),
-        other => vec![other],  // single-element source is wrapped in a list
+        other => vec![other], // single-element source is wrapped in a list
     };
 
     let mut result: Vec<Value> = Vec::new();
@@ -56,7 +58,7 @@ where
         for let_clause in &query.let_clause {
             if let Some(ref id) = let_clause.identifier {
                 if let Some(ref expr) = let_clause.expression {
-                    let val = eval_expr(&**expr, &row_bindings)?;
+                    let val = eval_expr(expr, &row_bindings)?;
                     row_bindings.insert(id.clone(), val);
                 }
             }
@@ -71,7 +73,7 @@ where
                 None => continue,
             };
 
-            let rel_source = eval_expr(&**rel_source_expr, &row_bindings)?;
+            let rel_source = eval_expr(rel_source_expr, &row_bindings)?;
             let rel_rows = match rel_source {
                 Value::List(v) => v,
                 Value::Null => vec![],
@@ -85,9 +87,7 @@ where
 
                 let sat = match &rel.such_that {
                     None => true,
-                    Some(st) => {
-                        eval_expr(&**st, &rel_bindings)? == Value::Boolean(true)
-                    }
+                    Some(st) => eval_expr(st, &rel_bindings)? == Value::Boolean(true),
                 };
                 if sat {
                     any_match = true;
@@ -98,12 +98,12 @@ where
             match rel_type {
                 "with" => {
                     if !any_match {
-                        continue 'row;  // no match → skip this row
+                        continue 'row; // no match → skip this row
                     }
                 }
                 "without" => {
                     if any_match {
-                        continue 'row;  // match found → skip this row
+                        continue 'row; // match found → skip this row
                     }
                 }
                 _ => {}
@@ -112,7 +112,7 @@ where
 
         // Evaluate where clause.
         if let Some(ref where_expr) = query.where_clause {
-            let keep = eval_expr(&**where_expr, &row_bindings)?;
+            let keep = eval_expr(where_expr, &row_bindings)?;
             if keep != Value::Boolean(true) {
                 continue;
             }
@@ -123,7 +123,7 @@ where
             None => row.clone(),
             Some(ret) => match &ret.expression {
                 None => row.clone(),
-                Some(ret_expr) => eval_expr(&**ret_expr, &row_bindings)?,
+                Some(ret_expr) => eval_expr(ret_expr, &row_bindings)?,
             },
         };
 
@@ -160,11 +160,7 @@ where
 // Sort helpers
 // ---------------------------------------------------------------------------
 
-fn apply_sort(
-    mut items: Vec<Value>,
-    sort_clause: &SortClause,
-) -> Result<Vec<Value>, EvalError>
-{
+fn apply_sort(mut items: Vec<Value>, sort_clause: &SortClause) -> Result<Vec<Value>, EvalError> {
     use crate::elm::SortDirection;
     use std::cmp::Ordering;
 
@@ -182,13 +178,21 @@ fn apply_sort(
                     (None, _) => Ordering::Less,
                     (_, None) => Ordering::Greater,
                 };
-                if desc { ord.reverse() } else { ord }
+                if desc {
+                    ord.reverse()
+                } else {
+                    ord
+                }
             });
         } else {
             // ByValue (sort by the element itself)
             items.sort_by(|a, b| {
                 let ord = cql_compare(a, b).unwrap_or(Ordering::Equal);
-                if desc { ord.reverse() } else { ord }
+                if desc {
+                    ord.reverse()
+                } else {
+                    ord
+                }
             });
         }
     }
@@ -197,9 +201,9 @@ fn apply_sort(
 }
 
 /// Extract a field from a Tuple or pass through for scalars.
-fn extract_path<'a>(v: &'a Value, path: &String) -> Option<&'a Value> {
+fn extract_path<'a>(v: &'a Value, path: &str) -> Option<&'a Value> {
     match v {
-        Value::Tuple(fields) => fields.get(path.as_str()),
+        Value::Tuple(fields) => fields.get(path),
         _ => Some(v),
     }
 }
@@ -208,19 +212,20 @@ fn extract_path<'a>(v: &'a Value, path: &String) -> Option<&'a Value> {
 mod tests {
     use super::*;
     use crate::elm::{
-        AliasedQuerySource, BinaryExpression, Expression, Literal, ListExpr, Property,
-        Query, ReturnClause,
+        AliasedQuerySource, BinaryExpression, Expression, Literal, Property, Query, ReturnClause,
     };
 
     fn int_list_expr(values: &[i64]) -> Expression {
         Expression::List(crate::elm::ListExpr {
             elements: values
                 .iter()
-                .map(|&v| Expression::Literal(Literal {
-                    value: Some(v.to_string()),
-                    value_type: Some("Integer".to_string()),
-                    ..Default::default()
-                }))
+                .map(|&v| {
+                    Expression::Literal(Literal {
+                        value: Some(v.to_string()),
+                        value_type: Some("Integer".to_string()),
+                        ..Default::default()
+                    })
+                })
                 .collect(),
             ..Default::default()
         })
@@ -241,14 +246,21 @@ mod tests {
                 }
             }
             Expression::List(list) => {
-                let items: Result<Vec<_>, _> =
-                    list.elements.iter().map(|e| eval_expr(e, bindings)).collect();
+                let items: Result<Vec<_>, _> = list
+                    .elements
+                    .iter()
+                    .map(|e| eval_expr(e, bindings))
+                    .collect();
                 Ok(Value::List(items?))
             }
             Expression::Property(prop) => {
-                let scope = prop.scope.as_deref().or(prop.source.as_ref().and_then(
-                    |s| if let Expression::IdentifierRef(id) = s.as_ref() { id.name.as_deref() } else { None },
-                ));
+                let scope = prop.scope.as_deref().or(prop.source.as_ref().and_then(|s| {
+                    if let Expression::IdentifierRef(id) = s.as_ref() {
+                        id.name.as_deref()
+                    } else {
+                        None
+                    }
+                }));
                 let base = match scope {
                     Some(alias) => bindings.get(alias).cloned().unwrap_or(Value::Null),
                     None => Value::Null,

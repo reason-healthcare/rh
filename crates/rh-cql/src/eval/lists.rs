@@ -30,7 +30,9 @@ pub fn exists(list: &Value) -> Result<Value, EvalError> {
         return Ok(Value::Boolean(false));
     }
     let items = require_list("Exists", list)?;
-    Ok(Value::Boolean(items.iter().any(|v| !matches!(v, Value::Null))))
+    Ok(Value::Boolean(
+        items.iter().any(|v| !matches!(v, Value::Null)),
+    ))
 }
 
 /// `Count` — number of non-null elements in a list.
@@ -72,7 +74,9 @@ pub fn min(list: &Value) -> Result<Value, EvalError> {
     let items = require_list("Min", list)?;
     let mut result: Option<&Value> = None;
     for v in items {
-        if matches!(v, Value::Null) { continue; }
+        if matches!(v, Value::Null) {
+            continue;
+        }
         result = Some(match result {
             None => v,
             Some(cur) => match cql_compare(v, cur) {
@@ -92,7 +96,9 @@ pub fn max(list: &Value) -> Result<Value, EvalError> {
     let items = require_list("Max", list)?;
     let mut result: Option<&Value> = None;
     for v in items {
-        if matches!(v, Value::Null) { continue; }
+        if matches!(v, Value::Null) {
+            continue;
+        }
         result = Some(match result {
             None => v,
             Some(cur) => match cql_compare(v, cur) {
@@ -127,7 +133,10 @@ pub fn avg(list: &Value) -> Result<Value, EvalError> {
         Value::Integer(x) => Ok(Value::Decimal(x as f64 / n)),
         Value::Long(x) => Ok(Value::Decimal(x as f64 / n)),
         Value::Decimal(x) => Ok(Value::Decimal(x / n)),
-        other => Err(err("Avg", &format!("unsupported element type for average: {other:?}"))),
+        other => Err(err(
+            "Avg",
+            &format!("unsupported element type for average: {other:?}"),
+        )),
     }
 }
 
@@ -178,7 +187,9 @@ pub fn list_contains(list: &Value, element: &Value) -> Result<Value, EvalError> 
     }
     let items = require_list("Contains", list)?;
     Ok(Value::Boolean(
-        items.iter().any(|v| cql_equal(v, element) == Value::Boolean(true)),
+        items
+            .iter()
+            .any(|v| cql_equal(v, element) == Value::Boolean(true)),
     ))
 }
 
@@ -216,7 +227,10 @@ pub fn distinct(list: &Value) -> Result<Value, EvalError> {
     let mut seen: Vec<&Value> = Vec::new();
     let mut result = Vec::new();
     for item in items {
-        if !seen.iter().any(|s| cql_equal(s, item) == Value::Boolean(true)) {
+        if !seen
+            .iter()
+            .any(|s| cql_equal(s, item) == Value::Boolean(true))
+        {
             seen.push(item);
             result.push(item.clone());
         }
@@ -234,7 +248,11 @@ pub fn sort_list(list: &Value, descending: bool) -> Result<Value, EvalError> {
     let mut sorted: Vec<Value> = items.to_vec();
     sorted.sort_by(|a, b| {
         let ord = cql_compare(a, b).unwrap_or(Ordering::Equal);
-        if descending { ord.reverse() } else { ord }
+        if descending {
+            ord.reverse()
+        } else {
+            ord
+        }
     });
     Ok(Value::List(sorted))
 }
@@ -268,7 +286,7 @@ where
         return Ok(Value::Null);
     }
     let items = require_list("ForEach", list)?;
-    let result: Result<Vec<Value>, EvalError> = items.iter().map(|v| transform(v)).collect();
+    let result: Result<Vec<Value>, EvalError> = items.iter().map(transform).collect();
     Ok(Value::List(result?))
 }
 
@@ -315,7 +333,10 @@ pub fn intersect_list(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let bv = require_list("Intersect", b)?;
     let result: Vec<Value> = av
         .iter()
-        .filter(|item| bv.iter().any(|bitem| cql_equal(item, bitem) == Value::Boolean(true)))
+        .filter(|item| {
+            bv.iter()
+                .any(|bitem| cql_equal(item, bitem) == Value::Boolean(true))
+        })
         .cloned()
         .collect();
     distinct(&Value::List(result))
@@ -333,7 +354,10 @@ pub fn except_list(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let bv = require_list("Except", b)?;
     let result: Vec<Value> = av
         .iter()
-        .filter(|item| !bv.iter().any(|bitem| cql_equal(item, bitem) == Value::Boolean(true)))
+        .filter(|item| {
+            !bv.iter()
+                .any(|bitem| cql_equal(item, bitem) == Value::Boolean(true))
+        })
         .cloned()
         .collect();
     Ok(Value::List(result))
@@ -350,10 +374,10 @@ pub fn list_includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
     }
     let av = require_list("Includes", a)?;
     let bv = require_list("Includes", b)?;
-    Ok(Value::Boolean(
-        bv.iter()
-            .all(|bitem| av.iter().any(|aitem| cql_equal(aitem, bitem) == Value::Boolean(true))),
-    ))
+    Ok(Value::Boolean(bv.iter().all(|bitem| {
+        av.iter()
+            .any(|aitem| cql_equal(aitem, bitem) == Value::Boolean(true))
+    })))
 }
 
 /// `IncludedIn` (list) — true if every element of `a` is in `b`.
@@ -385,7 +409,7 @@ pub fn median(list: &Value) -> Result<Value, EvalError> {
     }
     nums.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
     let n = nums.len();
-    let m = if n % 2 == 0 {
+    let m = if n.is_multiple_of(2) {
         (nums[n / 2 - 1] + nums[n / 2]) / 2.0
     } else {
         nums[n / 2]
@@ -409,7 +433,10 @@ pub fn mode(list: &Value) -> Result<Value, EvalError> {
     }
     let mut freq: Vec<(&Value, usize)> = Vec::new();
     for v in &non_null {
-        match freq.iter_mut().find(|(ev, _)| cql_equal(ev, v) == Value::Boolean(true)) {
+        match freq
+            .iter_mut()
+            .find(|(ev, _)| cql_equal(ev, v) == Value::Boolean(true))
+        {
             Some(entry) => entry.1 += 1,
             None => freq.push((v, 1)),
         }
@@ -573,18 +600,30 @@ mod tests {
 
     #[test]
     fn index_of_found() {
-        assert_eq!(index_of(&int_list(vec![10, 20, 30]), &Value::Integer(20)).unwrap(), Value::Integer(2));
+        assert_eq!(
+            index_of(&int_list(vec![10, 20, 30]), &Value::Integer(20)).unwrap(),
+            Value::Integer(2)
+        );
     }
 
     #[test]
     fn index_of_not_found() {
-        assert_eq!(index_of(&int_list(vec![10, 20]), &Value::Integer(99)).unwrap(), Value::Integer(-1));
+        assert_eq!(
+            index_of(&int_list(vec![10, 20]), &Value::Integer(99)).unwrap(),
+            Value::Integer(-1)
+        );
     }
 
     #[test]
     fn list_contains_basic() {
-        assert_eq!(list_contains(&int_list(vec![1, 2, 3]), &Value::Integer(2)).unwrap(), Value::Boolean(true));
-        assert_eq!(list_contains(&int_list(vec![1, 2, 3]), &Value::Integer(9)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            list_contains(&int_list(vec![1, 2, 3]), &Value::Integer(2)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            list_contains(&int_list(vec![1, 2, 3]), &Value::Integer(9)).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -618,7 +657,10 @@ mod tests {
 
     #[test]
     fn singleton_from_ok() {
-        assert_eq!(singleton_from(&int_list(vec![42])).unwrap(), Value::Integer(42));
+        assert_eq!(
+            singleton_from(&int_list(vec![42])).unwrap(),
+            Value::Integer(42)
+        );
     }
 
     #[test]
@@ -664,12 +706,18 @@ mod tests {
 
     #[test]
     fn median_odd() {
-        assert_eq!(median(&int_list(vec![3, 1, 2])).unwrap(), Value::Decimal(2.0));
+        assert_eq!(
+            median(&int_list(vec![3, 1, 2])).unwrap(),
+            Value::Decimal(2.0)
+        );
     }
 
     #[test]
     fn median_even() {
-        assert_eq!(median(&int_list(vec![1, 2, 3, 4])).unwrap(), Value::Decimal(2.5));
+        assert_eq!(
+            median(&int_list(vec![1, 2, 3, 4])).unwrap(),
+            Value::Decimal(2.5)
+        );
     }
 
     #[test]
@@ -681,14 +729,24 @@ mod tests {
     #[test]
     fn variance_basic() {
         // {2,4,4,4,5,5,7,9}: population variance = 4.0
-        let list = Value::List(vec![2,4,4,4,5,5,7,9].into_iter().map(Value::Integer).collect());
+        let list = Value::List(
+            vec![2, 4, 4, 4, 5, 5, 7, 9]
+                .into_iter()
+                .map(Value::Integer)
+                .collect(),
+        );
         assert_eq!(population_variance(&list).unwrap(), Value::Decimal(4.0));
     }
 
     #[test]
     fn std_dev_basic() {
         // population std dev of above = 2.0
-        let list = Value::List(vec![2,4,4,4,5,5,7,9].into_iter().map(Value::Integer).collect());
+        let list = Value::List(
+            vec![2, 4, 4, 4, 5, 5, 7, 9]
+                .into_iter()
+                .map(Value::Integer)
+                .collect(),
+        );
         assert_eq!(population_std_dev(&list).unwrap(), Value::Decimal(2.0));
     }
 

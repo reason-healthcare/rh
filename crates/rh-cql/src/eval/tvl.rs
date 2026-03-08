@@ -208,17 +208,26 @@ mod tests {
 
     #[test]
     fn and_true_true() {
-        assert_eq!(tvl_and(&Value::Boolean(true), &Value::Boolean(true)), Value::Boolean(true));
+        assert_eq!(
+            tvl_and(&Value::Boolean(true), &Value::Boolean(true)),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn and_true_false() {
-        assert_eq!(tvl_and(&Value::Boolean(true), &Value::Boolean(false)), Value::Boolean(false));
+        assert_eq!(
+            tvl_and(&Value::Boolean(true), &Value::Boolean(false)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn and_false_false() {
-        assert_eq!(tvl_and(&Value::Boolean(false), &Value::Boolean(false)), Value::Boolean(false));
+        assert_eq!(
+            tvl_and(&Value::Boolean(false), &Value::Boolean(false)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -230,7 +239,10 @@ mod tests {
     #[test]
     fn and_false_null_is_false() {
         // CQL spec: false and null → false (short-circuit)
-        assert_eq!(tvl_and(&Value::Boolean(false), &Value::Null), Value::Boolean(false));
+        assert_eq!(
+            tvl_and(&Value::Boolean(false), &Value::Null),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -240,7 +252,10 @@ mod tests {
 
     #[test]
     fn and_null_false_is_false() {
-        assert_eq!(tvl_and(&Value::Null, &Value::Boolean(false)), Value::Boolean(false));
+        assert_eq!(
+            tvl_and(&Value::Null, &Value::Boolean(false)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -252,18 +267,27 @@ mod tests {
 
     #[test]
     fn or_true_false_is_true() {
-        assert_eq!(tvl_or(&Value::Boolean(true), &Value::Boolean(false)), Value::Boolean(true));
+        assert_eq!(
+            tvl_or(&Value::Boolean(true), &Value::Boolean(false)),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn or_false_false_is_false() {
-        assert_eq!(tvl_or(&Value::Boolean(false), &Value::Boolean(false)), Value::Boolean(false));
+        assert_eq!(
+            tvl_or(&Value::Boolean(false), &Value::Boolean(false)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn or_true_null_is_true() {
         // CQL spec: true or null → true (short-circuit)
-        assert_eq!(tvl_or(&Value::Boolean(true), &Value::Null), Value::Boolean(true));
+        assert_eq!(
+            tvl_or(&Value::Boolean(true), &Value::Null),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
@@ -301,34 +325,52 @@ mod tests {
     fn implies_false_null_is_true() {
         // false implies null → true (false implies anything evaluates the
         // consequent only if antecedent is true; since it is false, result is true)
-        assert_eq!(tvl_implies(&Value::Boolean(false), &Value::Null), Value::Boolean(true));
+        assert_eq!(
+            tvl_implies(&Value::Boolean(false), &Value::Null),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn implies_true_null_is_null() {
-        assert_eq!(tvl_implies(&Value::Boolean(true), &Value::Null), Value::Null);
+        assert_eq!(
+            tvl_implies(&Value::Boolean(true), &Value::Null),
+            Value::Null
+        );
     }
 
     #[test]
     fn implies_null_true_is_true() {
-        assert_eq!(tvl_implies(&Value::Null, &Value::Boolean(true)), Value::Boolean(true));
+        assert_eq!(
+            tvl_implies(&Value::Null, &Value::Boolean(true)),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn implies_null_false_is_null() {
-        assert_eq!(tvl_implies(&Value::Null, &Value::Boolean(false)), Value::Null);
+        assert_eq!(
+            tvl_implies(&Value::Null, &Value::Boolean(false)),
+            Value::Null
+        );
     }
 
     // --- XOR ---
 
     #[test]
     fn xor_true_true_is_false() {
-        assert_eq!(tvl_xor(&Value::Boolean(true), &Value::Boolean(true)), Value::Boolean(false));
+        assert_eq!(
+            tvl_xor(&Value::Boolean(true), &Value::Boolean(true)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn xor_true_false_is_true() {
-        assert_eq!(tvl_xor(&Value::Boolean(true), &Value::Boolean(false)), Value::Boolean(true));
+        assert_eq!(
+            tvl_xor(&Value::Boolean(true), &Value::Boolean(false)),
+            Value::Boolean(true)
+        );
     }
 
     #[test]

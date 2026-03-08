@@ -9,9 +9,11 @@ use std::collections::BTreeMap;
 
 use super::context::{EvalContext, EvalError};
 use super::operators::*;
-use super::tvl::{tvl_not, tvl_xor, tvl_implies};
+use super::tvl::{tvl_implies, tvl_not, tvl_xor};
 use super::value::Value;
-use crate::elm::{Expression, NaryExpression, BinaryExpression, UnaryExpression, Library, StatementDef};
+use crate::elm::{
+    BinaryExpression, Expression, Library, NaryExpression, StatementDef, UnaryExpression,
+};
 
 // ---------------------------------------------------------------------------
 // TraceEvent (Task 9.20)
@@ -51,11 +53,7 @@ pub struct TraceEvent {
 /// # Returns
 ///
 /// `Ok(Value)` on success, `Err(EvalError)` on type mismatch or runtime error.
-pub fn evaluate_elm(
-    library: &Library,
-    name: &str,
-    ctx: &EvalContext,
-) -> Result<Value, EvalError> {
+pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<Value, EvalError> {
     let mut engine = Engine::new(library, ctx);
     let expr = engine.find_expression(name)?;
     let bindings = engine.build_initial_bindings();
@@ -93,27 +91,33 @@ struct Engine<'lib, 'ctx> {
 
 impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     fn new(library: &'lib Library, ctx: &'ctx EvalContext) -> Self {
-        Self { library, ctx, trace: Vec::new(), next_event_id: 1 }
+        Self {
+            library,
+            ctx,
+            trace: Vec::new(),
+            next_event_id: 1,
+        }
     }
 
     fn find_expression(&self, name: &str) -> Result<Expression, EvalError> {
         if let Some(ref stmts) = self.library.statements {
             for def in &stmts.defs {
-                match def {
-                    StatementDef::Expression(expr_def) => {
-                        if expr_def.name.as_deref() == Some(name) {
-                            return expr_def.expression.as_ref()
-                                .map(|e| *e.clone())
-                                .ok_or_else(|| EvalError::General(
-                                    format!("Expression '{name}' has no body")
-                                ));
-                        }
+                if let StatementDef::Expression(expr_def) = def {
+                    if expr_def.name.as_deref() == Some(name) {
+                        return expr_def
+                            .expression
+                            .as_ref()
+                            .map(|e| *e.clone())
+                            .ok_or_else(|| {
+                                EvalError::General(format!("Expression '{name}' has no body"))
+                            });
                     }
-                    _ => {}
                 }
             }
         }
-        Err(EvalError::General(format!("Expression '{name}' not found in library")))
+        Err(EvalError::General(format!(
+            "Expression '{name}' not found in library"
+        )))
     }
 
     /// Return true if `name` is declared as a parameter in the library.
@@ -133,7 +137,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         bindings
     }
 
-    fn record_trace(&mut self, op: &str, inputs: Vec<Value>, output: Value, children: Vec<u64>, elm_node_id: Option<String>) -> u64 {
+    fn record_trace(
+        &mut self,
+        op: &str,
+        inputs: Vec<Value>,
+        output: Value,
+        children: Vec<u64>,
+        elm_node_id: Option<String>,
+    ) -> u64 {
         let id = self.next_event_id;
         self.next_event_id += 1;
         self.trace.push(TraceEvent {
@@ -147,13 +158,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         id
     }
 
-    fn eval_expr(&mut self, expr: &Expression, bindings: &BTreeMap<String, Value>) -> Result<Value, EvalError> {
+    fn eval_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
         match expr {
             // ----- Literals -----
             Expression::Null(_) => Ok(Value::Null),
             Expression::Literal(lit) => {
                 let val = eval_literal(lit)?;
-                self.record_trace("Literal", vec![], val.clone(), vec![], lit.element.local_id.clone());
+                self.record_trace(
+                    "Literal",
+                    vec![],
+                    val.clone(),
+                    vec![],
+                    lit.element.local_id.clone(),
+                );
                 Ok(val)
             }
 
@@ -175,24 +196,35 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // Otherwise evaluate from library.
                 let expr = self.find_expression(name)?;
                 let val = self.eval_expr(&expr, bindings)?;
-                self.record_trace("ExpressionRef", vec![], val.clone(), vec![], r.element.local_id.clone());
+                self.record_trace(
+                    "ExpressionRef",
+                    vec![],
+                    val.clone(),
+                    vec![],
+                    r.element.local_id.clone(),
+                );
                 Ok(val)
             }
             Expression::OperandRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
-                bindings.get(name).cloned().ok_or_else(|| {
-                    EvalError::General(format!("Operand '{name}' not found"))
-                })
+                bindings
+                    .get(name)
+                    .cloned()
+                    .ok_or_else(|| EvalError::General(format!("Operand '{name}' not found")))
             }
             Expression::AliasRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
-                bindings.get(name).cloned().ok_or_else(|| {
-                    EvalError::General(format!("Alias '{name}' not found"))
-                })
+                bindings
+                    .get(name)
+                    .cloned()
+                    .ok_or_else(|| EvalError::General(format!("Alias '{name}' not found")))
             }
             Expression::ParameterRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
-                self.ctx.parameters.get(name).cloned()
+                self.ctx
+                    .parameters
+                    .get(name)
+                    .cloned()
                     .ok_or_else(|| EvalError::General(format!("Parameter '{name}' not found")))
             }
 
@@ -264,14 +296,30 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = equal(&a, &b);
-                self.trace_binary("Equal", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Equal",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Equivalent(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = equivalent(&a, &b);
-                self.trace_binary("Equivalent", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Equivalent",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::NotEqual(bin) => {
@@ -282,35 +330,75 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Value::Boolean(b) => Value::Boolean(!b),
                     other => other,
                 };
-                self.trace_binary("NotEqual", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "NotEqual",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Less(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = less(&a, &b)?;
-                self.trace_binary("Less", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Less",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Greater(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = greater(&a, &b)?;
-                self.trace_binary("Greater", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Greater",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::LessOrEqual(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = less_or_equal(&a, &b)?;
-                self.trace_binary("LessOrEqual", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "LessOrEqual",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::GreaterOrEqual(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = greater_or_equal(&a, &b)?;
-                self.trace_binary("GreaterOrEqual", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "GreaterOrEqual",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
 
@@ -319,28 +407,60 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = add(&a, &b)?;
-                self.trace_binary("Add", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Add",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Subtract(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = subtract(&a, &b)?;
-                self.trace_binary("Subtract", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Subtract",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Multiply(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = multiply(&a, &b)?;
-                self.trace_binary("Multiply", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Multiply",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Divide(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = divide(&a, &b)?;
-                self.trace_binary("Divide", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Divide",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::TruncatedDivide(bin) => {
@@ -348,44 +468,90 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let d = divide(&a, &b)?;
                 let result = truncate(&d)?;
-                self.trace_binary("TruncatedDivide", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "TruncatedDivide",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Modulo(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = modulo(&a, &b)?;
-                self.trace_binary("Modulo", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Modulo",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Negate(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = negate(&v)?;
-                self.trace_unary("Negate", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Negate",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Abs(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = abs(&v)?;
-                self.trace_unary("Abs", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Abs",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Ceiling(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = ceiling(&v)?;
-                self.trace_unary("Ceiling", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Ceiling",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Floor(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = floor(&v)?;
-                self.trace_unary("Floor", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Floor",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Truncate(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = truncate(&v)?;
-                self.trace_unary("Truncate", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Truncate",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Round(unary) => {
@@ -395,47 +561,83 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Ln(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = ln(&v)?;
-                self.trace_unary("Ln", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Ln",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Exp(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = exp(&v)?;
-                self.trace_unary("Exp", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Exp",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Log(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = log(&a, &b)?;
-                self.trace_binary("Log", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Log",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Power(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = power(&a, &b)?;
-                self.trace_binary("Power", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Power",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Successor(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = successor(&v)?;
-                self.trace_unary("Successor", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Successor",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Predecessor(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = predecessor(&v)?;
-                self.trace_unary("Predecessor", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Predecessor",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
-            Expression::MinValue(typed) => {
-                min_value(typed.value_type.as_deref().unwrap_or(""))
-            }
-            Expression::MaxValue(typed) => {
-                max_value(typed.value_type.as_deref().unwrap_or(""))
-            }
+            Expression::MinValue(typed) => min_value(typed.value_type.as_deref().unwrap_or("")),
+            Expression::MaxValue(typed) => max_value(typed.value_type.as_deref().unwrap_or("")),
 
             // ----- String -----
             Expression::Concatenate(nary) => {
@@ -443,12 +645,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if vals.iter().any(|v| matches!(v, Value::Null)) {
                     return Ok(Value::Null);
                 }
-                let parts: Result<Vec<String>, _> = vals.iter().map(|v| {
-                    match v {
+                let parts: Result<Vec<String>, _> = vals
+                    .iter()
+                    .map(|v| match v {
                         Value::String(s) => Ok(s.clone()),
-                        _ => Err(EvalError::General("Concatenate: non-string operand".to_string())),
-                    }
-                }).collect();
+                        _ => Err(EvalError::General(
+                            "Concatenate: non-string operand".to_string(),
+                        )),
+                    })
+                    .collect();
                 Ok(Value::String(parts?.join("")))
             }
             Expression::Combine(c) => {
@@ -476,34 +681,70 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Upper(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::upper(&v)?;
-                self.trace_unary("Upper", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Upper",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Lower(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::lower(&v)?;
-                self.trace_unary("Lower", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "Lower",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::StartsWith(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = super::operators::starts_with(&a, &b)?;
-                self.trace_binary("StartsWith", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "StartsWith",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::EndsWith(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = super::operators::ends_with(&a, &b)?;
-                self.trace_binary("EndsWith", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "EndsWith",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::Matches(bin) => {
                 let (a, id_a) = self.eval_operand_with_id(bin.operand.first(), bindings)?;
                 let (b, id_b) = self.eval_operand_with_id(bin.operand.get(1), bindings)?;
                 let result = super::operators::matches_regex(&a, &b)?;
-                self.trace_binary("Matches", bin.element.local_id.clone(), a, id_a, b, id_b, result.clone());
+                self.trace_binary(
+                    "Matches",
+                    bin.element.local_id.clone(),
+                    a,
+                    id_a,
+                    b,
+                    id_b,
+                    result.clone(),
+                );
                 Ok(result)
             }
 
@@ -511,61 +752,121 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::ToBoolean(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_boolean(&v)?;
-                self.trace_unary("ToBoolean", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToBoolean",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToInteger(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_integer(&v)?;
-                self.trace_unary("ToInteger", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToInteger",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToLong(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_long(&v)?;
-                self.trace_unary("ToLong", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToLong",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToDecimal(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_decimal(&v)?;
-                self.trace_unary("ToDecimal", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToDecimal",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToStringExpr(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_string(&v)?;
-                self.trace_unary("ToStringExpr", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToStringExpr",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToDate(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_date(&v)?;
-                self.trace_unary("ToDate", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToDate",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToDateTime(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_datetime(&v)?;
-                self.trace_unary("ToDateTime", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToDateTime",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToTime(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_time(&v)?;
-                self.trace_unary("ToTime", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToTime",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToQuantity(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_quantity(&v)?;
-                self.trace_unary("ToQuantity", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToQuantity",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToConcept(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary, bindings)?;
                 let result = super::operators::to_concept(&v)?;
-                self.trace_unary("ToConcept", unary.element.local_id.clone(), v, id_v, result.clone());
+                self.trace_unary(
+                    "ToConcept",
+                    unary.element.local_id.clone(),
+                    v,
+                    id_v,
+                    result.clone(),
+                );
                 Ok(result)
             }
             Expression::ToList(unary) => {
@@ -699,7 +1000,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Intersect(bin) => {
                 let (a, b) = self.eval_binary_args(bin, bindings)?;
                 match (&a, &b) {
-                    (Value::List(_), _) | (_, Value::List(_)) => super::lists::intersect_list(&a, &b),
+                    (Value::List(_), _) | (_, Value::List(_)) => {
+                        super::lists::intersect_list(&a, &b)
+                    }
                     _ => super::intervals::intersect_interval(&a, &b),
                 }
             }
@@ -750,7 +1053,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General("Contains: expected Interval or List".to_string())),
+                    _ => Err(EvalError::General(
+                        "Contains: expected Interval or List".to_string(),
+                    )),
                 }
             }
             Expression::In(timed_bin) => {
@@ -760,7 +1065,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General("In: expected Interval or List".to_string())),
+                    _ => Err(EvalError::General(
+                        "In: expected Interval or List".to_string(),
+                    )),
                 }
             }
             Expression::Overlaps(timed_bin) => {
@@ -839,11 +1146,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
 
             // ----- Query -----
-            Expression::Query(q) => {
-                super::queries::eval_query(q, bindings, &mut |expr, binds| {
-                    self.eval_expr(expr, binds)
-                })
-            }
+            Expression::Query(q) => super::queries::eval_query(q, bindings, &mut |expr, binds| {
+                self.eval_expr(expr, binds)
+            }),
 
             // ----- Retrieve -----
             Expression::Retrieve(r) => {
@@ -897,19 +1202,19 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 };
                 let path = prop.path.as_deref().unwrap_or("");
                 match source {
-                    Value::Tuple(ref fields) => Ok(fields.get(path).cloned().unwrap_or(Value::Null)),
+                    Value::Tuple(ref fields) => {
+                        Ok(fields.get(path).cloned().unwrap_or(Value::Null))
+                    }
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General(format!("Property '{path}': cannot access property on non-tuple"))),
+                    _ => Err(EvalError::General(format!(
+                        "Property '{path}': cannot access property on non-tuple"
+                    ))),
                 }
             }
 
             // ----- Date/Time -----
-            Expression::Today(_) => {
-                Ok(Value::Date(self.ctx.today()))
-            }
-            Expression::Now(_) => {
-                Ok(Value::DateTime(self.ctx.now()))
-            }
+            Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
+            Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
             Expression::SameAs(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
                 let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
@@ -933,7 +1238,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::DifferenceBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
                 let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::difference_between(&a, &b, tb.precision.as_deref().unwrap_or("day"))
+                super::operators::difference_between(
+                    &a,
+                    &b,
+                    tb.precision.as_deref().unwrap_or("day"),
+                )
             }
 
             // ----- Interval: proper / expand -----
@@ -949,7 +1258,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Expand(bin) => {
                 let (source, per) = self.eval_binary_args(bin, bindings)?;
-                let per_opt = if matches!(per, Value::Null) { None } else { Some(per) };
+                let per_opt = if matches!(per, Value::Null) {
+                    None
+                } else {
+                    Some(per)
+                };
                 super::intervals::expand(&source, per_opt.as_ref())
             }
             Expression::ProperContains(bin) => {
@@ -958,7 +1271,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Value::Interval { .. } => super::intervals::proper_contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General("ProperContains: expected Interval or List".to_string())),
+                    _ => Err(EvalError::General(
+                        "ProperContains: expected Interval or List".to_string(),
+                    )),
                 }
             }
             Expression::ProperIn(bin) => {
@@ -967,7 +1282,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Value::Interval { .. } => super::intervals::proper_in(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General("ProperIn: expected Interval or List".to_string())),
+                    _ => Err(EvalError::General(
+                        "ProperIn: expected Interval or List".to_string(),
+                    )),
                 }
             }
             Expression::ProperIncludes(timed_bin) => {
@@ -1060,65 +1377,107 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         }
     }
 
-    // Helper: evaluate an expr and return (value, Option<last_trace_event_id>).
-    // The returned id is the root trace event for this sub-expression, or None
-    // if no trace event was emitted (e.g. bare ParameterRef).
-    fn eval_expr_with_id(&mut self, expr: &Expression, bindings: &BTreeMap<String, Value>) -> Result<(Value, Option<u64>), EvalError> {
-        let before = self.next_event_id;
-        let val = self.eval_expr(expr, bindings)?;
-        let id = if self.next_event_id > before { Some(self.next_event_id - 1) } else { None };
-        Ok((val, id))
-    }
-
     // Like eval_expr_opt but also returns the last-emitted trace event id.
-    fn eval_operand_with_id(&mut self, expr: Option<&Expression>, bindings: &BTreeMap<String, Value>) -> Result<(Value, Option<u64>), EvalError> {
+    fn eval_operand_with_id(
+        &mut self,
+        expr: Option<&Expression>,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<(Value, Option<u64>), EvalError> {
         let before = self.next_event_id;
         let val = self.eval_expr_opt(expr, bindings)?;
-        let id = if self.next_event_id > before { Some(self.next_event_id - 1) } else { None };
+        let id = if self.next_event_id > before {
+            Some(self.next_event_id - 1)
+        } else {
+            None
+        };
         Ok((val, id))
     }
 
     // Evaluate a UnaryExpression operand and return (value, Option<trace_id>).
-    fn eval_unary_arg_with_id(&mut self, unary: &UnaryExpression, bindings: &BTreeMap<String, Value>) -> Result<(Value, Option<u64>), EvalError> {
+    fn eval_unary_arg_with_id(
+        &mut self,
+        unary: &UnaryExpression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<(Value, Option<u64>), EvalError> {
         self.eval_operand_with_id(unary.operand.as_deref(), bindings)
     }
 
     // Emit a trace event for a binary operator, collecting child event ids.
-    fn trace_binary(&mut self, op: &str, elm_node_id: Option<String>, a: Value, id_a: Option<u64>, b: Value, id_b: Option<u64>, result: Value) -> u64 {
+    #[allow(clippy::too_many_arguments)]
+    fn trace_binary(
+        &mut self,
+        op: &str,
+        elm_node_id: Option<String>,
+        a: Value,
+        id_a: Option<u64>,
+        b: Value,
+        id_b: Option<u64>,
+        result: Value,
+    ) -> u64 {
         let children: Vec<u64> = [id_a, id_b].into_iter().flatten().collect();
         self.record_trace(op, vec![a, b], result, children, elm_node_id)
     }
 
     // Emit a trace event for a unary operator, collecting the child event id.
-    fn trace_unary(&mut self, op: &str, elm_node_id: Option<String>, v: Value, id_v: Option<u64>, result: Value) -> u64 {
+    fn trace_unary(
+        &mut self,
+        op: &str,
+        elm_node_id: Option<String>,
+        v: Value,
+        id_v: Option<u64>,
+        result: Value,
+    ) -> u64 {
         let children: Vec<u64> = id_v.into_iter().collect();
         self.record_trace(op, vec![v], result, children, elm_node_id)
     }
 
     // ----- Helpers -----
 
-    fn eval_nary_args(&mut self, nary: &NaryExpression, bindings: &BTreeMap<String, Value>) -> Result<Vec<Value>, EvalError> {
-        nary.operand.iter().map(|e| self.eval_expr(e, bindings)).collect()
+    fn eval_nary_args(
+        &mut self,
+        nary: &NaryExpression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Vec<Value>, EvalError> {
+        nary.operand
+            .iter()
+            .map(|e| self.eval_expr(e, bindings))
+            .collect()
     }
 
-    fn eval_binary_args(&mut self, bin: &BinaryExpression, bindings: &BTreeMap<String, Value>) -> Result<(Value, Value), EvalError> {
-        let a = bin.operand.first()
+    fn eval_binary_args(
+        &mut self,
+        bin: &BinaryExpression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<(Value, Value), EvalError> {
+        let a = bin
+            .operand
+            .first()
             .map(|e| self.eval_expr(e, bindings))
             .unwrap_or(Ok(Value::Null))?;
-        let b = bin.operand.get(1)
+        let b = bin
+            .operand
+            .get(1)
             .map(|e| self.eval_expr(e, bindings))
             .unwrap_or(Ok(Value::Null))?;
         Ok((a, b))
     }
 
-    fn eval_unary_arg(&mut self, unary: &UnaryExpression, bindings: &BTreeMap<String, Value>) -> Result<Value, EvalError> {
+    fn eval_unary_arg(
+        &mut self,
+        unary: &UnaryExpression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
         match &unary.operand {
             Some(e) => self.eval_expr(e, bindings),
             None => Ok(Value::Null),
         }
     }
 
-    fn eval_expr_opt(&mut self, expr: Option<&Expression>, bindings: &BTreeMap<String, Value>) -> Result<Value, EvalError> {
+    fn eval_expr_opt(
+        &mut self,
+        expr: Option<&Expression>,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
         match expr {
             Some(e) => self.eval_expr(e, bindings),
             None => Ok(Value::Null),
@@ -1149,23 +1508,24 @@ fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Value, EvalErro
     match (name, args.as_slice()) {
         // Aggregate
         ("Count", [list]) => super::lists::count(list),
-        ("Sum",   [list]) => super::lists::sum(list),
-        ("Min",   [list]) => super::lists::min(list),
-        ("Max",   [list]) => super::lists::max(list),
-        ("Avg",   [list]) => super::lists::avg(list),
+        ("Sum", [list]) => super::lists::sum(list),
+        ("Min", [list]) => super::lists::min(list),
+        ("Max", [list]) => super::lists::max(list),
+        ("Avg", [list]) => super::lists::avg(list),
         // Type conversions
-        ("ToString",  [v]) => super::operators::to_string(v),
+        ("ToString", [v]) => super::operators::to_string(v),
         ("ToInteger", [v]) => super::operators::to_integer(v),
-        ("ToLong",    [v]) => super::operators::to_long(v),
+        ("ToLong", [v]) => super::operators::to_long(v),
         ("ToDecimal", [v]) => super::operators::to_decimal(v),
         ("ToBoolean", [v]) => super::operators::to_boolean(v),
-        ("ToDate",    [v]) => super::operators::to_date(v),
-        ("ToDateTime",[v]) => super::operators::to_datetime(v),
-        ("ToTime",    [v]) => super::operators::to_time(v),
-        ("ToQuantity",[v]) => super::operators::to_quantity(v),
+        ("ToDate", [v]) => super::operators::to_date(v),
+        ("ToDateTime", [v]) => super::operators::to_datetime(v),
+        ("ToTime", [v]) => super::operators::to_time(v),
+        ("ToQuantity", [v]) => super::operators::to_quantity(v),
         ("ToConcept", [v]) => super::operators::to_concept(v),
         _ => Err(EvalError::General(format!(
-            "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)", args.len()
+            "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)",
+            args.len()
         ))),
     }
 }
@@ -1185,13 +1545,17 @@ fn eval_literal(lit: &crate::elm::Literal) -> Result<Value, EvalError> {
 
     match value_type {
         "Boolean" => Ok(Value::Boolean(value_str == "true")),
-        "Integer" => value_str.parse::<i64>()
+        "Integer" => value_str
+            .parse::<i64>()
             .map(Value::Integer)
             .map_err(|_| EvalError::General(format!("Invalid Integer literal: '{value_str}'"))),
-        "Long" => value_str.trim_end_matches('L').parse::<i128>()
+        "Long" => value_str
+            .trim_end_matches('L')
+            .parse::<i128>()
             .map(Value::Long)
             .map_err(|_| EvalError::General(format!("Invalid Long literal: '{value_str}'"))),
-        "Decimal" => value_str.parse::<f64>()
+        "Decimal" => value_str
+            .parse::<f64>()
             .map(Value::Decimal)
             .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'"))),
         "String" => Ok(Value::String(value_str.to_string())),
@@ -1207,20 +1571,24 @@ fn eval_literal(lit: &crate::elm::Literal) -> Result<Value, EvalError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elm::{Expression, Literal, ExpressionRef, BinaryExpression, Library, ExpressionDefs, ExpressionDef, StatementDef};
+    use crate::elm::{
+        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, Library,
+        Literal, StatementDef,
+    };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
     use crate::eval::value::CqlDateTime;
 
     fn make_library(name: &str, expr: Expression) -> Library {
-        let mut lib = Library::default();
-        lib.statements = Some(ExpressionDefs {
-            defs: vec![StatementDef::Expression(ExpressionDef {
-                name: Some(name.to_string()),
-                expression: Some(Box::new(expr)),
-                ..Default::default()
-            })],
-        });
-        lib
+        Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some(name.to_string()),
+                    expression: Some(Box::new(expr)),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        }
     }
 
     fn fixed_ctx() -> EvalContext {
@@ -1274,7 +1642,10 @@ mod tests {
             ..Default::default()
         });
         let lib = make_library("Add3Plus4", expr);
-        assert_eq!(evaluate_elm(&lib, "Add3Plus4", &fixed_ctx()).unwrap(), Value::Integer(7));
+        assert_eq!(
+            evaluate_elm(&lib, "Add3Plus4", &fixed_ctx()).unwrap(),
+            Value::Integer(7)
+        );
     }
 
     #[test]
@@ -1295,53 +1666,68 @@ mod tests {
 
     #[test]
     fn eval_expression_ref() {
-        let mut lib = Library::default();
-        lib.statements = Some(ExpressionDefs {
-            defs: vec![
-                StatementDef::Expression(ExpressionDef {
-                    name: Some("Base".to_string()),
-                    expression: Some(Box::new(int_literal(99))),
-                    ..Default::default()
-                }),
-                StatementDef::Expression(ExpressionDef {
-                    name: Some("Ref".to_string()),
-                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+        let lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![
+                    StatementDef::Expression(ExpressionDef {
                         name: Some("Base".to_string()),
+                        expression: Some(Box::new(int_literal(99))),
                         ..Default::default()
-                    }))),
-                    ..Default::default()
-                }),
-            ],
-        });
-        assert_eq!(evaluate_elm(&lib, "Ref", &fixed_ctx()).unwrap(), Value::Integer(99));
+                    }),
+                    StatementDef::Expression(ExpressionDef {
+                        name: Some("Ref".to_string()),
+                        expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                            name: Some("Base".to_string()),
+                            ..Default::default()
+                        }))),
+                        ..Default::default()
+                    }),
+                ],
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            evaluate_elm(&lib, "Ref", &fixed_ctx()).unwrap(),
+            Value::Integer(99)
+        );
     }
     #[test]
     fn eval_add_trace_children() {
         // Spec scenario: evaluate_elm_with_trace on "X = 2 + 3" must contain
         // an Add event with inputs [Integer(2), Integer(3)], output Integer(5),
         // plus child Literal events.
-        use crate::elm::{BinaryExpression, ElementFields, Expression, Library,
-            ExpressionDef, ExpressionDefs, StatementDef};
+        use crate::elm::{
+            BinaryExpression, ElementFields, Expression, ExpressionDef, ExpressionDefs, Library,
+            StatementDef,
+        };
 
         let add_expr = Expression::Add(BinaryExpression {
-            element: ElementFields { local_id: Some("add1".to_string()), ..Default::default() },
+            element: ElementFields {
+                local_id: Some("add1".to_string()),
+                ..Default::default()
+            },
             operand: vec![int_literal(2), int_literal(3)],
             ..Default::default()
         });
 
-        let mut lib = Library::default();
-        lib.statements = Some(ExpressionDefs {
-            defs: vec![StatementDef::Expression(ExpressionDef {
-                name: Some("X".to_string()),
-                expression: Some(Box::new(add_expr)),
-                ..Default::default()
-            })],
-        });
+        let lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("X".to_string()),
+                    expression: Some(Box::new(add_expr)),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
 
         let (val, trace) = evaluate_elm_with_trace(&lib, "X", &fixed_ctx()).unwrap();
         assert_eq!(val, Value::Integer(5));
 
-        let add_event = trace.iter().find(|e| e.op == "Add").expect("no Add trace event");
+        let add_event = trace
+            .iter()
+            .find(|e| e.op == "Add")
+            .expect("no Add trace event");
         assert_eq!(add_event.inputs, vec![Value::Integer(2), Value::Integer(3)]);
         assert_eq!(add_event.output, Value::Integer(5));
         assert_eq!(add_event.elm_node_id, Some("add1".to_string()));
@@ -1351,5 +1737,4 @@ mod tests {
         // Children vec on Add event should reference both literals
         assert_eq!(add_event.children.len(), 2);
     }
-
 }

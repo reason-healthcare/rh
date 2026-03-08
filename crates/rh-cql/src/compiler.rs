@@ -727,7 +727,10 @@ mod tests {
                 let t = l.trim_start();
                 t.starts_with('[') && t.contains(':')
             });
-            assert!(has_location, "event line missing [line:col] prefix: {result}");
+            assert!(
+                has_location,
+                "event line missing [line:col] prefix: {result}"
+            );
         }
     }
 

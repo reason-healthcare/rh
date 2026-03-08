@@ -8,12 +8,9 @@ use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_to_json,
-    elm::AccessModifier,
-    evaluate_elm, evaluate_elm_with_trace,
-    explain_compile, explain_parse,
-    CqlDateTime, EvalContextBuilder, FixedClock,
-    validate, CompilerOptions, SignatureLevel,
+    compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
+    evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
+    CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
 };
 
 #[derive(Subcommand)]
@@ -177,6 +174,7 @@ fn read_source(input: &str) -> Result<String> {
 }
 
 /// Compile CQL source to ELM JSON
+#[allow(clippy::too_many_arguments)]
 fn compile_cql(
     input: &str,
     output: Option<&Path>,
@@ -256,7 +254,9 @@ fn compile_cql(
     if emit_source_map {
         let sm_result = compile_to_elm_with_sourcemap(&source, Some(options), None)
             .context("Failed to generate source map")?;
-        let sm_json = sm_result.source_map_json().context("Failed to serialize source map")?;
+        let sm_json = sm_result
+            .source_map_json()
+            .context("Failed to serialize source map")?;
 
         match source_map_output {
             Some(path) => {
@@ -306,7 +306,10 @@ fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
     // Compile to ELM
     let result = compile(&source, None).context("Failed to compile CQL")?;
     if !result.is_success() {
-        eprintln!("✗ Compilation failed with {} error(s):", result.errors.len());
+        eprintln!(
+            "✗ Compilation failed with {} error(s):",
+            result.errors.len()
+        );
         for err in &result.errors {
             eprintln!("  ✗ {}", err.message());
         }

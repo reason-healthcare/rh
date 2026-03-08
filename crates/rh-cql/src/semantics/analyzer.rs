@@ -617,10 +617,12 @@ impl SemanticAnalyzer {
         // Convert collected sources into TypedQuerySource values.
         let typed_sources: Vec<_> = sources
             .into_iter()
-            .map(|(alias, expression, _)| crate::semantics::typed_ast::TypedQuerySource {
-                alias,
-                expression: Box::new(expression),
-            })
+            .map(
+                |(alias, expression, _)| crate::semantics::typed_ast::TypedQuerySource {
+                    alias,
+                    expression: Box::new(expression),
+                },
+            )
             .collect();
 
         let let_clauses: Vec<_> = e
@@ -634,7 +636,8 @@ impl SemanticAnalyzer {
                     identifier: lc.identifier.clone(),
                     expression: Box::new(typed_expr),
                 };
-                self.scope_manager.register_query_alias(lc.identifier.clone(), let_type);
+                self.scope_manager
+                    .register_query_alias(lc.identifier.clone(), let_type);
                 result
             })
             .collect();

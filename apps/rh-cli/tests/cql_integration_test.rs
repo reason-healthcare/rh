@@ -65,7 +65,11 @@ fn test_explain_parse_invalid_cql() {
         .write_stdin("this is not valid CQL !!!###")
         .assert()
         // May succeed (partial parse) or fail – but must not panic
-        .stdout(predicate::str::is_empty().not().or(predicate::str::is_empty()));
+        .stdout(
+            predicate::str::is_empty()
+                .not()
+                .or(predicate::str::is_empty()),
+        );
 }
 
 // ---------------------------------------------------------------------------

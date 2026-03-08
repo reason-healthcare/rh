@@ -352,7 +352,13 @@ impl ElmEmitter {
                         annotation: vec![],
                     }));
                 }
-                TypedStatement::FunctionDef { name, parameters: _params, return_type: _ret, body, fluent: _fluent } => {
+                TypedStatement::FunctionDef {
+                    name,
+                    parameters: _params,
+                    return_type: _ret,
+                    body,
+                    fluent: _fluent,
+                } => {
                     let expression = body.as_ref().map(|b| Box::new(self.emit_expression(b)));
                     statements.push(elm::StatementDef::Function(elm::FunctionDef {
                         name: Some(name),

@@ -21,11 +21,15 @@ fn err(op: &str, msg: &str) -> EvalError {
 }
 
 /// Extract the bounds of an Interval value or return an error.
+#[allow(clippy::type_complexity)]
 fn unwrap_interval(v: &Value) -> Result<(Option<&Value>, Option<&Value>, bool, bool), EvalError> {
     match v {
-        Value::Interval { low, high, low_closed, high_closed } => {
-            Ok((low.as_deref(), high.as_deref(), *low_closed, *high_closed))
-        }
+        Value::Interval {
+            low,
+            high,
+            low_closed,
+            high_closed,
+        } => Ok((low.as_deref(), high.as_deref(), *low_closed, *high_closed)),
         _ => Err(err("interval", "expected Interval value")),
     }
 }
@@ -164,11 +168,12 @@ pub fn includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
 
     // a.low <= b.low
     let low_ok = match (a_low, b_low) {
-        (None, _) => Some(true),                 // a is left-unbounded
-        (_, None) => Some(false),                // b is left-unbounded but a is not
+        (None, _) => Some(true),  // a is left-unbounded
+        (_, None) => Some(false), // b is left-unbounded but a is not
         (Some(al), Some(bl)) => {
-            let ord = cql_compare(al, bl)
-                .ok_or_else(|| EvalError::General("includes: incomparable interval bounds".to_string()))?;;
+            let ord = cql_compare(al, bl).ok_or_else(|| {
+                EvalError::General("includes: incomparable interval bounds".to_string())
+            })?;
             Some(match ord {
                 Ordering::Less => true,
                 Ordering::Equal => !a_lc || b_lc, // a open ⊆ a closed requires b closed
@@ -182,8 +187,9 @@ pub fn includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
         (None, _) => Some(true),
         (_, None) => Some(false),
         (Some(ah), Some(bh)) => {
-            let ord = cql_compare(ah, bh)
-                .ok_or_else(|| EvalError::General("includes: incomparable interval bounds".to_string()))?;;
+            let ord = cql_compare(ah, bh).ok_or_else(|| {
+                EvalError::General("includes: incomparable interval bounds".to_string())
+            })?;
             Some(match ord {
                 Ordering::Greater => true,
                 Ordering::Equal => !a_hc || b_hc,
@@ -219,8 +225,9 @@ pub fn overlaps(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let a_starts_before_b_ends = match (a_low, b_high) {
         (None, _) | (_, None) => Some(true),
         (Some(al), Some(bh)) => {
-            let ord = cql_compare(al, bh)
-                .ok_or_else(|| EvalError::General("overlaps_before: incomparable bounds".to_string()))?;;
+            let ord = cql_compare(al, bh).ok_or_else(|| {
+                EvalError::General("overlaps_before: incomparable bounds".to_string())
+            })?;
             Some(match ord {
                 Ordering::Less => true,
                 Ordering::Equal => a_lc && b_hc,
@@ -232,8 +239,9 @@ pub fn overlaps(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let b_starts_before_a_ends = match (b_low, a_high) {
         (None, _) | (_, None) => Some(true),
         (Some(bl), Some(ah)) => {
-            let ord = cql_compare(bl, ah)
-                .ok_or_else(|| EvalError::General("overlaps_after: incomparable bounds".to_string()))?;;
+            let ord = cql_compare(bl, ah).ok_or_else(|| {
+                EvalError::General("overlaps_after: incomparable bounds".to_string())
+            })?;
             Some(match ord {
                 Ordering::Less => true,
                 Ordering::Equal => b_lc && a_hc,
@@ -277,8 +285,7 @@ pub fn overlaps_after(a: &Value, b: &Value) -> Result<Value, EvalError> {
 /// `Meets` — a ends immediately before b starts (or vice versa).
 pub fn meets(a: &Value, b: &Value) -> Result<Value, EvalError> {
     Ok(Value::Boolean(
-        meets_before(a, b)? == Value::Boolean(true)
-            || meets_after(a, b)? == Value::Boolean(true),
+        meets_before(a, b)? == Value::Boolean(true) || meets_after(a, b)? == Value::Boolean(true),
     ))
 }
 
@@ -292,7 +299,7 @@ pub fn meets_before(a: &Value, b: &Value) -> Result<Value, EvalError> {
     match (a_high, b_low) {
         (Some(ah), Some(bl)) => {
             let ord = cql_compare(ah, bl)
-                .ok_or_else(|| EvalError::General("meets: incomparable bounds".to_string()))?;;
+                .ok_or_else(|| EvalError::General("meets: incomparable bounds".to_string()))?;
             Ok(Value::Boolean(match ord {
                 Ordering::Equal => a_hc != b_lc, // one closed, one open → adjacent
                 _ => false,
@@ -320,8 +327,7 @@ pub fn starts(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let (b_low, _, b_lc, _) = unwrap_interval(b)?;
     let low_match = match (a_low, b_low) {
         (None, None) => Some(true),
-        (Some(al), Some(bl)) => cql_compare(al, bl)
-            .map(|o| o == Ordering::Equal && a_lc == b_lc),
+        (Some(al), Some(bl)) => cql_compare(al, bl).map(|o| o == Ordering::Equal && a_lc == b_lc),
         _ => Some(false),
     };
     Ok(low_match.map(Value::Boolean).unwrap_or(Value::Null))
@@ -336,8 +342,7 @@ pub fn ends(a: &Value, b: &Value) -> Result<Value, EvalError> {
     let (_, b_high, _, b_hc) = unwrap_interval(b)?;
     let high_match = match (a_high, b_high) {
         (None, None) => Some(true),
-        (Some(ah), Some(bh)) => cql_compare(ah, bh)
-            .map(|o| o == Ordering::Equal && a_hc == b_hc),
+        (Some(ah), Some(bh)) => cql_compare(ah, bh).map(|o| o == Ordering::Equal && a_hc == b_hc),
         _ => Some(false),
     };
     Ok(high_match.map(Value::Boolean).unwrap_or(Value::Null))
@@ -420,13 +425,12 @@ pub fn except_interval(a: &Value, b: &Value) -> Result<Value, EvalError> {
         _ => {}
     }
     // If b includes a entirely, return null.
-    match includes(b, a)? {
-        Value::Boolean(true) => return Ok(Value::Null),
-        _ => {}
+    if let Value::Boolean(true) = includes(b, a)? {
+        return Ok(Value::Null);
     }
     // Return the portion of a that comes before b starts.
     let (_, b_low, _, b_lc) = unwrap_interval(b)?;
-    let (a_low, a_high, a_lc, a_hc) = unwrap_interval(a)?;
+    let (a_low, _a_high, a_lc, _a_hc) = unwrap_interval(a)?;
     // Return left part of a (before b begins), if any.
     Ok(Value::Interval {
         low: a_low.map(|v| Box::new(v.clone())),
@@ -579,7 +583,11 @@ pub fn collapse(list: &Value, _per: Option<&Value>) -> Result<Value, EvalError> 
     }
 
     // Sort intervals by their low bound (null low = -∞ sorts first).
-    let mut intervals: Vec<Value> = items.iter().filter(|v| !matches!(v, Value::Null)).cloned().collect();
+    let mut intervals: Vec<Value> = items
+        .iter()
+        .filter(|v| !matches!(v, Value::Null))
+        .cloned()
+        .collect();
     // Stable sort by low bound.
     intervals.sort_by(|a, b| {
         let (al, _, _, _) = unwrap_interval(a).ok().unwrap_or((None, None, true, true));
@@ -616,8 +624,10 @@ pub fn collapse(list: &Value, _per: Option<&Value>) -> Result<Value, EvalError> 
 
 /// Returns the "minimum" (earlier) of two bounds (for union low / intersect high).
 fn min_bound<'a>(
-    a: Option<&'a Value>, a_closed: bool,
-    b: Option<&'a Value>, b_closed: bool,
+    a: Option<&'a Value>,
+    a_closed: bool,
+    b: Option<&'a Value>,
+    b_closed: bool,
 ) -> (Option<&'a Value>, bool) {
     match (a, b) {
         (None, _) => (None, a_closed),
@@ -632,8 +642,10 @@ fn min_bound<'a>(
 
 /// Returns the "maximum" (later) of two bounds (for union high / intersect low).
 fn max_bound<'a>(
-    a: Option<&'a Value>, a_closed: bool,
-    b: Option<&'a Value>, b_closed: bool,
+    a: Option<&'a Value>,
+    a_closed: bool,
+    b: Option<&'a Value>,
+    b_closed: bool,
 ) -> (Option<&'a Value>, bool) {
     match (a, b) {
         (None, _) => (None, a_closed),
@@ -666,16 +678,31 @@ mod tests {
     #[test]
     fn contains_basic() {
         let iv = int_interval(1, 10);
-        assert_eq!(contains(&iv, &Value::Integer(5)).unwrap(), Value::Boolean(true));
-        assert_eq!(contains(&iv, &Value::Integer(0)).unwrap(), Value::Boolean(false));
-        assert_eq!(contains(&iv, &Value::Integer(10)).unwrap(), Value::Boolean(true));
+        assert_eq!(
+            contains(&iv, &Value::Integer(5)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            contains(&iv, &Value::Integer(0)).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            contains(&iv, &Value::Integer(10)).unwrap(),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn in_interval_basic() {
         let iv = int_interval(1, 10);
-        assert_eq!(in_interval(&Value::Integer(5), &iv).unwrap(), Value::Boolean(true));
-        assert_eq!(in_interval(&Value::Integer(11), &iv).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            in_interval(&Value::Integer(5), &iv).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            in_interval(&Value::Integer(11), &iv).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -735,8 +762,14 @@ mod tests {
 
     #[test]
     fn null_propagation() {
-        assert_eq!(contains(&Value::Null, &Value::Integer(1)).unwrap(), Value::Null);
-        assert_eq!(overlaps(&Value::Null, &int_interval(1, 5)).unwrap(), Value::Null);
+        assert_eq!(
+            contains(&Value::Null, &Value::Integer(1)).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            overlaps(&Value::Null, &int_interval(1, 5)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -775,7 +808,10 @@ mod tests {
         assert_eq!(meets_before(&a, &b).unwrap(), Value::Boolean(true));
         assert_eq!(meets_after(&b, &a).unwrap(), Value::Boolean(true));
         // Intervals that overlap should not meet
-        assert_eq!(meets_before(&int_interval(1, 5), &int_interval(3, 8)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            meets_before(&int_interval(1, 5), &int_interval(3, 8)).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -799,12 +835,24 @@ mod tests {
     fn proper_contains_basic() {
         let iv = int_interval(1, 10);
         // Interior point: proper
-        assert_eq!(proper_contains(&iv, &Value::Integer(5)).unwrap(), Value::Boolean(true));
+        assert_eq!(
+            proper_contains(&iv, &Value::Integer(5)).unwrap(),
+            Value::Boolean(true)
+        );
         // Boundary point: NOT proper (closed boundary)
-        assert_eq!(proper_contains(&iv, &Value::Integer(1)).unwrap(), Value::Boolean(false));
-        assert_eq!(proper_contains(&iv, &Value::Integer(10)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            proper_contains(&iv, &Value::Integer(1)).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            proper_contains(&iv, &Value::Integer(10)).unwrap(),
+            Value::Boolean(false)
+        );
         // Outside: false
-        assert_eq!(proper_contains(&iv, &Value::Integer(11)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            proper_contains(&iv, &Value::Integer(11)).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]

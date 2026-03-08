@@ -88,7 +88,11 @@ fn compare_dates(a: &CqlDate, b: &CqlDate) -> Option<Ordering> {
                 (None, None) => am.partial_cmp(&bm),
                 (Some(ad), Some(bd)) => {
                     let mo = am.cmp(&bm);
-                    if mo != Ordering::Equal { Some(mo) } else { ad.partial_cmp(&bd) }
+                    if mo != Ordering::Equal {
+                        Some(mo)
+                    } else {
+                        ad.partial_cmp(&bd)
+                    }
                 }
                 _ => None, // mismatched day precision → null
             }
@@ -131,8 +135,16 @@ fn compare_times(a: &CqlTime, b: &CqlTime) -> Option<Ordering> {
 
 fn compare_datetimes(a: &CqlDateTime, b: &CqlDateTime) -> Option<Ordering> {
     // Compare using the CqlDate portion then time components.
-    let da = CqlDate { year: a.year, month: a.month, day: a.day };
-    let db = CqlDate { year: b.year, month: b.month, day: b.day };
+    let da = CqlDate {
+        year: a.year,
+        month: a.month,
+        day: a.day,
+    };
+    let db = CqlDate {
+        year: b.year,
+        month: b.month,
+        day: b.day,
+    };
     let date_ord = compare_dates(&da, &db)?;
     if date_ord != Ordering::Equal {
         return Some(date_ord);
@@ -241,11 +253,17 @@ pub fn add(a: &Value, b: &Value) -> Result<Value, EvalError> {
         (Value::Long(x), Value::Long(y)) => Ok(Value::Long(x + y)),
         (Value::Decimal(x), Value::Decimal(y)) => Ok(Value::Decimal(x + y)),
         (Value::Quantity(x), Value::Quantity(y)) if x.unit == y.unit => {
-            Ok(Value::Quantity(CqlQuantity { value: x.value + y.value, unit: x.unit.clone() }))
+            Ok(Value::Quantity(CqlQuantity {
+                value: x.value + y.value,
+                unit: x.unit.clone(),
+            }))
         }
         // CQL String concatenation: 'a' + 'b' = 'ab'
         (Value::String(x), Value::String(y)) => Ok(Value::String(format!("{x}{y}"))),
-        _ => Err(err("Add", &format!("unsupported operand types: {a:?} + {b:?}"))),
+        _ => Err(err(
+            "Add",
+            &format!("unsupported operand types: {a:?} + {b:?}"),
+        )),
     }
 }
 
@@ -257,9 +275,15 @@ pub fn subtract(a: &Value, b: &Value) -> Result<Value, EvalError> {
         (Value::Long(x), Value::Long(y)) => Ok(Value::Long(x - y)),
         (Value::Decimal(x), Value::Decimal(y)) => Ok(Value::Decimal(x - y)),
         (Value::Quantity(x), Value::Quantity(y)) if x.unit == y.unit => {
-            Ok(Value::Quantity(CqlQuantity { value: x.value - y.value, unit: x.unit.clone() }))
+            Ok(Value::Quantity(CqlQuantity {
+                value: x.value - y.value,
+                unit: x.unit.clone(),
+            }))
         }
-        _ => Err(err("Subtract", &format!("unsupported operand types: {a:?} - {b:?}"))),
+        _ => Err(err(
+            "Subtract",
+            &format!("unsupported operand types: {a:?} - {b:?}"),
+        )),
     }
 }
 
@@ -274,7 +298,10 @@ pub fn multiply(a: &Value, b: &Value) -> Result<Value, EvalError> {
             value: x.value * y.value,
             unit: format!("{}.{}", x.unit, y.unit),
         })),
-        _ => Err(err("Multiply", &format!("unsupported operand types: {a:?} * {b:?}"))),
+        _ => Err(err(
+            "Multiply",
+            &format!("unsupported operand types: {a:?} * {b:?}"),
+        )),
     }
 }
 
@@ -286,7 +313,12 @@ pub fn divide(a: &Value, b: &Value) -> Result<Value, EvalError> {
         (Value::Integer(x), Value::Integer(y)) => (*x as f64, *y as f64),
         (Value::Long(x), Value::Long(y)) => (*x as f64, *y as f64),
         (Value::Decimal(x), Value::Decimal(y)) => (*x, *y),
-        _ => return Err(err("Divide", &format!("unsupported operand types: {a:?} / {b:?}"))),
+        _ => {
+            return Err(err(
+                "Divide",
+                &format!("unsupported operand types: {a:?} / {b:?}"),
+            ))
+        }
     };
     if den == 0.0 {
         return Ok(Value::Null); // CQL spec: division by zero → null
@@ -300,15 +332,30 @@ pub fn modulo(a: &Value, b: &Value) -> Result<Value, EvalError> {
     null2!(a, b);
     match (a, b) {
         (Value::Integer(x), Value::Integer(y)) => {
-            if *y == 0 { Ok(Value::Null) } else { Ok(Value::Integer(x % y)) }
+            if *y == 0 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Integer(x % y))
+            }
         }
         (Value::Long(x), Value::Long(y)) => {
-            if *y == 0 { Ok(Value::Null) } else { Ok(Value::Long(x % y)) }
+            if *y == 0 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Long(x % y))
+            }
         }
         (Value::Decimal(x), Value::Decimal(y)) => {
-            if *y == 0.0 { Ok(Value::Null) } else { Ok(Value::Decimal(x % y)) }
+            if *y == 0.0 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Decimal(x % y))
+            }
         }
-        _ => Err(err("Modulo", &format!("unsupported operand types: {a:?} mod {b:?}"))),
+        _ => Err(err(
+            "Modulo",
+            &format!("unsupported operand types: {a:?} mod {b:?}"),
+        )),
     }
 }
 
@@ -319,9 +366,10 @@ pub fn negate(a: &Value) -> Result<Value, EvalError> {
         Value::Integer(x) => Ok(Value::Integer(-x)),
         Value::Long(x) => Ok(Value::Long(-x)),
         Value::Decimal(x) => Ok(Value::Decimal(-x)),
-        Value::Quantity(q) => {
-            Ok(Value::Quantity(CqlQuantity { value: -q.value, unit: q.unit.clone() }))
-        }
+        Value::Quantity(q) => Ok(Value::Quantity(CqlQuantity {
+            value: -q.value,
+            unit: q.unit.clone(),
+        })),
         _ => Err(err("Negate", &format!("unsupported type: {a:?}"))),
     }
 }
@@ -333,9 +381,10 @@ pub fn abs(a: &Value) -> Result<Value, EvalError> {
         Value::Integer(x) => Ok(Value::Integer(x.abs())),
         Value::Long(x) => Ok(Value::Long(x.abs())),
         Value::Decimal(x) => Ok(Value::Decimal(x.abs())),
-        Value::Quantity(q) => {
-            Ok(Value::Quantity(CqlQuantity { value: q.value.abs(), unit: q.unit.clone() }))
-        }
+        Value::Quantity(q) => Ok(Value::Quantity(CqlQuantity {
+            value: q.value.abs(),
+            unit: q.unit.clone(),
+        })),
         _ => Err(err("Abs", &format!("unsupported type: {a:?}"))),
     }
 }
@@ -383,7 +432,12 @@ pub fn round(a: &Value, precision: Option<&Value>) -> Result<Value, EvalError> {
     let prec: i32 = match precision {
         None | Some(Value::Null) => 0,
         Some(Value::Integer(p)) => *p as i32,
-        Some(other) => return Err(err("Round", &format!("precision must be Integer, got {other:?}"))),
+        Some(other) => {
+            return Err(err(
+                "Round",
+                &format!("precision must be Integer, got {other:?}"),
+            ))
+        }
     };
     let x = match a {
         Value::Decimal(x) => *x,
@@ -434,8 +488,10 @@ pub fn exp(a: &Value) -> Result<Value, EvalError> {
 /// `null` for non-positive argument or base.
 pub fn log(a: &Value, base: &Value) -> Result<Value, EvalError> {
     null2!(a, base);
-    let x = numeric_as_f64(a).ok_or_else(|| err("Log", &format!("unsupported argument type: {a:?}")))?;
-    let b = numeric_as_f64(base).ok_or_else(|| err("Log", &format!("unsupported base type: {base:?}")))?;
+    let x = numeric_as_f64(a)
+        .ok_or_else(|| err("Log", &format!("unsupported argument type: {a:?}")))?;
+    let b = numeric_as_f64(base)
+        .ok_or_else(|| err("Log", &format!("unsupported base type: {base:?}")))?;
     if x <= 0.0 || b <= 0.0 || b == 1.0 {
         return Ok(Value::Null);
     }
@@ -454,7 +510,13 @@ fn days_in_month(year: i32, month: u8) -> u8 {
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
-        2 => if is_leap_year(year) { 29 } else { 28 },
+        2 => {
+            if is_leap_year(year) {
+                29
+            } else {
+                28
+            }
+        }
         _ => 30,
     }
 }
@@ -465,14 +527,30 @@ fn date_predecessor(d: &CqlDate) -> Option<CqlDate> {
     match (d.month, d.day) {
         // year-precision: go back one year
         (None, _) => {
-            if d.year <= 1 { None } else { Some(CqlDate { year: d.year - 1, month: None, day: None }) }
+            if d.year <= 1 {
+                None
+            } else {
+                Some(CqlDate {
+                    year: d.year - 1,
+                    month: None,
+                    day: None,
+                })
+            }
         }
         // month-precision: go back one month
         (Some(m), None) => {
             if m > 1 {
-                Some(CqlDate { year: d.year, month: Some(m - 1), day: None })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(m - 1),
+                    day: None,
+                })
             } else if d.year > 1 {
-                Some(CqlDate { year: d.year - 1, month: Some(12), day: None })
+                Some(CqlDate {
+                    year: d.year - 1,
+                    month: Some(12),
+                    day: None,
+                })
             } else {
                 None
             }
@@ -480,12 +558,24 @@ fn date_predecessor(d: &CqlDate) -> Option<CqlDate> {
         // day-precision: go back one day
         (Some(m), Some(day)) => {
             if day > 1 {
-                Some(CqlDate { year: d.year, month: Some(m), day: Some(day - 1) })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(m),
+                    day: Some(day - 1),
+                })
             } else if m > 1 {
                 let prev_m = m - 1;
-                Some(CqlDate { year: d.year, month: Some(prev_m), day: Some(days_in_month(d.year, prev_m)) })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(prev_m),
+                    day: Some(days_in_month(d.year, prev_m)),
+                })
             } else if d.year > 1 {
-                Some(CqlDate { year: d.year - 1, month: Some(12), day: Some(31) })
+                Some(CqlDate {
+                    year: d.year - 1,
+                    month: Some(12),
+                    day: Some(31),
+                })
             } else {
                 None
             }
@@ -498,13 +588,29 @@ fn date_predecessor(d: &CqlDate) -> Option<CqlDate> {
 fn date_successor(d: &CqlDate) -> Option<CqlDate> {
     match (d.month, d.day) {
         (None, _) => {
-            if d.year >= 9999 { None } else { Some(CqlDate { year: d.year + 1, month: None, day: None }) }
+            if d.year >= 9999 {
+                None
+            } else {
+                Some(CqlDate {
+                    year: d.year + 1,
+                    month: None,
+                    day: None,
+                })
+            }
         }
         (Some(m), None) => {
             if m < 12 {
-                Some(CqlDate { year: d.year, month: Some(m + 1), day: None })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(m + 1),
+                    day: None,
+                })
             } else if d.year < 9999 {
-                Some(CqlDate { year: d.year + 1, month: Some(1), day: None })
+                Some(CqlDate {
+                    year: d.year + 1,
+                    month: Some(1),
+                    day: None,
+                })
             } else {
                 None
             }
@@ -512,11 +618,23 @@ fn date_successor(d: &CqlDate) -> Option<CqlDate> {
         (Some(m), Some(day)) => {
             let last = days_in_month(d.year, m);
             if day < last {
-                Some(CqlDate { year: d.year, month: Some(m), day: Some(day + 1) })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(m),
+                    day: Some(day + 1),
+                })
             } else if m < 12 {
-                Some(CqlDate { year: d.year, month: Some(m + 1), day: Some(1) })
+                Some(CqlDate {
+                    year: d.year,
+                    month: Some(m + 1),
+                    day: Some(1),
+                })
             } else if d.year < 9999 {
-                Some(CqlDate { year: d.year + 1, month: Some(1), day: Some(1) })
+                Some(CqlDate {
+                    year: d.year + 1,
+                    month: Some(1),
+                    day: Some(1),
+                })
             } else {
                 None
             }
@@ -529,43 +647,89 @@ fn date_successor(d: &CqlDate) -> Option<CqlDate> {
 fn time_predecessor(t: &CqlTime) -> Option<CqlTime> {
     if let Some(ms) = t.millisecond {
         if ms > 0 {
-            return Some(CqlTime { millisecond: Some(ms - 1), ..*t });
+            return Some(CqlTime {
+                millisecond: Some(ms - 1),
+                ..*t
+            });
         }
         let s = t.second.unwrap_or(0);
         if s > 0 {
-            return Some(CqlTime { second: Some(s - 1), millisecond: Some(999), ..*t });
+            return Some(CqlTime {
+                second: Some(s - 1),
+                millisecond: Some(999),
+                ..*t
+            });
         }
         let m = t.minute.unwrap_or(0);
         if m > 0 {
-            return Some(CqlTime { minute: Some(m - 1), second: Some(59), millisecond: Some(999), ..*t });
+            return Some(CqlTime {
+                minute: Some(m - 1),
+                second: Some(59),
+                millisecond: Some(999),
+                ..*t
+            });
         }
         if t.hour > 0 {
-            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: Some(59), millisecond: Some(999) });
+            return Some(CqlTime {
+                hour: t.hour - 1,
+                minute: Some(59),
+                second: Some(59),
+                millisecond: Some(999),
+            });
         }
-        return None; // already at 00:00:00.000
+        None // already at 00:00:00.000
     } else if let Some(s) = t.second {
         if s > 0 {
-            return Some(CqlTime { second: Some(s - 1), ..*t });
+            return Some(CqlTime {
+                second: Some(s - 1),
+                ..*t
+            });
         }
         let m = t.minute.unwrap_or(0);
         if m > 0 {
-            return Some(CqlTime { minute: Some(m - 1), second: Some(59), ..*t });
+            return Some(CqlTime {
+                minute: Some(m - 1),
+                second: Some(59),
+                ..*t
+            });
         }
         if t.hour > 0 {
-            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: Some(59), millisecond: None });
+            return Some(CqlTime {
+                hour: t.hour - 1,
+                minute: Some(59),
+                second: Some(59),
+                millisecond: None,
+            });
         }
-        return None;
+        None
     } else if let Some(m) = t.minute {
         if m > 0 {
-            return Some(CqlTime { minute: Some(m - 1), ..*t });
+            return Some(CqlTime {
+                minute: Some(m - 1),
+                ..*t
+            });
         }
         if t.hour > 0 {
-            return Some(CqlTime { hour: t.hour - 1, minute: Some(59), second: None, millisecond: None });
+            return Some(CqlTime {
+                hour: t.hour - 1,
+                minute: Some(59),
+                second: None,
+                millisecond: None,
+            });
         }
-        return None;
+        None
     } else {
         // hour-only precision
-        if t.hour > 0 { Some(CqlTime { hour: t.hour - 1, minute: None, second: None, millisecond: None }) } else { None }
+        if t.hour > 0 {
+            Some(CqlTime {
+                hour: t.hour - 1,
+                minute: None,
+                second: None,
+                millisecond: None,
+            })
+        } else {
+            None
+        }
     }
 }
 
@@ -574,42 +738,86 @@ fn time_predecessor(t: &CqlTime) -> Option<CqlTime> {
 fn time_successor(t: &CqlTime) -> Option<CqlTime> {
     if let Some(ms) = t.millisecond {
         if ms < 999 {
-            return Some(CqlTime { millisecond: Some(ms + 1), ..*t });
+            return Some(CqlTime {
+                millisecond: Some(ms + 1),
+                ..*t
+            });
         }
         let s = t.second.unwrap_or(0);
         if s < 59 {
-            return Some(CqlTime { second: Some(s + 1), millisecond: Some(0), ..*t });
+            return Some(CqlTime {
+                second: Some(s + 1),
+                millisecond: Some(0),
+                ..*t
+            });
         }
         let m = t.minute.unwrap_or(0);
         if m < 59 {
-            return Some(CqlTime { minute: Some(m + 1), second: Some(0), millisecond: Some(0), ..*t });
+            return Some(CqlTime {
+                minute: Some(m + 1),
+                second: Some(0),
+                millisecond: Some(0),
+                ..*t
+            });
         }
         if t.hour < 23 {
-            return Some(CqlTime { hour: t.hour + 1, minute: Some(0), second: Some(0), millisecond: Some(0) });
+            return Some(CqlTime {
+                hour: t.hour + 1,
+                minute: Some(0),
+                second: Some(0),
+                millisecond: Some(0),
+            });
         }
-        return None; // already at 23:59:59.999
+        None // already at 23:59:59.999
     } else if let Some(s) = t.second {
         if s < 59 {
-            return Some(CqlTime { second: Some(s + 1), ..*t });
+            return Some(CqlTime {
+                second: Some(s + 1),
+                ..*t
+            });
         }
         let m = t.minute.unwrap_or(0);
         if m < 59 {
-            return Some(CqlTime { minute: Some(m + 1), second: Some(0), ..*t });
+            return Some(CqlTime {
+                minute: Some(m + 1),
+                second: Some(0),
+                ..*t
+            });
         }
         if t.hour < 23 {
-            return Some(CqlTime { hour: t.hour + 1, minute: Some(59), second: Some(0), millisecond: None });
+            return Some(CqlTime {
+                hour: t.hour + 1,
+                minute: Some(59),
+                second: Some(0),
+                millisecond: None,
+            });
         }
-        return None;
+        None
     } else if let Some(m) = t.minute {
         if m < 59 {
-            return Some(CqlTime { minute: Some(m + 1), ..*t });
+            return Some(CqlTime {
+                minute: Some(m + 1),
+                ..*t
+            });
         }
         if t.hour < 23 {
-            return Some(CqlTime { hour: t.hour + 1, minute: Some(0), second: None, millisecond: None });
+            return Some(CqlTime {
+                hour: t.hour + 1,
+                minute: Some(0),
+                second: None,
+                millisecond: None,
+            });
         }
-        return None;
+        None
+    } else if t.hour < 23 {
+        Some(CqlTime {
+            hour: t.hour + 1,
+            minute: None,
+            second: None,
+            millisecond: None,
+        })
     } else {
-        if t.hour < 23 { Some(CqlTime { hour: t.hour + 1, minute: None, second: None, millisecond: None }) } else { None }
+        None
     }
 }
 
@@ -631,44 +839,140 @@ fn datetime_predecessor(dt: &CqlDateTime) -> Option<CqlDateTime> {
         };
     }
 
-    let date_part = CqlDate { year: dt.year, month: dt.month, day: dt.day };
+    let date_part = CqlDate {
+        year: dt.year,
+        month: dt.month,
+        day: dt.day,
+    };
 
     if let Some(ms) = dt.millisecond {
-        if ms > 0 { return Some(CqlDateTime { millisecond: Some(ms - 1), ..dt.clone() }); }
+        if ms > 0 {
+            return Some(CqlDateTime {
+                millisecond: Some(ms - 1),
+                ..dt.clone()
+            });
+        }
         let s = dt.second.unwrap_or(0);
-        if s > 0 { return Some(CqlDateTime { second: Some(s - 1), millisecond: Some(999), ..dt.clone() }); }
+        if s > 0 {
+            return Some(CqlDateTime {
+                second: Some(s - 1),
+                millisecond: Some(999),
+                ..dt.clone()
+            });
+        }
         let m = dt.minute.unwrap_or(0);
-        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), second: Some(59), millisecond: Some(999), ..dt.clone() }); }
+        if m > 0 {
+            return Some(CqlDateTime {
+                minute: Some(m - 1),
+                second: Some(59),
+                millisecond: Some(999),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), second: Some(59), millisecond: Some(999), ..dt.clone() }); }
+        if h > 0 {
+            return Some(CqlDateTime {
+                hour: Some(h - 1),
+                minute: Some(59),
+                second: Some(59),
+                millisecond: Some(999),
+                ..dt.clone()
+            });
+        }
         let prev = date_predecessor(&date_part)?;
-        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
-            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999), offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: prev.year,
+            month: prev.month,
+            day: prev.day,
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(s) = dt.second {
-        if s > 0 { return Some(CqlDateTime { second: Some(s - 1), ..dt.clone() }); }
+        if s > 0 {
+            return Some(CqlDateTime {
+                second: Some(s - 1),
+                ..dt.clone()
+            });
+        }
         let m = dt.minute.unwrap_or(0);
-        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), second: Some(59), ..dt.clone() }); }
+        if m > 0 {
+            return Some(CqlDateTime {
+                minute: Some(m - 1),
+                second: Some(59),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), second: Some(59), ..dt.clone() }); }
+        if h > 0 {
+            return Some(CqlDateTime {
+                hour: Some(h - 1),
+                minute: Some(59),
+                second: Some(59),
+                ..dt.clone()
+            });
+        }
         let prev = date_predecessor(&date_part)?;
-        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
-            hour: Some(23), minute: Some(59), second: Some(59), millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: prev.year,
+            month: prev.month,
+            day: prev.day,
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(m) = dt.minute {
-        if m > 0 { return Some(CqlDateTime { minute: Some(m - 1), ..dt.clone() }); }
+        if m > 0 {
+            return Some(CqlDateTime {
+                minute: Some(m - 1),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), minute: Some(59), ..dt.clone() }); }
+        if h > 0 {
+            return Some(CqlDateTime {
+                hour: Some(h - 1),
+                minute: Some(59),
+                ..dt.clone()
+            });
+        }
         let prev = date_predecessor(&date_part)?;
-        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
-            hour: Some(23), minute: Some(59), second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: prev.year,
+            month: prev.month,
+            day: prev.day,
+            hour: Some(23),
+            minute: Some(59),
+            second: None,
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(h) = dt.hour {
-        if h > 0 { return Some(CqlDateTime { hour: Some(h - 1), ..dt.clone() }); }
+        if h > 0 {
+            return Some(CqlDateTime {
+                hour: Some(h - 1),
+                ..dt.clone()
+            });
+        }
         let prev = date_predecessor(&date_part)?;
-        return Some(CqlDateTime { year: prev.year, month: prev.month, day: prev.day,
-            hour: Some(23), minute: None, second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: prev.year,
+            month: prev.month,
+            day: prev.day,
+            hour: Some(23),
+            minute: None,
+            second: None,
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else {
         // date-only precision
         let prev = date_predecessor(&date_part)?;
-        return Some(with_date!(prev));
+        Some(with_date!(prev))
     }
 }
 
@@ -690,43 +994,139 @@ fn datetime_successor(dt: &CqlDateTime) -> Option<CqlDateTime> {
         };
     }
 
-    let date_part = CqlDate { year: dt.year, month: dt.month, day: dt.day };
+    let date_part = CqlDate {
+        year: dt.year,
+        month: dt.month,
+        day: dt.day,
+    };
 
     if let Some(ms) = dt.millisecond {
-        if ms < 999 { return Some(CqlDateTime { millisecond: Some(ms + 1), ..dt.clone() }); }
+        if ms < 999 {
+            return Some(CqlDateTime {
+                millisecond: Some(ms + 1),
+                ..dt.clone()
+            });
+        }
         let s = dt.second.unwrap_or(0);
-        if s < 59 { return Some(CqlDateTime { second: Some(s + 1), millisecond: Some(0), ..dt.clone() }); }
+        if s < 59 {
+            return Some(CqlDateTime {
+                second: Some(s + 1),
+                millisecond: Some(0),
+                ..dt.clone()
+            });
+        }
         let m = dt.minute.unwrap_or(0);
-        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), second: Some(0), millisecond: Some(0), ..dt.clone() }); }
+        if m < 59 {
+            return Some(CqlDateTime {
+                minute: Some(m + 1),
+                second: Some(0),
+                millisecond: Some(0),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), second: Some(0), millisecond: Some(0), ..dt.clone() }); }
+        if h < 23 {
+            return Some(CqlDateTime {
+                hour: Some(h + 1),
+                minute: Some(0),
+                second: Some(0),
+                millisecond: Some(0),
+                ..dt.clone()
+            });
+        }
         let next = date_successor(&date_part)?;
-        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0), offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: next.year,
+            month: next.month,
+            day: next.day,
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(s) = dt.second {
-        if s < 59 { return Some(CqlDateTime { second: Some(s + 1), ..dt.clone() }); }
+        if s < 59 {
+            return Some(CqlDateTime {
+                second: Some(s + 1),
+                ..dt.clone()
+            });
+        }
         let m = dt.minute.unwrap_or(0);
-        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), second: Some(0), ..dt.clone() }); }
+        if m < 59 {
+            return Some(CqlDateTime {
+                minute: Some(m + 1),
+                second: Some(0),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), second: Some(0), ..dt.clone() }); }
+        if h < 23 {
+            return Some(CqlDateTime {
+                hour: Some(h + 1),
+                minute: Some(0),
+                second: Some(0),
+                ..dt.clone()
+            });
+        }
         let next = date_successor(&date_part)?;
-        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: next.year,
+            month: next.month,
+            day: next.day,
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(m) = dt.minute {
-        if m < 59 { return Some(CqlDateTime { minute: Some(m + 1), ..dt.clone() }); }
+        if m < 59 {
+            return Some(CqlDateTime {
+                minute: Some(m + 1),
+                ..dt.clone()
+            });
+        }
         let h = dt.hour.unwrap_or(0);
-        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), minute: Some(0), ..dt.clone() }); }
+        if h < 23 {
+            return Some(CqlDateTime {
+                hour: Some(h + 1),
+                minute: Some(0),
+                ..dt.clone()
+            });
+        }
         let next = date_successor(&date_part)?;
-        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
-            hour: Some(0), minute: Some(0), second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: next.year,
+            month: next.month,
+            day: next.day,
+            hour: Some(0),
+            minute: Some(0),
+            second: None,
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else if let Some(h) = dt.hour {
-        if h < 23 { return Some(CqlDateTime { hour: Some(h + 1), ..dt.clone() }); }
+        if h < 23 {
+            return Some(CqlDateTime {
+                hour: Some(h + 1),
+                ..dt.clone()
+            });
+        }
         let next = date_successor(&date_part)?;
-        return Some(CqlDateTime { year: next.year, month: next.month, day: next.day,
-            hour: Some(0), minute: None, second: None, millisecond: None, offset_seconds: dt.offset_seconds });
+        Some(CqlDateTime {
+            year: next.year,
+            month: next.month,
+            day: next.day,
+            hour: Some(0),
+            minute: None,
+            second: None,
+            millisecond: None,
+            offset_seconds: dt.offset_seconds,
+        })
     } else {
         let next = date_successor(&date_part)?;
-        return Some(with_date!(next));
+        Some(with_date!(next))
     }
 }
 
@@ -750,17 +1150,28 @@ pub fn predecessor(a: &Value) -> Result<Value, EvalError> {
     null1!(a);
     match a {
         Value::Integer(x) => {
-            if *x <= i32::MIN as i64 { Ok(Value::Null) } else { Ok(Value::Integer(x - 1)) }
+            if *x <= i32::MIN as i64 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Integer(x - 1))
+            }
         }
         Value::Long(x) => {
-            if *x <= i64::MIN as i128 { Ok(Value::Null) } else { Ok(Value::Long(x - 1)) }
+            if *x <= i64::MIN as i128 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Long(x - 1))
+            }
         }
         Value::Decimal(x) => Ok(Value::Decimal(x - 1e-8)),
-        Value::Quantity(q) => {
-            Ok(Value::Quantity(CqlQuantity { value: q.value - 1e-8, unit: q.unit.clone() }))
-        }
+        Value::Quantity(q) => Ok(Value::Quantity(CqlQuantity {
+            value: q.value - 1e-8,
+            unit: q.unit.clone(),
+        })),
         Value::Date(d) => Ok(date_predecessor(d).map(Value::Date).unwrap_or(Value::Null)),
-        Value::DateTime(dt) => Ok(datetime_predecessor(dt).map(Value::DateTime).unwrap_or(Value::Null)),
+        Value::DateTime(dt) => Ok(datetime_predecessor(dt)
+            .map(Value::DateTime)
+            .unwrap_or(Value::Null)),
         Value::Time(t) => Ok(time_predecessor(t).map(Value::Time).unwrap_or(Value::Null)),
         _ => Err(err("Predecessor", &format!("unsupported type: {a:?}"))),
     }
@@ -782,17 +1193,28 @@ pub fn successor(a: &Value) -> Result<Value, EvalError> {
     null1!(a);
     match a {
         Value::Integer(x) => {
-            if *x >= i32::MAX as i64 { Ok(Value::Null) } else { Ok(Value::Integer(x + 1)) }
+            if *x >= i32::MAX as i64 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Integer(x + 1))
+            }
         }
         Value::Long(x) => {
-            if *x >= i64::MAX as i128 { Ok(Value::Null) } else { Ok(Value::Long(x + 1)) }
+            if *x >= i64::MAX as i128 {
+                Ok(Value::Null)
+            } else {
+                Ok(Value::Long(x + 1))
+            }
         }
         Value::Decimal(x) => Ok(Value::Decimal(x + 1e-8)),
-        Value::Quantity(q) => {
-            Ok(Value::Quantity(CqlQuantity { value: q.value + 1e-8, unit: q.unit.clone() }))
-        }
+        Value::Quantity(q) => Ok(Value::Quantity(CqlQuantity {
+            value: q.value + 1e-8,
+            unit: q.unit.clone(),
+        })),
         Value::Date(d) => Ok(date_successor(d).map(Value::Date).unwrap_or(Value::Null)),
-        Value::DateTime(dt) => Ok(datetime_successor(dt).map(Value::DateTime).unwrap_or(Value::Null)),
+        Value::DateTime(dt) => Ok(datetime_successor(dt)
+            .map(Value::DateTime)
+            .unwrap_or(Value::Null)),
         Value::Time(t) => Ok(time_successor(t).map(Value::Time).unwrap_or(Value::Null)),
         _ => Err(err("Successor", &format!("unsupported type: {a:?}"))),
     }
@@ -814,16 +1236,30 @@ pub fn min_value(type_name: &str) -> Result<Value, EvalError> {
         "Integer" => Ok(Value::Integer(i32::MIN as i64)),
         "Long" => Ok(Value::Long(i64::MIN as i128)),
         "Decimal" => Ok(Value::Decimal(f64::MIN)),
-        "Date" => Ok(Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) })),
+        "Date" => Ok(Value::Date(CqlDate {
+            year: 1,
+            month: Some(1),
+            day: Some(1),
+        })),
         "DateTime" => Ok(Value::DateTime(CqlDateTime {
-            year: 1, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            year: 1,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
             offset_seconds: None,
         })),
         "Time" => Ok(Value::Time(CqlTime {
-            hour: 0, minute: Some(0), second: Some(0), millisecond: Some(0),
+            hour: 0,
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
         })),
-        other => Err(EvalError::General(format!("MinValue: unsupported type '{other}'"))),
+        other => Err(EvalError::General(format!(
+            "MinValue: unsupported type '{other}'"
+        ))),
     }
 }
 
@@ -843,16 +1279,30 @@ pub fn max_value(type_name: &str) -> Result<Value, EvalError> {
         "Integer" => Ok(Value::Integer(i32::MAX as i64)),
         "Long" => Ok(Value::Long(i64::MAX as i128)),
         "Decimal" => Ok(Value::Decimal(f64::MAX)),
-        "Date" => Ok(Value::Date(CqlDate { year: 9999, month: Some(12), day: Some(31) })),
+        "Date" => Ok(Value::Date(CqlDate {
+            year: 9999,
+            month: Some(12),
+            day: Some(31),
+        })),
         "DateTime" => Ok(Value::DateTime(CqlDateTime {
-            year: 9999, month: Some(12), day: Some(31),
-            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            year: 9999,
+            month: Some(12),
+            day: Some(31),
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
             offset_seconds: None,
         })),
         "Time" => Ok(Value::Time(CqlTime {
-            hour: 23, minute: Some(59), second: Some(59), millisecond: Some(999),
+            hour: 23,
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
         })),
-        other => Err(EvalError::General(format!("MaxValue: unsupported type '{other}'"))),
+        other => Err(EvalError::General(format!(
+            "MaxValue: unsupported type '{other}'"
+        ))),
     }
 }
 
@@ -1002,14 +1452,20 @@ pub fn matches_regex(s: &Value, pattern: &Value) -> Result<Value, EvalError> {
 }
 
 /// Replace all regex matches of `pattern` in `s` with `substitution`.
-pub fn replace_matches(s: &Value, pattern: &Value, substitution: &Value) -> Result<Value, EvalError> {
+pub fn replace_matches(
+    s: &Value,
+    pattern: &Value,
+    substitution: &Value,
+) -> Result<Value, EvalError> {
     null2!(s, pattern);
     null1!(substitution);
     match (s, pattern, substitution) {
         (Value::String(str_val), Value::String(pat), Value::String(sub)) => {
             let re = Regex::new(pat)
                 .map_err(|e| err("ReplaceMatches", &format!("invalid pattern: {e}")))?;
-            Ok(Value::String(re.replace_all(str_val, sub.as_str()).to_string()))
+            Ok(Value::String(
+                re.replace_all(str_val, sub.as_str()).to_string(),
+            ))
         }
         _ => Err(err("ReplaceMatches", "expected String arguments")),
     }
@@ -1026,7 +1482,9 @@ pub fn indexer_str(s: &Value, index: &Value) -> Result<Value, EvalError> {
                 return Ok(Value::Null);
             }
             let ch = str_val.chars().nth(*idx as usize);
-            Ok(ch.map(|c| Value::String(c.to_string())).unwrap_or(Value::Null))
+            Ok(ch
+                .map(|c| Value::String(c.to_string()))
+                .unwrap_or(Value::Null))
         }
         _ => Err(err("Indexer", "expected String and Integer arguments")),
     }
@@ -1068,7 +1526,11 @@ pub fn last_position_of(pattern: &Value, s: &Value) -> Result<Value, EvalError> 
 ///
 /// If `length` is provided, at most `length` characters are returned.
 /// Returns `Null` if `start_index` is out of range.  CQL §15.22.
-pub fn substring(s: &Value, start_index: &Value, length: Option<&Value>) -> Result<Value, EvalError> {
+pub fn substring(
+    s: &Value,
+    start_index: &Value,
+    length: Option<&Value>,
+) -> Result<Value, EvalError> {
     null2!(s, start_index);
     match (s, start_index) {
         (Value::String(str_val), Value::Integer(start)) => {
@@ -1112,7 +1574,11 @@ pub fn date_construct(
     let y = int_component(year, "Date", "year")? as i32;
     let m = opt_u8_component(month, "Date", "month")?;
     let d = opt_u8_component(day, "Date", "day")?;
-    Ok(Value::Date(CqlDate { year: y, month: m, day: d }))
+    Ok(Value::Date(CqlDate {
+        year: y,
+        month: m,
+        day: d,
+    }))
 }
 
 /// Construct a `Time` from hour / minute / second / millisecond components.
@@ -1131,7 +1597,12 @@ pub fn time_construct(
         Some(Value::Integer(v)) => Some(*v as u32),
         _ => return Err(err("Time", "millisecond must be Integer")),
     };
-    Ok(Value::Time(CqlTime { hour: h, minute: min, second: sec, millisecond: ms }))
+    Ok(Value::Time(CqlTime {
+        hour: h,
+        minute: min,
+        second: sec,
+        millisecond: ms,
+    }))
 }
 
 /// Construct a `DateTime` from up to eight components plus an optional offset.
@@ -1194,7 +1665,10 @@ pub fn date_time_component(value: &Value, component: &str) -> Result<Value, Eval
             "year" => Ok(Value::Integer(d.year as i64)),
             "month" => Ok(opt_to_value(d.month.map(|v| v as i64))),
             "day" => Ok(opt_to_value(d.day.map(|v| v as i64))),
-            _ => Err(err("DateTimeComponent", &format!("'{component}' not available on Date"))),
+            _ => Err(err(
+                "DateTimeComponent",
+                &format!("'{component}' not available on Date"),
+            )),
         },
         Value::DateTime(dt) => match component {
             "year" => Ok(Value::Integer(dt.year as i64)),
@@ -1204,14 +1678,20 @@ pub fn date_time_component(value: &Value, component: &str) -> Result<Value, Eval
             "minute" => Ok(opt_to_value(dt.minute.map(|v| v as i64))),
             "second" => Ok(opt_to_value(dt.second.map(|v| v as i64))),
             "millisecond" => Ok(opt_to_value(dt.millisecond.map(|v| v as i64))),
-            _ => Err(err("DateTimeComponent", &format!("unknown component '{component}'"))),
+            _ => Err(err(
+                "DateTimeComponent",
+                &format!("unknown component '{component}'"),
+            )),
         },
         Value::Time(t) => match component {
             "hour" => Ok(Value::Integer(t.hour as i64)),
             "minute" => Ok(opt_to_value(t.minute.map(|v| v as i64))),
             "second" => Ok(opt_to_value(t.second.map(|v| v as i64))),
             "millisecond" => Ok(opt_to_value(t.millisecond.map(|v| v as i64))),
-            _ => Err(err("DateTimeComponent", &format!("'{component}' not available on Time"))),
+            _ => Err(err(
+                "DateTimeComponent",
+                &format!("'{component}' not available on Time"),
+            )),
         },
         _ => Err(err("DateTimeComponent", "expected Date, DateTime, or Time")),
     }
@@ -1230,8 +1710,12 @@ pub fn date_time_component(value: &Value, component: &str) -> Result<Value, Eval
 pub fn date_time_add(value: &Value, quantity: &Value) -> Result<Value, EvalError> {
     null2!(value, quantity);
     let (qty_val, qty_unit) = extract_quantity(quantity, "DateTimeAdd")?;
-    let unit = normalize_temporal_unit(&qty_unit)
-        .ok_or_else(|| err("DateTimeAdd", &format!("unsupported temporal unit '{qty_unit}'")))?;
+    let unit = normalize_temporal_unit(&qty_unit).ok_or_else(|| {
+        err(
+            "DateTimeAdd",
+            &format!("unsupported temporal unit '{qty_unit}'"),
+        )
+    })?;
     let amount = qty_val.round() as i64;
     match value {
         Value::Date(d) => date_add_unit(d, amount, &unit).map(Value::Date),
@@ -1245,7 +1729,10 @@ pub fn date_time_add(value: &Value, quantity: &Value) -> Result<Value, EvalError
 pub fn date_time_subtract(value: &Value, quantity: &Value) -> Result<Value, EvalError> {
     null2!(value, quantity);
     let (qty_val, qty_unit) = extract_quantity(quantity, "DateTimeSubtract")?;
-    let negated = Value::Quantity(CqlQuantity { value: -qty_val, unit: qty_unit });
+    let negated = Value::Quantity(CqlQuantity {
+        value: -qty_val,
+        unit: qty_unit,
+    });
     date_time_add(value, &negated)
 }
 
@@ -1385,9 +1872,17 @@ fn date_add_unit(d: &CqlDate, amount: i64, unit: &str) -> Result<CqlDate, EvalEr
             let new_year = d.year + amount as i32;
             // Clamp Feb 29 for non-leap years
             let new_day = d.day.map(|day| {
-                if d.month == Some(2) && day == 29 && !is_leap_year(new_year) { 28 } else { day }
+                if d.month == Some(2) && day == 29 && !is_leap_year(new_year) {
+                    28
+                } else {
+                    day
+                }
             });
-            Ok(CqlDate { year: new_year, month: d.month, day: new_day })
+            Ok(CqlDate {
+                year: new_year,
+                month: d.month,
+                day: new_day,
+            })
         }
         "month" => {
             if let Some(m) = d.month {
@@ -1398,9 +1893,16 @@ fn date_add_unit(d: &CqlDate, amount: i64, unit: &str) -> Result<CqlDate, EvalEr
                     let max_day = days_in_month(new_year, new_month);
                     day.min(max_day)
                 });
-                Ok(CqlDate { year: new_year, month: Some(new_month), day: new_day })
+                Ok(CqlDate {
+                    year: new_year,
+                    month: Some(new_month),
+                    day: new_day,
+                })
             } else {
-                Err(err("DateTimeAdd", "cannot add months to year-precision Date"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add months to year-precision Date",
+                ))
             }
         }
         "week" => date_add_unit(d, amount * 7, "day"),
@@ -1408,12 +1910,22 @@ fn date_add_unit(d: &CqlDate, amount: i64, unit: &str) -> Result<CqlDate, EvalEr
             if let (Some(m), Some(day)) = (d.month, d.day) {
                 let days = ymd_to_days(d.year, m, day) + amount;
                 let (ny, nm, nd) = days_to_ymd(days);
-                Ok(CqlDate { year: ny, month: Some(nm), day: Some(nd) })
+                Ok(CqlDate {
+                    year: ny,
+                    month: Some(nm),
+                    day: Some(nd),
+                })
             } else {
-                Err(err("DateTimeAdd", "cannot add days to coarse-precision Date"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add days to coarse-precision Date",
+                ))
             }
         }
-        _ => Err(err("DateTimeAdd", &format!("unit '{unit}' not applicable to Date"))),
+        _ => Err(err(
+            "DateTimeAdd",
+            &format!("unit '{unit}' not applicable to Date"),
+        )),
     }
 }
 
@@ -1422,9 +1934,17 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
         "year" => {
             let new_year = dt.year + amount as i32;
             let new_day = dt.day.map(|day| {
-                if dt.month == Some(2) && day == 29 && !is_leap_year(new_year) { 28 } else { day }
+                if dt.month == Some(2) && day == 29 && !is_leap_year(new_year) {
+                    28
+                } else {
+                    day
+                }
             });
-            Ok(CqlDateTime { year: new_year, day: new_day, ..dt.clone() })
+            Ok(CqlDateTime {
+                year: new_year,
+                day: new_day,
+                ..dt.clone()
+            })
         }
         "month" => {
             if let Some(m) = dt.month {
@@ -1432,9 +1952,17 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
                 let ny = (total / 12) as i32;
                 let nm = (total % 12 + 1) as u8;
                 let new_day = dt.day.map(|d| d.min(days_in_month(ny, nm)));
-                Ok(CqlDateTime { year: ny, month: Some(nm), day: new_day, ..dt.clone() })
+                Ok(CqlDateTime {
+                    year: ny,
+                    month: Some(nm),
+                    day: new_day,
+                    ..dt.clone()
+                })
             } else {
-                Err(err("DateTimeAdd", "cannot add months to year-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add months to year-precision DateTime",
+                ))
             }
         }
         "week" => datetime_add_unit(dt, amount * 7, "day"),
@@ -1442,9 +1970,17 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
             if let (Some(m), Some(day)) = (dt.month, dt.day) {
                 let days = ymd_to_days(dt.year, m, day) + amount;
                 let (ny, nm, nd) = days_to_ymd(days);
-                Ok(CqlDateTime { year: ny, month: Some(nm), day: Some(nd), ..dt.clone() })
+                Ok(CqlDateTime {
+                    year: ny,
+                    month: Some(nm),
+                    day: Some(nd),
+                    ..dt.clone()
+                })
             } else {
-                Err(err("DateTimeAdd", "cannot add days to coarse-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add days to coarse-precision DateTime",
+                ))
             }
         }
         "hour" => {
@@ -1452,13 +1988,19 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
                 let total_h = h as i64 + amount;
                 let extra_days = total_h.div_euclid(24);
                 let new_h = total_h.rem_euclid(24) as u8;
-                let mut base = CqlDateTime { hour: Some(new_h), ..dt.clone() };
+                let mut base = CqlDateTime {
+                    hour: Some(new_h),
+                    ..dt.clone()
+                };
                 if extra_days != 0 {
                     base = datetime_add_unit(&base, extra_days, "day")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add hours to coarse-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add hours to coarse-precision DateTime",
+                ))
             }
         }
         "minute" => {
@@ -1466,13 +2008,19 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
                 let total_min = min as i64 + amount;
                 let extra_h = total_min.div_euclid(60);
                 let new_min = total_min.rem_euclid(60) as u8;
-                let mut base = CqlDateTime { minute: Some(new_min), ..dt.clone() };
+                let mut base = CqlDateTime {
+                    minute: Some(new_min),
+                    ..dt.clone()
+                };
                 if extra_h != 0 {
                     base = datetime_add_unit(&base, extra_h, "hour")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add minutes to coarse-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add minutes to coarse-precision DateTime",
+                ))
             }
         }
         "second" => {
@@ -1480,13 +2028,19 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
                 let total_sec = sec as i64 + amount;
                 let extra_min = total_sec.div_euclid(60);
                 let new_sec = total_sec.rem_euclid(60) as u8;
-                let mut base = CqlDateTime { second: Some(new_sec), ..dt.clone() };
+                let mut base = CqlDateTime {
+                    second: Some(new_sec),
+                    ..dt.clone()
+                };
                 if extra_min != 0 {
                     base = datetime_add_unit(&base, extra_min, "minute")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add seconds to coarse-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add seconds to coarse-precision DateTime",
+                ))
             }
         }
         "millisecond" => {
@@ -1494,13 +2048,19 @@ fn datetime_add_unit(dt: &CqlDateTime, amount: i64, unit: &str) -> Result<CqlDat
                 let total_ms = ms as i64 + amount;
                 let extra_sec = total_ms.div_euclid(1000);
                 let new_ms = total_ms.rem_euclid(1000) as u32;
-                let mut base = CqlDateTime { millisecond: Some(new_ms), ..dt.clone() };
+                let mut base = CqlDateTime {
+                    millisecond: Some(new_ms),
+                    ..dt.clone()
+                };
                 if extra_sec != 0 {
                     base = datetime_add_unit(&base, extra_sec, "second")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add milliseconds to coarse-precision DateTime"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add milliseconds to coarse-precision DateTime",
+                ))
             }
         }
         _ => Err(err("DateTimeAdd", &format!("unsupported unit '{unit}'"))),
@@ -1511,20 +2071,29 @@ fn time_add_unit(t: &CqlTime, amount: i64, unit: &str) -> Result<CqlTime, EvalEr
     match unit {
         "hour" => {
             let new_h = ((t.hour as i64 + amount).rem_euclid(24)) as u8;
-            Ok(CqlTime { hour: new_h, ..t.clone() })
+            Ok(CqlTime {
+                hour: new_h,
+                ..t.clone()
+            })
         }
         "minute" => {
             if let Some(min) = t.minute {
                 let total = min as i64 + amount;
                 let extra_h = total.div_euclid(60);
                 let new_min = total.rem_euclid(60) as u8;
-                let mut base = CqlTime { minute: Some(new_min), ..t.clone() };
+                let mut base = CqlTime {
+                    minute: Some(new_min),
+                    ..t.clone()
+                };
                 if extra_h != 0 {
                     base = time_add_unit(&base, extra_h, "hour")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add minutes to hour-precision Time"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add minutes to hour-precision Time",
+                ))
             }
         }
         "second" => {
@@ -1532,13 +2101,19 @@ fn time_add_unit(t: &CqlTime, amount: i64, unit: &str) -> Result<CqlTime, EvalEr
                 let total = sec as i64 + amount;
                 let extra_min = total.div_euclid(60);
                 let new_sec = total.rem_euclid(60) as u8;
-                let mut base = CqlTime { second: Some(new_sec), ..t.clone() };
+                let mut base = CqlTime {
+                    second: Some(new_sec),
+                    ..t.clone()
+                };
                 if extra_min != 0 {
                     base = time_add_unit(&base, extra_min, "minute")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add seconds to coarse-precision Time"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add seconds to coarse-precision Time",
+                ))
             }
         }
         "millisecond" => {
@@ -1546,16 +2121,25 @@ fn time_add_unit(t: &CqlTime, amount: i64, unit: &str) -> Result<CqlTime, EvalEr
                 let total = ms as i64 + amount;
                 let extra_sec = total.div_euclid(1000);
                 let new_ms = total.rem_euclid(1000) as u32;
-                let mut base = CqlTime { millisecond: Some(new_ms), ..t.clone() };
+                let mut base = CqlTime {
+                    millisecond: Some(new_ms),
+                    ..t.clone()
+                };
                 if extra_sec != 0 {
                     base = time_add_unit(&base, extra_sec, "second")?;
                 }
                 Ok(base)
             } else {
-                Err(err("DateTimeAdd", "cannot add milliseconds to coarse-precision Time"))
+                Err(err(
+                    "DateTimeAdd",
+                    "cannot add milliseconds to coarse-precision Time",
+                ))
             }
         }
-        _ => Err(err("DateTimeAdd", &format!("unit '{unit}' not applicable to Time"))),
+        _ => Err(err(
+            "DateTimeAdd",
+            &format!("unit '{unit}' not applicable to Time"),
+        )),
     }
 }
 
@@ -1571,15 +2155,11 @@ fn temporal_compare(
     predicate: impl Fn(Ordering) -> bool,
 ) -> Result<Value, EvalError> {
     let ord = match (a, b) {
-        (Value::Date(d1), Value::Date(d2)) => {
-            compare_dates_at_precision(d1, d2, precision, op)?
-        }
+        (Value::Date(d1), Value::Date(d2)) => compare_dates_at_precision(d1, d2, precision, op)?,
         (Value::DateTime(dt1), Value::DateTime(dt2)) => {
             compare_datetimes_at_precision(dt1, dt2, precision, op)?
         }
-        (Value::Time(t1), Value::Time(t2)) => {
-            compare_times_at_precision(t1, t2, precision, op)?
-        }
+        (Value::Time(t1), Value::Time(t2)) => compare_times_at_precision(t1, t2, precision, op)?,
         _ => return Err(err(op, "arguments must be the same temporal type")),
     };
     match ord {
@@ -1636,14 +2216,18 @@ fn compare_dates_at_precision(
     };
     // Compare year
     let ord = a.year.cmp(&b.year);
-    if ord != Ordering::Equal || max_level == 0 { return Ok(Some(ord)); }
+    if ord != Ordering::Equal || max_level == 0 {
+        return Ok(Some(ord));
+    }
     // Compare month
     match (a.month, b.month) {
         (None, None) => return Ok(Some(Ordering::Equal)),
         (None, Some(_)) | (Some(_), None) => return Ok(None),
         (Some(am), Some(bm)) => {
             let ord = am.cmp(&bm);
-            if ord != Ordering::Equal || max_level == 1 { return Ok(Some(ord)); }
+            if ord != Ordering::Equal || max_level == 1 {
+                return Ok(Some(ord));
+            }
         }
     }
     // Compare day
@@ -1666,14 +2250,18 @@ fn compare_times_at_precision(
             .ok_or_else(|| err(op, &format!("invalid precision '{p}' for Time")))?,
     };
     let ord = a.hour.cmp(&b.hour);
-    if ord != Ordering::Equal || max_level == 0 { return Ok(Some(ord)); }
+    if ord != Ordering::Equal || max_level == 0 {
+        return Ok(Some(ord));
+    }
     // minute
     match (a.minute, b.minute) {
         (None, None) => return Ok(Some(Ordering::Equal)),
         (None, Some(_)) | (Some(_), None) => return Ok(None),
         (Some(am), Some(bm)) => {
             let ord = am.cmp(&bm);
-            if ord != Ordering::Equal || max_level == 1 { return Ok(Some(ord)); }
+            if ord != Ordering::Equal || max_level == 1 {
+                return Ok(Some(ord));
+            }
         }
     }
     // second
@@ -1682,7 +2270,9 @@ fn compare_times_at_precision(
         (None, Some(_)) | (Some(_), None) => return Ok(None),
         (Some(asec), Some(bsec)) => {
             let ord = asec.cmp(&bsec);
-            if ord != Ordering::Equal || max_level == 2 { return Ok(Some(ord)); }
+            if ord != Ordering::Equal || max_level == 2 {
+                return Ok(Some(ord));
+            }
         }
     }
     // millisecond
@@ -1719,7 +2309,9 @@ fn compare_datetimes_at_precision(
         };
     }
     let ord = a.year.cmp(&b.year);
-    if ord != Ordering::Equal || max_level == 0 { return Ok(Some(ord)); }
+    if ord != Ordering::Equal || max_level == 0 {
+        return Ok(Some(ord));
+    }
     cmp_opt_field!(a.month, b.month, 1);
     cmp_opt_field!(a.day, b.day, 2);
     cmp_opt_field!(a.hour, b.hour, 3);
@@ -1738,13 +2330,14 @@ fn compare_datetimes_at_precision(
 
 fn date_duration_between(a: &Value, b: &Value, unit: &str) -> Result<Value, EvalError> {
     match (a, b) {
-        (Value::Date(d1), Value::Date(d2)) => {
-            Ok(Value::Integer(date_duration_diff(d1, d2, unit)?))
-        }
+        (Value::Date(d1), Value::Date(d2)) => Ok(Value::Integer(date_duration_diff(d1, d2, unit)?)),
         (Value::DateTime(dt1), Value::DateTime(dt2)) => {
             Ok(Value::Integer(datetime_duration_diff(dt1, dt2, unit)?))
         }
-        _ => Err(err("DurationBetween", "arguments must be same temporal type")),
+        _ => Err(err(
+            "DurationBetween",
+            "arguments must be same temporal type",
+        )),
     }
 }
 
@@ -1758,19 +2351,30 @@ fn date_duration_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalE
     match unit {
         "year" => Ok((b.year - a.year) as i64),
         "month" => {
-            let a_m = a.month.ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
-            let b_m = b.month.ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
+            let a_m = a
+                .month
+                .ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
+            let b_m = b
+                .month
+                .ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
             Ok((b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64))
         }
         "week" => Ok(date_duration_diff(a, b, "day")? / 7),
         "day" => {
-            let a_day = a.day.ok_or_else(|| err("DurationBetween", "coarse-precision Date has no day"))?;
-            let b_day = b.day.ok_or_else(|| err("DurationBetween", "coarse-precision Date has no day"))?;
+            let a_day = a
+                .day
+                .ok_or_else(|| err("DurationBetween", "coarse-precision Date has no day"))?;
+            let b_day = b
+                .day
+                .ok_or_else(|| err("DurationBetween", "coarse-precision Date has no day"))?;
             let a_mo = a.month.unwrap();
             let b_mo = b.month.unwrap();
             Ok(ymd_to_days(b.year, b_mo, b_day) - ymd_to_days(a.year, a_mo, a_day))
         }
-        _ => Err(err("DurationBetween", &format!("unit '{unit}' not applicable to Date"))),
+        _ => Err(err(
+            "DurationBetween",
+            &format!("unit '{unit}' not applicable to Date"),
+        )),
     }
 }
 
@@ -1786,7 +2390,8 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
         "day" => {
             let a_day = a.day.ok_or_else(|| err("DurationBetween", "no day"))?;
             let b_day = b.day.ok_or_else(|| err("DurationBetween", "no day"))?;
-            Ok(ymd_to_days(b.year, b.month.unwrap(), b_day) - ymd_to_days(a.year, a.month.unwrap(), a_day))
+            Ok(ymd_to_days(b.year, b.month.unwrap(), b_day)
+                - ymd_to_days(a.year, a.month.unwrap(), a_day))
         }
         "hour" => {
             let days = datetime_duration_diff(a, b, "day")?;
@@ -1796,23 +2401,40 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
         }
         "minute" => {
             let hours = datetime_duration_diff(a, b, "hour")?;
-            let a_min = a.minute.ok_or_else(|| err("DurationBetween", "no minute"))? as i64;
-            let b_min = b.minute.ok_or_else(|| err("DurationBetween", "no minute"))? as i64;
+            let a_min = a
+                .minute
+                .ok_or_else(|| err("DurationBetween", "no minute"))? as i64;
+            let b_min = b
+                .minute
+                .ok_or_else(|| err("DurationBetween", "no minute"))? as i64;
             Ok(hours * 60 + (b_min - a_min))
         }
         "second" => {
             let mins = datetime_duration_diff(a, b, "minute")?;
-            let a_sec = a.second.ok_or_else(|| err("DurationBetween", "no second"))? as i64;
-            let b_sec = b.second.ok_or_else(|| err("DurationBetween", "no second"))? as i64;
+            let a_sec = a
+                .second
+                .ok_or_else(|| err("DurationBetween", "no second"))? as i64;
+            let b_sec = b
+                .second
+                .ok_or_else(|| err("DurationBetween", "no second"))? as i64;
             Ok(mins * 60 + (b_sec - a_sec))
         }
         "millisecond" => {
             let secs = datetime_duration_diff(a, b, "second")?;
-            let a_ms = a.millisecond.ok_or_else(|| err("DurationBetween", "no millisecond"))? as i64;
-            let b_ms = b.millisecond.ok_or_else(|| err("DurationBetween", "no millisecond"))? as i64;
+            let a_ms = a
+                .millisecond
+                .ok_or_else(|| err("DurationBetween", "no millisecond"))?
+                as i64;
+            let b_ms = b
+                .millisecond
+                .ok_or_else(|| err("DurationBetween", "no millisecond"))?
+                as i64;
             Ok(secs * 1000 + (b_ms - a_ms))
         }
-        _ => Err(err("DurationBetween", &format!("unsupported unit '{unit}'"))),
+        _ => Err(err(
+            "DurationBetween",
+            &format!("unsupported unit '{unit}'"),
+        )),
     }
 }
 
@@ -1892,7 +2514,9 @@ pub fn to_integer(v: &Value) -> Result<Value, EvalError> {
                 Ok(Value::Null)
             }
         }
-        Value::String(s) => s.trim().parse::<i64>()
+        Value::String(s) => s
+            .trim()
+            .parse::<i64>()
             .map(Value::Integer)
             .map_err(|_| err("ToInteger", "invalid integer string"))
             .or(Ok(Value::Null)),
@@ -1914,7 +2538,9 @@ pub fn to_long(v: &Value) -> Result<Value, EvalError> {
                 Ok(Value::Null)
             }
         }
-        Value::String(s) => s.trim().parse::<i128>()
+        Value::String(s) => s
+            .trim()
+            .parse::<i128>()
             .map(Value::Long)
             .map_err(|_| err("ToLong", "invalid long string"))
             .or(Ok(Value::Null)),
@@ -1930,7 +2556,9 @@ pub fn to_decimal(v: &Value) -> Result<Value, EvalError> {
         Value::Decimal(d) => Ok(Value::Decimal(*d)),
         Value::Integer(n) => Ok(Value::Decimal(*n as f64)),
         Value::Long(n) => Ok(Value::Decimal(*n as f64)),
-        Value::String(s) => s.trim().parse::<f64>()
+        Value::String(s) => s
+            .trim()
+            .parse::<f64>()
             .map(Value::Decimal)
             .map_err(|_| err("ToDecimal", "invalid decimal string"))
             .or(Ok(Value::Null)),
@@ -1947,7 +2575,12 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
         Value::Boolean(b) => Ok(Value::String(b.to_string())),
         Value::Integer(n) => Ok(Value::String(n.to_string())),
         Value::Long(n) => Ok(Value::String(n.to_string())),
-        Value::Decimal(d) => Ok(Value::String(format!("{d:.8}").trim_end_matches('0').trim_end_matches('.').to_string())),
+        Value::Decimal(d) => Ok(Value::String(
+            format!("{d:.8}")
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string(),
+        )),
         Value::Date(d) => Ok(Value::String(d.to_string())),
         Value::DateTime(dt) => Ok(Value::String(dt.to_string())),
         Value::Time(t) => Ok(Value::String(t.to_string())),
@@ -1963,7 +2596,11 @@ pub fn to_date(v: &Value) -> Result<Value, EvalError> {
     null1!(v);
     match v {
         Value::Date(d) => Ok(Value::Date(d.clone())),
-        Value::DateTime(dt) => Ok(Value::Date(CqlDate { year: dt.year, month: dt.month, day: dt.day })),
+        Value::DateTime(dt) => Ok(Value::Date(CqlDate {
+            year: dt.year,
+            month: dt.month,
+            day: dt.day,
+        })),
         Value::String(s) => {
             let s = s.trim();
             if let Some(d) = parse_date_str(s) {
@@ -1981,21 +2618,39 @@ fn parse_date_str(s: &str) -> Option<CqlDate> {
     match parts.len() {
         1 => {
             let year = parts[0].parse::<i32>().ok()?;
-            Some(CqlDate { year, month: None, day: None })
+            Some(CqlDate {
+                year,
+                month: None,
+                day: None,
+            })
         }
         2 => {
             let year = parts[0].parse::<i32>().ok()?;
             let month = parts[1].parse::<u8>().ok()?;
-            if month < 1 || month > 12 { return None; }
-            Some(CqlDate { year, month: Some(month), day: None })
+            if !(1..=12).contains(&month) {
+                return None;
+            }
+            Some(CqlDate {
+                year,
+                month: Some(month),
+                day: None,
+            })
         }
         3 => {
             let year = parts[0].parse::<i32>().ok()?;
             let month = parts[1].parse::<u8>().ok()?;
             let day = parts[2].parse::<u8>().ok()?;
-            if month < 1 || month > 12 { return None; }
-            if day < 1 || day > 31 { return None; }
-            Some(CqlDate { year, month: Some(month), day: Some(day) })
+            if !(1..=12).contains(&month) {
+                return None;
+            }
+            if !(1..=31).contains(&day) {
+                return None;
+            }
+            Some(CqlDate {
+                year,
+                month: Some(month),
+                day: Some(day),
+            })
         }
         _ => None,
     }
@@ -2009,9 +2664,14 @@ pub fn to_datetime(v: &Value) -> Result<Value, EvalError> {
     match v {
         Value::DateTime(dt) => Ok(Value::DateTime(dt.clone())),
         Value::Date(d) => Ok(Value::DateTime(CqlDateTime {
-            year: d.year, month: d.month, day: d.day,
-            hour: None, minute: None, second: None,
-            millisecond: None, offset_seconds: None,
+            year: d.year,
+            month: d.month,
+            day: d.day,
+            hour: None,
+            minute: None,
+            second: None,
+            millisecond: None,
+            offset_seconds: None,
         })),
         Value::String(s) => {
             let s = s.trim();
@@ -2065,25 +2725,38 @@ fn parse_datetime_str(s: &str) -> Option<CqlDateTime> {
     }
 
     Some(CqlDateTime {
-        year: date.year, month: date.month, day: date.day,
-        hour, minute, second, millisecond, offset_seconds,
+        year: date.year,
+        month: date.month,
+        day: date.day,
+        hour,
+        minute,
+        second,
+        millisecond,
+        offset_seconds,
     })
 }
 
 fn strip_timezone(s: &str) -> (&str, Option<i32>) {
-    if s.ends_with('Z') {
-        (&s[..s.len() - 1], Some(0))
+    if let Some(stripped) = s.strip_suffix('Z') {
+        (stripped, Some(0))
     } else if let Some(pos) = s.rfind('+').or_else(|| {
         // find a '-' that isn't at position 0 (to avoid catching '-' in seconds)
         s[1..].rfind('-').map(|p| p + 1)
     }) {
         let tz_str = &s[pos..];
-        let sign = if s.as_bytes()[pos] == b'+' { 1i32 } else { -1i32 };
+        let sign = if s.as_bytes()[pos] == b'+' {
+            1i32
+        } else {
+            -1i32
+        };
         let tz_body = &tz_str[1..];
         let tz_parts: Vec<&str> = tz_body.split(':').collect();
         let offset = if tz_parts.len() == 2 {
             tz_parts[0].parse::<i32>().ok().and_then(|h| {
-                tz_parts[1].parse::<i32>().ok().map(|m| sign * (h * 3600 + m * 60))
+                tz_parts[1]
+                    .parse::<i32>()
+                    .ok()
+                    .map(|m| sign * (h * 3600 + m * 60))
             })
         } else {
             None
@@ -2116,19 +2789,33 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
 fn parse_time_str(s: &str) -> Option<CqlTime> {
     let parts: Vec<&str> = s.split(':').collect();
     let hour = parts.first()?.parse::<u8>().ok()?;
-    if hour > 23 { return None; }
-    let minute = if parts.len() >= 2 { parts[1].parse::<u8>().ok() } else { None };
+    if hour > 23 {
+        return None;
+    }
+    let minute = if parts.len() >= 2 {
+        parts[1].parse::<u8>().ok()
+    } else {
+        None
+    };
     let (second, millisecond) = if parts.len() >= 3 {
         let sec_str = parts[2];
         if let Some(dot) = sec_str.find('.') {
-            (sec_str[..dot].parse::<u8>().ok(), sec_str[dot + 1..].parse::<u32>().ok())
+            (
+                sec_str[..dot].parse::<u8>().ok(),
+                sec_str[dot + 1..].parse::<u32>().ok(),
+            )
         } else {
             (sec_str.parse::<u8>().ok(), None)
         }
     } else {
         (None, None)
     };
-    Some(CqlTime { hour, minute, second, millisecond })
+    Some(CqlTime {
+        hour,
+        minute,
+        second,
+        millisecond,
+    })
 }
 
 /// `ToQuantity` — parses a String in `<value> '<unit>'` format, or converts a
@@ -2137,9 +2824,18 @@ pub fn to_quantity(v: &Value) -> Result<Value, EvalError> {
     null1!(v);
     match v {
         Value::Quantity(q) => Ok(Value::Quantity(q.clone())),
-        Value::Integer(n) => Ok(Value::Quantity(CqlQuantity { value: *n as f64, unit: "1".to_string() })),
-        Value::Long(n) => Ok(Value::Quantity(CqlQuantity { value: *n as f64, unit: "1".to_string() })),
-        Value::Decimal(d) => Ok(Value::Quantity(CqlQuantity { value: *d, unit: "1".to_string() })),
+        Value::Integer(n) => Ok(Value::Quantity(CqlQuantity {
+            value: *n as f64,
+            unit: "1".to_string(),
+        })),
+        Value::Long(n) => Ok(Value::Quantity(CqlQuantity {
+            value: *n as f64,
+            unit: "1".to_string(),
+        })),
+        Value::Decimal(d) => Ok(Value::Quantity(CqlQuantity {
+            value: *d,
+            unit: "1".to_string(),
+        })),
         Value::String(s) => {
             let s = s.trim();
             // Expect: "<number> '<unit>'"
@@ -2155,7 +2851,10 @@ pub fn to_quantity(v: &Value) -> Result<Value, EvalError> {
             }
             // Try parsing as plain number → unit '1'
             if let Ok(v) = s.parse::<f64>() {
-                return Ok(Value::Quantity(CqlQuantity { value: v, unit: "1".to_string() }));
+                return Ok(Value::Quantity(CqlQuantity {
+                    value: v,
+                    unit: "1".to_string(),
+                }));
             }
             Ok(Value::Null)
         }
@@ -2181,7 +2880,10 @@ pub fn to_concept(v: &Value) -> Result<Value, EvalError> {
                     _ => return Err(err("ToConcept", "list elements must be Code")),
                 }
             }
-            Ok(Value::Concept(super::value::CqlConcept { codes, display: None }))
+            Ok(Value::Concept(super::value::CqlConcept {
+                codes,
+                display: None,
+            }))
         }
         _ => Err(err("ToConcept", "cannot convert to Concept")),
     }
@@ -2270,7 +2972,10 @@ mod tests {
 
     #[test]
     fn add_integers() {
-        assert_eq!(add(&Value::Integer(3), &Value::Integer(4)).unwrap(), Value::Integer(7));
+        assert_eq!(
+            add(&Value::Integer(3), &Value::Integer(4)).unwrap(),
+            Value::Integer(7)
+        );
     }
 
     #[test]
@@ -2281,37 +2986,58 @@ mod tests {
 
     #[test]
     fn subtract_decimals() {
-        assert_eq!(subtract(&Value::Decimal(5.5), &Value::Decimal(2.5)).unwrap(), Value::Decimal(3.0));
+        assert_eq!(
+            subtract(&Value::Decimal(5.5), &Value::Decimal(2.5)).unwrap(),
+            Value::Decimal(3.0)
+        );
     }
 
     #[test]
     fn multiply_long() {
-        assert_eq!(multiply(&Value::Long(100), &Value::Long(200)).unwrap(), Value::Long(20000));
+        assert_eq!(
+            multiply(&Value::Long(100), &Value::Long(200)).unwrap(),
+            Value::Long(20000)
+        );
     }
 
     #[test]
     fn divide_integers_yields_decimal() {
-        assert_eq!(divide(&Value::Integer(7), &Value::Integer(2)).unwrap(), Value::Decimal(3.5));
+        assert_eq!(
+            divide(&Value::Integer(7), &Value::Integer(2)).unwrap(),
+            Value::Decimal(3.5)
+        );
     }
 
     #[test]
     fn divide_by_zero_yields_null() {
-        assert_eq!(divide(&Value::Integer(5), &Value::Integer(0)).unwrap(), Value::Null);
+        assert_eq!(
+            divide(&Value::Integer(5), &Value::Integer(0)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn modulo_integer() {
-        assert_eq!(modulo(&Value::Integer(10), &Value::Integer(3)).unwrap(), Value::Integer(1));
+        assert_eq!(
+            modulo(&Value::Integer(10), &Value::Integer(3)).unwrap(),
+            Value::Integer(1)
+        );
     }
 
     #[test]
     fn modulo_by_zero_yields_null() {
-        assert_eq!(modulo(&Value::Integer(5), &Value::Integer(0)).unwrap(), Value::Null);
+        assert_eq!(
+            modulo(&Value::Integer(5), &Value::Integer(0)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn negate_decimal() {
-        assert_eq!(negate(&Value::Decimal(3.14)).unwrap(), Value::Decimal(-3.14));
+        assert_eq!(
+            negate(&Value::Decimal(1.25)).unwrap(),
+            Value::Decimal(-1.25)
+        );
     }
 
     #[test]
@@ -2339,7 +3065,10 @@ mod tests {
 
     #[test]
     fn round_default_precision() {
-        assert_eq!(round(&Value::Decimal(3.567), None).unwrap(), Value::Decimal(4.0));
+        assert_eq!(
+            round(&Value::Decimal(3.567), None).unwrap(),
+            Value::Decimal(4.0)
+        );
     }
 
     #[test]
@@ -2352,7 +3081,10 @@ mod tests {
 
     #[test]
     fn power_integer_base() {
-        assert_eq!(power(&Value::Integer(2), &Value::Integer(10)).unwrap(), Value::Decimal(1024.0));
+        assert_eq!(
+            power(&Value::Integer(2), &Value::Integer(10)).unwrap(),
+            Value::Decimal(1024.0)
+        );
     }
 
     #[test]
@@ -2393,7 +3125,10 @@ mod tests {
 
     #[test]
     fn predecessor_integer_min_yields_null() {
-        assert_eq!(predecessor(&Value::Integer(i32::MIN as i64)).unwrap(), Value::Null);
+        assert_eq!(
+            predecessor(&Value::Integer(i32::MIN as i64)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -2403,13 +3138,22 @@ mod tests {
 
     #[test]
     fn successor_integer_max_yields_null() {
-        assert_eq!(successor(&Value::Integer(i32::MAX as i64)).unwrap(), Value::Null);
+        assert_eq!(
+            successor(&Value::Integer(i32::MAX as i64)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn min_max_value_integer() {
-        assert_eq!(min_value("Integer").unwrap(), Value::Integer(i32::MIN as i64));
-        assert_eq!(max_value("Integer").unwrap(), Value::Integer(i32::MAX as i64));
+        assert_eq!(
+            min_value("Integer").unwrap(),
+            Value::Integer(i32::MIN as i64)
+        );
+        assert_eq!(
+            max_value("Integer").unwrap(),
+            Value::Integer(i32::MAX as i64)
+        );
     }
 
     #[test]
@@ -2428,15 +3172,30 @@ mod tests {
 
     #[test]
     fn less_integers() {
-        assert_eq!(less(&Value::Integer(1), &Value::Integer(2)).unwrap(), Value::Boolean(true));
-        assert_eq!(less(&Value::Integer(2), &Value::Integer(2)).unwrap(), Value::Boolean(false));
-        assert_eq!(less(&Value::Integer(3), &Value::Integer(2)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            less(&Value::Integer(1), &Value::Integer(2)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            less(&Value::Integer(2), &Value::Integer(2)).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            less(&Value::Integer(3), &Value::Integer(2)).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn greater_decimals() {
-        assert_eq!(greater(&Value::Decimal(3.5), &Value::Decimal(2.0)).unwrap(), Value::Boolean(true));
-        assert_eq!(greater(&Value::Decimal(1.0), &Value::Decimal(2.0)).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            greater(&Value::Decimal(3.5), &Value::Decimal(2.0)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            greater(&Value::Decimal(1.0), &Value::Decimal(2.0)).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -2453,48 +3212,78 @@ mod tests {
 
     #[test]
     fn greater_or_equal_null_propagates() {
-        assert_eq!(greater_or_equal(&Value::Null, &Value::Integer(1)).unwrap(), Value::Null);
+        assert_eq!(
+            greater_or_equal(&Value::Null, &Value::Integer(1)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn equal_delegates_to_cql_equal() {
-        assert_eq!(equal(&Value::Integer(5), &Value::Integer(5)), Value::Boolean(true));
+        assert_eq!(
+            equal(&Value::Integer(5), &Value::Integer(5)),
+            Value::Boolean(true)
+        );
         assert_eq!(equal(&Value::Null, &Value::Integer(5)), Value::Null);
     }
 
     #[test]
     fn equivalent_null_safe() {
         assert_eq!(equivalent(&Value::Null, &Value::Null), Value::Boolean(true));
-        assert_eq!(equivalent(&Value::Null, &Value::Integer(1)), Value::Boolean(false));
+        assert_eq!(
+            equivalent(&Value::Null, &Value::Integer(1)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn compare_different_types_yields_null() {
         // Integer vs Decimal are different variant arms — not comparable, returns null
-        assert_eq!(less(&Value::Integer(1), &Value::Decimal(2.0)).unwrap(), Value::Null);
+        assert_eq!(
+            less(&Value::Integer(1), &Value::Decimal(2.0)).unwrap(),
+            Value::Null
+        );
     }
 
     // ---- Temporal comparison (S1) ------------------------------------------
 
     #[test]
     fn less_date_values() {
-        let earlier = Value::Date(CqlDate { year: 2020, month: Some(1), day: Some(1) });
-        let later   = Value::Date(CqlDate { year: 2020, month: Some(6), day: Some(15) });
-        assert_eq!(less(&earlier, &later).unwrap(),   Value::Boolean(true));
-        assert_eq!(less(&later, &earlier).unwrap(),   Value::Boolean(false));
+        let earlier = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(1),
+            day: Some(1),
+        });
+        let later = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(6),
+            day: Some(15),
+        });
+        assert_eq!(less(&earlier, &later).unwrap(), Value::Boolean(true));
+        assert_eq!(less(&later, &earlier).unwrap(), Value::Boolean(false));
         assert_eq!(less(&earlier, &earlier).unwrap(), Value::Boolean(false));
     }
 
     #[test]
     fn greater_datetime_values() {
         let dt1 = Value::DateTime(CqlDateTime {
-            year: 2023, month: Some(3), day: Some(10),
-            hour: Some(12), minute: Some(0), second: Some(0), millisecond: Some(0),
+            year: 2023,
+            month: Some(3),
+            day: Some(10),
+            hour: Some(12),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
             offset_seconds: None,
         });
         let dt2 = Value::DateTime(CqlDateTime {
-            year: 2023, month: Some(3), day: Some(10),
-            hour: Some(8), minute: Some(30), second: Some(0), millisecond: Some(0),
+            year: 2023,
+            month: Some(3),
+            day: Some(10),
+            hour: Some(8),
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(0),
             offset_seconds: None,
         });
         assert_eq!(greater(&dt1, &dt2).unwrap(), Value::Boolean(true));
@@ -2505,62 +3294,128 @@ mod tests {
 
     #[test]
     fn predecessor_date_day_precision() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(3), day: Some(1) });
-        let expected = Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(28) });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(3),
+            day: Some(1),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(2),
+            day: Some(28),
+        });
         assert_eq!(predecessor(&d).unwrap(), expected);
     }
 
     #[test]
     fn predecessor_date_crosses_year() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        let expected = Value::Date(CqlDate { year: 2022, month: Some(12), day: Some(31) });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2022,
+            month: Some(12),
+            day: Some(31),
+        });
         assert_eq!(predecessor(&d).unwrap(), expected);
     }
 
     #[test]
     fn predecessor_date_min_yields_null() {
-        let d = Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) });
+        let d = Value::Date(CqlDate {
+            year: 1,
+            month: Some(1),
+            day: Some(1),
+        });
         assert_eq!(predecessor(&d).unwrap(), Value::Null);
     }
 
     #[test]
     fn successor_date_month_end() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(31) });
-        let expected = Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(1) });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(31),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(2),
+            day: Some(1),
+        });
         assert_eq!(successor(&d).unwrap(), expected);
     }
 
     #[test]
     fn successor_date_leap_year() {
-        let d = Value::Date(CqlDate { year: 2024, month: Some(2), day: Some(28) });
-        let expected = Value::Date(CqlDate { year: 2024, month: Some(2), day: Some(29) });
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(2),
+            day: Some(28),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(2),
+            day: Some(29),
+        });
         assert_eq!(successor(&d).unwrap(), expected);
     }
 
     #[test]
     fn predecessor_time_millisecond() {
-        let t = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(0), millisecond: Some(0) });
-        let expected = Value::Time(CqlTime { hour: 10, minute: Some(29), second: Some(59), millisecond: Some(999) });
+        let t = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(0),
+        });
+        let expected = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(29),
+            second: Some(59),
+            millisecond: Some(999),
+        });
         assert_eq!(predecessor(&t).unwrap(), expected);
     }
 
     #[test]
     fn successor_time_millisecond() {
-        let t = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(0), millisecond: Some(999) });
-        let expected = Value::Time(CqlTime { hour: 10, minute: Some(30), second: Some(1), millisecond: Some(0) });
+        let t = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(999),
+        });
+        let expected = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(1),
+            millisecond: Some(0),
+        });
         assert_eq!(successor(&t).unwrap(), expected);
     }
 
     #[test]
     fn predecessor_datetime_millisecond() {
         let dt = Value::DateTime(CqlDateTime {
-            year: 2023, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
             offset_seconds: None,
         });
         let expected = Value::DateTime(CqlDateTime {
-            year: 2022, month: Some(12), day: Some(31),
-            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            year: 2022,
+            month: Some(12),
+            day: Some(31),
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
             offset_seconds: None,
         });
         assert_eq!(predecessor(&dt).unwrap(), expected);
@@ -2569,13 +3424,23 @@ mod tests {
     #[test]
     fn successor_datetime_millisecond() {
         let dt = Value::DateTime(CqlDateTime {
-            year: 2023, month: Some(12), day: Some(31),
-            hour: Some(23), minute: Some(59), second: Some(59), millisecond: Some(999),
+            year: 2023,
+            month: Some(12),
+            day: Some(31),
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
             offset_seconds: None,
         });
         let expected = Value::DateTime(CqlDateTime {
-            year: 2024, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: Some(0),
+            year: 2024,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
             offset_seconds: None,
         });
         assert_eq!(successor(&dt).unwrap(), expected);
@@ -2587,11 +3452,19 @@ mod tests {
     fn min_max_value_date() {
         assert_eq!(
             min_value("Date").unwrap(),
-            Value::Date(CqlDate { year: 1, month: Some(1), day: Some(1) })
+            Value::Date(CqlDate {
+                year: 1,
+                month: Some(1),
+                day: Some(1)
+            })
         );
         assert_eq!(
             max_value("Date").unwrap(),
-            Value::Date(CqlDate { year: 9999, month: Some(12), day: Some(31) })
+            Value::Date(CqlDate {
+                year: 9999,
+                month: Some(12),
+                day: Some(31)
+            })
         );
     }
 
@@ -2599,11 +3472,21 @@ mod tests {
     fn min_max_value_time() {
         assert_eq!(
             min_value("Time").unwrap(),
-            Value::Time(CqlTime { hour: 0, minute: Some(0), second: Some(0), millisecond: Some(0) })
+            Value::Time(CqlTime {
+                hour: 0,
+                minute: Some(0),
+                second: Some(0),
+                millisecond: Some(0)
+            })
         );
         assert_eq!(
             max_value("Time").unwrap(),
-            Value::Time(CqlTime { hour: 23, minute: Some(59), second: Some(59), millisecond: Some(999) })
+            Value::Time(CqlTime {
+                hour: 23,
+                minute: Some(59),
+                second: Some(59),
+                millisecond: Some(999)
+            })
         );
     }
 
@@ -2611,8 +3494,12 @@ mod tests {
     fn min_max_value_datetime() {
         let min_dt = min_value("DateTime").unwrap();
         let max_dt = max_value("DateTime").unwrap();
-        assert!(matches!(min_dt, Value::DateTime(ref d) if d.year == 1 && d.millisecond == Some(0)));
-        assert!(matches!(max_dt, Value::DateTime(ref d) if d.year == 9999 && d.millisecond == Some(999)));
+        assert!(
+            matches!(min_dt, Value::DateTime(ref d) if d.year == 1 && d.millisecond == Some(0))
+        );
+        assert!(
+            matches!(max_dt, Value::DateTime(ref d) if d.year == 9999 && d.millisecond == Some(999))
+        );
     }
 
     // ---- String operators (9.12) --------------------------------------------
@@ -2621,12 +3508,18 @@ mod tests {
     fn concatenate_two_strings() {
         let a = Value::String("Hello, ".into());
         let b = Value::String("World!".into());
-        assert_eq!(concatenate(&a, &b).unwrap(), Value::String("Hello, World!".into()));
+        assert_eq!(
+            concatenate(&a, &b).unwrap(),
+            Value::String("Hello, World!".into())
+        );
     }
 
     #[test]
     fn concatenate_null_propagates() {
-        assert_eq!(concatenate(&Value::Null, &Value::String("x".into())).unwrap(), Value::Null);
+        assert_eq!(
+            concatenate(&Value::Null, &Value::String("x".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -2663,21 +3556,24 @@ mod tests {
 
     #[test]
     fn split_basic() {
-        let result = split(
-            &Value::String("a,b,c".into()),
-            &Value::String(",".into()),
-        ).unwrap();
-        assert_eq!(result, Value::List(vec![
-            Value::String("a".into()),
-            Value::String("b".into()),
-            Value::String("c".into()),
-        ]));
+        let result = split(&Value::String("a,b,c".into()), &Value::String(",".into())).unwrap();
+        assert_eq!(
+            result,
+            Value::List(vec![
+                Value::String("a".into()),
+                Value::String("b".into()),
+                Value::String("c".into()),
+            ])
+        );
     }
 
     #[test]
     fn length_str_unicode() {
         // "café" has 4 Unicode characters
-        assert_eq!(length_str(&Value::String("café".into())).unwrap(), Value::Integer(4));
+        assert_eq!(
+            length_str(&Value::String("café".into())).unwrap(),
+            Value::Integer(4)
+        );
     }
 
     #[test]
@@ -2690,18 +3586,36 @@ mod tests {
     #[test]
     fn starts_ends_with() {
         let s = Value::String("foobar".into());
-        assert_eq!(starts_with(&s, &Value::String("foo".into())).unwrap(), Value::Boolean(true));
-        assert_eq!(starts_with(&s, &Value::String("bar".into())).unwrap(), Value::Boolean(false));
-        assert_eq!(ends_with(&s, &Value::String("bar".into())).unwrap(), Value::Boolean(true));
-        assert_eq!(ends_with(&s, &Value::String("foo".into())).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            starts_with(&s, &Value::String("foo".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            starts_with(&s, &Value::String("bar".into())).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            ends_with(&s, &Value::String("bar".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            ends_with(&s, &Value::String("foo".into())).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn matches_regex_full_match() {
         let s = Value::String("hello123".into());
         // Must match full string
-        assert_eq!(matches_regex(&s, &Value::String("[a-z]+\\d+".into())).unwrap(), Value::Boolean(true));
-        assert_eq!(matches_regex(&s, &Value::String("[a-z]+".into())).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            matches_regex(&s, &Value::String("[a-z]+\\d+".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            matches_regex(&s, &Value::String("[a-z]+".into())).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -2710,15 +3624,22 @@ mod tests {
             &Value::String("foo123bar".into()),
             &Value::String("\\d+".into()),
             &Value::String("NUM".into()),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(result, Value::String("fooNUMbar".into()));
     }
 
     #[test]
     fn indexer_str_zero_based() {
         let s = Value::String("abc".into());
-        assert_eq!(indexer_str(&s, &Value::Integer(0)).unwrap(), Value::String("a".into()));
-        assert_eq!(indexer_str(&s, &Value::Integer(2)).unwrap(), Value::String("c".into()));
+        assert_eq!(
+            indexer_str(&s, &Value::Integer(0)).unwrap(),
+            Value::String("a".into())
+        );
+        assert_eq!(
+            indexer_str(&s, &Value::Integer(2)).unwrap(),
+            Value::String("c".into())
+        );
         assert_eq!(indexer_str(&s, &Value::Integer(5)).unwrap(), Value::Null);
         assert_eq!(indexer_str(&s, &Value::Integer(-1)).unwrap(), Value::Null);
     }
@@ -2730,7 +3651,10 @@ mod tests {
         // first occurrence at index 1 (0-based)
         assert_eq!(position_of(&pat, &s).unwrap(), Value::Integer(1));
         // not found: -1
-        assert_eq!(position_of(&Value::String("xyz".into()), &s).unwrap(), Value::Integer(-1));
+        assert_eq!(
+            position_of(&Value::String("xyz".into()), &s).unwrap(),
+            Value::Integer(-1)
+        );
     }
 
     #[test]
@@ -2762,7 +3686,10 @@ mod tests {
     #[test]
     fn substring_out_of_bounds_null() {
         let s = Value::String("Hi".into());
-        assert_eq!(substring(&s, &Value::Integer(10), None).unwrap(), Value::Null);
+        assert_eq!(
+            substring(&s, &Value::Integer(10), None).unwrap(),
+            Value::Null
+        );
     }
 
     // ---- Date/Time construction (9.13) -------------------------------------
@@ -2771,15 +3698,28 @@ mod tests {
     fn date_construct_year_only() {
         assert_eq!(
             date_construct(&Value::Integer(2024), None, None).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: None, day: None })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: None,
+                day: None
+            })
         );
     }
 
     #[test]
     fn date_construct_full() {
         assert_eq!(
-            date_construct(&Value::Integer(2024), Some(&Value::Integer(3)), Some(&Value::Integer(15))).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) })
+            date_construct(
+                &Value::Integer(2024),
+                Some(&Value::Integer(3)),
+                Some(&Value::Integer(15))
+            )
+            .unwrap(),
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(3),
+                day: Some(15)
+            })
         );
     }
 
@@ -2787,7 +3727,12 @@ mod tests {
     fn time_construct_partial() {
         assert_eq!(
             time_construct(&Value::Integer(10), Some(&Value::Integer(30)), None, None).unwrap(),
-            Value::Time(CqlTime { hour: 10, minute: Some(30), second: None, millisecond: None })
+            Value::Time(CqlTime {
+                hour: 10,
+                minute: Some(30),
+                second: None,
+                millisecond: None
+            })
         );
     }
 
@@ -2802,130 +3747,264 @@ mod tests {
             Some(&Value::Integer(0)),
             Some(&Value::Integer(0)),
             None,
-        ).unwrap();
-        assert!(matches!(dt, Value::DateTime(ref d) if d.year == 2024 && d.month == Some(6) && d.hour == Some(12)));
+        )
+        .unwrap();
+        assert!(
+            matches!(dt, Value::DateTime(ref d) if d.year == 2024 && d.month == Some(6) && d.hour == Some(12))
+        );
     }
 
     // ---- Component extraction (9.13) ----------------------------------------
 
     #[test]
     fn date_component_extraction() {
-        let d = Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) });
-        assert_eq!(date_time_component(&d, "year").unwrap(), Value::Integer(2024));
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(3),
+            day: Some(15),
+        });
+        assert_eq!(
+            date_time_component(&d, "year").unwrap(),
+            Value::Integer(2024)
+        );
         assert_eq!(date_time_component(&d, "month").unwrap(), Value::Integer(3));
         assert_eq!(date_time_component(&d, "day").unwrap(), Value::Integer(15));
     }
 
     #[test]
     fn date_component_absent_returns_null() {
-        let d = Value::Date(CqlDate { year: 2024, month: None, day: None });
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: None,
+            day: None,
+        });
         assert_eq!(date_time_component(&d, "month").unwrap(), Value::Null);
         assert_eq!(date_time_component(&d, "day").unwrap(), Value::Null);
     }
 
     #[test]
     fn time_component_extraction() {
-        let t = Value::Time(CqlTime { hour: 14, minute: Some(30), second: Some(45), millisecond: Some(500) });
+        let t = Value::Time(CqlTime {
+            hour: 14,
+            minute: Some(30),
+            second: Some(45),
+            millisecond: Some(500),
+        });
         assert_eq!(date_time_component(&t, "hour").unwrap(), Value::Integer(14));
-        assert_eq!(date_time_component(&t, "minute").unwrap(), Value::Integer(30));
-        assert_eq!(date_time_component(&t, "millisecond").unwrap(), Value::Integer(500));
+        assert_eq!(
+            date_time_component(&t, "minute").unwrap(),
+            Value::Integer(30)
+        );
+        assert_eq!(
+            date_time_component(&t, "millisecond").unwrap(),
+            Value::Integer(500)
+        );
     }
 
     // ---- Date arithmetic (9.13) -------------------------------------------
 
     #[test]
     fn date_add_one_year() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(15) });
-        let qty = Value::Quantity(CqlQuantity { value: 1.0, unit: "a".into() });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 1.0,
+            unit: "a".into(),
+        });
         assert_eq!(
             date_time_add(&d, &qty).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(6), day: Some(15) })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(6),
+                day: Some(15)
+            })
         );
     }
 
     #[test]
     fn date_add_months_crosses_year() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(11), day: Some(1) });
-        let qty = Value::Quantity(CqlQuantity { value: 3.0, unit: "month".into() });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(11),
+            day: Some(1),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 3.0,
+            unit: "month".into(),
+        });
         assert_eq!(
             date_time_add(&d, &qty).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(2), day: Some(1) })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(2),
+                day: Some(1)
+            })
         );
     }
 
     #[test]
     fn date_add_days() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(30) });
-        let qty = Value::Quantity(CqlQuantity { value: 5.0, unit: "d".into() });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(30),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 5.0,
+            unit: "d".into(),
+        });
         assert_eq!(
             date_time_add(&d, &qty).unwrap(),
-            Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(4) })
+            Value::Date(CqlDate {
+                year: 2023,
+                month: Some(2),
+                day: Some(4)
+            })
         );
     }
 
     #[test]
     fn date_subtract_days() {
-        let d = Value::Date(CqlDate { year: 2023, month: Some(3), day: Some(1) });
-        let qty = Value::Quantity(CqlQuantity { value: 1.0, unit: "day".into() });
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(3),
+            day: Some(1),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 1.0,
+            unit: "day".into(),
+        });
         assert_eq!(
             date_time_subtract(&d, &qty).unwrap(),
-            Value::Date(CqlDate { year: 2023, month: Some(2), day: Some(28) })
+            Value::Date(CqlDate {
+                year: 2023,
+                month: Some(2),
+                day: Some(28)
+            })
         );
     }
 
     #[test]
     fn datetime_add_hours_overflow() {
         let dt = Value::DateTime(CqlDateTime {
-            year: 2023, month: Some(1), day: Some(31),
-            hour: Some(22), minute: Some(0), second: Some(0), millisecond: None,
+            year: 2023,
+            month: Some(1),
+            day: Some(31),
+            hour: Some(22),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
             offset_seconds: None,
         });
-        let qty = Value::Quantity(CqlQuantity { value: 3.0, unit: "h".into() });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 3.0,
+            unit: "h".into(),
+        });
         let result = date_time_add(&dt, &qty).unwrap();
-        assert!(matches!(result, Value::DateTime(ref d) if d.year == 2023 && d.month == Some(2) && d.day == Some(1) && d.hour == Some(1)));
+        assert!(
+            matches!(result, Value::DateTime(ref d) if d.year == 2023 && d.month == Some(2) && d.day == Some(1) && d.hour == Some(1))
+        );
     }
 
     // ---- SameAs / SameOrBefore / SameOrAfter (9.13) ------------------------
 
     #[test]
     fn same_as_dates() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(15) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
         let d2 = d1.clone();
-        let d3 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(16) });
+        let d3 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(16),
+        });
         assert_eq!(same_as(&d1, &d2, None).unwrap(), Value::Boolean(true));
         assert_eq!(same_as(&d1, &d3, None).unwrap(), Value::Boolean(false));
     }
 
     #[test]
     fn same_as_at_year_precision() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(12), day: Some(31) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(12),
+            day: Some(31),
+        });
         // Same year → true at year precision
-        assert_eq!(same_as(&d1, &d2, Some("year")).unwrap(), Value::Boolean(true));
+        assert_eq!(
+            same_as(&d1, &d2, Some("year")).unwrap(),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn same_or_before_dates() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(15) });
-        assert_eq!(same_or_before(&d1, &d2, None).unwrap(), Value::Boolean(true));
-        assert_eq!(same_or_before(&d2, &d1, None).unwrap(), Value::Boolean(false));
-        assert_eq!(same_or_before(&d1, &d1, None).unwrap(), Value::Boolean(true));
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        assert_eq!(
+            same_or_before(&d1, &d2, None).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            same_or_before(&d2, &d1, None).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            same_or_before(&d1, &d1, None).unwrap(),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn same_or_after_dates() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(15) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(1) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
         assert_eq!(same_or_after(&d1, &d2, None).unwrap(), Value::Boolean(true));
-        assert_eq!(same_or_after(&d2, &d1, None).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            same_or_after(&d2, &d1, None).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
     fn same_as_mixed_precision_returns_null() {
         // year-only compared to full date → uncertain
-        let d1 = Value::Date(CqlDate { year: 2023, month: None, day: None });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(1) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: None,
+            day: None,
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
         assert_eq!(same_as(&d1, &d2, Some("month")).unwrap(), Value::Null);
     }
 
@@ -2933,30 +4012,68 @@ mod tests {
 
     #[test]
     fn duration_between_years() {
-        let d1 = Value::Date(CqlDate { year: 2020, month: Some(1), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        assert_eq!(duration_between(&d1, &d2, "year").unwrap(), Value::Integer(3));
+        let d1 = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        assert_eq!(
+            duration_between(&d1, &d2, "year").unwrap(),
+            Value::Integer(3)
+        );
     }
 
     #[test]
     fn duration_between_months() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(4), day: Some(1) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(4),
+            day: Some(1),
+        });
         assert_eq!(duration_between(&d1, &d2, "mo").unwrap(), Value::Integer(3));
     }
 
     #[test]
     fn duration_between_days() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(8) });
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(8),
+        });
         assert_eq!(duration_between(&d1, &d2, "d").unwrap(), Value::Integer(7));
     }
 
     #[test]
     fn duration_between_negative() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(15) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(6), day: Some(1) });
-        assert_eq!(duration_between(&d1, &d2, "day").unwrap(), Value::Integer(-14));
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        assert_eq!(
+            duration_between(&d1, &d2, "day").unwrap(),
+            Value::Integer(-14)
+        );
     }
 
     // ---- SplitOnMatches (9.12) ---------------------------------------------
@@ -2966,13 +4083,17 @@ mod tests {
         let result = split_on_matches(
             &Value::String("a1b2c3".into()),
             &Value::String("\\d".into()),
-        ).unwrap();
-        assert_eq!(result, Value::List(vec![
-            Value::String("a".into()),
-            Value::String("b".into()),
-            Value::String("c".into()),
-            Value::String("".into()),
-        ]));
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            Value::List(vec![
+                Value::String("a".into()),
+                Value::String("b".into()),
+                Value::String("c".into()),
+                Value::String("".into()),
+            ])
+        );
     }
 
     #[test]
@@ -2980,7 +4101,8 @@ mod tests {
         let result = split_on_matches(
             &Value::String("hello".into()),
             &Value::String("\\d+".into()),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(result, Value::List(vec![Value::String("hello".into())]));
     }
 
@@ -3000,23 +4122,54 @@ mod tests {
 
     #[test]
     fn difference_between_years() {
-        let d1 = Value::Date(CqlDate { year: 2020, month: Some(6), day: Some(15) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
+        let d1 = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
         // difference truncates to whole year components (2023 - 2020 = 3)
-        assert_eq!(difference_between(&d1, &d2, "year").unwrap(), Value::Integer(3));
+        assert_eq!(
+            difference_between(&d1, &d2, "year").unwrap(),
+            Value::Integer(3)
+        );
     }
 
     #[test]
     fn difference_between_days() {
-        let d1 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) });
-        let d2 = Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(8) });
-        assert_eq!(difference_between(&d1, &d2, "day").unwrap(), Value::Integer(7));
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(8),
+        });
+        assert_eq!(
+            difference_between(&d1, &d2, "day").unwrap(),
+            Value::Integer(7)
+        );
     }
 
     #[test]
     fn difference_between_null_propagates() {
         assert_eq!(
-            difference_between(&Value::Null, &Value::Date(CqlDate { year: 2023, month: Some(1), day: Some(1) }), "day").unwrap(),
+            difference_between(
+                &Value::Null,
+                &Value::Date(CqlDate {
+                    year: 2023,
+                    month: Some(1),
+                    day: Some(1)
+                }),
+                "day"
+            )
+            .unwrap(),
             Value::Null
         );
     }
@@ -3025,14 +4178,26 @@ mod tests {
 
     #[test]
     fn starts_with_null_propagates() {
-        assert_eq!(starts_with(&Value::Null, &Value::String("foo".into())).unwrap(), Value::Null);
-        assert_eq!(starts_with(&Value::String("foo".into()), &Value::Null).unwrap(), Value::Null);
+        assert_eq!(
+            starts_with(&Value::Null, &Value::String("foo".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            starts_with(&Value::String("foo".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn ends_with_null_propagates() {
-        assert_eq!(ends_with(&Value::Null, &Value::String("bar".into())).unwrap(), Value::Null);
-        assert_eq!(ends_with(&Value::String("foobar".into()), &Value::Null).unwrap(), Value::Null);
+        assert_eq!(
+            ends_with(&Value::Null, &Value::String("bar".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            ends_with(&Value::String("foobar".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -3052,23 +4217,44 @@ mod tests {
 
     #[test]
     fn split_null_propagates() {
-        assert_eq!(split(&Value::Null, &Value::String(",".into())).unwrap(), Value::Null);
-        assert_eq!(split(&Value::String("a,b".into()), &Value::Null).unwrap(), Value::Null);
+        assert_eq!(
+            split(&Value::Null, &Value::String(",".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            split(&Value::String("a,b".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
     }
 
     // ---- Type conversion operators -----------------------------------------
 
     #[test]
     fn to_boolean_from_string_true() {
-        assert_eq!(to_boolean(&Value::String("true".into())).unwrap(), Value::Boolean(true));
-        assert_eq!(to_boolean(&Value::String("T".into())).unwrap(), Value::Boolean(true));
-        assert_eq!(to_boolean(&Value::String("yes".into())).unwrap(), Value::Boolean(true));
+        assert_eq!(
+            to_boolean(&Value::String("true".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            to_boolean(&Value::String("T".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            to_boolean(&Value::String("yes".into())).unwrap(),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
     fn to_boolean_from_string_false() {
-        assert_eq!(to_boolean(&Value::String("false".into())).unwrap(), Value::Boolean(false));
-        assert_eq!(to_boolean(&Value::String("no".into())).unwrap(), Value::Boolean(false));
+        assert_eq!(
+            to_boolean(&Value::String("false".into())).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            to_boolean(&Value::String("no".into())).unwrap(),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
@@ -3078,18 +4264,27 @@ mod tests {
 
     #[test]
     fn to_boolean_invalid_string_yields_null() {
-        assert_eq!(to_boolean(&Value::String("maybe".into())).unwrap(), Value::Null);
+        assert_eq!(
+            to_boolean(&Value::String("maybe".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn to_integer_from_string() {
-        assert_eq!(to_integer(&Value::String("42".into())).unwrap(), Value::Integer(42));
+        assert_eq!(
+            to_integer(&Value::String("42".into())).unwrap(),
+            Value::Integer(42)
+        );
     }
 
     #[test]
     fn to_integer_overflow_yields_null() {
         // Long value outside i32 range → null
-        assert_eq!(to_integer(&Value::Long(i32::MAX as i128 + 1)).unwrap(), Value::Null);
+        assert_eq!(
+            to_integer(&Value::Long(i32::MAX as i128 + 1)).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -3109,13 +4304,22 @@ mod tests {
 
     #[test]
     fn to_string_from_boolean() {
-        assert_eq!(to_string(&Value::Boolean(true)).unwrap(), Value::String("true".into()));
-        assert_eq!(to_string(&Value::Boolean(false)).unwrap(), Value::String("false".into()));
+        assert_eq!(
+            to_string(&Value::Boolean(true)).unwrap(),
+            Value::String("true".into())
+        );
+        assert_eq!(
+            to_string(&Value::Boolean(false)).unwrap(),
+            Value::String("false".into())
+        );
     }
 
     #[test]
     fn to_string_from_integer() {
-        assert_eq!(to_string(&Value::Integer(7)).unwrap(), Value::String("7".into()));
+        assert_eq!(
+            to_string(&Value::Integer(7)).unwrap(),
+            Value::String("7".into())
+        );
     }
 
     #[test]
@@ -3126,8 +4330,14 @@ mod tests {
     #[test]
     fn is_type_matching() {
         assert_eq!(is_type(&Value::Integer(1), "Integer"), Value::Boolean(true));
-        assert_eq!(is_type(&Value::Boolean(true), "Boolean"), Value::Boolean(true));
-        assert_eq!(is_type(&Value::Decimal(1.5), "Decimal"), Value::Boolean(true));
+        assert_eq!(
+            is_type(&Value::Boolean(true), "Boolean"),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            is_type(&Value::Decimal(1.5), "Decimal"),
+            Value::Boolean(true)
+        );
     }
 
     #[test]
@@ -3148,12 +4358,18 @@ mod tests {
 
     #[test]
     fn convert_round_trips_decimal() {
-        assert_eq!(convert(&Value::Integer(3), "Decimal").unwrap(), Value::Decimal(3.0));
+        assert_eq!(
+            convert(&Value::Integer(3), "Decimal").unwrap(),
+            Value::Decimal(3.0)
+        );
     }
 
     #[test]
     fn convert_round_trips_string() {
-        assert_eq!(convert(&Value::Integer(10), "String").unwrap(), Value::String("10".into()));
+        assert_eq!(
+            convert(&Value::Integer(10), "String").unwrap(),
+            Value::String("10".into())
+        );
     }
 
     #[test]
@@ -3163,7 +4379,10 @@ mod tests {
 
     #[test]
     fn convert_to_list_wraps_value() {
-        assert_eq!(convert(&Value::Integer(5), "List").unwrap(), Value::List(vec![Value::Integer(5)]));
+        assert_eq!(
+            convert(&Value::Integer(5), "List").unwrap(),
+            Value::List(vec![Value::Integer(5)])
+        );
     }
 
     #[test]
@@ -3178,7 +4397,10 @@ mod tests {
 
     #[test]
     fn to_list_value_wraps_in_singleton() {
-        assert_eq!(to_list(&Value::Boolean(true)).unwrap(), Value::List(vec![Value::Boolean(true)]));
+        assert_eq!(
+            to_list(&Value::Boolean(true)).unwrap(),
+            Value::List(vec![Value::Boolean(true)])
+        );
     }
 
     #[test]
@@ -3211,12 +4433,18 @@ mod tests {
 
     #[test]
     fn to_long_from_string() {
-        assert_eq!(to_long(&Value::String("12345678901".into())).unwrap(), Value::Long(12345678901));
+        assert_eq!(
+            to_long(&Value::String("12345678901".into())).unwrap(),
+            Value::Long(12345678901)
+        );
     }
 
     #[test]
     fn to_long_from_string_invalid_yields_null() {
-        assert_eq!(to_long(&Value::String("not-a-number".into())).unwrap(), Value::Null);
+        assert_eq!(
+            to_long(&Value::String("not-a-number".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
@@ -3236,7 +4464,11 @@ mod tests {
     fn to_date_from_string_full() {
         assert_eq!(
             to_date(&Value::String("2024-03-15".into())).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(3),
+                day: Some(15)
+            })
         );
     }
 
@@ -3244,7 +4476,11 @@ mod tests {
     fn to_date_from_string_year_month() {
         assert_eq!(
             to_date(&Value::String("2024-06".into())).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(6), day: None })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(6),
+                day: None
+            })
         );
     }
 
@@ -3252,31 +4488,51 @@ mod tests {
     fn to_date_from_string_year_only() {
         assert_eq!(
             to_date(&Value::String("2024".into())).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: None, day: None })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: None,
+                day: None
+            })
         );
     }
 
     #[test]
     fn to_date_from_string_invalid_yields_null() {
-        assert_eq!(to_date(&Value::String("not-a-date".into())).unwrap(), Value::Null);
+        assert_eq!(
+            to_date(&Value::String("not-a-date".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn to_date_from_datetime() {
         let dt = Value::DateTime(CqlDateTime {
-            year: 2024, month: Some(3), day: Some(15),
-            hour: Some(10), minute: None, second: None, millisecond: None,
+            year: 2024,
+            month: Some(3),
+            day: Some(15),
+            hour: Some(10),
+            minute: None,
+            second: None,
+            millisecond: None,
             offset_seconds: None,
         });
         assert_eq!(
             to_date(&dt).unwrap(),
-            Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) })
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(3),
+                day: Some(15)
+            })
         );
     }
 
     #[test]
     fn to_date_from_date_identity() {
-        let d = Value::Date(CqlDate { year: 2024, month: Some(1), day: Some(1) });
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(1),
+            day: Some(1),
+        });
         assert_eq!(to_date(&d).unwrap(), d);
     }
 
@@ -3290,32 +4546,50 @@ mod tests {
     #[test]
     fn to_datetime_from_string_full() {
         let result = to_datetime(&Value::String("2024-03-15T10:30:00".into())).unwrap();
-        assert!(matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(3) && dt.day == Some(15) && dt.hour == Some(10)));
+        assert!(
+            matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(3) && dt.day == Some(15) && dt.hour == Some(10))
+        );
     }
 
     #[test]
     fn to_datetime_from_string_date_only() {
         let result = to_datetime(&Value::String("2024-06-01".into())).unwrap();
-        assert!(matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(6) && dt.day == Some(1) && dt.hour == None));
+        assert!(
+            matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(6) && dt.day == Some(1) && dt.hour.is_none())
+        );
     }
 
     #[test]
     fn to_datetime_from_string_invalid_yields_null() {
-        assert_eq!(to_datetime(&Value::String("garbage".into())).unwrap(), Value::Null);
+        assert_eq!(
+            to_datetime(&Value::String("garbage".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn to_datetime_from_date() {
-        let d = Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) });
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(3),
+            day: Some(15),
+        });
         let result = to_datetime(&d).unwrap();
-        assert!(matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(3) && dt.day == Some(15) && dt.hour == None));
+        assert!(
+            matches!(result, Value::DateTime(ref dt) if dt.year == 2024 && dt.month == Some(3) && dt.day == Some(15) && dt.hour.is_none())
+        );
     }
 
     #[test]
     fn to_datetime_from_datetime_identity() {
         let dt = Value::DateTime(CqlDateTime {
-            year: 2024, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0), millisecond: None,
+            year: 2024,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
             offset_seconds: None,
         });
         assert_eq!(to_datetime(&dt).unwrap(), dt);
@@ -3332,7 +4606,12 @@ mod tests {
     fn to_time_from_string_full() {
         assert_eq!(
             to_time(&Value::String("14:30:00".into())).unwrap(),
-            Value::Time(CqlTime { hour: 14, minute: Some(30), second: Some(0), millisecond: None })
+            Value::Time(CqlTime {
+                hour: 14,
+                minute: Some(30),
+                second: Some(0),
+                millisecond: None
+            })
         );
     }
 
@@ -3340,7 +4619,12 @@ mod tests {
     fn to_time_from_string_hour_only() {
         assert_eq!(
             to_time(&Value::String("10".into())).unwrap(),
-            Value::Time(CqlTime { hour: 10, minute: None, second: None, millisecond: None })
+            Value::Time(CqlTime {
+                hour: 10,
+                minute: None,
+                second: None,
+                millisecond: None
+            })
         );
     }
 
@@ -3348,7 +4632,12 @@ mod tests {
     fn to_time_from_string_with_milliseconds() {
         assert_eq!(
             to_time(&Value::String("08:15:30.500".into())).unwrap(),
-            Value::Time(CqlTime { hour: 8, minute: Some(15), second: Some(30), millisecond: Some(500) })
+            Value::Time(CqlTime {
+                hour: 8,
+                minute: Some(15),
+                second: Some(30),
+                millisecond: Some(500)
+            })
         );
     }
 
@@ -3357,13 +4646,23 @@ mod tests {
         // CQL time literals start with T
         assert_eq!(
             to_time(&Value::String("T12:00".into())).unwrap(),
-            Value::Time(CqlTime { hour: 12, minute: Some(0), second: None, millisecond: None })
+            Value::Time(CqlTime {
+                hour: 12,
+                minute: Some(0),
+                second: None,
+                millisecond: None
+            })
         );
     }
 
     #[test]
     fn to_time_from_time_identity() {
-        let t = Value::Time(CqlTime { hour: 9, minute: Some(30), second: None, millisecond: None });
+        let t = Value::Time(CqlTime {
+            hour: 9,
+            minute: Some(30),
+            second: None,
+            millisecond: None,
+        });
         assert_eq!(to_time(&t).unwrap(), t);
     }
 
@@ -3377,41 +4676,77 @@ mod tests {
     #[test]
     fn to_quantity_from_integer() {
         let result = to_quantity(&Value::Integer(5)).unwrap();
-        assert_eq!(result, Value::Quantity(CqlQuantity { value: 5.0, unit: "1".to_string() }));
+        assert_eq!(
+            result,
+            Value::Quantity(CqlQuantity {
+                value: 5.0,
+                unit: "1".to_string()
+            })
+        );
     }
 
     #[test]
     fn to_quantity_from_long() {
         let result = to_quantity(&Value::Long(100)).unwrap();
-        assert_eq!(result, Value::Quantity(CqlQuantity { value: 100.0, unit: "1".to_string() }));
+        assert_eq!(
+            result,
+            Value::Quantity(CqlQuantity {
+                value: 100.0,
+                unit: "1".to_string()
+            })
+        );
     }
 
     #[test]
     fn to_quantity_from_decimal() {
-        let result = to_quantity(&Value::Decimal(3.14)).unwrap();
-        assert_eq!(result, Value::Quantity(CqlQuantity { value: 3.14, unit: "1".to_string() }));
+        let result = to_quantity(&Value::Decimal(1.25)).unwrap();
+        assert_eq!(
+            result,
+            Value::Quantity(CqlQuantity {
+                value: 1.25,
+                unit: "1".to_string()
+            })
+        );
     }
 
     #[test]
     fn to_quantity_from_string_with_unit() {
         let result = to_quantity(&Value::String("10.5 'mg'".into())).unwrap();
-        assert_eq!(result, Value::Quantity(CqlQuantity { value: 10.5, unit: "mg".to_string() }));
+        assert_eq!(
+            result,
+            Value::Quantity(CqlQuantity {
+                value: 10.5,
+                unit: "mg".to_string()
+            })
+        );
     }
 
     #[test]
     fn to_quantity_from_string_number_only() {
         let result = to_quantity(&Value::String("42".into())).unwrap();
-        assert_eq!(result, Value::Quantity(CqlQuantity { value: 42.0, unit: "1".to_string() }));
+        assert_eq!(
+            result,
+            Value::Quantity(CqlQuantity {
+                value: 42.0,
+                unit: "1".to_string()
+            })
+        );
     }
 
     #[test]
     fn to_quantity_from_string_invalid_yields_null() {
-        assert_eq!(to_quantity(&Value::String("not-a-quantity".into())).unwrap(), Value::Null);
+        assert_eq!(
+            to_quantity(&Value::String("not-a-quantity".into())).unwrap(),
+            Value::Null
+        );
     }
 
     #[test]
     fn to_quantity_from_quantity_identity() {
-        let q = Value::Quantity(CqlQuantity { value: 7.0, unit: "kg".to_string() });
+        let q = Value::Quantity(CqlQuantity {
+            value: 7.0,
+            unit: "kg".to_string(),
+        });
         assert_eq!(to_quantity(&q).unwrap(), q);
     }
 

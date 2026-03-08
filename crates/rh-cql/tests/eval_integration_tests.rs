@@ -5,8 +5,7 @@
 //! against an `EvalContext`, asserting on the resulting `Value`.
 
 use rh_cql::{
-    compile_with_model, evaluate_elm, EvalContextBuilder, FixedClock, Value,
-    CqlDate, CqlDateTime, CqlQuantity, CqlTime,
+    compile_with_model, evaluate_elm, CqlDateTime, EvalContextBuilder, FixedClock, Value,
 };
 
 // ---------------------------------------------------------------------------
@@ -238,9 +237,14 @@ fn eval_case_no_match_returns_else() {
 #[test]
 fn eval_list_literal() {
     let cql = "library T define X: {1, 2, 3}";
-    assert_eq!(eval_expr(cql, "X"), Value::List(vec![
-        Value::Integer(1), Value::Integer(2), Value::Integer(3),
-    ]));
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::List(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3),
+        ])
+    );
 }
 
 #[test]
@@ -323,8 +327,10 @@ fn eval_as_type_cast() {
 fn eval_interval_literal() {
     let cql = "library T define X: Interval[1, 5]";
     let result = eval_expr(cql, "X");
-    assert!(matches!(result, Value::Interval { ref low, ref high, low_closed: true, high_closed: true }
-        if low.as_deref() == Some(&Value::Integer(1)) && high.as_deref() == Some(&Value::Integer(5))));
+    assert!(
+        matches!(result, Value::Interval { ref low, ref high, low_closed: true, high_closed: true }
+        if low.as_deref() == Some(&Value::Integer(1)) && high.as_deref() == Some(&Value::Integer(5)))
+    );
 }
 
 #[test]
@@ -409,14 +415,18 @@ fn eval_with_trace_returns_events() {
     let cql = "library T define X: 2 + 3";
     let result = compile_with_model(cql, None, None).expect("compile failed");
     let ctx = default_ctx();
-    let (value, trace) = evaluate_elm_with_trace(&result.library, "X", &ctx)
-        .expect("evaluation failed");
+    let (value, trace) =
+        evaluate_elm_with_trace(&result.library, "X", &ctx).expect("evaluation failed");
 
     assert_eq!(value, Value::Integer(5));
     assert!(!trace.is_empty(), "expected trace events");
     // At minimum there should be an Add event and two Literal events
     let has_add = trace.iter().any(|e| e.op == "Add");
-    assert!(has_add, "expected an Add trace event, got: {:?}", trace.iter().map(|e| &e.op).collect::<Vec<_>>());
+    assert!(
+        has_add,
+        "expected an Add trace event, got: {:?}",
+        trace.iter().map(|e| &e.op).collect::<Vec<_>>()
+    );
 }
 
 #[test]
@@ -426,11 +436,14 @@ fn eval_trace_event_has_inputs_and_output() {
     let cql = "library T define X: 10 + 5";
     let result = compile_with_model(cql, None, None).expect("compile failed");
     let ctx = default_ctx();
-    let (value, trace) = evaluate_elm_with_trace(&result.library, "X", &ctx)
-        .expect("evaluation failed");
+    let (value, trace) =
+        evaluate_elm_with_trace(&result.library, "X", &ctx).expect("evaluation failed");
 
     assert_eq!(value, Value::Integer(15));
-    let add_event = trace.iter().find(|e| e.op == "Add").expect("expected Add event");
+    let add_event = trace
+        .iter()
+        .find(|e| e.op == "Add")
+        .expect("expected Add event");
     assert_eq!(add_event.output, Value::Integer(15));
     assert_eq!(add_event.inputs.len(), 2);
 }
@@ -480,7 +493,12 @@ define X: Numbers N return N * 2";
     let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
     match value {
         Value::List(items) => {
-            assert_eq!(items.len(), 3, "expected 3 projected items, got {:?}", items);
+            assert_eq!(
+                items.len(),
+                3,
+                "expected 3 projected items, got {:?}",
+                items
+            );
             assert!(items.contains(&Value::Integer(2)));
             assert!(items.contains(&Value::Integer(4)));
             assert!(items.contains(&Value::Integer(6)));
@@ -537,8 +555,8 @@ define X: Numbers N where N > 100";
 /// Scenario: Retrieve returns all resources of a given type.
 #[test]
 fn eval_retrieve_returns_resources() {
-    use std::collections::BTreeMap;
     use rh_cql::{compile, InMemoryDataProvider};
+    use std::collections::BTreeMap;
 
     let cql = "library T
 using FHIR version '4.0.1'
@@ -556,7 +574,10 @@ define X: [Observation]";
     provider.add_resource("Observation", Value::Tuple(obs1));
 
     let mut obs2 = BTreeMap::new();
-    obs2.insert("status".to_string(), Value::String("preliminary".to_string()));
+    obs2.insert(
+        "status".to_string(),
+        Value::String("preliminary".to_string()),
+    );
     obs2.insert("id".to_string(), Value::String("obs-2".to_string()));
     provider.add_resource("Observation", Value::Tuple(obs2));
 

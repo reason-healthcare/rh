@@ -282,7 +282,10 @@ impl fmt::Display for Value {
             Value::DateTime(dt) => write!(f, "@{dt}"),
             Value::Time(t) => write!(f, "@{t}"),
             Value::Quantity(q) => write!(f, "{q}"),
-            Value::Ratio { numerator, denominator } => {
+            Value::Ratio {
+                numerator,
+                denominator,
+            } => {
                 write!(f, "{numerator} : {denominator}")
             }
             Value::Code(c) => write!(f, "{c}"),
@@ -395,17 +398,28 @@ mod tests {
         assert_eq!(Value::Null.to_string(), "null");
         assert_eq!(Value::Boolean(true).to_string(), "true");
         assert_eq!(Value::Integer(42).to_string(), "42");
-        assert_eq!(Value::Long(9_999_999_999_999_999_999).to_string(), "9999999999999999999");
-        assert_eq!(Value::Decimal(3.14).to_string(), "3.14");
+        assert_eq!(
+            Value::Long(9_999_999_999_999_999_999).to_string(),
+            "9999999999999999999"
+        );
+        assert_eq!(Value::Decimal(1.25).to_string(), "1.25");
         assert_eq!(Value::String("hello".to_string()).to_string(), "'hello'");
     }
 
     #[test]
     fn value_display_date() {
-        let d = Value::Date(CqlDate { year: 2024, month: Some(3), day: Some(15) });
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(3),
+            day: Some(15),
+        });
         assert_eq!(d.to_string(), "@2024-03-15");
 
-        let d_year = Value::Date(CqlDate { year: 2024, month: None, day: None });
+        let d_year = Value::Date(CqlDate {
+            year: 2024,
+            month: None,
+            day: None,
+        });
         assert_eq!(d_year.to_string(), "@2024");
     }
 
@@ -426,13 +440,22 @@ mod tests {
 
     #[test]
     fn value_display_time() {
-        let t = Value::Time(CqlTime { hour: 14, minute: Some(30), second: Some(45), millisecond: None });
+        let t = Value::Time(CqlTime {
+            hour: 14,
+            minute: Some(30),
+            second: Some(45),
+            millisecond: None,
+        });
         assert_eq!(t.to_string(), "@T14:30:45");
     }
 
     #[test]
     fn value_display_list() {
-        let list = Value::List(vec![Value::Integer(1), Value::Integer(2), Value::Integer(3)]);
+        let list = Value::List(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3),
+        ]);
         assert_eq!(list.to_string(), "{1, 2, 3}");
     }
 
@@ -449,10 +472,22 @@ mod tests {
 
     #[test]
     fn cql_equal_primitives() {
-        assert_eq!(cql_equal(&Value::Integer(3), &Value::Integer(3)), Value::Boolean(true));
-        assert_eq!(cql_equal(&Value::Integer(3), &Value::Integer(4)), Value::Boolean(false));
-        assert_eq!(cql_equal(&Value::Boolean(true), &Value::Boolean(true)), Value::Boolean(true));
-        assert_eq!(cql_equal(&Value::Boolean(true), &Value::Boolean(false)), Value::Boolean(false));
+        assert_eq!(
+            cql_equal(&Value::Integer(3), &Value::Integer(3)),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            cql_equal(&Value::Integer(3), &Value::Integer(4)),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            cql_equal(&Value::Boolean(true), &Value::Boolean(true)),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            cql_equal(&Value::Boolean(true), &Value::Boolean(false)),
+            Value::Boolean(false)
+        );
     }
 
     #[test]
