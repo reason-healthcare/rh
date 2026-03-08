@@ -59,11 +59,41 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 - [ ] 8.3 Clarify the status of deprecated translator and builder APIs in crate-level documentation
 - [ ] 8.4 Update any README or plan references that still describe superseded architecture
 
+## 9. Unified Diagnostic System
+
+- [ ] 9.1 Define a consistent `Diagnostic` type used across Parse, Semantic, Emit, and Eval stages
+- [ ] 9.2 Include `SourceSpan`, `Severity`, and unique error codes in the unified diagnostic structure
+- [ ] 9.3 Implement diagnostic aggregation in the consolidated pipeline to ensure consistent reporting
+
+## 10. Performance and Benchmarking
+
+- [ ] 10.1 Establish baseline benchmarks for compilation and evaluation before implementing indexing changes
+- [ ] 10.2 Add performance regression tests to CI to track lookup and evaluation speed improvements
+- [ ] 10.3 Verify that the refactor provides measurable improvements for large library lookup
+
+## 11. "Golden File" Verification
+
+- [ ] 11.1 Implement or expand "golden" integration tests comparing ELM output against known-good baselines
+- [ ] 11.2 Use golden files to verify that the multi-stage pipeline produces bit-identical or semantically equivalent output during refactoring
+- [ ] 11.3 Add verification tests for evaluation results against stable result sets
+
+## 12. Internal Context Consolidation
+
+- [ ] 12.1 Introduce a `CompilationContext` to streamline function signatures in the compiler and semantics modules
+- [ ] 12.2 Consolidate options, providers, and registries into a shared context object passed through the pipeline
+- [ ] 12.3 Reduce parameter drilling in the evaluation engine using a consolidated `EvalContext`
+
+## 13. XML Parsing Modernization
+
+- [ ] 13.1 Refactor `src/modelinfo_xml.rs` to use a more modular approach for parsing `TypeInfo` variants
+- [ ] 13.2 Split the large 1300+ line parser into smaller submodules or explore a more declarative parsing strategy
+
 ## Recommended Order
 
 - [ ] A. Complete warning cleanup first so structural regressions are easier to spot
 - [ ] B. Consolidate the compilation pipeline before parser or evaluation refactors
-- [ ] C. Refactor CLI code after the pipeline is unified
-- [ ] D. Add definition indexes before deeper evaluation cleanup
-- [ ] E. Split parser, evaluation, and library modules after behavior is covered by tests
-- [ ] F. Refresh documentation after the code structure stabilizes
+- [ ] C. Establish baseline benchmarks and golden files to protect against regressions
+- [ ] D. Refactor CLI code after the pipeline is unified
+- [ ] E. Add definition indexes before deeper evaluation cleanup
+- [ ] F. Split parser, evaluation, and library modules after behavior is covered by tests
+- [ ] G. Refresh documentation after the code structure stabilizes
