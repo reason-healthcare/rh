@@ -228,54 +228,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     .ok_or_else(|| EvalError::General(format!("Parameter '{name}' not found")))
             }
 
-            // ----- Logical -----
-            Expression::And(nary) => {
-                let vals = self.eval_nary_args(nary, bindings)?;
-                Ok(vals
-                    .iter()
-                    .fold(Value::Boolean(true), |acc, v| tvl_and(&acc, v)))
-            }
-            Expression::Or(nary) => {
-                let vals = self.eval_nary_args(nary, bindings)?;
-                Ok(vals
-                    .iter()
-                    .fold(Value::Boolean(false), |acc, v| tvl_or(&acc, v)))
-            }
-            Expression::Not(unary) => {
-                let operand = self.eval_unary_arg(unary, bindings)?;
-                Ok(tvl_not(&operand))
-            }
-            Expression::Xor(bin) => {
-                let (a, b) = self.eval_binary_args(bin, bindings)?;
-                Ok(tvl_xor(&a, &b))
-            }
-            Expression::Implies(bin) => {
-                let (a, b) = self.eval_binary_args(bin, bindings)?;
-                Ok(tvl_implies(&a, &b))
-            }
-
-            // ----- Null operations -----
-            Expression::IsNull(unary) => {
-                let v = self.eval_unary_arg(unary, bindings)?;
-                Ok(Value::Boolean(matches!(v, Value::Null)))
-            }
-            Expression::IsTrue(unary) => {
-                let v = self.eval_unary_arg(unary, bindings)?;
-                Ok(Value::Boolean(v == Value::Boolean(true)))
-            }
-            Expression::IsFalse(unary) => {
-                let v = self.eval_unary_arg(unary, bindings)?;
-                Ok(Value::Boolean(v == Value::Boolean(false)))
-            }
-            Expression::Coalesce(nary) => {
-                for op in &nary.operand {
-                    let v = self.eval_expr(op, bindings)?;
-                    if !matches!(v, Value::Null) {
-                        return Ok(v);
-                    }
-                }
-                Ok(Value::Null)
-            }
+            // ----- Logical & null -----
+            Expression::And(_)
+            | Expression::Or(_)
+            | Expression::Not(_)
+            | Expression::Xor(_)
+            | Expression::Implies(_)
+            | Expression::IsNull(_)
+            | Expression::IsTrue(_)
+            | Expression::IsFalse(_)
+            | Expression::Coalesce(_) => self.eval_logical_expr(expr, bindings),
 
             // ----- Comparison -----
             Expression::Equal(bin) => {
@@ -910,7 +872,270 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 }
             }
 
-            // ----- List operators -----
+            // ----- List -----
+            Expression::List(_)
+            | Expression::Exists(_)
+            | Expression::Count(_)
+            | Expression::Sum(_)
+            | Expression::Min(_)
+            | Expression::Max(_)
+            | Expression::Avg(_)
+            | Expression::First(_)
+            | Expression::Last(_)
+            | Expression::Flatten(_)
+            | Expression::Distinct(_)
+            | Expression::SingletonFrom(_)
+            | Expression::Indexer(_)
+            | Expression::Union(_)
+            | Expression::Intersect(_)
+            | Expression::Except(_) => self.eval_list_expr(expr, bindings),
+
+            // ----- Interval -----
+            Expression::Interval(_)
+            | Expression::Start(_)
+            | Expression::End(_)
+            | Expression::Width(_)
+            | Expression::PointFrom(_)
+            | Expression::Contains(_)
+            | Expression::In(_)
+            | Expression::Overlaps(_)
+            | Expression::Meets(_)
+            | Expression::MeetsBefore(_)
+            | Expression::MeetsAfter(_)
+            | Expression::Includes(_)
+            | Expression::IncludedIn(_)
+            | Expression::Starts(_)
+            | Expression::Ends(_)
+            | Expression::Collapse(_) => self.eval_interval_expr(expr, bindings),
+
+            // ----- Control flow -----
+            Expression::If(_) | Expression::Case(_) => self.eval_control_flow_expr(expr, bindings),
+
+            // ----- Query & retrieve -----
+            Expression::Query(_) | Expression::Retrieve(_) => self.eval_query_expr(expr, bindings),
+
+            // ----- Tuple / Instance -----
+            Expression::Tuple(tup) => {
+                let mut fields = BTreeMap::new();
+                for element in &tup.elements {
+                    if let (Some(name), Some(val_expr)) = (&element.name, &element.value) {
+                        fields.insert(name.clone(), self.eval_expr(val_expr, bindings)?);
+                    }
+                }
+                Ok(Value::Tuple(fields))
+            }
+
+            // ----- Property -----
+            Expression::Property(prop) => {
+                let source = match &prop.source {
+                    Some(e) => self.eval_expr(e, bindings)?,
+                    None => {
+                        let scope = prop.scope.as_deref().unwrap_or("$this");
+                        bindings.get(scope).cloned().unwrap_or(Value::Null)
+                    }
+                };
+                let path = prop.path.as_deref().unwrap_or("");
+                match source {
+                    Value::Tuple(ref fields) => {
+                        Ok(fields.get(path).cloned().unwrap_or(Value::Null))
+                    }
+                    Value::Null => Ok(Value::Null),
+                    _ => Err(EvalError::General(format!(
+                        "Property '{path}': cannot access property on non-tuple"
+                    ))),
+                }
+            }
+
+            // ----- Date/Time -----
+            Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
+            Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
+            Expression::SameAs(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
+                super::operators::same_as(&a, &b, tb.precision.as_deref())
+            }
+            Expression::SameOrBefore(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
+                super::operators::same_or_before(&a, &b, tb.precision.as_deref())
+            }
+            Expression::SameOrAfter(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
+                super::operators::same_or_after(&a, &b, tb.precision.as_deref())
+            }
+            Expression::DurationBetween(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
+                super::operators::duration_between(&a, &b, tb.precision.as_deref().unwrap_or("day"))
+            }
+            Expression::DifferenceBetween(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
+                super::operators::difference_between(
+                    &a,
+                    &b,
+                    tb.precision.as_deref().unwrap_or("day"),
+                )
+            }
+
+            // ----- Interval: proper / expand -----
+            Expression::OverlapsBefore(_)
+            | Expression::OverlapsAfter(_)
+            | Expression::Expand(_)
+            | Expression::ProperContains(_)
+            | Expression::ProperIn(_)
+            | Expression::ProperIncludes(_)
+            | Expression::ProperIncludedIn(_) => self.eval_interval_expr(expr, bindings),
+
+            // ----- List: sort + statistical aggregates -----
+            Expression::Sort(_)
+            | Expression::Median(_)
+            | Expression::Mode(_)
+            | Expression::Variance(_)
+            | Expression::StdDev(_)
+            | Expression::PopulationVariance(_)
+            | Expression::PopulationStdDev(_)
+            | Expression::AllTrue(_)
+            | Expression::AnyTrue(_)
+            | Expression::Repeat(_) => self.eval_list_expr(expr, bindings),
+
+            // ----- Terminology -----
+            Expression::Code(_)
+            | Expression::CodeRef(_)
+            | Expression::ConceptRef(_)
+            | Expression::ValueSetRef(_)
+            | Expression::CodeSystemRef(_)
+            | Expression::InValueSet(_)
+            | Expression::InCodeSystem(_)
+            | Expression::AnyInValueSet(_)
+            | Expression::AnyInCodeSystem(_) => self.eval_terminology_expr(expr, bindings),
+
+            // ----- Built-in function dispatch -----
+            Expression::FunctionRef(func_ref) => {
+                let name = func_ref.name.as_deref().unwrap_or("");
+                let mut args = Vec::new();
+                for operand in &func_ref.operand {
+                    args.push(self.eval_expr(operand, bindings)?);
+                }
+                eval_builtin_function(name, args)
+            }
+
+            other => Err(EvalError::General(format!(
+                "evaluate_elm: unsupported ELM expression type: {:?}",
+                std::mem::discriminant(other)
+            ))),
+        }
+    }
+
+    // --- Expression-family helpers -----------------------------------------
+
+    /// Evaluate logical and null-propagation expressions:
+    /// `And`, `Or`, `Not`, `Xor`, `Implies`, `IsNull`, `IsTrue`, `IsFalse`,
+    /// `Coalesce`.
+    fn eval_logical_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        match expr {
+            Expression::And(nary) => {
+                let vals = self.eval_nary_args(nary, bindings)?;
+                Ok(vals
+                    .iter()
+                    .fold(Value::Boolean(true), |acc, v| tvl_and(&acc, v)))
+            }
+            Expression::Or(nary) => {
+                let vals = self.eval_nary_args(nary, bindings)?;
+                Ok(vals
+                    .iter()
+                    .fold(Value::Boolean(false), |acc, v| tvl_or(&acc, v)))
+            }
+            Expression::Not(unary) => {
+                let operand = self.eval_unary_arg(unary, bindings)?;
+                Ok(tvl_not(&operand))
+            }
+            Expression::Xor(bin) => {
+                let (a, b) = self.eval_binary_args(bin, bindings)?;
+                Ok(tvl_xor(&a, &b))
+            }
+            Expression::Implies(bin) => {
+                let (a, b) = self.eval_binary_args(bin, bindings)?;
+                Ok(tvl_implies(&a, &b))
+            }
+            Expression::IsNull(unary) => {
+                let v = self.eval_unary_arg(unary, bindings)?;
+                Ok(Value::Boolean(matches!(v, Value::Null)))
+            }
+            Expression::IsTrue(unary) => {
+                let v = self.eval_unary_arg(unary, bindings)?;
+                Ok(Value::Boolean(v == Value::Boolean(true)))
+            }
+            Expression::IsFalse(unary) => {
+                let v = self.eval_unary_arg(unary, bindings)?;
+                Ok(Value::Boolean(v == Value::Boolean(false)))
+            }
+            Expression::Coalesce(nary) => {
+                for op in &nary.operand {
+                    let v = self.eval_expr(op, bindings)?;
+                    if !matches!(v, Value::Null) {
+                        return Ok(v);
+                    }
+                }
+                Ok(Value::Null)
+            }
+            _ => unreachable!("eval_logical_expr: unexpected expression"),
+        }
+    }
+
+    /// Evaluate control-flow expressions: `If`, `Case`.
+    fn eval_control_flow_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        match expr {
+            Expression::If(if_expr) => {
+                let cond = self.eval_expr_opt(if_expr.condition.as_deref(), bindings)?;
+                if cond == Value::Boolean(true) {
+                    self.eval_expr_opt(if_expr.then_expr.as_deref(), bindings)
+                } else {
+                    self.eval_expr_opt(if_expr.else_expr.as_deref(), bindings)
+                }
+            }
+            Expression::Case(case) => {
+                let comparand = match &case.comparand {
+                    Some(e) => Some(self.eval_expr(e, bindings)?),
+                    None => None,
+                };
+                for item in &case.case_item {
+                    let when_val = self.eval_expr_opt(item.when_expr.as_deref(), bindings)?;
+                    let matched = match &comparand {
+                        None => when_val == Value::Boolean(true),
+                        Some(comp) => equal(comp, &when_val) == Value::Boolean(true),
+                    };
+                    if matched {
+                        return self.eval_expr_opt(item.then_expr.as_deref(), bindings);
+                    }
+                }
+                self.eval_expr_opt(case.else_expr.as_deref(), bindings)
+            }
+            _ => unreachable!("eval_control_flow_expr: unexpected expression"),
+        }
+    }
+
+    /// Evaluate list construction, aggregate, and set-operation expressions:
+    /// `List`, `Exists`, `Count`, `Sum`, `Min`, `Max`, `Avg`, `First`,
+    /// `Last`, `Flatten`, `Distinct`, `SingletonFrom`, `Indexer`, `Union`,
+    /// `Intersect`, `Except`, `Sort`, `Median`, `Mode`, `Variance`,
+    /// `StdDev`, `PopulationVariance`, `PopulationStdDev`, `AllTrue`,
+    /// `AnyTrue`, `Repeat`.
+    fn eval_list_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        match expr {
             Expression::List(list_expr) => {
                 let mut items = Vec::new();
                 for e in &list_expr.elements {
@@ -999,8 +1224,70 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     _ => super::intervals::except_interval(&a, &b),
                 }
             }
+            Expression::Sort(sort) => {
+                let v = self.eval_expr_opt(sort.source.as_deref(), bindings)?;
+                let descending = sort
+                    .by
+                    .first()
+                    .and_then(|item| item.direction.as_ref())
+                    .map(|d| *d == crate::elm::SortDirection::Desc)
+                    .unwrap_or(false);
+                super::lists::sort_list(&v, descending)
+            }
+            Expression::Median(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::median(&v)
+            }
+            Expression::Mode(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::mode(&v)
+            }
+            Expression::Variance(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::variance(&v)
+            }
+            Expression::StdDev(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::std_dev(&v)
+            }
+            Expression::PopulationVariance(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::population_variance(&v)
+            }
+            Expression::PopulationStdDev(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::population_std_dev(&v)
+            }
+            Expression::AllTrue(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::all_true(&v)
+            }
+            Expression::AnyTrue(agg) => {
+                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
+                super::lists::any_true(&v)
+            }
+            Expression::Repeat(repeat) => {
+                // Repeat: fixpoint iteration — evaluate source only (stub; full
+                // implementation requires per-element scope binding).
+                self.eval_expr_opt(repeat.source.as_deref(), bindings)
+            }
+            _ => unreachable!("eval_list_expr: unexpected expression"),
+        }
+    }
 
-            // ----- Interval operators -----
+    /// Evaluate interval operators, including mixed interval/list membership
+    /// tests that dispatch on runtime type:
+    /// `Interval`, `Start`, `End`, `Width`, `PointFrom`, `Contains`, `In`,
+    /// `Overlaps`, `OverlapsBefore`, `OverlapsAfter`, `Meets`, `MeetsBefore`,
+    /// `MeetsAfter`, `Includes`, `IncludedIn`, `Starts`, `Ends`, `Collapse`,
+    /// `Expand`, `ProperContains`, `ProperIn`, `ProperIncludes`,
+    /// `ProperIncludedIn`.
+    fn eval_interval_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        match expr {
             Expression::Interval(iv) => {
                 let low = match &iv.low {
                     Some(e) => Some(Box::new(self.eval_expr(e, bindings)?)),
@@ -1061,6 +1348,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let b = self.eval_expr_opt(timed_bin.operand.get(1), bindings)?;
                 super::intervals::overlaps(&a, &b)
             }
+            Expression::OverlapsBefore(timed_bin) => {
+                let a = self.eval_expr_opt(timed_bin.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(timed_bin.operand.get(1), bindings)?;
+                super::intervals::overlaps_before(&a, &b)
+            }
+            Expression::OverlapsAfter(timed_bin) => {
+                let a = self.eval_expr_opt(timed_bin.operand.first(), bindings)?;
+                let b = self.eval_expr_opt(timed_bin.operand.get(1), bindings)?;
+                super::intervals::overlaps_after(&a, &b)
+            }
             Expression::Meets(bin) => {
                 let (a, b) = self.eval_binary_args(bin, bindings)?;
                 super::intervals::meets(&a, &b)
@@ -1102,145 +1399,6 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Collapse(unary) => {
                 let v = self.eval_unary_arg(unary, bindings)?;
                 super::intervals::collapse(&v, None)
-            }
-
-            // ----- Control Flow -----
-            Expression::If(if_expr) => {
-                let cond = self.eval_expr_opt(if_expr.condition.as_deref(), bindings)?;
-                if cond == Value::Boolean(true) {
-                    self.eval_expr_opt(if_expr.then_expr.as_deref(), bindings)
-                } else {
-                    self.eval_expr_opt(if_expr.else_expr.as_deref(), bindings)
-                }
-            }
-            Expression::Case(case) => {
-                let comparand = match &case.comparand {
-                    Some(e) => Some(self.eval_expr(e, bindings)?),
-                    None => None,
-                };
-                for item in &case.case_item {
-                    let when_val = self.eval_expr_opt(item.when_expr.as_deref(), bindings)?;
-                    let matched = match &comparand {
-                        None => when_val == Value::Boolean(true),
-                        Some(comp) => equal(comp, &when_val) == Value::Boolean(true),
-                    };
-                    if matched {
-                        return self.eval_expr_opt(item.then_expr.as_deref(), bindings);
-                    }
-                }
-                self.eval_expr_opt(case.else_expr.as_deref(), bindings)
-            }
-
-            // ----- Query -----
-            Expression::Query(q) => super::queries::eval_query(q, bindings, &mut |expr, binds| {
-                self.eval_expr(expr, binds)
-            }),
-
-            // ----- Retrieve -----
-            Expression::Retrieve(r) => {
-                let raw_type = r.data_type.as_deref().unwrap_or("");
-                // Strip Clark-notation namespace prefix `{uri}LocalName` → `LocalName`
-                let data_type = if let Some(pos) = raw_type.find('}') {
-                    &raw_type[pos + 1..]
-                } else {
-                    raw_type
-                };
-                let code_path = r.code_property.as_deref();
-                let date_path = r.date_property.as_deref();
-                let codes_val = match &r.codes {
-                    Some(expr) => Some(self.eval_expr(expr, bindings)?),
-                    None => None,
-                };
-                let date_range_val = match &r.date_range {
-                    Some(expr) => Some(self.eval_expr(expr, bindings)?),
-                    None => None,
-                };
-                let results = self.ctx.retrieve(
-                    None,
-                    data_type,
-                    code_path,
-                    codes_val.as_ref(),
-                    date_path,
-                    date_range_val.as_ref(),
-                )?;
-                Ok(Value::List(results))
-            }
-
-            // ----- Tuple / Instance -----
-            Expression::Tuple(tup) => {
-                let mut fields = BTreeMap::new();
-                for element in &tup.elements {
-                    if let (Some(name), Some(val_expr)) = (&element.name, &element.value) {
-                        fields.insert(name.clone(), self.eval_expr(val_expr, bindings)?);
-                    }
-                }
-                Ok(Value::Tuple(fields))
-            }
-
-            // ----- Property -----
-            Expression::Property(prop) => {
-                let source = match &prop.source {
-                    Some(e) => self.eval_expr(e, bindings)?,
-                    None => {
-                        let scope = prop.scope.as_deref().unwrap_or("$this");
-                        bindings.get(scope).cloned().unwrap_or(Value::Null)
-                    }
-                };
-                let path = prop.path.as_deref().unwrap_or("");
-                match source {
-                    Value::Tuple(ref fields) => {
-                        Ok(fields.get(path).cloned().unwrap_or(Value::Null))
-                    }
-                    Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General(format!(
-                        "Property '{path}': cannot access property on non-tuple"
-                    ))),
-                }
-            }
-
-            // ----- Date/Time -----
-            Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
-            Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
-            Expression::SameAs(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::same_as(&a, &b, tb.precision.as_deref())
-            }
-            Expression::SameOrBefore(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::same_or_before(&a, &b, tb.precision.as_deref())
-            }
-            Expression::SameOrAfter(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::same_or_after(&a, &b, tb.precision.as_deref())
-            }
-            Expression::DurationBetween(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::duration_between(&a, &b, tb.precision.as_deref().unwrap_or("day"))
-            }
-            Expression::DifferenceBetween(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(tb.operand.get(1), bindings)?;
-                super::operators::difference_between(
-                    &a,
-                    &b,
-                    tb.precision.as_deref().unwrap_or("day"),
-                )
-            }
-
-            // ----- Interval: proper / expand -----
-            Expression::OverlapsBefore(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1), bindings)?;
-                super::intervals::overlaps_before(&a, &b)
-            }
-            Expression::OverlapsAfter(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first(), bindings)?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1), bindings)?;
-                super::intervals::overlaps_after(&a, &b)
             }
             Expression::Expand(bin) => {
                 let (source, per) = self.eval_binary_args(bin, bindings)?;
@@ -1295,71 +1453,297 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     _ => Ok(Value::Null),
                 }
             }
+            _ => unreachable!("eval_interval_expr: unexpected expression"),
+        }
+    }
 
-            // ----- List: sort + statistical aggregates -----
-            Expression::Sort(sort) => {
-                let v = self.eval_expr_opt(sort.source.as_deref(), bindings)?;
-                let descending = sort
-                    .by
-                    .first()
-                    .and_then(|item| item.direction.as_ref())
-                    .map(|d| *d == crate::elm::SortDirection::Desc)
-                    .unwrap_or(false);
-                super::lists::sort_list(&v, descending)
+    /// Evaluate query and retrieve expressions: `Query`, `Retrieve`.
+    fn eval_query_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        match expr {
+            Expression::Query(q) => super::queries::eval_query(q, bindings, &mut |expr, binds| {
+                self.eval_expr(expr, binds)
+            }),
+            Expression::Retrieve(r) => {
+                let raw_type = r.data_type.as_deref().unwrap_or("");
+                // Strip Clark-notation namespace prefix `{uri}LocalName` → `LocalName`
+                let data_type = if let Some(pos) = raw_type.find('}') {
+                    &raw_type[pos + 1..]
+                } else {
+                    raw_type
+                };
+                let code_path = r.code_property.as_deref();
+                let date_path = r.date_property.as_deref();
+                let codes_val = match &r.codes {
+                    Some(expr) => Some(self.eval_expr(expr, bindings)?),
+                    None => None,
+                };
+                let date_range_val = match &r.date_range {
+                    Some(expr) => Some(self.eval_expr(expr, bindings)?),
+                    None => None,
+                };
+                let results = self.ctx.retrieve(
+                    None,
+                    data_type,
+                    code_path,
+                    codes_val.as_ref(),
+                    date_path,
+                    date_range_val.as_ref(),
+                )?;
+                Ok(Value::List(results))
             }
-            Expression::Median(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::median(&v)
+            _ => unreachable!("eval_query_expr: unexpected expression"),
+        }
+    }
+
+    /// Evaluate terminology expressions:
+    /// `Code`, `CodeRef`, `ConceptRef`, `ValueSetRef`, `CodeSystemRef`,
+    /// `InValueSet`, `InCodeSystem`, `AnyInValueSet`, `AnyInCodeSystem`.
+    ///
+    /// `CodeRef` and `ConceptRef` resolve named definitions from the compiled
+    /// library into runtime `Value::Code` / `Value::Concept`.  `ValueSetRef`
+    /// and `CodeSystemRef` resolve to `Value::String` containing the canonical
+    /// URI so they can be consumed by membership-test expressions.
+    /// `InValueSet` / `InCodeSystem` delegate membership tests to the runtime
+    /// [`EvalContext`].
+    fn eval_terminology_expr(
+        &mut self,
+        expr: &Expression,
+        bindings: &BTreeMap<String, Value>,
+    ) -> Result<Value, EvalError> {
+        use super::value::{CqlCode, CqlConcept};
+
+        match expr {
+            // ------ Value set / code system reference resolution ------
+            Expression::ValueSetRef(vs_ref) => {
+                let name = vs_ref.name.as_deref().unwrap_or("");
+                let url = self
+                    .library
+                    .value_sets
+                    .as_ref()
+                    .and_then(|vs| vs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
+                    .and_then(|d| d.id.as_deref())
+                    .unwrap_or(name) // fall back to name as-is if not found
+                    .to_string();
+                Ok(Value::String(url))
             }
-            Expression::Mode(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::mode(&v)
-            }
-            Expression::Variance(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::variance(&v)
-            }
-            Expression::StdDev(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::std_dev(&v)
-            }
-            Expression::PopulationVariance(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::population_variance(&v)
-            }
-            Expression::PopulationStdDev(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::population_std_dev(&v)
-            }
-            Expression::AllTrue(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::all_true(&v)
-            }
-            Expression::AnyTrue(agg) => {
-                let v = self.eval_expr_opt(agg.source.as_deref(), bindings)?;
-                super::lists::any_true(&v)
-            }
-            Expression::Repeat(repeat) => {
-                // Repeat: fixpoint iteration — evaluate source only (stub; full
-                // implementation requires per-element scope binding).
-                self.eval_expr_opt(repeat.source.as_deref(), bindings)
+            Expression::CodeSystemRef(cs_ref) => {
+                let name = cs_ref.name.as_deref().unwrap_or("");
+                let url = self
+                    .library
+                    .code_systems
+                    .as_ref()
+                    .and_then(|cs| cs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
+                    .and_then(|d| d.id.as_deref())
+                    .unwrap_or(name)
+                    .to_string();
+                Ok(Value::String(url))
             }
 
-            // ----- Fallback -----
-            // ----- Built-in function dispatch -----
-            Expression::FunctionRef(func_ref) => {
-                let name = func_ref.name.as_deref().unwrap_or("");
-                let mut args = Vec::new();
-                for operand in &func_ref.operand {
-                    args.push(self.eval_expr(operand, bindings)?);
+            // ------ Inline code literal ------
+            Expression::Code(code_expr) => {
+                let system_url = code_expr
+                    .system
+                    .as_ref()
+                    .and_then(|cs_ref| {
+                        let cs_name = cs_ref.name.as_deref()?;
+                        self.library
+                            .code_systems
+                            .as_ref()?
+                            .defs
+                            .iter()
+                            .find(|d| d.name.as_deref() == Some(cs_name))
+                            .and_then(|d| d.id.as_deref())
+                            .map(str::to_string)
+                    })
+                    .unwrap_or_default();
+                Ok(Value::Code(CqlCode {
+                    code: code_expr.code.clone().unwrap_or_default(),
+                    system: system_url,
+                    display: code_expr.display.clone(),
+                    version: None,
+                }))
+            }
+
+            // ------ Named code / concept lookups ------
+            Expression::CodeRef(r) => {
+                let name = r.name.as_deref().unwrap_or("");
+                let code_def = self
+                    .library
+                    .codes
+                    .as_ref()
+                    .and_then(|c| c.defs.iter().find(|d| d.name.as_deref() == Some(name)))
+                    .ok_or_else(|| {
+                        EvalError::General(format!("CodeRef: code '{name}' not found in library"))
+                    })?
+                    .clone();
+                let system_url = code_def
+                    .code_system
+                    .as_ref()
+                    .and_then(|cs_ref| {
+                        self.library
+                            .code_systems
+                            .as_ref()?
+                            .defs
+                            .iter()
+                            .find(|d| d.name.as_deref() == cs_ref.name.as_deref())
+                            .and_then(|d| d.id.as_deref())
+                            .map(str::to_string)
+                    })
+                    .unwrap_or_default();
+                Ok(Value::Code(CqlCode {
+                    code: code_def.id.clone().unwrap_or_default(),
+                    system: system_url,
+                    display: code_def.display.clone(),
+                    version: None,
+                }))
+            }
+            Expression::ConceptRef(r) => {
+                let name = r.name.as_deref().unwrap_or("");
+                let concept_def = self
+                    .library
+                    .concepts
+                    .as_ref()
+                    .and_then(|c| c.defs.iter().find(|d| d.name.as_deref() == Some(name)))
+                    .ok_or_else(|| {
+                        EvalError::General(format!(
+                            "ConceptRef: concept '{name}' not found in library"
+                        ))
+                    })?
+                    .clone();
+                // Resolve each member code through the library's code definitions.
+                let codes: Vec<CqlCode> = concept_def
+                    .code
+                    .iter()
+                    .filter_map(|code_ref| {
+                        let code_name = code_ref.name.as_deref()?;
+                        let code_def = self
+                            .library
+                            .codes
+                            .as_ref()?
+                            .defs
+                            .iter()
+                            .find(|d| d.name.as_deref() == Some(code_name))?;
+                        let system_url = code_def
+                            .code_system
+                            .as_ref()
+                            .and_then(|cs_ref| {
+                                self.library
+                                    .code_systems
+                                    .as_ref()?
+                                    .defs
+                                    .iter()
+                                    .find(|d| d.name.as_deref() == cs_ref.name.as_deref())
+                                    .and_then(|d| d.id.as_deref())
+                                    .map(str::to_string)
+                            })
+                            .unwrap_or_default();
+                        Some(CqlCode {
+                            code: code_def.id.clone().unwrap_or_default(),
+                            system: system_url,
+                            display: code_def.display.clone(),
+                            version: None,
+                        })
+                    })
+                    .collect();
+                Ok(Value::Concept(CqlConcept {
+                    codes,
+                    display: concept_def.display.clone(),
+                }))
+            }
+
+            // ------ Membership tests ------
+            Expression::InValueSet(ivs) => {
+                let code_val = self.eval_expr_opt(ivs.code.as_deref(), bindings)?;
+                // valueset_expression takes precedence over valueset per ELM spec.
+                let vs_expr = ivs
+                    .valueset_expression
+                    .as_deref()
+                    .or(ivs.valueset.as_deref());
+                let vs_url = match vs_expr {
+                    Some(e) => match self.eval_expr(e, bindings)? {
+                        Value::String(s) => s,
+                        _ => return Ok(Value::Null),
+                    },
+                    None => return Ok(Value::Null),
+                };
+                match code_val {
+                    Value::Code(ref c) => {
+                        let result = self.ctx.in_valueset(c, &vs_url)?;
+                        Ok(Value::Boolean(result))
+                    }
+                    Value::Null => Ok(Value::Null),
+                    _ => Ok(Value::Null),
                 }
-                eval_builtin_function(name, args)
+            }
+            Expression::InCodeSystem(ics) => {
+                let code_val = self.eval_expr_opt(ics.code.as_deref(), bindings)?;
+                let cs_expr = ics
+                    .codesystem_expression
+                    .as_deref()
+                    .or(ics.codesystem.as_deref());
+                let cs_url = match cs_expr {
+                    Some(e) => match self.eval_expr(e, bindings)? {
+                        Value::String(s) => s,
+                        _ => return Ok(Value::Null),
+                    },
+                    None => return Ok(Value::Null),
+                };
+                match code_val {
+                    Value::Code(ref c) => Ok(Value::Boolean(c.system == cs_url)),
+                    Value::Null => Ok(Value::Null),
+                    _ => Ok(Value::Null),
+                }
+            }
+            Expression::AnyInValueSet(aivs) => {
+                let codes_val = self.eval_expr_opt(aivs.codes.as_deref(), bindings)?;
+                let vs_url = match aivs.valueset.as_deref() {
+                    Some(e) => match self.eval_expr(e, bindings)? {
+                        Value::String(s) => s,
+                        _ => return Ok(Value::Null),
+                    },
+                    None => return Ok(Value::Null),
+                };
+                let codes = match codes_val {
+                    Value::List(items) => items,
+                    Value::Null => return Ok(Value::Null),
+                    _ => return Ok(Value::Null),
+                };
+                let mut any_match = false;
+                for item in &codes {
+                    if let Value::Code(c) = item {
+                        if self.ctx.in_valueset(c, &vs_url)? {
+                            any_match = true;
+                            break;
+                        }
+                    }
+                }
+                Ok(Value::Boolean(any_match))
+            }
+            Expression::AnyInCodeSystem(aics) => {
+                let codes_val = self.eval_expr_opt(aics.codes.as_deref(), bindings)?;
+                let cs_url = match aics.codesystem.as_deref() {
+                    Some(e) => match self.eval_expr(e, bindings)? {
+                        Value::String(s) => s,
+                        _ => return Ok(Value::Null),
+                    },
+                    None => return Ok(Value::Null),
+                };
+                let codes = match codes_val {
+                    Value::List(items) => items,
+                    Value::Null => return Ok(Value::Null),
+                    _ => return Ok(Value::Null),
+                };
+                let any_match = codes
+                    .iter()
+                    .any(|item| matches!(item, Value::Code(c) if c.system == cs_url));
+                Ok(Value::Boolean(any_match))
             }
 
-            other => Err(EvalError::General(format!(
-                "evaluate_elm: unsupported ELM expression type: {:?}",
-                std::mem::discriminant(other)
-            ))),
+            _ => unreachable!("eval_terminology_expr: unexpected expression"),
         }
     }
 
