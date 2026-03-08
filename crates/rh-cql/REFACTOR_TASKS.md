@@ -41,10 +41,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 6. Library Module Decomposition
 
-- [ ] 6.1 Split `src/library.rs` into smaller modules for identifiers, sources, providers, compiled-library access, and library management
-- [ ] 6.2 Keep public exports in `src/lib.rs` stable while reorganizing internal files
-- [ ] 6.3 Move provider implementations into dedicated submodules and keep filesystem, memory, and composite behaviors clearly separated
-- [ ] 6.4 Add tests around provider behavior and compiled-library lookup before and after the split
+- [x] 6.1 Split `src/library.rs` into smaller modules for identifiers, sources, providers, compiled-library access, and library management
+- [x] 6.2 Keep public exports in `src/lib.rs` stable while reorganizing internal files
+- [x] 6.3 Move provider implementations into dedicated submodules and keep filesystem, memory, and composite behaviors clearly separated
+- [x] 6.4 Add tests around provider behavior and compiled-library lookup before and after the split
 
 ## 7. Warning and Dead-Code Cleanup
 
