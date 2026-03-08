@@ -4,10 +4,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 1. Compilation Pipeline Consolidation
 
-- [ ] 1.1 Extract a shared internal compilation pipeline in `src/compiler.rs` that performs parse, semantic analysis, ELM emission, diagnostics collection, and optional source-map generation
-- [ ] 1.2 Reimplement `compile()`, `compile_with_model()`, `validate()`, `compile_to_json()`, `compile_to_elm_with_sourcemap()`, and `explain_compile()` on top of that shared pipeline
-- [ ] 1.3 Remove duplicated compile work in the CLI `compile` command when `--source-map` is enabled
-- [ ] 1.4 Add regression tests verifying compile, validate, explain, and source-map generation produce consistent diagnostics for the same input
+- [x] 1.1 Extract a shared internal compilation pipeline in `src/compiler.rs` that performs parse, semantic analysis, ELM emission, diagnostics collection, and optional source-map generation
+- [x] 1.2 Reimplement `compile()`, `compile_with_model()`, `validate()`, `compile_to_json()`, `compile_to_elm_with_sourcemap()`, and `explain_compile()` on top of that shared pipeline
+- [x] 1.3 Remove duplicated compile work in the CLI `compile` command when `--source-map` is enabled
+- [x] 1.4 Add regression tests verifying compile, validate, explain, and source-map generation produce consistent diagnostics for the same input
 
 ## 2. CLI Structure Cleanup
 
