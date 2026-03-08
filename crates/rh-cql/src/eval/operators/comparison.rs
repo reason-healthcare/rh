@@ -7,18 +7,7 @@ use std::cmp::Ordering;
 
 use super::super::context::EvalError;
 use super::super::value::{CqlDate, CqlDateTime, CqlTime, Value};
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-macro_rules! null2 {
-    ($a:expr, $b:expr) => {
-        if matches!($a, Value::Null) || matches!($b, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
+use super::utils::null2;
 
 // ---------------------------------------------------------------------------
 // Ordering helper
@@ -205,5 +194,133 @@ pub fn greater_or_equal(a: &Value, b: &Value) -> Result<Value, EvalError> {
     match cql_compare(a, b) {
         Some(ord) => Ok(Value::Boolean(ord != Ordering::Less)),
         None => Ok(Value::Null),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eval::value::{CqlDate, CqlDateTime, Value};
+
+    #[test]
+    fn less_integers() {
+        assert_eq!(
+            less(&Value::Integer(1), &Value::Integer(2)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            less(&Value::Integer(2), &Value::Integer(2)).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            less(&Value::Integer(3), &Value::Integer(2)).unwrap(),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn greater_decimals() {
+        assert_eq!(
+            greater(&Value::Decimal(3.5), &Value::Decimal(2.0)).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            greater(&Value::Decimal(1.0), &Value::Decimal(2.0)).unwrap(),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn less_or_equal_strings() {
+        assert_eq!(
+            less_or_equal(&Value::String("abc".into()), &Value::String("abd".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            less_or_equal(&Value::String("abc".into()), &Value::String("abc".into())).unwrap(),
+            Value::Boolean(true)
+        );
+    }
+
+    #[test]
+    fn greater_or_equal_null_propagates() {
+        assert_eq!(
+            greater_or_equal(&Value::Null, &Value::Integer(1)).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn equal_delegates_to_cql_equal() {
+        assert_eq!(
+            equal(&Value::Integer(5), &Value::Integer(5)),
+            Value::Boolean(true)
+        );
+        assert_eq!(equal(&Value::Null, &Value::Integer(5)), Value::Null);
+    }
+
+    #[test]
+    fn equivalent_null_safe() {
+        assert_eq!(equivalent(&Value::Null, &Value::Null), Value::Boolean(true));
+        assert_eq!(
+            equivalent(&Value::Null, &Value::Integer(1)),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn compare_different_types_yields_null() {
+        // Integer vs Decimal are different variant arms — not comparable, returns null
+        assert_eq!(
+            less(&Value::Integer(1), &Value::Decimal(2.0)).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn less_date_values() {
+        let earlier = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(1),
+            day: Some(1),
+        });
+        let later = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(6),
+            day: Some(15),
+        });
+        assert_eq!(less(&earlier, &later).unwrap(), Value::Boolean(true));
+        assert_eq!(less(&later, &earlier).unwrap(), Value::Boolean(false));
+        assert_eq!(less(&earlier, &earlier).unwrap(), Value::Boolean(false));
+    }
+
+    #[test]
+    fn greater_datetime_values() {
+        let dt1 = Value::DateTime(CqlDateTime {
+            year: 2023,
+            month: Some(3),
+            day: Some(10),
+            hour: Some(12),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
+            offset_seconds: None,
+        });
+        let dt2 = Value::DateTime(CqlDateTime {
+            year: 2023,
+            month: Some(3),
+            day: Some(10),
+            hour: Some(8),
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(0),
+            offset_seconds: None,
+        });
+        assert_eq!(greater(&dt1, &dt2).unwrap(), Value::Boolean(true));
+        assert_eq!(greater(&dt2, &dt1).unwrap(), Value::Boolean(false));
     }
 }

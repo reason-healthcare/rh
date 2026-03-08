@@ -29,8 +29,8 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 - [x] 4.1 Refactor `src/eval/engine.rs` so it primarily handles dispatch, bindings, and trace recording
 - [x] 4.2 Extract expression-family helpers for logical, control-flow, list, interval, query, and terminology evaluation paths
 - [x] 4.3 Split `src/eval/operators.rs` into domain modules such as arithmetic, comparison, string, temporal, and conversion
-- [ ] 4.4 Keep shared null-propagation and error helpers in a small common evaluation utility layer
-- [ ] 4.5 Preserve current operator and evaluation behavior with unit and integration tests during the split
+- [x] 4.4 Keep shared null-propagation and error helpers in a small common evaluation utility layer
+- [x] 4.5 Preserve current operator and evaluation behavior with unit and integration tests during the split
 
 ## 5. Definition Lookup and Caching
 

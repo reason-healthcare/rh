@@ -6,30 +6,7 @@
 
 use super::super::context::EvalError;
 use super::super::value::{CqlQuantity, Value};
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-macro_rules! null1 {
-    ($a:expr) => {
-        if matches!($a, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-macro_rules! null2 {
-    ($a:expr, $b:expr) => {
-        if matches!($a, Value::Null) || matches!($b, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-fn err(op: &str, msg: &str) -> EvalError {
-    EvalError::General(format!("{op}: {msg}"))
-}
+use super::utils::{err, null1, null2};
 
 fn numeric_as_f64(v: &Value) -> Option<f64> {
     match v {
@@ -296,4 +273,162 @@ pub fn log(a: &Value, base: &Value) -> Result<Value, EvalError> {
         return Ok(Value::Null);
     }
     Ok(Value::Decimal(x.log(b)))
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eval::value::Value;
+
+    #[test]
+    fn add_integers() {
+        assert_eq!(
+            add(&Value::Integer(3), &Value::Integer(4)).unwrap(),
+            Value::Integer(7)
+        );
+    }
+
+    #[test]
+    fn add_null_propagates() {
+        assert_eq!(add(&Value::Null, &Value::Integer(1)).unwrap(), Value::Null);
+        assert_eq!(add(&Value::Integer(1), &Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn subtract_decimals() {
+        assert_eq!(
+            subtract(&Value::Decimal(5.5), &Value::Decimal(2.5)).unwrap(),
+            Value::Decimal(3.0)
+        );
+    }
+
+    #[test]
+    fn multiply_long() {
+        assert_eq!(
+            multiply(&Value::Long(100), &Value::Long(200)).unwrap(),
+            Value::Long(20000)
+        );
+    }
+
+    #[test]
+    fn divide_integers_yields_decimal() {
+        assert_eq!(
+            divide(&Value::Integer(7), &Value::Integer(2)).unwrap(),
+            Value::Decimal(3.5)
+        );
+    }
+
+    #[test]
+    fn divide_by_zero_yields_null() {
+        assert_eq!(
+            divide(&Value::Integer(5), &Value::Integer(0)).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn modulo_integer() {
+        assert_eq!(
+            modulo(&Value::Integer(10), &Value::Integer(3)).unwrap(),
+            Value::Integer(1)
+        );
+    }
+
+    #[test]
+    fn modulo_by_zero_yields_null() {
+        assert_eq!(
+            modulo(&Value::Integer(5), &Value::Integer(0)).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn negate_decimal() {
+        assert_eq!(
+            negate(&Value::Decimal(1.25)).unwrap(),
+            Value::Decimal(-1.25)
+        );
+    }
+
+    #[test]
+    fn abs_negative_integer() {
+        assert_eq!(abs(&Value::Integer(-7)).unwrap(), Value::Integer(7));
+    }
+
+    #[test]
+    fn ceiling_decimal() {
+        assert_eq!(ceiling(&Value::Decimal(1.1)).unwrap(), Value::Integer(2));
+        assert_eq!(ceiling(&Value::Decimal(-1.1)).unwrap(), Value::Integer(-1));
+    }
+
+    #[test]
+    fn floor_decimal() {
+        assert_eq!(floor(&Value::Decimal(1.9)).unwrap(), Value::Integer(1));
+        assert_eq!(floor(&Value::Decimal(-1.1)).unwrap(), Value::Integer(-2));
+    }
+
+    #[test]
+    fn truncate_decimal() {
+        assert_eq!(truncate(&Value::Decimal(3.9)).unwrap(), Value::Integer(3));
+        assert_eq!(truncate(&Value::Decimal(-3.9)).unwrap(), Value::Integer(-3));
+    }
+
+    #[test]
+    fn round_default_precision() {
+        assert_eq!(
+            round(&Value::Decimal(3.567), None).unwrap(),
+            Value::Decimal(4.0)
+        );
+    }
+
+    #[test]
+    fn round_with_precision() {
+        assert_eq!(
+            round(&Value::Decimal(3.567), Some(&Value::Integer(2))).unwrap(),
+            Value::Decimal(3.57)
+        );
+    }
+
+    #[test]
+    fn power_integer_base() {
+        assert_eq!(
+            power(&Value::Integer(2), &Value::Integer(10)).unwrap(),
+            Value::Decimal(1024.0)
+        );
+    }
+
+    #[test]
+    fn ln_positive() {
+        let result = ln(&Value::Decimal(std::f64::consts::E)).unwrap();
+        if let Value::Decimal(x) = result {
+            assert!((x - 1.0).abs() < 1e-10);
+        } else {
+            panic!("expected Decimal");
+        }
+    }
+
+    #[test]
+    fn ln_non_positive_yields_null() {
+        assert_eq!(ln(&Value::Decimal(0.0)).unwrap(), Value::Null);
+        assert_eq!(ln(&Value::Decimal(-1.0)).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn exp_zero_is_one() {
+        assert_eq!(exp(&Value::Decimal(0.0)).unwrap(), Value::Decimal(1.0));
+    }
+
+    #[test]
+    fn log_base10() {
+        let result = log(&Value::Decimal(1000.0), &Value::Decimal(10.0)).unwrap();
+        if let Value::Decimal(x) = result {
+            assert!((x - 3.0).abs() < 1e-10);
+        } else {
+            panic!("expected Decimal");
+        }
+    }
 }

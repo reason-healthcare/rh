@@ -9,30 +9,7 @@ use regex::Regex;
 
 use super::super::context::EvalError;
 use super::super::value::Value;
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-macro_rules! null1 {
-    ($a:expr) => {
-        if matches!($a, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-macro_rules! null2 {
-    ($a:expr, $b:expr) => {
-        if matches!($a, Value::Null) || matches!($b, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-fn err(op: &str, msg: &str) -> EvalError {
-    EvalError::General(format!("{op}: {msg}"))
-}
+use super::utils::{err, null1, null2};
 
 // ---------------------------------------------------------------------------
 // String operators (9.12)
@@ -282,5 +259,294 @@ pub fn substring(
             Ok(Value::String(result))
         }
         _ => Err(err("Substring", "expected String and Integer arguments")),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eval::value::Value;
+
+    #[test]
+    fn concatenate_two_strings() {
+        let a = Value::String("Hello, ".into());
+        let b = Value::String("World!".into());
+        assert_eq!(
+            concatenate(&a, &b).unwrap(),
+            Value::String("Hello, World!".into())
+        );
+    }
+
+    #[test]
+    fn concatenate_null_propagates() {
+        assert_eq!(
+            concatenate(&Value::Null, &Value::String("x".into())).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn combine_list_with_separator() {
+        let list = Value::List(vec![
+            Value::String("a".into()),
+            Value::String("b".into()),
+            Value::String("c".into()),
+        ]);
+        assert_eq!(
+            combine(&list, Some(&Value::String(", ".into()))).unwrap(),
+            Value::String("a, b, c".into())
+        );
+    }
+
+    #[test]
+    fn combine_skips_nulls() {
+        let list = Value::List(vec![
+            Value::String("a".into()),
+            Value::Null,
+            Value::String("c".into()),
+        ]);
+        assert_eq!(
+            combine(&list, Some(&Value::String("-".into()))).unwrap(),
+            Value::String("a-c".into())
+        );
+    }
+
+    #[test]
+    fn combine_null_separator_means_empty_string() {
+        let list = Value::List(vec![Value::String("x".into()), Value::String("y".into())]);
+        assert_eq!(combine(&list, None).unwrap(), Value::String("xy".into()));
+    }
+
+    #[test]
+    fn split_basic() {
+        let result = split(&Value::String("a,b,c".into()), &Value::String(",".into())).unwrap();
+        assert_eq!(
+            result,
+            Value::List(vec![
+                Value::String("a".into()),
+                Value::String("b".into()),
+                Value::String("c".into()),
+            ])
+        );
+    }
+
+    #[test]
+    fn length_str_unicode() {
+        // "café" has 4 Unicode characters
+        assert_eq!(
+            length_str(&Value::String("café".into())).unwrap(),
+            Value::Integer(4)
+        );
+    }
+
+    #[test]
+    fn upper_lower_round_trip() {
+        let s = Value::String("Hello World".into());
+        assert_eq!(upper(&s).unwrap(), Value::String("HELLO WORLD".into()));
+        assert_eq!(lower(&s).unwrap(), Value::String("hello world".into()));
+    }
+
+    #[test]
+    fn starts_ends_with() {
+        let s = Value::String("foobar".into());
+        assert_eq!(
+            starts_with(&s, &Value::String("foo".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            starts_with(&s, &Value::String("bar".into())).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            ends_with(&s, &Value::String("bar".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            ends_with(&s, &Value::String("foo".into())).unwrap(),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn matches_regex_full_match() {
+        let s = Value::String("hello123".into());
+        // Must match full string
+        assert_eq!(
+            matches_regex(&s, &Value::String("[a-z]+\\d+".into())).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            matches_regex(&s, &Value::String("[a-z]+".into())).unwrap(),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn replace_matches_substitution() {
+        let result = replace_matches(
+            &Value::String("foo123bar".into()),
+            &Value::String("\\d+".into()),
+            &Value::String("NUM".into()),
+        )
+        .unwrap();
+        assert_eq!(result, Value::String("fooNUMbar".into()));
+    }
+
+    #[test]
+    fn indexer_str_zero_based() {
+        let s = Value::String("abc".into());
+        assert_eq!(
+            indexer_str(&s, &Value::Integer(0)).unwrap(),
+            Value::String("a".into())
+        );
+        assert_eq!(
+            indexer_str(&s, &Value::Integer(2)).unwrap(),
+            Value::String("c".into())
+        );
+        assert_eq!(indexer_str(&s, &Value::Integer(5)).unwrap(), Value::Null);
+        assert_eq!(indexer_str(&s, &Value::Integer(-1)).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn position_of_found_and_not_found() {
+        let s = Value::String("abcabc".into());
+        let pat = Value::String("bc".into());
+        // first occurrence at index 1 (0-based)
+        assert_eq!(position_of(&pat, &s).unwrap(), Value::Integer(1));
+        // not found: -1
+        assert_eq!(
+            position_of(&Value::String("xyz".into()), &s).unwrap(),
+            Value::Integer(-1)
+        );
+    }
+
+    #[test]
+    fn last_position_of_found() {
+        let s = Value::String("abcabc".into());
+        let pat = Value::String("bc".into());
+        assert_eq!(last_position_of(&pat, &s).unwrap(), Value::Integer(4));
+    }
+
+    #[test]
+    fn substring_from_start() {
+        let s = Value::String("Hello, World!".into());
+        // 0-based
+        assert_eq!(
+            substring(&s, &Value::Integer(7), None).unwrap(),
+            Value::String("World!".into())
+        );
+    }
+
+    #[test]
+    fn substring_with_length() {
+        let s = Value::String("Hello, World!".into());
+        assert_eq!(
+            substring(&s, &Value::Integer(7), Some(&Value::Integer(5))).unwrap(),
+            Value::String("World".into())
+        );
+    }
+
+    #[test]
+    fn substring_out_of_bounds_null() {
+        let s = Value::String("Hi".into());
+        assert_eq!(
+            substring(&s, &Value::Integer(10), None).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn split_on_matches_basic() {
+        let result = split_on_matches(
+            &Value::String("a1b2c3".into()),
+            &Value::String("\\d".into()),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            Value::List(vec![
+                Value::String("a".into()),
+                Value::String("b".into()),
+                Value::String("c".into()),
+                Value::String("".into()),
+            ])
+        );
+    }
+
+    #[test]
+    fn split_on_matches_no_match_returns_single_element() {
+        let result = split_on_matches(
+            &Value::String("hello".into()),
+            &Value::String("\\d+".into()),
+        )
+        .unwrap();
+        assert_eq!(result, Value::List(vec![Value::String("hello".into())]));
+    }
+
+    #[test]
+    fn split_on_matches_null_propagates() {
+        assert_eq!(
+            split_on_matches(&Value::Null, &Value::String("x".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            split_on_matches(&Value::String("x".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn starts_with_null_propagates() {
+        assert_eq!(
+            starts_with(&Value::Null, &Value::String("foo".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            starts_with(&Value::String("foo".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn ends_with_null_propagates() {
+        assert_eq!(
+            ends_with(&Value::Null, &Value::String("bar".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            ends_with(&Value::String("foobar".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn upper_null_propagates() {
+        assert_eq!(upper(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn lower_null_propagates() {
+        assert_eq!(lower(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn length_str_null_propagates() {
+        assert_eq!(length_str(&Value::Null).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn split_null_propagates() {
+        assert_eq!(
+            split(&Value::Null, &Value::String(",".into())).unwrap(),
+            Value::Null
+        );
+        assert_eq!(
+            split(&Value::String("a,b".into()), &Value::Null).unwrap(),
+            Value::Null
+        );
     }
 }

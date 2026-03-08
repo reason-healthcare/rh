@@ -10,30 +10,7 @@ use std::cmp::Ordering;
 
 use super::super::context::EvalError;
 use super::super::value::{CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-macro_rules! null1 {
-    ($a:expr) => {
-        if matches!($a, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-macro_rules! null2 {
-    ($a:expr, $b:expr) => {
-        if matches!($a, Value::Null) || matches!($b, Value::Null) {
-            return Ok(Value::Null);
-        }
-    };
-}
-
-fn err(op: &str, msg: &str) -> EvalError {
-    EvalError::General(format!("{op}: {msg}"))
-}
+use super::utils::{err, null1, null2};
 
 // ---------------------------------------------------------------------------
 // Date/time arithmetic helpers for Predecessor / Successor
@@ -1721,5 +1698,721 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             "DurationBetween",
             &format!("unsupported unit '{unit}'"),
         )),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eval::value::{CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
+
+    // ---- Predecessor / Successor — scalar types ----------------------------
+
+    #[test]
+    fn predecessor_integer() {
+        assert_eq!(predecessor(&Value::Integer(5)).unwrap(), Value::Integer(4));
+    }
+
+    #[test]
+    fn predecessor_integer_min_yields_null() {
+        assert_eq!(
+            predecessor(&Value::Integer(i32::MIN as i64)).unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn successor_integer() {
+        assert_eq!(successor(&Value::Integer(5)).unwrap(), Value::Integer(6));
+    }
+
+    #[test]
+    fn successor_integer_max_yields_null() {
+        assert_eq!(
+            successor(&Value::Integer(i32::MAX as i64)).unwrap(),
+            Value::Null
+        );
+    }
+
+    // ---- MinValue / MaxValue — scalar types --------------------------------
+
+    #[test]
+    fn min_max_value_integer() {
+        assert_eq!(
+            min_value("Integer").unwrap(),
+            Value::Integer(i32::MIN as i64)
+        );
+        assert_eq!(
+            max_value("Integer").unwrap(),
+            Value::Integer(i32::MAX as i64)
+        );
+    }
+
+    #[test]
+    fn min_max_value_long() {
+        assert_eq!(min_value("Long").unwrap(), Value::Long(i64::MIN as i128));
+        assert_eq!(max_value("Long").unwrap(), Value::Long(i64::MAX as i128));
+    }
+
+    #[test]
+    fn min_max_value_unknown_type_errors() {
+        assert!(min_value("Foo").is_err());
+        assert!(max_value("Bar").is_err());
+    }
+
+    // ---- Predecessor / Successor — temporal types --------------------------
+
+    #[test]
+    fn predecessor_date_day_precision() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(3),
+            day: Some(1),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(2),
+            day: Some(28),
+        });
+        assert_eq!(predecessor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_date_crosses_year() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2022,
+            month: Some(12),
+            day: Some(31),
+        });
+        assert_eq!(predecessor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_date_min_yields_null() {
+        let d = Value::Date(CqlDate {
+            year: 1,
+            month: Some(1),
+            day: Some(1),
+        });
+        assert_eq!(predecessor(&d).unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn successor_date_month_end() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(31),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(2),
+            day: Some(1),
+        });
+        assert_eq!(successor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_date_leap_year() {
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(2),
+            day: Some(28),
+        });
+        let expected = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(2),
+            day: Some(29),
+        });
+        assert_eq!(successor(&d).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_time_millisecond() {
+        let t = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(0),
+        });
+        let expected = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(29),
+            second: Some(59),
+            millisecond: Some(999),
+        });
+        assert_eq!(predecessor(&t).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_time_millisecond() {
+        let t = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: Some(999),
+        });
+        let expected = Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(1),
+            millisecond: Some(0),
+        });
+        assert_eq!(successor(&t).unwrap(), expected);
+    }
+
+    #[test]
+    fn predecessor_datetime_millisecond() {
+        let dt = Value::DateTime(CqlDateTime {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
+            offset_seconds: None,
+        });
+        let expected = Value::DateTime(CqlDateTime {
+            year: 2022,
+            month: Some(12),
+            day: Some(31),
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
+            offset_seconds: None,
+        });
+        assert_eq!(predecessor(&dt).unwrap(), expected);
+    }
+
+    #[test]
+    fn successor_datetime_millisecond() {
+        let dt = Value::DateTime(CqlDateTime {
+            year: 2023,
+            month: Some(12),
+            day: Some(31),
+            hour: Some(23),
+            minute: Some(59),
+            second: Some(59),
+            millisecond: Some(999),
+            offset_seconds: None,
+        });
+        let expected = Value::DateTime(CqlDateTime {
+            year: 2024,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: Some(0),
+            offset_seconds: None,
+        });
+        assert_eq!(successor(&dt).unwrap(), expected);
+    }
+
+    // ---- MinValue / MaxValue — temporal types ------------------------------
+
+    #[test]
+    fn min_max_value_date() {
+        assert_eq!(
+            min_value("Date").unwrap(),
+            Value::Date(CqlDate {
+                year: 1,
+                month: Some(1),
+                day: Some(1)
+            })
+        );
+        assert_eq!(
+            max_value("Date").unwrap(),
+            Value::Date(CqlDate {
+                year: 9999,
+                month: Some(12),
+                day: Some(31)
+            })
+        );
+    }
+
+    #[test]
+    fn min_max_value_time() {
+        assert_eq!(
+            min_value("Time").unwrap(),
+            Value::Time(CqlTime {
+                hour: 0,
+                minute: Some(0),
+                second: Some(0),
+                millisecond: Some(0)
+            })
+        );
+        assert_eq!(
+            max_value("Time").unwrap(),
+            Value::Time(CqlTime {
+                hour: 23,
+                minute: Some(59),
+                second: Some(59),
+                millisecond: Some(999)
+            })
+        );
+    }
+
+    #[test]
+    fn min_max_value_datetime() {
+        let min_dt = min_value("DateTime").unwrap();
+        let max_dt = max_value("DateTime").unwrap();
+        assert!(
+            matches!(min_dt, Value::DateTime(ref d) if d.year == 1 && d.millisecond == Some(0))
+        );
+        assert!(
+            matches!(max_dt, Value::DateTime(ref d) if d.year == 9999 && d.millisecond == Some(999))
+        );
+    }
+
+    // ---- Date/Time construction --------------------------------------------
+
+    #[test]
+    fn date_construct_year_only() {
+        assert_eq!(
+            date_construct(&Value::Integer(2024), None, None).unwrap(),
+            Value::Date(CqlDate {
+                year: 2024,
+                month: None,
+                day: None
+            })
+        );
+    }
+
+    #[test]
+    fn date_construct_full() {
+        assert_eq!(
+            date_construct(
+                &Value::Integer(2024),
+                Some(&Value::Integer(3)),
+                Some(&Value::Integer(15))
+            )
+            .unwrap(),
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(3),
+                day: Some(15)
+            })
+        );
+    }
+
+    #[test]
+    fn time_construct_partial() {
+        assert_eq!(
+            time_construct(&Value::Integer(10), Some(&Value::Integer(30)), None, None).unwrap(),
+            Value::Time(CqlTime {
+                hour: 10,
+                minute: Some(30),
+                second: None,
+                millisecond: None
+            })
+        );
+    }
+
+    #[test]
+    fn datetime_construct_basic() {
+        let dt = datetime_construct(
+            &Value::Integer(2024),
+            Some(&Value::Integer(6)),
+            Some(&Value::Integer(15)),
+            Some(&Value::Integer(12)),
+            Some(&Value::Integer(0)),
+            Some(&Value::Integer(0)),
+            Some(&Value::Integer(0)),
+            None,
+        )
+        .unwrap();
+        assert!(
+            matches!(dt, Value::DateTime(ref d) if d.year == 2024 && d.month == Some(6) && d.hour == Some(12))
+        );
+    }
+
+    // ---- Component extraction ----------------------------------------------
+
+    #[test]
+    fn date_component_extraction() {
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: Some(3),
+            day: Some(15),
+        });
+        assert_eq!(
+            date_time_component(&d, "year").unwrap(),
+            Value::Integer(2024)
+        );
+        assert_eq!(date_time_component(&d, "month").unwrap(), Value::Integer(3));
+        assert_eq!(date_time_component(&d, "day").unwrap(), Value::Integer(15));
+    }
+
+    #[test]
+    fn date_component_absent_returns_null() {
+        let d = Value::Date(CqlDate {
+            year: 2024,
+            month: None,
+            day: None,
+        });
+        assert_eq!(date_time_component(&d, "month").unwrap(), Value::Null);
+        assert_eq!(date_time_component(&d, "day").unwrap(), Value::Null);
+    }
+
+    #[test]
+    fn time_component_extraction() {
+        let t = Value::Time(CqlTime {
+            hour: 14,
+            minute: Some(30),
+            second: Some(45),
+            millisecond: Some(500),
+        });
+        assert_eq!(date_time_component(&t, "hour").unwrap(), Value::Integer(14));
+        assert_eq!(
+            date_time_component(&t, "minute").unwrap(),
+            Value::Integer(30)
+        );
+        assert_eq!(
+            date_time_component(&t, "millisecond").unwrap(),
+            Value::Integer(500)
+        );
+    }
+
+    // ---- Date arithmetic ---------------------------------------------------
+
+    #[test]
+    fn date_add_one_year() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 1.0,
+            unit: "a".into(),
+        });
+        assert_eq!(
+            date_time_add(&d, &qty).unwrap(),
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(6),
+                day: Some(15)
+            })
+        );
+    }
+
+    #[test]
+    fn date_add_months_crosses_year() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(11),
+            day: Some(1),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 3.0,
+            unit: "month".into(),
+        });
+        assert_eq!(
+            date_time_add(&d, &qty).unwrap(),
+            Value::Date(CqlDate {
+                year: 2024,
+                month: Some(2),
+                day: Some(1)
+            })
+        );
+    }
+
+    #[test]
+    fn date_add_days() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(30),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 5.0,
+            unit: "d".into(),
+        });
+        assert_eq!(
+            date_time_add(&d, &qty).unwrap(),
+            Value::Date(CqlDate {
+                year: 2023,
+                month: Some(2),
+                day: Some(4)
+            })
+        );
+    }
+
+    #[test]
+    fn date_subtract_days() {
+        let d = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(3),
+            day: Some(1),
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 1.0,
+            unit: "day".into(),
+        });
+        assert_eq!(
+            date_time_subtract(&d, &qty).unwrap(),
+            Value::Date(CqlDate {
+                year: 2023,
+                month: Some(2),
+                day: Some(28)
+            })
+        );
+    }
+
+    #[test]
+    fn datetime_add_hours_overflow() {
+        let dt = Value::DateTime(CqlDateTime {
+            year: 2023,
+            month: Some(1),
+            day: Some(31),
+            hour: Some(22),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None,
+        });
+        let qty = Value::Quantity(CqlQuantity {
+            value: 3.0,
+            unit: "h".into(),
+        });
+        let result = date_time_add(&dt, &qty).unwrap();
+        assert!(
+            matches!(result, Value::DateTime(ref d) if d.year == 2023 && d.month == Some(2) && d.day == Some(1) && d.hour == Some(1))
+        );
+    }
+
+    // ---- SameAs / SameOrBefore / SameOrAfter -------------------------------
+
+    #[test]
+    fn same_as_dates() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = d1.clone();
+        let d3 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(16),
+        });
+        assert_eq!(same_as(&d1, &d2, None).unwrap(), Value::Boolean(true));
+        assert_eq!(same_as(&d1, &d3, None).unwrap(), Value::Boolean(false));
+    }
+
+    #[test]
+    fn same_as_at_year_precision() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(12),
+            day: Some(31),
+        });
+        // Same year → true at year precision
+        assert_eq!(
+            same_as(&d1, &d2, Some("year")).unwrap(),
+            Value::Boolean(true)
+        );
+    }
+
+    #[test]
+    fn same_or_before_dates() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        assert_eq!(
+            same_or_before(&d1, &d2, None).unwrap(),
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            same_or_before(&d2, &d1, None).unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            same_or_before(&d1, &d1, None).unwrap(),
+            Value::Boolean(true)
+        );
+    }
+
+    #[test]
+    fn same_or_after_dates() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        assert_eq!(same_or_after(&d1, &d2, None).unwrap(), Value::Boolean(true));
+        assert_eq!(
+            same_or_after(&d2, &d1, None).unwrap(),
+            Value::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn same_as_mixed_precision_returns_null() {
+        // year-only compared to full date → uncertain
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: None,
+            day: None,
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        assert_eq!(same_as(&d1, &d2, Some("month")).unwrap(), Value::Null);
+    }
+
+    // ---- Duration between --------------------------------------------------
+
+    #[test]
+    fn duration_between_years() {
+        let d1 = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        assert_eq!(
+            duration_between(&d1, &d2, "year").unwrap(),
+            Value::Integer(3)
+        );
+    }
+
+    #[test]
+    fn duration_between_months() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(4),
+            day: Some(1),
+        });
+        assert_eq!(duration_between(&d1, &d2, "mo").unwrap(), Value::Integer(3));
+    }
+
+    #[test]
+    fn duration_between_days() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(8),
+        });
+        assert_eq!(duration_between(&d1, &d2, "d").unwrap(), Value::Integer(7));
+    }
+
+    #[test]
+    fn duration_between_negative() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(6),
+            day: Some(1),
+        });
+        assert_eq!(
+            duration_between(&d1, &d2, "day").unwrap(),
+            Value::Integer(-14)
+        );
+    }
+
+    // ---- Difference between ------------------------------------------------
+
+    #[test]
+    fn difference_between_years() {
+        let d1 = Value::Date(CqlDate {
+            year: 2020,
+            month: Some(6),
+            day: Some(15),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        // difference truncates to whole year components (2023 - 2020 = 3)
+        assert_eq!(
+            difference_between(&d1, &d2, "year").unwrap(),
+            Value::Integer(3)
+        );
+    }
+
+    #[test]
+    fn difference_between_days() {
+        let d1 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(1),
+        });
+        let d2 = Value::Date(CqlDate {
+            year: 2023,
+            month: Some(1),
+            day: Some(8),
+        });
+        assert_eq!(
+            difference_between(&d1, &d2, "day").unwrap(),
+            Value::Integer(7)
+        );
+    }
+
+    #[test]
+    fn difference_between_null_propagates() {
+        assert_eq!(
+            difference_between(
+                &Value::Null,
+                &Value::Date(CqlDate {
+                    year: 2023,
+                    month: Some(1),
+                    day: Some(1)
+                }),
+                "day"
+            )
+            .unwrap(),
+            Value::Null
+        );
     }
 }
