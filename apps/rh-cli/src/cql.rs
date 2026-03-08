@@ -204,45 +204,87 @@ fn compile_cql(
         opts
     };
 
-    // First compile to get detailed errors
-    let result = match compile(&source, Some(options.clone())) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("✗ {e}");
+    // Run the pipeline once.  When a source map is requested we use
+    // compile_to_elm_with_sourcemap so that parse + analysis + emission happen
+    // only once.
+    let (json, sm_json_opt) = if emit_source_map {
+        let result = match compile_to_elm_with_sourcemap(&source, Some(options), None) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("✗ {e}");
+                anyhow::bail!("CQL compilation failed");
+            }
+        };
+
+        if !result.is_success() {
+            eprintln!(
+                "✗ Compilation failed with {} error(s):\n",
+                result.errors.len()
+            );
+            for err in &result.errors {
+                eprintln!("  ✗ {}", err.message());
+                if let Some(loc) = err.locator() {
+                    eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
+                }
+            }
+            if !result.warnings.is_empty() {
+                eprintln!("\nWarnings ({}):", result.warnings.len());
+                for warning in &result.warnings {
+                    eprintln!("  ⚠ {}", warning.message());
+                }
+            }
             anyhow::bail!("CQL compilation failed");
         }
+
+        let json = if compact {
+            result.to_compact_json()
+        } else {
+            result.to_json()
+        }
+        .context("Failed to serialize ELM to JSON")?;
+        let sm_json = result
+            .source_map_json()
+            .context("Failed to serialize source map")?;
+        (json, Some(sm_json))
+    } else {
+        let result = match compile(&source, Some(options)) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("✗ {e}");
+                anyhow::bail!("CQL compilation failed");
+            }
+        };
+
+        if !result.is_success() {
+            eprintln!(
+                "✗ Compilation failed with {} error(s):\n",
+                result.errors.len()
+            );
+            for err in &result.errors {
+                eprintln!("  ✗ {}", err.message());
+                if let Some(loc) = err.locator() {
+                    eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
+                }
+            }
+            if !result.warnings.is_empty() {
+                eprintln!("\nWarnings ({}):", result.warnings.len());
+                for warning in &result.warnings {
+                    eprintln!("  ⚠ {}", warning.message());
+                }
+            }
+            anyhow::bail!("CQL compilation failed");
+        }
+
+        let json = if compact {
+            result.to_compact_json()
+        } else {
+            result.to_json()
+        }
+        .context("Failed to serialize ELM to JSON")?;
+        (json, None)
     };
 
-    // If there are errors, display them and exit
-    if !result.is_success() {
-        eprintln!(
-            "✗ Compilation failed with {} error(s):\n",
-            result.errors.len()
-        );
-        for err in &result.errors {
-            eprintln!("  ✗ {}", err.message());
-            if let Some(loc) = err.locator() {
-                eprintln!("    at line {}, column {}", loc.start_line, loc.start_char);
-            }
-        }
-        if !result.warnings.is_empty() {
-            eprintln!("\nWarnings ({}):", result.warnings.len());
-            for warning in &result.warnings {
-                eprintln!("  ⚠ {}", warning.message());
-            }
-        }
-        anyhow::bail!("CQL compilation failed");
-    }
-
-    // Generate JSON output
-    let json = if compact {
-        result.to_compact_json()
-    } else {
-        result.to_json()
-    }
-    .context("Failed to serialize ELM to JSON")?;
-
-    // Write output
+    // Write ELM output
     if let Some(path) = output {
         fs::write(path, &json).with_context(|| format!("Failed to write to {}", path.display()))?;
         info!("✓ Compiled to {}", path.display());
@@ -250,14 +292,8 @@ fn compile_cql(
         println!("{json}");
     }
 
-    // Source-map emission
-    if emit_source_map {
-        let sm_result = compile_to_elm_with_sourcemap(&source, Some(options), None)
-            .context("Failed to generate source map")?;
-        let sm_json = sm_result
-            .source_map_json()
-            .context("Failed to serialize source map")?;
-
+    // Write source-map output (only present when --source-map was requested)
+    if let Some(sm_json) = sm_json_opt {
         match source_map_output {
             Some(path) => {
                 fs::write(path, &sm_json)
