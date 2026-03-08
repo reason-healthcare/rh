@@ -133,6 +133,7 @@ pub use eval::context::{
     Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError,
     FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
+pub use eval::engine::{evaluate_elm, evaluate_elm_with_trace, TraceEvent};
 pub use semantics::analyzer::SemanticAnalyzer;
 pub use semantics::scope::ScopeManager;
 pub use semantics::typed_ast::{
