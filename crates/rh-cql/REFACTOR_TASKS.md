@@ -19,10 +19,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 3. Parser Extraction
 
-- [ ] 3.1 Add a shared helper for left-associative precedence parsing in `src/parser/expression.rs`
-- [ ] 3.2 Extract shared query-tail parsing for `let`, relationship, `where`, `return`, `aggregate`, and `sort` clauses
-- [ ] 3.3 Split `src/parser/expression.rs` into smaller submodules such as precedence, query, literals, selectors, and retrieve parsing
-- [ ] 3.4 Preserve or expand parser coverage to verify no grammar regressions after the split
+- [x] 3.1 Add a shared helper for left-associative precedence parsing in `src/parser/expression.rs`
+- [x] 3.2 Extract shared query-tail parsing for `let`, relationship, `where`, `return`, `aggregate`, and `sort` clauses
+- [x] 3.3 Split `src/parser/expression.rs` into smaller submodules such as precedence, query, literals, selectors, and retrieve parsing
+- [x] 3.4 Preserve or expand parser coverage to verify no grammar regressions after the split
 
 ## 4. Evaluation Engine and Operator Modularization
 

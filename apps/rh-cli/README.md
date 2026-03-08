@@ -211,7 +211,7 @@ cargo run -p rh -- cql validate library.cql
 # Validate from stdin
 cat library.cql | cargo run -p rh -- cql validate -
 
-# Show line/column locations alongside errors
+# Show line/column locations alongside warnings (errors always include location)
 cargo run -p rh -- cql validate library.cql --verbose
 ```
 
@@ -225,7 +225,7 @@ cargo run -p rh -- cql validate library.cql --verbose
 ✗ CQL has errors
 
 Errors (1):
-  ✗ Could not resolve identifier UndefinedIdent
+  ✗ Could not resolve identifier UndefinedIdent (line 7, col 3)
 ```
 
 ### Show Library Information
