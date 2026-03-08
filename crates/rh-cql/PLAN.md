@@ -1,6 +1,6 @@
 # rh-cql PLAN
 
-Status: Planning only (no CQL feature implementation in this artifact)
+Status: ✅ Restructured into three-stage pipeline (cql-multi-stage-pipeline-refactor)
 
 ## 1) Objective
 
@@ -128,7 +128,7 @@ If any of these constraints are intentionally broken, the change should include 
 
 ## 5) Capability Phases (OpenSpec-friendly slicing)
 
-## Phase A — Parser Foundation
+## Phase A — Parser Foundation ✅ (Restructured)
 
 **Goal**: Parse CQL libraries into stable AST with spans and recoverable errors.
 
@@ -142,7 +142,7 @@ Exit criteria:
 - Can parse canonical examples from spec pages + selected real-world snippets
 - Diagnostics include file/line/column + error code
 
-## Phase B — Semantic Analysis
+## Phase B — Semantic Analysis ✅ (Restructured — moved to `semantics/`)
 
 **Goal**: Build symbol/type pipeline needed for meaningful compile and explain.
 
@@ -156,7 +156,7 @@ Exit criteria:
 - Semantic pass stable for Phase A expression set
 - Deterministic diagnostic ordering
 
-## Phase C — CQL→ELM Compile
+## Phase C — CQL→ELM Compile ✅ (Restructured — three-stage pipeline, `emit/` modules)
 
 **Goal**: Produce valid ELM JSON for supported CQL subset.
 
@@ -173,7 +173,7 @@ Exit criteria:
 - Translation golden tests pass (CQL input → expected ELM JSON shape)
 - Output is consistent and round-trippable for supported subset
 
-## Phase D — Explain Mode
+## Phase D — Explain Mode ✅ (Implemented)
 
 **Goal**: Human-oriented "what happened" output for parse/compile/eval pipelines.
 
@@ -187,7 +187,7 @@ Exit criteria:
 - Explain output usable for debugging translator/evaluator issues
 - Message catalog references spec section tags where possible
 
-## Phase E — ELM Evaluation Engine
+## Phase E — ELM Evaluation Engine ✅ (Implemented)
 
 **Goal**: Execute supported ELM reliably and deterministically.
 
@@ -205,7 +205,7 @@ Exit criteria:
 - Passes selected cql-tests corpus for implemented feature groups
 - Handles CQL-compiled ELM and direct ELM input equivalently
 
-## Phase F — Integration + Conformance Expansion
+## Phase F — Integration + Conformance Expansion 🔄 (In Progress)
 
 **Goal**: Connect crate to CLI/workflows and broaden operator coverage.
 

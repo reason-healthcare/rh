@@ -6,16 +6,19 @@ CQL (Clinical Quality Language) capabilities for the RH ecosystem.
 
 This crate provides:
 
-- **CQL-to-ELM Compiler**: Parse CQL source and translate to ELM
+- **Three-Stage CQL Compiler**: Parse → Semantic Analysis (Typed AST) → ELM Emission
 - **ELM Types**: Complete Rust type definitions for ELM (Expression Logical Model)
 - **ELM JSON Output**: Serialize ELM to JSON (compatible with reference implementation)
+- **Source Maps**: CQL source span → ELM node correlation via `compile_to_elm_with_sourcemap`
+- **Explain Output**: Human-readable parse tree and compilation details (`explain_parse`, `explain_compile`)
+- **ELM Evaluator**: Pure Rust evaluation engine (`evaluate_elm`, `evaluate_elm_with_trace`)
 - **ModelInfo Types**: FHIR and custom model definitions for type resolution
-- **Model Providers**: In-memory model management (WASM-compatible)
 - **DataType System**: Type checking, compatibility, and implicit conversions
 
 ## Status
 
-🚧 **Under Development** - Parser and core translation complete; execution engine planned.
+✅ **Core Complete** — Three-stage pipeline (Parse → Semantic Analysis → ELM Emit) implemented.
+Source maps, explain mode, and ELM evaluation engine are all functional.
 
 ## Quick Start
 
@@ -48,15 +51,22 @@ CQL compiles to ELM (Expression Logical Model), a structured representation that
 
 ## Architecture
 
+The compiler follows a strict three-stage pipeline:
+
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  CQL Source │ ──▶ │  ELM (JSON) │ ──▶ │  Execution  │
-│    (.cql)   │     │   or XML    │     │   Engine    │
-└─────────────┘     └─────────────┘     └─────────────┘
-      │                   │                   │
-      └───────────────────┴───────────────────┘
-                    rh-cql
+┌─────────────┐    ┌─────────────────┐    ┌─────────────┐    ┌─────────────┐
+│  CQL Source │ ──▶│  SemanticAnalyzer│──▶ │ ElmEmitter  │──▶ │  ELM JSON   │
+│   parser/   │    │  semantics/      │    │  emit/      │    │ (+ SourceMap│
+└─────────────┘    └─────────────────┘    └─────────────┘    │  optional)  │
+                                                              └─────────────┘
+                                                                     │
+                                                              ┌──────▼──────┐
+                                                              │  eval/      │
+                                                              │ evaluate_elm│
+                                                              └─────────────┘
 ```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for full details.
 
 ## Public API
 
@@ -152,6 +162,71 @@ if result.is_valid() {
 }
 ```
 
+### Source Maps
+
+Get a correlated CQL→ELM source map alongside the compiled output:
+
+```rust
+use rh_cql::compile_to_elm_with_sourcemap;
+
+let source = "library Test version '1.0' define X: 1 + 2";
+let result = compile_to_elm_with_sourcemap(source, None, None).unwrap();
+
+if result.is_success() {
+    let library = &result.library;
+    let sm_json = result.source_map_json().unwrap();
+    println!("{sm_json}");
+}
+```
+
+### Explaining CQL
+
+Human-readable parse tree and compilation details:
+
+```rust
+use rh_cql::{explain_parse, explain_compile};
+
+let source = "library Test version '1.0' define X: 1 + 2";
+
+// Parse tree
+let parse_explanation = explain_parse(source).unwrap();
+println!("{parse_explanation}");
+
+// Semantic analysis details (resolved types, overloads, conversions)
+let compile_explanation = explain_compile(source, None).unwrap();
+println!("{compile_explanation}");
+```
+
+### Evaluating ELM
+
+```rust
+use rh_cql::{
+    compile, evaluate_elm, evaluate_elm_with_trace,
+    EvalContextBuilder, FixedClock, CqlDateTime,
+};
+
+let source = "library Test version '1.0' define X: 1 + 2";
+let result = compile(source, None).unwrap();
+assert!(result.is_success());
+
+let clock = FixedClock::new(CqlDateTime {
+    year: 2025, month: Some(1), day: Some(1),
+    hour: Some(0), minute: Some(0), second: Some(0),
+    millisecond: None, offset_seconds: Some(0),
+});
+let ctx = EvalContextBuilder::new(clock).build();
+
+// Evaluate a named expression
+let value = evaluate_elm(&result.library, "X", &ctx).unwrap();
+println!("X = {value}"); // X = 3
+
+// Evaluate with step-by-step trace
+let (value, trace) = evaluate_elm_with_trace(&result.library, "X", &ctx).unwrap();
+for event in &trace {
+    println!("  op={} inputs={:?} output={}", event.op, event.inputs, event.output);
+}
+```
+
 ### Working with CompilationResult
 
 ```rust
@@ -176,12 +251,12 @@ let compact = result.to_compact_json().unwrap(); // Minified
 
 ## Features
 
-### ✅ CQL-to-ELM Compiler
+### ✅ CQL-to-ELM Compiler (Three-Stage Pipeline)
 
-- **Full CQL Parser**: Lexer and parser built with nom combinators
-- **Preprocessor**: Extract library metadata before full compilation
-- **Semantic Analysis**: Type checking, symbol resolution, operator overloading
-- **ELM Generation**: Complete translation to ELM structures
+- **CQL Parser**: pest PEG grammar, full CQL expression set
+- **Semantic Analyzer**: Type checking, symbol resolution, operator overloading, implicit conversions
+- **ELM Emitter**: Modular emit submodules (<500 lines each)
+- **Source Maps**: CQL span → ELM node correlation (`compile_to_elm_with_sourcemap`)
 - **JSON Output**: Serialize to JSON compatible with reference implementation
 
 #### Design Decision: FHIRHelpers-Agnostic Translation
@@ -241,6 +316,21 @@ rh-cql output:
 
 The ELM output is valid per the ELM specification—the runtime/executor must understand how to evaluate equivalence between FHIR and CQL types.
 
+### ✅ Explain Mode
+
+- `explain_parse(source)` — AST summary with node types and source locations
+- `explain_compile(source, options)` — Compilation narrative (resolved types, overloads, implicit conversions)
+- `explain_eval(elm, trace)` — Evaluation trace explanation
+
+### ✅ ELM Evaluation Engine
+
+- `evaluate_elm(library, name, ctx)` — Evaluate a named expression
+- `evaluate_elm_with_trace(library, name, ctx)` — Evaluation with `TraceEvent` trace
+- Arithmetic, comparison, string, datetime, type-conversion operators
+- Interval, list, and query evaluation
+- Three-valued logic (null-safe And, Or, Not, etc.)
+- Deterministic clock injection via `FixedClock` / `EvalContextBuilder`
+
 ### ✅ ELM Type Definitions
 
 Full Rust type definitions for ELM, supporting:
@@ -256,12 +346,12 @@ Full Rust type definitions for ELM, supporting:
 - **Built-in FHIR R4**: Pre-loaded model with core resource types
 - **DataType system**: Type checking, subtyping, implicit conversions
 
-### 🚧 Planned Features
+### � Planned / In Progress
 
 - [ ] WASM build for browser/Node.js usage
-- [ ] Retrieve expression translation
-- [ ] Query expression translation  
-- [ ] Execution engine for ELM evaluation
+- [ ] Full CQL conformance parity (Phase F)
+- [ ] Retrieve expression full model-driven translation
+- [ ] Incremental compilation and caching
 
 ## Additional APIs
 

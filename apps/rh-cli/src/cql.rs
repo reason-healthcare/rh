@@ -8,8 +8,29 @@ use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
 use rh_cql::{
-    compile, compile_to_json, elm::AccessModifier, validate, CompilerOptions, SignatureLevel,
+    compile, compile_to_elm_with_sourcemap, compile_to_json,
+    elm::AccessModifier,
+    evaluate_elm, evaluate_elm_with_trace,
+    explain_compile, explain_parse,
+    CqlDateTime, EvalContextBuilder, FixedClock,
+    validate, CompilerOptions, SignatureLevel,
 };
+
+#[derive(Subcommand)]
+pub enum ExplainMode {
+    /// Show the parse tree for CQL source
+    Parse {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+    },
+    /// Show semantic analysis details (resolved types, overloads, conversions)
+    Compile {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+    },
+}
 
 #[derive(Subcommand)]
 pub enum CqlCommands {
@@ -38,6 +59,14 @@ pub enum CqlCommands {
         /// Include all signatures in output
         #[clap(long)]
         signatures: bool,
+
+        /// Also emit a source-map sidecar file alongside the ELM output
+        #[clap(long)]
+        source_map: bool,
+
+        /// Path for source-map output (defaults to <output>.sourcemap.json or stderr)
+        #[clap(long, value_name = "PATH")]
+        source_map_output: Option<PathBuf>,
     },
 
     /// Validate CQL source without generating ELM
@@ -64,6 +93,27 @@ pub enum CqlCommands {
         #[clap(long)]
         debug: bool,
     },
+
+    /// Explain CQL parse tree or compilation details
+    Explain {
+        #[clap(subcommand)]
+        mode: ExplainMode,
+    },
+
+    /// Evaluate a named expression in a compiled CQL library
+    Eval {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Name of the expression definition to evaluate
+        #[clap(short = 'e', long)]
+        expression: String,
+
+        /// Output a step-by-step evaluation trace
+        #[clap(long)]
+        trace: bool,
+    },
 }
 
 pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
@@ -75,6 +125,8 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
             debug,
             strict,
             signatures,
+            source_map,
+            source_map_output,
         } => {
             compile_cql(
                 &input,
@@ -83,6 +135,8 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 debug,
                 strict,
                 signatures,
+                source_map,
+                source_map_output.as_deref(),
             )?;
         }
         CqlCommands::Validate { input, verbose } => {
@@ -93,6 +147,16 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
         }
         CqlCommands::Repl { debug } => {
             run_repl(debug).await?;
+        }
+        CqlCommands::Explain { mode } => {
+            run_explain(mode)?;
+        }
+        CqlCommands::Eval {
+            input,
+            expression,
+            trace,
+        } => {
+            eval_cql(&input, &expression, trace)?;
         }
     }
 
@@ -120,6 +184,8 @@ fn compile_cql(
     debug: bool,
     strict: bool,
     signatures: bool,
+    emit_source_map: bool,
+    source_map_output: Option<&Path>,
 ) -> Result<()> {
     let source = read_source(input)?;
 
@@ -184,6 +250,110 @@ fn compile_cql(
         info!("✓ Compiled to {}", path.display());
     } else {
         println!("{json}");
+    }
+
+    // Source-map emission
+    if emit_source_map {
+        let sm_result = compile_to_elm_with_sourcemap(&source, Some(options), None)
+            .context("Failed to generate source map")?;
+        let sm_json = sm_result.source_map_json().context("Failed to serialize source map")?;
+
+        match source_map_output {
+            Some(path) => {
+                fs::write(path, &sm_json)
+                    .with_context(|| format!("Failed to write source map to {}", path.display()))?;
+                info!("✓ Source map written to {}", path.display());
+            }
+            None => match output {
+                Some(elm_path) => {
+                    let sm_path = format!("{}.sourcemap.json", elm_path.display());
+                    fs::write(&sm_path, &sm_json)
+                        .with_context(|| format!("Failed to write source map to {sm_path}"))?;
+                    info!("✓ Source map written to {sm_path}");
+                }
+                None => {
+                    eprintln!("-- source map --");
+                    eprintln!("{sm_json}");
+                }
+            },
+        }
+    }
+
+    Ok(())
+}
+
+/// Explain CQL parse tree or compilation
+fn run_explain(mode: ExplainMode) -> Result<()> {
+    match mode {
+        ExplainMode::Parse { input } => {
+            let source = read_source(&input)?;
+            let text = explain_parse(&source).context("Failed to explain parse")?;
+            println!("{text}");
+        }
+        ExplainMode::Compile { input } => {
+            let source = read_source(&input)?;
+            let text = explain_compile(&source, None).context("Failed to explain compile")?;
+            println!("{text}");
+        }
+    }
+    Ok(())
+}
+
+/// Evaluate a named expression in a CQL library
+fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
+    let source = read_source(input)?;
+
+    // Compile to ELM
+    let result = compile(&source, None).context("Failed to compile CQL")?;
+    if !result.is_success() {
+        eprintln!("✗ Compilation failed with {} error(s):", result.errors.len());
+        for err in &result.errors {
+            eprintln!("  ✗ {}", err.message());
+        }
+        anyhow::bail!("CQL compilation failed");
+    }
+
+    // Build a minimal EvalContext pinned to the current system time
+    let now = {
+        use chrono::{Datelike, Local, Timelike};
+        let t = Local::now();
+        CqlDateTime {
+            year: t.year(),
+            month: Some(t.month() as u8),
+            day: Some(t.day() as u8),
+            hour: Some(t.hour() as u8),
+            minute: Some(t.minute() as u8),
+            second: Some(t.second() as u8),
+            millisecond: Some(t.timestamp_subsec_millis()),
+            offset_seconds: Some(t.offset().local_minus_utc()),
+        }
+    };
+    let ctx = EvalContextBuilder::new(FixedClock::new(now)).build();
+
+    let library = &result.library;
+
+    if show_trace {
+        let (value, trace) = evaluate_elm_with_trace(library, expression, &ctx)
+            .with_context(|| format!("Failed to evaluate expression '{expression}'"))?;
+        println!("Result: {value}");
+        println!();
+        println!("Trace ({} events):", trace.len());
+        for event in &trace {
+            let node_id = event.elm_node_id.as_deref().unwrap_or("-");
+            let children = if event.children.is_empty() {
+                String::new()
+            } else {
+                format!(" children={:?}", event.children)
+            };
+            println!(
+                "  [{}] op={} node={} inputs={:?} output={}{}",
+                event.event_id, event.op, node_id, event.inputs, event.output, children
+            );
+        }
+    } else {
+        let value = evaluate_elm(library, expression, &ctx)
+            .with_context(|| format!("Failed to evaluate expression '{expression}'"))?;
+        println!("{value}");
     }
 
     Ok(())

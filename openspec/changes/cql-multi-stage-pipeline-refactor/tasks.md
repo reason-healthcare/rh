@@ -175,16 +175,16 @@
 
 ## 10. CLI Updates
 
-- [ ] 10.1 Add `explain` subcommand to `apps/rh-cli/src/cql.rs` with `parse` and `compile` modes
-- [ ] 10.2 Add `eval` subcommand to `apps/rh-cli/src/cql.rs` with `--expression`, `--trace` options
-- [ ] 10.3 Add source-map output option to `compile` subcommand (`--source-map` flag)
-- [ ] 10.4 Write CLI integration tests for `explain parse`, `explain compile`, and `eval` subcommands
+- [x] 10.1 Add `explain` subcommand to `apps/rh-cli/src/cql.rs` with `parse` and `compile` modes
+- [x] 10.2 Add `eval` subcommand to `apps/rh-cli/src/cql.rs` with `--expression`, `--trace` options
+- [x] 10.3 Add source-map output option to `compile` subcommand (`--source-map` flag)
+- [x] 10.4 Write CLI integration tests for `explain parse`, `explain compile`, and `eval` subcommands
 
 ## 11. Documentation and Cleanup
 
-- [ ] 11.1 Update `crates/rh-cql/ARCHITECTURE.md` to document the three-stage pipeline, Typed AST, and module structure
-- [ ] 11.2 Update `crates/rh-cql/PLAN.md` to mark Phases A-C as restructured, Phase D (explain) as implemented, Phase E (eval) as implemented
-- [ ] 11.3 Update `crates/rh-cql/README.md` with new API surface (`compile_to_elm_with_sourcemap`, `explain_parse`, `explain_compile`, `evaluate_elm`)
+- [x] 11.1 Update `crates/rh-cql/ARCHITECTURE.md` to document the three-stage pipeline, Typed AST, and module structure
+- [x] 11.2 Update `crates/rh-cql/PLAN.md` to mark Phases A-C as restructured, Phase D (explain) as implemented, Phase E (eval) as implemented
+- [x] 11.3 Update `crates/rh-cql/README.md` with new API surface (`compile_to_elm_with_sourcemap`, `explain_parse`, `explain_compile`, `evaluate_elm`)
 - [x] 11.4 Run `cargo test -p rh-cql` and verify all tests pass
 - [x] 11.5 Run `cargo clippy -p rh-cql` and resolve any warnings
-- [ ] 11.6 Verify all examples in `examples/` compile and produce expected output
+- [x] 11.6 Verify all examples in `examples/` compile and produce expected output
