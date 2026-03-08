@@ -55,10 +55,10 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 8. Documentation Refresh
 
-- [ ] 8.1 Update `crates/rh-cql/ARCHITECTURE.md` to match the actual `nom` parser and the current semantic-analysis and emit pipeline
-- [ ] 8.2 Document the unified compilation pipeline once it exists
-- [ ] 8.3 Clarify the status of deprecated translator and builder APIs in crate-level documentation
-- [ ] 8.4 Update any README or plan references that still describe superseded architecture
+- [x] 8.1 Update `crates/rh-cql/ARCHITECTURE.md` to match the actual `nom` parser and the current semantic-analysis and emit pipeline
+- [x] 8.2 Document the unified compilation pipeline once it exists
+- [x] 8.3 Clarify the status of deprecated translator and builder APIs in crate-level documentation
+- [x] 8.4 Update any README or plan references that still describe superseded architecture
 
 ## 9. Unified Diagnostic System
 
@@ -92,9 +92,9 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 ## Recommended Order
 
 - [x] A. Complete warning cleanup first so structural regressions are easier to spot
-- [ ] B. Consolidate the compilation pipeline before parser or evaluation refactors
+- [x] B. Consolidate the compilation pipeline before parser or evaluation refactors
 - [ ] C. Establish baseline benchmarks and golden files to protect against regressions
-- [ ] D. Refactor CLI code after the pipeline is unified
-- [ ] E. Add definition indexes before deeper evaluation cleanup
-- [ ] F. Split parser, evaluation, and library modules after behavior is covered by tests
-- [ ] G. Refresh documentation after the code structure stabilizes
+- [x] D. Refactor CLI code after the pipeline is unified
+- [x] E. Add definition indexes before deeper evaluation cleanup
+- [x] F. Split parser, evaluation, and library modules after behavior is covered by tests
+- [x] G. Refresh documentation after the code structure stabilizes

@@ -253,7 +253,7 @@ let compact = result.to_compact_json().unwrap(); // Minified
 
 ### ✅ CQL-to-ELM Compiler (Three-Stage Pipeline)
 
-- **CQL Parser**: pest PEG grammar, full CQL expression set
+- **CQL Parser**: nom combinator-based hand-written parser, full CQL expression set
 - **Semantic Analyzer**: Type checking, symbol resolution, operator overloading, implicit conversions
 - **ELM Emitter**: Modular emit submodules (<500 lines each)
 - **Source Maps**: CQL span → ELM node correlation (`compile_to_elm_with_sourcemap`)

@@ -3,9 +3,10 @@
 //! CQL (Clinical Quality Language) capabilities for the RH ecosystem.
 //!
 //! This crate provides:
-//! - CQL-to-ELM translation
-//! - CQL/ELM execution against FHIR data
-//! - ModelInfo type definitions for data model resolution
+//! - **Three-stage CQL compiler**: Parse (nom) → Semantic Analysis (Typed AST) → ELM Emission
+//! - CQL/ELM execution against FHIR data via a pure-Rust evaluation engine
+//! - ModelInfo type definitions for FHIR and custom data model resolution
+//! - Source maps correlating CQL source positions to ELM IR nodes
 //!
 //! ## Status
 //!
@@ -28,26 +29,46 @@
 //! println!("{}", result.to_json().unwrap());
 //! ```
 //!
+//! ## Pipeline
+//!
+//! All public compile functions delegate to a shared internal pipeline:
+//!
+//! 1. **Parse** — `&str` → `ast::Library` via [`CqlParser`] (nom combinators)
+//! 2. **Analyze** — `ast::Library` → [`TypedLibrary`] via [`SemanticAnalyzer`]
+//! 3. **Emit** *(optional)* — [`TypedLibrary`] → `elm::Library` via [`ElmEmitter`]
+//! 4. **Source map** *(optional)* — emitter side-channel during emit
+//!
+//! See [`ARCHITECTURE.md`](https://github.com/reason-healthcare/rh/blob/main/crates/rh-cql/ARCHITECTURE.md)
+//! for full details.
+//!
 //! ## Modules
 //!
-//! - [`compiler`]: Public compilation API (`compile`, `validate`, `compile_to_json`)
+//! ### Core pipeline
+//! - [`compiler`]: Public compilation API (`compile`, `validate`, `compile_to_json`, …)
+//! - [`parser`]: Stage 1 — CQL parser using nom combinators
+//! - [`semantics`]: Stage 2 — `SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`
+//! - [`emit`]: Stage 3 — `ElmEmitter` (preferred ELM emission pipeline)
+//! - [`sourcemap`]: Source-map types (`SourceMap`, `SourceElmMapping`)
+//!
+//! ### Supporting modules
 //! - [`elm`]: ELM (Expression Logical Model) type definitions
+//! - [`eval`]: Runtime value model, three-valued logic, and eval engine
+//! - [`library`]: Library source providers and compiled library management
 //! - [`modelinfo`]: ModelInfo type definitions for CQL data model resolution
 //! - [`provider`]: Model information providers (in-memory, WASM-compatible)
-//! - [`library`]: Library source providers and compiled library management
 //! - [`datatype`]: Internal DataType system for type checking
-//! - [`parser`]: CQL parser using nom combinators
-//! - [`preprocessor`]: Preprocessor for extracting library info from AST
-//! - [`builder`]: LibraryBuilder for semantic analysis and ELM generation
 //! - [`types`]: Type resolution for CQL semantic analysis
 //! - [`operators`]: Operator resolution for CQL semantic analysis
-//! - [`translator`]: Expression translation from CQL AST to ELM (deprecated — use `emit`)
-//! - [`emit`]: Multi-stage ELM emitter (new preferred pipeline)
-//! - [`eval`]: Runtime value model, three-valued logic, and eval engine
-//! - [`semantics`]: Semantic analysis — `SemanticAnalyzer`, `TypedLibrary`, `ScopeManager`
 //! - [`options`]: Compiler options for translation behavior
 //! - [`output`]: ELM output generation (JSON serialization)
 //! - [`reporting`]: Error reporting with source locations and severity levels
+//! - [`preprocessor`]: Preprocessor for extracting library info from AST
+//!
+//! ### Deprecated
+//! - [`builder`]: `LibraryBuilder` — superseded by the `compiler` API; retained as a
+//!   convenience shim. **Prefer `compile()` / `compile_with_model()` instead.**
+//! - [`translator`]: `ExpressionTranslator` — superseded by `SemanticAnalyzer` + `ElmEmitter`.
+//!   Marked `#[deprecated]`; will be removed in a future release.
 
 pub mod builder;
 pub mod compiler;
