@@ -1,3 +1,6 @@
+use crate::elm::Library;
+use crate::eval::context::{EvalContext, EvalError};
+use crate::eval::engine::{evaluate_elm_with_trace, TraceEvent};
 use crate::parser::ast;
 use crate::parser::span::SourceLocation;
 use crate::semantics::typed_ast::{TypedExpression, TypedLibrary, TypedNode, TypedStatement};
@@ -392,19 +395,140 @@ fn collect_semantic_events(node: &TypedNode<TypedExpression>, events: &mut Vec<S
     }
 }
 
-pub fn explain_eval() -> Result<String, String> {
-    Err("Evaluation engine not yet available".to_string())
+/// Evaluate a named expression from a compiled ELM [`Library`] and return a
+/// human-readable trace of every sub-expression evaluated.
+///
+/// Uses `evaluate_elm_with_trace` internally once the eval engine is
+/// functional.
+///
+/// # Arguments
+///
+/// - `library`  — the compiled ELM library
+/// - `name`     — the expression definition name to evaluate
+/// - `ctx`      — runtime evaluation context
+///
+/// # Returns
+///
+/// A formatted trace string on success, or an `EvalError` on failure.
+pub fn explain_eval(
+    library: &Library,
+    name: &str,
+    ctx: &EvalContext,
+) -> Result<String, EvalError> {
+    let (result, trace) = evaluate_elm_with_trace(library, name, ctx)?;
+    let mut out = String::new();
+    writeln!(out, "Eval Explanation for expression '{name}':").unwrap();
+    writeln!(out, "Result: {result:?}").unwrap();
+    if trace.is_empty() {
+        writeln!(out, "\n(No trace events recorded)").unwrap();
+    } else {
+        writeln!(out, "\nTrace ({} events):", trace.len()).unwrap();
+        for event in &trace {
+            format_trace_event(event, &mut out);
+        }
+    }
+    Ok(out)
+}
+
+fn format_trace_event(event: &TraceEvent, out: &mut String) {
+    let node_id = event.elm_node_id.as_deref().unwrap_or("-");
+    let inputs_str: Vec<String> = event.inputs.iter().map(|v| format!("{v:?}")).collect();
+    let children_part = if event.children.is_empty() {
+        String::new()
+    } else {
+        format!(" (children: {:?})", event.children)
+    };
+    writeln!(
+        out,
+        "  [{}] {} [node:{}]: ({}) \u{2192} {:?}{children_part}",
+        event.event_id,
+        event.op,
+        node_id,
+        inputs_str.join(", "),
+        event.output,
+    )
+    .unwrap();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::elm::{BinaryExpression, Expression, ExpressionDef, ExpressionDefs, Library, Literal, StatementDef};
+    use crate::eval::context::{EvalContextBuilder, FixedClock};
+    use crate::eval::value::{CqlDateTime, Value};
+
+    fn make_library(name: &str, expr: Expression) -> Library {
+        let mut lib = Library::default();
+        lib.statements = Some(ExpressionDefs {
+            defs: vec![StatementDef::Expression(ExpressionDef {
+                name: Some(name.to_string()),
+                expression: Some(Box::new(expr)),
+                ..Default::default()
+            })],
+        });
+        lib
+    }
+
+    fn fixed_ctx() -> EvalContext {
+        let clock = FixedClock::new(CqlDateTime {
+            year: 2024,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None,
+        });
+        EvalContextBuilder::new(clock).build()
+    }
+
+    fn int_literal(v: i64) -> Expression {
+        Expression::Literal(Literal {
+            value: Some(v.to_string()),
+            value_type: Some("Integer".to_string()),
+            ..Default::default()
+        })
+    }
 
     #[test]
-    fn test_explain_eval_stub() {
-        assert_eq!(
-            explain_eval(),
-            Err("Evaluation engine not yet available".to_string())
-        );
+    fn test_explain_eval_literal() {
+        let lib = make_library("X", int_literal(42));
+        let result = explain_eval(&lib, "X", &fixed_ctx()).unwrap();
+        assert!(result.contains("Eval Explanation for expression 'X':"));
+        assert!(result.contains("Result:"));
+        assert!(result.contains("Literal"));
+    }
+
+    #[test]
+    fn test_explain_eval_add() {
+        let expr = Expression::Add(BinaryExpression {
+            operand: vec![int_literal(2), int_literal(3)],
+            ..Default::default()
+        });
+        let lib = make_library("Sum", expr);
+        let result = explain_eval(&lib, "Sum", &fixed_ctx()).unwrap();
+        assert!(result.contains("Eval Explanation for expression 'Sum':"));
+        assert!(result.contains("Result: Integer(5)"));
+        assert!(result.contains("Add"));
+        assert!(result.contains("Trace"));
+    }
+
+    #[test]
+    fn test_explain_eval_unknown_expression() {
+        let lib = Library::default();
+        let result = explain_eval(&lib, "Missing", &fixed_ctx());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_explain_eval_result_contains_value() {
+        let lib = make_library("Flag", Expression::Literal(Literal {
+            value: Some("true".to_string()),
+            value_type: Some("Boolean".to_string()),
+            ..Default::default()
+        }));
+        let result = explain_eval(&lib, "Flag", &fixed_ctx()).unwrap();
+        assert!(result.contains("Boolean(true)"));
     }
 }

@@ -150,23 +150,23 @@
 
 ### 9.E Type Conversion Operators
 
-- [ ] 9.14 Create `src/eval/operators.rs`: implement type conversion operators (ToBoolean, ToInteger, ToDecimal, ToLong, ToString, ToDate, ToDateTime, ToTime, ToQuantity, ToConcept, Is, As, Convert)
+- [x] 9.14 Create `src/eval/operators.rs`: implement type conversion operators (ToBoolean, ToInteger, ToDecimal, ToLong, ToString, ToDate, ToDateTime, ToTime, ToQuantity, ToConcept, Is, As, Convert)
 
 ### 9.F Interval & List Operators
 
-- [ ] 9.15 Create `src/eval/intervals.rs`: implement interval operators (Contains, In, Includes, IncludedIn, Overlaps, Meets, Starts, Ends, Union, Intersect, Except, Width, Start, End, PointFrom, Expand, Collapse)
-- [ ] 9.16 Create `src/eval/lists.rs`: implement list operators (Exists, Count, Sum, Min, Max, Avg, First, Last, IndexOf, Contains, In, Flatten, Distinct, Sort, Filter, ForEach, SingletonFrom, Union, Intersect, Except)
+- [x] 9.15 Create `src/eval/intervals.rs`: implement interval operators (Contains, In, Includes, IncludedIn, Overlaps, Meets, Starts, Ends, Union, Intersect, Except, Width, Start, End, PointFrom, Expand, Collapse)
+- [x] 9.16 Create `src/eval/lists.rs`: implement list operators (Exists, Count, Sum, Min, Max, Avg, First, Last, IndexOf, Contains, In, Flatten, Distinct, Sort, Filter, ForEach, SingletonFrom, Union, Intersect, Except)
 
 ### 9.G Query Evaluation
 
-- [ ] 9.17 Create `src/eval/queries.rs`: implement single-source query evaluation (from, where, return, sort, let)
+- [x] 9.17 Create `src/eval/queries.rs`: implement single-source query evaluation (from, where, return, sort, let)
 
 ### 9.H Evaluation Entry Points & Trace
 
-- [ ] 9.18 Implement `evaluate_elm()` entry point: accept `elm::Library`, expression name, `EvalContext`, return `Result<Value>`
-- [ ] 9.19 Implement `evaluate_elm_with_trace()`: return `(Value, Vec<TraceEvent>)` with step-by-step trace events
-- [ ] 9.20 Define `TraceEvent` struct with `event_id`, `elm_node_id`, `op`, `inputs`, `output`, `children`
-- [ ] 9.21 Wire `explain_eval()` to use `evaluate_elm_with_trace()` once the eval engine is functional
+- [x] 9.18 Implement `evaluate_elm()` entry point: accept `elm::Library`, expression name, `EvalContext`, return `Result<Value>`
+- [x] 9.19 Implement `evaluate_elm_with_trace()`: return `(Value, Vec<TraceEvent>)` with step-by-step trace events
+- [x] 9.20 Define `TraceEvent` struct with `event_id`, `elm_node_id`, `op`, `inputs`, `output`, `children`
+- [x] 9.21 Wire `explain_eval()` to use `evaluate_elm_with_trace()` once the eval engine is functional
 
 ### 9.I Tests
 
