@@ -4,8 +4,8 @@
 
 use crate::parser::ast::*;
 use crate::parser::lexer::{
-    date_literal, datetime_literal, decimal_literal,
-    integer_literal, keyword, long_literal, quantity_literal, string_literal, time_literal,
+    date_literal, datetime_literal, decimal_literal, integer_literal, keyword, long_literal,
+    quantity_literal, string_literal, time_literal,
 };
 use crate::parser::span::Span;
 use nom::{
@@ -104,4 +104,3 @@ pub(crate) fn parse_datetime_literal_expr(input: Span<'_>) -> IResult<Span<'_>, 
         Expression::Literal(Literal::DateTime(s))
     })(input)
 }
-

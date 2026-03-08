@@ -177,7 +177,12 @@ fn print_diagnostic_list(items: &[CqlCompilerException], prefix: &str, with_loca
     for item in items {
         if with_location {
             if let Some(loc) = item.locator() {
-                eprintln!("  {prefix} {} (line {}, col {})", item.message(), loc.start_line, loc.start_char + 1);
+                eprintln!(
+                    "  {prefix} {} (line {}, col {})",
+                    item.message(),
+                    loc.start_line,
+                    loc.start_char + 1
+                );
                 continue;
             }
         }
@@ -435,7 +440,12 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             for warning in &result.warnings {
                 if verbose {
                     if let Some(loc) = warning.locator() {
-                        println!("  ⚠ {} (line {}, col {})", warning.message(), loc.start_line, loc.start_char + 1);
+                        println!(
+                            "  ⚠ {} (line {}, col {})",
+                            warning.message(),
+                            loc.start_line,
+                            loc.start_char + 1
+                        );
                         continue;
                     }
                 }
@@ -448,7 +458,12 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
         println!("Errors ({}):", result.errors.len());
         for err in &result.errors {
             if let Some(loc) = err.locator() {
-                println!("  ✗ {} (line {}, col {})", err.message(), loc.start_line, loc.start_char + 1);
+                println!(
+                    "  ✗ {} (line {}, col {})",
+                    err.message(),
+                    loc.start_line,
+                    loc.start_char + 1
+                );
             } else {
                 println!("  ✗ {}", err.message());
             }
@@ -459,7 +474,12 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             for warning in &result.warnings {
                 if verbose {
                     if let Some(loc) = warning.locator() {
-                        println!("  ⚠ {} (line {}, col {})", warning.message(), loc.start_line, loc.start_char + 1);
+                        println!(
+                            "  ⚠ {} (line {}, col {})",
+                            warning.message(),
+                            loc.start_line,
+                            loc.start_char + 1
+                        );
                         continue;
                     }
                 }

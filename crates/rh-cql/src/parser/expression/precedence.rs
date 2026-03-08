@@ -16,11 +16,20 @@
 //! 9. Unary: `not`, `-`, `exists`, etc.
 //! 10. Invocation: `.`, `[]`, `()`
 
+use super::expression;
+use super::literals::*;
+use super::query::{
+    parse_identifier_source_query, parse_parenthesized_source_query, parse_query,
+    parse_single_source_query, parse_unquoted_identifier_source_query,
+};
+use super::retrieve::{parse_retrieve, parse_type_specifier};
+use super::selectors::{
+    parse_bare_list_selector, parse_case, parse_if_then_else, parse_inline_tuple_selector,
+    parse_instance_selector, parse_interval_selector, parse_list_selector, parse_tuple_selector,
+};
 use crate::parser::ast::*;
 use crate::parser::lexer::{
-    any_identifier, decimal_literal,
-    integer_literal, keyword,
-    skip_ws_and_comments, ws,
+    any_identifier, decimal_literal, integer_literal, keyword, skip_ws_and_comments, ws,
 };
 use crate::parser::span::{SourceLocation, Span};
 use nom::{
@@ -32,18 +41,6 @@ use nom::{
     sequence::{delimited, preceded, tuple},
     IResult,
 };
-use super::literals::*;
-use super::selectors::{
-    parse_interval_selector, parse_list_selector, parse_inline_tuple_selector,
-    parse_bare_list_selector, parse_tuple_selector, parse_instance_selector,
-    parse_if_then_else, parse_case,
-};
-use super::query::{
-    parse_query, parse_parenthesized_source_query, parse_identifier_source_query,
-    parse_single_source_query, parse_unquoted_identifier_source_query,
-};
-use super::retrieve::{parse_retrieve, parse_type_specifier};
-use super::expression;
 
 // ============================================================================
 // Shared Precedence Helpers
@@ -66,7 +63,6 @@ fn fold_left_assoc(first: Expression, rest: Vec<(BinaryOperator, Expression)>) -
     rest.into_iter()
         .fold(first, |acc, (op, rhs)| binary_expr(op, acc, rhs))
 }
-
 
 // ============================================================================
 // Precedence Level 1: OR / XOR (lowest precedence)
@@ -107,8 +103,9 @@ fn parse_implies_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, rest) = many0(preceded(ws(keyword("implies")), parse_equality_expression))(input)?;
     Ok((
         input,
-        rest.into_iter()
-            .fold(first, |acc, rhs| binary_expr(BinaryOperator::Implies, acc, rhs)),
+        rest.into_iter().fold(first, |acc, rhs| {
+            binary_expr(BinaryOperator::Implies, acc, rhs)
+        }),
     ))
 }
 
@@ -871,8 +868,9 @@ fn parse_power_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, rest) = many0(preceded(ws(char('^')), parse_unary_expression))(input)?;
     Ok((
         input,
-        rest.into_iter()
-            .fold(first, |acc, rhs| binary_expr(BinaryOperator::Power, acc, rhs)),
+        rest.into_iter().fold(first, |acc, rhs| {
+            binary_expr(BinaryOperator::Power, acc, rhs)
+        }),
     ))
 }
 
@@ -1344,7 +1342,6 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     ))(input)
 }
 
-
 // ============================================================================
 // Helpers (parenthesized expressions, identifiers, function calls)
 // ============================================================================
@@ -1409,4 +1406,3 @@ pub(crate) fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>,
         )),
     }
 }
-

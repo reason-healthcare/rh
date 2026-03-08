@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 use super::context::{EvalContext, EvalError};
 use super::operators::*;
-use super::tvl::{tvl_implies, tvl_not, tvl_xor};
+use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 use super::value::Value;
 use crate::elm::{
     BinaryExpression, Expression, Library, NaryExpression, StatementDef, UnaryExpression,
@@ -231,29 +231,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ----- Logical -----
             Expression::And(nary) => {
                 let vals = self.eval_nary_args(nary, bindings)?;
-                let result = vals.iter().fold(Value::Boolean(true), |acc, v| {
-                    if acc == Value::Boolean(false) || *v == Value::Boolean(false) {
-                        Value::Boolean(false)
-                    } else if acc == Value::Null || *v == Value::Null {
-                        Value::Null
-                    } else {
-                        Value::Boolean(true)
-                    }
-                });
-                Ok(result)
+                Ok(vals
+                    .iter()
+                    .fold(Value::Boolean(true), |acc, v| tvl_and(&acc, v)))
             }
             Expression::Or(nary) => {
                 let vals = self.eval_nary_args(nary, bindings)?;
-                let result = vals.iter().fold(Value::Boolean(false), |acc, v| {
-                    if acc == Value::Boolean(true) || *v == Value::Boolean(true) {
-                        Value::Boolean(true)
-                    } else if acc == Value::Null || *v == Value::Null {
-                        Value::Null
-                    } else {
-                        Value::Boolean(false)
-                    }
-                });
-                Ok(result)
+                Ok(vals
+                    .iter()
+                    .fold(Value::Boolean(false), |acc, v| tvl_or(&acc, v)))
             }
             Expression::Not(unary) => {
                 let operand = self.eval_unary_arg(unary, bindings)?;
@@ -1486,83 +1472,10 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers (free-standing utilities used by the dispatch)
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Strip the XML/ELM namespace prefix from a qualified type name.
-/// e.g. `"{urn:hl7-org:elm-types:r1}Integer"` → `"Integer"`.
-fn strip_elm_namespace(raw: &str) -> &str {
-    if let Some(pos) = raw.rfind('}') {
-        &raw[pos + 1..]
-    } else {
-        raw
-    }
-}
-
-/// Evaluate a built-in CQL system function referenced by name.
-///
-/// These are functions that may be emitted as `FunctionRef` by the CQL → ELM
-/// compiler (e.g. `Count`, `Sum`, `ToString`, `ToInteger`).
-fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Value, EvalError> {
-    match (name, args.as_slice()) {
-        // Aggregate
-        ("Count", [list]) => super::lists::count(list),
-        ("Sum", [list]) => super::lists::sum(list),
-        ("Min", [list]) => super::lists::min(list),
-        ("Max", [list]) => super::lists::max(list),
-        ("Avg", [list]) => super::lists::avg(list),
-        // Type conversions
-        ("ToString", [v]) => super::operators::to_string(v),
-        ("ToInteger", [v]) => super::operators::to_integer(v),
-        ("ToLong", [v]) => super::operators::to_long(v),
-        ("ToDecimal", [v]) => super::operators::to_decimal(v),
-        ("ToBoolean", [v]) => super::operators::to_boolean(v),
-        ("ToDate", [v]) => super::operators::to_date(v),
-        ("ToDateTime", [v]) => super::operators::to_datetime(v),
-        ("ToTime", [v]) => super::operators::to_time(v),
-        ("ToQuantity", [v]) => super::operators::to_quantity(v),
-        ("ToConcept", [v]) => super::operators::to_concept(v),
-        _ => Err(EvalError::General(format!(
-            "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)",
-            args.len()
-        ))),
-    }
-}
-
-// Literal evaluation helper
-// ---------------------------------------------------------------------------
-
-fn eval_literal(lit: &crate::elm::Literal) -> Result<Value, EvalError> {
-    let value_str = lit.value.as_deref().unwrap_or("");
-    let raw_type = lit.value_type.as_deref().unwrap_or("");
-    // Strip namespace prefix: "{urn:hl7-org:elm-types:r1}Integer" → "Integer"
-    let value_type = if let Some(pos) = raw_type.rfind('}') {
-        &raw_type[pos + 1..]
-    } else {
-        raw_type
-    };
-
-    match value_type {
-        "Boolean" => Ok(Value::Boolean(value_str == "true")),
-        "Integer" => value_str
-            .parse::<i64>()
-            .map(Value::Integer)
-            .map_err(|_| EvalError::General(format!("Invalid Integer literal: '{value_str}'"))),
-        "Long" => value_str
-            .trim_end_matches('L')
-            .parse::<i128>()
-            .map(Value::Long)
-            .map_err(|_| EvalError::General(format!("Invalid Long literal: '{value_str}'"))),
-        "Decimal" => value_str
-            .parse::<f64>()
-            .map(Value::Decimal)
-            .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'"))),
-        "String" => Ok(Value::String(value_str.to_string())),
-        "" if value_str.is_empty() => Ok(Value::Null),
-        _ => Ok(Value::String(value_str.to_string())),
-    }
-}
+// Note: eval_literal, eval_builtin_function, and strip_elm_namespace live in
+// super::operators so they can be reused without depending on the Engine.
 
 // ---------------------------------------------------------------------------
 // Tests (Task 9.23 — integration tests)

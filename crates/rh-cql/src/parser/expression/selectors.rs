@@ -3,11 +3,10 @@
 //! Covers: Interval, List, bare-list, Tuple, Instance selectors, and
 //! `if/then/else` + `case` expressions.
 
+use super::expression;
+use super::retrieve::parse_type_specifier;
 use crate::parser::ast::*;
-use crate::parser::lexer::{
-    any_identifier, keyword,
-    skip_ws_and_comments, ws,
-};
+use crate::parser::lexer::{any_identifier, keyword, skip_ws_and_comments, ws};
 use crate::parser::span::Span;
 use nom::{
     branch::alt,
@@ -17,8 +16,6 @@ use nom::{
     sequence::{delimited, tuple},
     IResult,
 };
-use super::retrieve::parse_type_specifier;
-use super::expression;
 
 // ============================================================================
 // Collection Constructors
@@ -256,4 +253,3 @@ fn parse_case_item(input: Span<'_>) -> IResult<Span<'_>, CaseItem> {
         },
     ))
 }
-

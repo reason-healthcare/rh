@@ -3,10 +3,15 @@
 //! Covers: `from` queries, implicit-source queries, and all query tail
 //! clauses (`let`, `with`/`without`, `where`, `return`, `aggregate`, `sort`).
 
+use super::expression;
+use super::precedence::{
+    parse_function_or_identifier, parse_index_suffix, parse_member_suffix, InvocationSuffix,
+};
+use super::retrieve::parse_retrieve;
+use super::selectors::{parse_bare_list_selector, parse_list_selector};
 use crate::parser::ast::*;
 use crate::parser::lexer::{
-    any_identifier, identifier, keyword, quoted_identifier,
-    skip_ws_and_comments, ws,
+    any_identifier, identifier, keyword, quoted_identifier, skip_ws_and_comments, ws,
 };
 use crate::parser::span::Span;
 use nom::{
@@ -17,10 +22,6 @@ use nom::{
     sequence::{delimited, preceded, tuple},
     IResult,
 };
-use super::retrieve::parse_retrieve;
-use super::selectors::{parse_list_selector, parse_bare_list_selector};
-use super::precedence::{parse_member_suffix, parse_index_suffix, InvocationSuffix, parse_function_or_identifier};
-use super::expression;
 
 // ============================================================================
 // Query
@@ -235,7 +236,9 @@ pub(crate) fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>
 
 /// Parse a single-source query with an unquoted identifier as source
 /// This handles: `DefinitionName alias where ...` or `Src.property alias where ...`
-pub(crate) fn parse_unquoted_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+pub(crate) fn parse_unquoted_identifier_source_query(
+    input: Span<'_>,
+) -> IResult<Span<'_>, Expression> {
     let (input, _) = skip_ws_and_comments(input)?;
     let start_loc = input.location();
 
@@ -476,4 +479,3 @@ fn parse_sort_item(input: Span<'_>) -> IResult<Span<'_>, SortItem> {
 // ============================================================================
 // Retrieve
 // ============================================================================
-

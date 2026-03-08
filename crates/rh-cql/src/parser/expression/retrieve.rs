@@ -1,12 +1,9 @@
 //! Retrieve expression and type-specifier parsers.
 
-use crate::parser::ast::*;
-use crate::parser::lexer::{
-    any_identifier, keyword,
-    skip_ws_and_comments, ws,
-};
-use crate::parser::span::Span;
 use super::expression;
+use crate::parser::ast::*;
+use crate::parser::lexer::{any_identifier, keyword, skip_ws_and_comments, ws};
+use crate::parser::span::Span;
 use nom::{
     branch::alt,
     bytes::complete::tag_no_case,
@@ -148,4 +145,3 @@ fn parse_qualified_type_name(input: Span<'_>) -> IResult<Span<'_>, (Option<Strin
         Ok((input, (Some(namespace), name)))
     }
 }
-

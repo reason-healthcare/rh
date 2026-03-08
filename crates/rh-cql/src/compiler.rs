@@ -94,9 +94,9 @@ fn run_compile_pipeline(
         .map_err(|e| CompilationError::Parse(e.to_string()))?;
 
     // 2. Resolve model provider
-    let provider = config.model_provider.unwrap_or_else(|| {
-        Arc::new(crate::provider::fhir_r4_provider_from_package())
-    });
+    let provider = config
+        .model_provider
+        .unwrap_or_else(|| Arc::new(crate::provider::fhir_r4_provider_from_package()));
 
     // 3. Semantic analysis
     let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
@@ -144,8 +144,7 @@ fn run_compile_pipeline(
                 .and_then(|i| i.version.as_deref())
                 .unwrap_or("");
             let uri = library_uri.as_deref().unwrap_or("");
-            let doc_id =
-                crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
+            let doc_id = crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
 
             source_map
                 .source_documents
@@ -308,7 +307,9 @@ pub fn compile_with_model(
         },
     )?;
 
-    let library = output.library.expect("pipeline with Elm mode must return a library");
+    let library = output
+        .library
+        .expect("pipeline with Elm mode must return a library");
     let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
 
     Ok(CompilationResult {
@@ -404,8 +405,7 @@ impl SourceMapCompilationResult {
 
     /// Convert the library to compact JSON string.
     pub fn to_compact_json(&self) -> Result<String, CompilationError> {
-        library_to_compact_json(&self.library)
-            .map_err(|e| CompilationError::Output(e.to_string()))
+        library_to_compact_json(&self.library).map_err(|e| CompilationError::Output(e.to_string()))
     }
 
     /// Serialize the source map to a sidecar JSON string (`*.elm.sourcemap.json`).
@@ -988,8 +988,7 @@ mod tests {
     /// Source that compiles cleanly — used to verify zero-error consistency.
     const CLEAN_SOURCE: &str = "library T version '1.0' define X: 1 + 2";
     /// Source that causes a semantic error (undefined reference).
-    const ERROR_SOURCE: &str =
-        "library T version '1.0' define X: UndefinedRef + 1";
+    const ERROR_SOURCE: &str = "library T version '1.0' define X: UndefinedRef + 1";
 
     #[test]
     fn test_consistent_diagnostics_clean_compile_vs_validate() {
@@ -1065,9 +1064,15 @@ mod tests {
         let sm = compile_to_elm_with_sourcemap(CLEAN_SOURCE, None, None).unwrap();
         assert!(sm.is_success());
         let json = sm.to_json().unwrap();
-        assert!(json.contains("\"id\": \"T\""), "pretty JSON must contain id: {json}");
+        assert!(
+            json.contains("\"id\": \"T\""),
+            "pretty JSON must contain id: {json}"
+        );
         let compact = sm.to_compact_json().unwrap();
-        assert!(compact.contains("\"id\":\"T\""), "compact JSON must contain id: {compact}");
+        assert!(
+            compact.contains("\"id\":\"T\""),
+            "compact JSON must contain id: {compact}"
+        );
         let _sm_json = sm.source_map_json().unwrap(); // must not panic
     }
 
@@ -1085,7 +1090,10 @@ mod tests {
             .as_ref()
             .map(|s| s.defs.len())
             .unwrap_or(0);
-        assert!(stmt_count >= 2, "expected at least 2 defs; got {stmt_count}");
+        assert!(
+            stmt_count >= 2,
+            "expected at least 2 defs; got {stmt_count}"
+        );
         assert!(exp.contains("ExpressionDef(A)"), "explain missing A: {exp}");
         assert!(exp.contains("ExpressionDef(B)"), "explain missing B: {exp}");
     }

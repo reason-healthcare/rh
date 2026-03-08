@@ -21,10 +21,10 @@ use super::span::Span;
 use nom::IResult;
 
 mod literals;
-mod selectors;
-mod retrieve;
-mod query;
 mod precedence;
+mod query;
+mod retrieve;
+mod selectors;
 
 /// Parse any CQL expression.
 ///

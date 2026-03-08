@@ -69,10 +69,8 @@ impl SemanticAnalyzer {
                 Some(s.name.clone()),
             ),
             None => {
-                let exc = CqlCompilerException::new(format!(
-                    "Could not resolve identifier: {}",
-                    e.name
-                ));
+                let exc =
+                    CqlCompilerException::new(format!("Could not resolve identifier: {}", e.name));
                 let exc = match e.location {
                     Some(loc) => exc.with_locator(SourceLocator::from(loc)),
                     None => exc,
