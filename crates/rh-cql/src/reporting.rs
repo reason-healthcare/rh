@@ -890,9 +890,10 @@ impl From<CqlCompilerException> for Diagnostic {
         let (code, stage) = match exc.error_type() {
             ExceptionType::Syntax => (DiagnosticCode::ParseSyntax, DiagnosticStage::Parse),
             ExceptionType::Semantic => (DiagnosticCode::SemanticGeneral, DiagnosticStage::Semantic),
-            ExceptionType::Include => {
-                (DiagnosticCode::SemanticIncludeNotFound, DiagnosticStage::Semantic)
-            }
+            ExceptionType::Include => (
+                DiagnosticCode::SemanticIncludeNotFound,
+                DiagnosticStage::Semantic,
+            ),
             ExceptionType::Internal => (DiagnosticCode::EmitInternal, DiagnosticStage::Emit),
         };
         // Convert SourceLocator (line: 1-based, char: 0-based) →

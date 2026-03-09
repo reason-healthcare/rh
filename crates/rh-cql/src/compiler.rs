@@ -106,8 +106,7 @@ fn run_compile_pipeline(
     );
     let (typed_library, raw_diagnostics) = analyzer.analyze(ast);
 
-    let diagnostics: Vec<Diagnostic> =
-        raw_diagnostics.into_iter().map(Diagnostic::from).collect();
+    let diagnostics: Vec<Diagnostic> = raw_diagnostics.into_iter().map(Diagnostic::from).collect();
 
     // 4. Optionally emit ELM and/or source map
     match config.emit_mode {

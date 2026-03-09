@@ -68,9 +68,9 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 10. Performance and Benchmarking
 
-- [ ] 10.1 Establish baseline benchmarks for compilation and evaluation before implementing indexing changes
-- [ ] 10.2 Add performance regression tests to CI to track lookup and evaluation speed improvements
-- [ ] 10.3 Verify that the refactor provides measurable improvements for large library lookup
+- [x] 10.1 Establish baseline benchmarks for compilation and evaluation before implementing indexing changes
+- [x] 10.2 Add performance regression tests to CI to track lookup and evaluation speed improvements
+- [x] 10.3 Verify that the refactor provides measurable improvements for large library lookup
 
 ## 11. "Golden File" Verification
 
@@ -93,7 +93,7 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 - [x] A. Complete warning cleanup first so structural regressions are easier to spot
 - [x] B. Consolidate the compilation pipeline before parser or evaluation refactors
-- [ ] C. Establish baseline benchmarks and golden files to protect against regressions
+- [x] C. Establish baseline benchmarks and golden files to protect against regressions
 - [x] D. Refactor CLI code after the pipeline is unified
 - [x] E. Add definition indexes before deeper evaluation cleanup
 - [x] F. Split parser, evaluation, and library modules after behavior is covered by tests

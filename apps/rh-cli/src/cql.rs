@@ -10,7 +10,7 @@ use tracing::{error, info};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
     evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
-    Diagnostic, CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
+    CqlDateTime, Diagnostic, EvalContextBuilder, FixedClock, SignatureLevel,
 };
 
 #[derive(Subcommand)]
@@ -179,9 +179,7 @@ fn print_diagnostic_list(items: &[Diagnostic], prefix: &str, with_location: bool
             if let Some(span) = &item.span {
                 eprintln!(
                     "  {prefix} {} (line {}, col {})",
-                    item.message,
-                    span.start.line,
-                    span.start.column
+                    item.message, span.start.line, span.start.column
                 );
                 continue;
             }
@@ -194,10 +192,7 @@ fn print_diagnostic_list(items: &[Diagnostic], prefix: &str, with_location: bool
 ///
 /// Should be called when a compilation result is not successful. Returns an
 /// `anyhow::Error` so callers can propagate with `return Err(...)` or `?`.
-fn report_compile_failure(
-    errors: &[Diagnostic],
-    warnings: &[Diagnostic],
-) -> anyhow::Error {
+fn report_compile_failure(errors: &[Diagnostic], warnings: &[Diagnostic]) -> anyhow::Error {
     eprintln!("✗ Compilation failed with {} error(s):\n", errors.len());
     print_diagnostic_list(errors, "✗", true);
     if !warnings.is_empty() {
@@ -442,9 +437,7 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
                     if let Some(span) = &warning.span {
                         println!(
                             "  ⚠ {} (line {}, col {})",
-                            warning.message,
-                            span.start.line,
-                            span.start.column
+                            warning.message, span.start.line, span.start.column
                         );
                         continue;
                     }
@@ -460,9 +453,7 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             if let Some(span) = &err.span {
                 println!(
                     "  ✗ {} (line {}, col {})",
-                    err.message,
-                    span.start.line,
-                    span.start.column
+                    err.message, span.start.line, span.start.column
                 );
             } else {
                 println!("  ✗ {}", err.message);
@@ -476,9 +467,7 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
                     if let Some(span) = &warning.span {
                         println!(
                             "  ⚠ {} (line {}, col {})",
-                            warning.message,
-                            span.start.line,
-                            span.start.column
+                            warning.message, span.start.line, span.start.column
                         );
                         continue;
                     }
