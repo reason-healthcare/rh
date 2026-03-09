@@ -222,7 +222,7 @@ impl fmt::Display for CqlDateTime {
 
 impl fmt::Display for CqlTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "T{:02}", self.hour)?;
+        write!(f, "{:02}", self.hour)?;
         if let Some(m) = self.minute {
             write!(f, ":{:02}", m)?;
             if let Some(s) = self.second {
@@ -280,7 +280,7 @@ impl fmt::Display for Value {
             Value::String(s) => write!(f, "'{s}'"),
             Value::Date(d) => write!(f, "@{d}"),
             Value::DateTime(dt) => write!(f, "@{dt}"),
-            Value::Time(t) => write!(f, "@{t}"),
+            Value::Time(t) => write!(f, "@T{t}"),
             Value::Quantity(q) => write!(f, "{q}"),
             Value::Ratio {
                 numerator,
@@ -354,6 +354,60 @@ pub fn cql_equal(a: &Value, b: &Value) -> Value {
     if matches!(a, Value::Null) || matches!(b, Value::Null) {
         return Value::Null;
     }
+    // Integer/Decimal cross-type comparison: implicit promotion.
+    match (a, b) {
+        (Value::Decimal(x), Value::Integer(y)) => return Value::Boolean(*x == *y as f64),
+        (Value::Integer(x), Value::Decimal(y)) => return Value::Boolean(*x as f64 == *y),
+        // Time equality: different precision → Null (CQL §5.6).
+        (Value::Time(at), Value::Time(bt)) => {
+            if at.millisecond.is_some() != bt.millisecond.is_some()
+                || at.second.is_some() != bt.second.is_some()
+                || at.minute.is_some() != bt.minute.is_some()
+            {
+                return Value::Null;
+            }
+            return Value::Boolean(at == bt);
+        }
+        // DateTime equality: different precision → Null.
+        (Value::DateTime(adt), Value::DateTime(bdt)) => {
+            if adt.millisecond.is_some() != bdt.millisecond.is_some()
+                || adt.second.is_some() != bdt.second.is_some()
+                || adt.minute.is_some() != bdt.minute.is_some()
+                || adt.hour.is_some() != bdt.hour.is_some()
+                || adt.day.is_some() != bdt.day.is_some()
+                || adt.month.is_some() != bdt.month.is_some()
+            {
+                return Value::Null;
+            }
+            return Value::Boolean(adt == bdt);
+        }
+        // Date equality: different precision → Null.
+        (Value::Date(ad), Value::Date(bd)) => {
+            if ad.day.is_some() != bd.day.is_some() || ad.month.is_some() != bd.month.is_some() {
+                return Value::Null;
+            }
+            return Value::Boolean(ad == bd);
+        }
+        // List equality: element-by-element with null propagation.
+        (Value::List(av), Value::List(bv)) => {
+            if av.len() != bv.len() {
+                return Value::Boolean(false);
+            }
+            let mut result = Value::Boolean(true);
+            for (ai, bi) in av.iter().zip(bv.iter()) {
+                match cql_equal(ai, bi) {
+                    Value::Null => {
+                        // A null comparison propagates null (unless we later see false).
+                        result = Value::Null;
+                    }
+                    Value::Boolean(false) => return Value::Boolean(false),
+                    _ => {}
+                }
+            }
+            return result;
+        }
+        _ => {}
+    }
     Value::Boolean(a == b)
 }
 
@@ -378,6 +432,9 @@ pub fn cql_equivalent(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Null, Value::Null) => true,
         (Value::Null, _) | (_, Value::Null) => false,
+        // Integer/Decimal cross-type: 1.0 ~ 1 → true
+        (Value::Decimal(x), Value::Integer(y)) => *x == *y as f64,
+        (Value::Integer(x), Value::Decimal(y)) => *x as f64 == *y,
         // Decimal: treat NaN as not equivalent; use total-order bitwise compare
         // to avoid surprises from IEEE 754 NaN behavior.
         (Value::Decimal(x), Value::Decimal(y)) => x.to_bits() == y.to_bits(),

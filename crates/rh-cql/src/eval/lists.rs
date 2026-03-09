@@ -162,35 +162,65 @@ pub fn last(list: &Value) -> Result<Value, EvalError> {
     Ok(items.last().cloned().unwrap_or(Value::Null))
 }
 
-/// `IndexOf` — returns the 1-based index of the first occurrence of `element`
+/// `IndexOf` — returns the 0-based index of the first occurrence of `element`
 /// in `list`, or -1 if not found.
 pub fn index_of(list: &Value, element: &Value) -> Result<Value, EvalError> {
-    if matches!(list, Value::Null) || matches!(element, Value::Null) {
+    if matches!(list, Value::Null) {
         return Ok(Value::Null);
+    }
+    if matches!(element, Value::Null) {
+        // Special case: find null in the list (null element can be in a list)
+        let items = require_list("IndexOf", list)?;
+        for (i, v) in items.iter().enumerate() {
+            if matches!(v, Value::Null) {
+                return Ok(Value::Integer(i as i64)); // 0-based
+            }
+        }
+        return Ok(Value::Integer(-1));
     }
     let items = require_list("IndexOf", list)?;
     for (i, v) in items.iter().enumerate() {
         if cql_equal(v, element) == Value::Boolean(true) {
-            return Ok(Value::Integer((i + 1) as i64));
+            return Ok(Value::Integer(i as i64)); // 0-based
         }
     }
     Ok(Value::Integer(-1))
 }
 
 /// `Contains` (list) — true if `list` contains `element`.
+///
+/// If the list is null (treated as empty), returns false.
+/// If the element is null, propagates null (per CQL spec §20.3).
+/// If comparison with a list element returns null (e.g. precision mismatch),
+/// and no definitive true match is found, the result is null.
 pub fn list_contains(list: &Value, element: &Value) -> Result<Value, EvalError> {
+    // Null list = empty list, doesn't contain anything
     if matches!(list, Value::Null) {
-        return Ok(Value::Null);
+        return Ok(Value::Boolean(false));
     }
+    // Null element: standard null propagation (per CQL spec §20.3)
     if matches!(element, Value::Null) {
         return Ok(Value::Null);
     }
     let items = require_list("Contains", list)?;
-    Ok(Value::Boolean(
-        items
-            .iter()
-            .any(|v| cql_equal(v, element) == Value::Boolean(true)),
-    ))
+    let mut had_null = false;
+    for v in items {
+        // Null items in the list are never equal to any element per CQL null semantics.
+        if matches!(v, Value::Null) {
+            continue;
+        }
+        match cql_equal(v, element) {
+            Value::Boolean(true) => return Ok(Value::Boolean(true)),
+            // Null result from comparison (e.g. precision mismatch) propagates.
+            Value::Null => had_null = true,
+            _ => {}
+        }
+    }
+    if had_null {
+        Ok(Value::Null)
+    } else {
+        Ok(Value::Boolean(false))
+    }
 }
 
 /// `In` (list) — alias for `Contains` with reversed arguments.
@@ -368,15 +398,34 @@ pub fn except_list(a: &Value, b: &Value) -> Result<Value, EvalError> {
 // ---------------------------------------------------------------------------
 
 /// `Includes` (list) — true if list `a` contains every element of list `b`.
+///
+/// Null container (a) = empty list → returns false (unless b is also null/empty).
+/// Null item list (b) = empty list → returns true (any list includes empty).
+/// Null elements in b are matched via identity (null in a = match).
 pub fn list_includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    if matches!(a, Value::Null) || matches!(b, Value::Null) {
-        return Ok(Value::Null);
+    // Null container = empty list → only includes empty list
+    if matches!(a, Value::Null) {
+        // empty includes empty (true), empty doesn't include non-empty (false)
+        return match b {
+            Value::Null => Ok(Value::Boolean(true)),
+            Value::List(bv) => Ok(Value::Boolean(bv.is_empty())),
+            _ => Ok(Value::Boolean(false)),
+        };
+    }
+    // Null item list = empty list → any list includes empty
+    if matches!(b, Value::Null) {
+        return Ok(Value::Boolean(true));
     }
     let av = require_list("Includes", a)?;
     let bv = require_list("Includes", b)?;
     Ok(Value::Boolean(bv.iter().all(|bitem| {
-        av.iter()
-            .any(|aitem| cql_equal(aitem, bitem) == Value::Boolean(true))
+        if matches!(bitem, Value::Null) {
+            // Check if null is literally in av
+            av.iter().any(|aitem| matches!(aitem, Value::Null))
+        } else {
+            av.iter()
+                .any(|aitem| cql_equal(aitem, bitem) == Value::Boolean(true))
+        }
     })))
 }
 
@@ -602,7 +651,7 @@ mod tests {
     fn index_of_found() {
         assert_eq!(
             index_of(&int_list(vec![10, 20, 30]), &Value::Integer(20)).unwrap(),
-            Value::Integer(2)
+            Value::Integer(1) // 0-based: 20 is at index 1
         );
     }
 

@@ -206,6 +206,46 @@ enum ExpectedValue {
 ///
 /// Unsupported formats are returned as `[ExpectedValue::Unsupported]` so the
 /// test can be skipped rather than failed.
+/// Decode CQL string escape sequences: `\uXXXX` → actual unicode char, `\\` → `\`, etc.
+fn decode_cql_string_escapes(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('u') => {
+                    // Collect exactly 4 hex digits
+                    let hex: String = (0..4).filter_map(|_| chars.next()).collect();
+                    if let Ok(n) = u32::from_str_radix(&hex, 16) {
+                        if let Some(ch) = char::from_u32(n) {
+                            result.push(ch);
+                            continue;
+                        }
+                    }
+                    // If parsing fails, keep as-is
+                    result.push('\\');
+                    result.push('u');
+                    result.push_str(&hex);
+                }
+                Some('n') => result.push('\n'),
+                Some('r') => result.push('\r'),
+                Some('t') => result.push('\t'),
+                Some('\\') => result.push('\\'),
+                Some('\'') => result.push('\''),
+                Some('"') => result.push('"'),
+                Some(other) => {
+                    result.push('\\');
+                    result.push(other);
+                }
+                None => result.push('\\'),
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 fn parse_expected(raw: &str) -> ExpectedValue {
     let s = raw.trim();
 
@@ -249,7 +289,9 @@ fn parse_expected(raw: &str) -> ExpectedValue {
     // String literals: CQL strings are delimited by single quotes.
     // Note: the test XML uses single-quoted strings like 'abc'.
     if s.starts_with('\'') && s.ends_with('\'') {
-        return ExpectedValue::Str(s[1..s.len() - 1].to_string());
+        let inner = &s[1..s.len() - 1];
+        let decoded = decode_cql_string_escapes(inner);
+        return ExpectedValue::Str(decoded);
     }
 
     // Try integer (no decimal point)
@@ -345,7 +387,7 @@ enum Outcome {
     /// `invalid="true"` test that correctly produced an error/null result.
     InvalidPass,
     /// `invalid="true"` test that unexpectedly succeeded.
-    InvalidFail(String),
+    InvalidFail(#[allow(dead_code)] String),
 }
 
 fn shared_clock() -> FixedClock {

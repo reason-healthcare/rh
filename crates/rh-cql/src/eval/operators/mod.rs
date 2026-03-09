@@ -18,7 +18,7 @@ pub use temporal::*;
 
 use super::super::elm;
 use super::context::EvalError;
-use super::value::Value;
+use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 
 // ---------------------------------------------------------------------------
 // ELM namespace utilities (shared with the engine)
@@ -38,6 +38,118 @@ pub(crate) fn strip_elm_namespace(raw: &str) -> &str {
 // ---------------------------------------------------------------------------
 // Literal evaluation (shared with the engine)
 // ---------------------------------------------------------------------------
+
+/// Parse a time string `"HH:MM"`, `"HH:MM:SS"`, or `"HH:MM:SS.mmm"` → `Value::Time`.
+fn parse_time_value(s: &str) -> Result<Value, EvalError> {
+    let parts: Vec<&str> = s.splitn(3, ':').collect();
+    if parts.len() < 2 {
+        return Err(EvalError::General(format!("Invalid Time literal: '{s}'")));
+    }
+    let hour = parts[0]
+        .parse::<u8>()
+        .map_err(|_| EvalError::General(format!("Invalid Time hour in '{s}'")))?;
+    let minute = parts[1].parse::<u8>().ok();
+    if parts.len() == 2 {
+        return Ok(Value::Time(CqlTime {
+            hour,
+            minute,
+            second: None,
+            millisecond: None,
+        }));
+    }
+    // parts[2] is "SS" or "SS.mmm"
+    let sec_ms: Vec<&str> = parts[2].splitn(2, '.').collect();
+    let second = sec_ms[0].parse::<u8>().ok();
+    // Milliseconds: "9"→900ms, "99"→990ms, "999"→999ms (right-pad with zeros to 3 digits)
+    let millisecond = sec_ms.get(1).and_then(|ms_str| {
+        let padded = format!("{:0<3}", ms_str);
+        padded[..3].parse::<u32>().ok()
+    });
+    Ok(Value::Time(CqlTime {
+        hour,
+        minute,
+        second,
+        millisecond,
+    }))
+}
+
+/// Parse a date string `"YYYY"`, `"YYYY-MM"`, or `"YYYY-MM-DD"` → `Value::Date`.
+fn parse_date_value(s: &str) -> Result<Value, EvalError> {
+    let parts: Vec<&str> = s.splitn(3, '-').collect();
+    if parts.is_empty() {
+        return Err(EvalError::General(format!("Invalid Date literal: '{s}'")));
+    }
+    let year = parts[0]
+        .parse::<i32>()
+        .map_err(|_| EvalError::General(format!("Invalid Date year in '{s}'")))?;
+    let month = parts.get(1).and_then(|m| m.parse::<u8>().ok());
+    let day = parts.get(2).and_then(|d| d.parse::<u8>().ok());
+    Ok(Value::Date(CqlDate { year, month, day }))
+}
+
+/// Parse a timezone offset string like `"+05:00"` or `"-07:00"` → seconds east of UTC.
+fn parse_tz_offset(tz: &str) -> Option<i32> {
+    if tz.len() < 6 {
+        return None;
+    }
+    let sign: i32 = if tz.starts_with('+') { 1 } else { -1 };
+    let h: i32 = tz[1..3].parse().ok()?;
+    let m: i32 = tz[4..6].parse().ok()?;
+    Some(sign * (h * 3600 + m * 60))
+}
+
+/// Parse a datetime string `"YYYY-MM-DDTHH:MM:SS.mmm[±HH:MM]"` → `Value::DateTime`.
+fn parse_datetime_value(s: &str) -> Result<Value, EvalError> {
+    let t_pos = s.find('T').ok_or_else(|| {
+        EvalError::General(format!("Invalid DateTime literal (missing T): '{s}'"))
+    })?;
+    let date_str = &s[..t_pos];
+    let time_and_tz = &s[t_pos + 1..];
+
+    // Strip timezone suffix (+HH:MM, -HH:MM, Z).
+    let (time_str, offset_seconds) = if let Some(stripped) = time_and_tz.strip_suffix('Z') {
+        (stripped, Some(0i32))
+    } else if let Some(pos) = time_and_tz.rfind(['+', '-']).filter(|&p| p > 0) {
+        let offset = parse_tz_offset(&time_and_tz[pos..]);
+        (&time_and_tz[..pos], offset)
+    } else {
+        (time_and_tz, None)
+    };
+
+    let date_parts: Vec<&str> = date_str.splitn(3, '-').collect();
+    let year = date_parts
+        .first()
+        .and_then(|y| y.parse::<i32>().ok())
+        .ok_or_else(|| EvalError::General(format!("Invalid DateTime year in '{s}'")))?;
+    let month = date_parts.get(1).and_then(|m| m.parse::<u8>().ok());
+    let day = date_parts.get(2).and_then(|d| d.parse::<u8>().ok());
+
+    let time_parts: Vec<&str> = time_str.splitn(3, ':').collect();
+    let hour = time_parts.first().and_then(|h| h.parse::<u8>().ok());
+    let minute = time_parts.get(1).and_then(|m| m.parse::<u8>().ok());
+    let (second, millisecond) = if let Some(sec_ms) = time_parts.get(2) {
+        let sec_ms_parts: Vec<&str> = sec_ms.splitn(2, '.').collect();
+        let sec = sec_ms_parts.first().and_then(|s| s.parse::<u8>().ok());
+        let ms = sec_ms_parts.get(1).and_then(|ms_str| {
+            let padded = format!("{:0<3}", ms_str);
+            padded[..3].parse::<u32>().ok()
+        });
+        (sec, ms)
+    } else {
+        (None, None)
+    };
+
+    Ok(Value::DateTime(CqlDateTime {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond,
+        offset_seconds,
+    }))
+}
 
 /// Parse an ELM [`Literal`] node into a runtime [`Value`].
 pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
@@ -61,6 +173,9 @@ pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
             .map(Value::Decimal)
             .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'"))),
         "String" => Ok(Value::String(value_str.to_string())),
+        "Date" => parse_date_value(value_str),
+        "DateTime" => parse_datetime_value(value_str),
+        "Time" => parse_time_value(value_str),
         "" if value_str.is_empty() => Ok(Value::Null),
         _ => Ok(Value::String(value_str.to_string())),
     }
