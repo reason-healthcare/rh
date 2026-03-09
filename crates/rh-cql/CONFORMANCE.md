@@ -170,45 +170,15 @@ python3 scripts/compare_translators.py --suite test-cases/jvmTest/
 
 ## 4. Feature Implementation Status
 
-### 4.1 Language features
+For an exhaustive, operator-by-operator breakdown of what is and is not implemented across all
+four pipeline stages (Parse → Semantic → Emit → Eval), see:
 
-| Feature area | Parser | Semantic analysis | ELM emission | Evaluation |
-|---|---|---|---|---|
-| Value literals (Boolean, Integer, Decimal, String, null) | ✅ | ✅ | ✅ | ✅ |
-| Long literals | ❌ | — | — | — |
-| Quantity literals (`1'cm'`) | ❌ | — | — | — |
-| Date/Time/Time literals | ✅ | ✅ | ✅ | ✅ |
-| Ratio literals | ❌ | — | — | — |
-| List selectors `{ }` | ✅ | ✅ | ✅ | ✅ |
-| Tuple selectors | ✅ | ✅ | ✅ | ✅ |
-| Interval selectors | ✅ | ✅ | ✅ | ✅ |
-| Logical operators (And, Or, Not, Xor, Implies) | ✅ | ✅ | ✅ | ✅ |
-| Comparison operators (=, ≠, <, ≤, >, ≥) | ✅ | ✅ | ✅ | ✅ |
-| Arithmetic operators (+, -, *, /, mod, ^) | ✅ | ✅ | ✅ | ✅ |
-| String operators (Combine, Split, Upper, Lower, Length, etc.) | ✅ | ✅ | ✅ | ✅ |
-| Type operators (is, as, cast, convert) | ✅ | ✅ | ✅ | Partial |
-| Nullological operators (IsNull, IsTrue, IsFalse, Coalesce) | ✅ | ✅ | ✅ | ❌ |
-| If-then-else / Case expressions | ✅ | ✅ | ✅ | ✅ |
-| Query (`from … where … return … sort`) | ✅ | ✅ | ✅ | ✅ |
-| Multi-source queries | ✅ | Partial | Partial | Partial |
-| Aggregate clause in queries | ✅ | Partial | Partial | ❌ |
-| Retrieve (clinical FHIR data) | ✅ | ✅ | ✅ | ❌ |
-| Interval operators (In, Includes, Before, After, etc.) | ✅ | ✅ | ✅ | ✅ |
-| List operators (Exists, First, Last, Count, etc.) | ✅ | ✅ | ✅ | ✅ |
-| Date/Time operators (After, Before, During, etc.) | ✅ | ✅ | ✅ | Partial |
-| Temporal precision phrases | ✅ | ✅ | ✅ | Partial |
-| Aggregate functions (Sum, Min, Max, Avg, Count, etc.) | ✅ | Partial | Partial | Partial |
-| System math functions (Abs, Ceiling, Floor, etc.) | ✅ parser | ✅ semantic | ❌ emit as `FunctionRef` | ❌ |
-| Predecessor / Successor | ✅ | ✅ | ✅ | ✅ |
-| MinValue / MaxValue | ✅ | ✅ | ✅ | ✅ |
-| Error / Messaging operators (Message) | ✅ | Partial | Partial | ❌ |
-| Function definitions and calls | ✅ | ✅ | ✅ | ✅ |
-| Included library references | ✅ | ✅ | ✅ | Partial |
-| Parameters | ✅ | ✅ | ✅ | ✅ |
-| `using` declarations (FHIR model) | ✅ | ✅ | ✅ | N/A |
-| Source maps | ✅ | ✅ | ✅ | N/A |
+➡ **[SPEC_COVERAGE.md](SPEC_COVERAGE.md)**
 
-### 4.2 Compilation pipeline features
+That document covers every operator defined in CQL 1.5.3 Appendix B, all 130 lexer keywords, all
+grammar productions, and a prioritised gap summary.
+
+### 4.1 Compilation pipeline features
 
 | Feature | Status |
 |---|---|
@@ -221,7 +191,7 @@ python3 scripts/compare_translators.py --suite test-cases/jvmTest/
 | ELM XML output | ❌ |
 | Compile-to-FHIR-Library | ❌ |
 
-### 4.3 Evaluation engine features
+### 4.2 Evaluation engine features
 
 | Feature | Status |
 |---|---|
@@ -234,9 +204,6 @@ python3 scripts/compare_translators.py --suite test-cases/jvmTest/
 | FHIR data access via `InMemoryDataProvider` | ✅ |
 | Terminology service (`InMemoryTerminologyProvider`) | ✅ |
 | Retrieve execution | ❌ |
-| System function built-ins (Abs, Ceiling, Floor, Round, Ln, Exp, Log) | ❌ |
-| Nullological built-ins (IsNull, IsTrue, IsFalse, Coalesce) | ❌ |
-| Error/Messaging operators | ❌ |
 | Library includes in evaluation | Partial |
 | Query evaluation (single source) | ✅ |
 | Query aggregate clause | ❌ |
