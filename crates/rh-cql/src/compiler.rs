@@ -42,6 +42,80 @@ use crate::reporting::{Diagnostic, Severity};
 use crate::semantics::typed_ast::TypedLibrary;
 use std::sync::Arc;
 
+// ── CompilationContext ───────────────────────────────────────────────────────
+
+/// Shared compilation environment passed through the compiler and semantics
+/// pipeline stages.
+///
+/// `CompilationContext` consolidates [`CompilerOptions`] and an optional
+/// [`ModelInfoProvider`][crate::provider::ModelInfoProvider] so that the same
+/// context object can be constructed once and threaded through
+/// `run_compile_pipeline`, `SemanticAnalyzer`, and the ELM emitter without
+/// repeating the same pair of arguments at every call site.
+///
+/// # Example
+///
+/// ```rust
+/// use rh_cql::{CompilationContext, CompilerOptions, SignatureLevel};
+///
+/// let ctx = CompilationContext::new(
+///     CompilerOptions::default().with_signature_level(SignatureLevel::All),
+///     None,
+/// );
+/// assert!(ctx.model_provider().is_none());
+/// ```
+#[derive(Clone, Default)]
+pub struct CompilationContext {
+    /// Compiler options controlling translation behaviour.
+    pub options: CompilerOptions,
+    /// Optional model provider; `None` falls back to the bundled FHIR R4
+    /// provider at the point of use.
+    model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
+}
+
+impl CompilationContext {
+    /// Create a new context with the given options and an optional model
+    /// provider.
+    pub fn new(
+        options: CompilerOptions,
+        model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
+    ) -> Self {
+        CompilationContext {
+            options,
+            model_provider,
+        }
+    }
+
+    /// Return the model provider if one was supplied, or `None`.
+    pub fn model_provider(&self) -> Option<&Arc<dyn crate::provider::ModelInfoProvider>> {
+        self.model_provider.as_ref()
+    }
+
+    /// Resolve to a concrete provider: the stored one, or the default FHIR R4
+    /// provider.
+    pub(crate) fn resolve_provider(&self) -> Arc<dyn crate::provider::ModelInfoProvider> {
+        self.model_provider
+            .clone()
+            .unwrap_or_else(|| Arc::new(crate::provider::fhir_r4_provider_from_package()))
+    }
+}
+
+impl std::fmt::Debug for CompilationContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompilationContext")
+            .field("options", &self.options)
+            .field(
+                "model_provider",
+                if self.model_provider.is_some() {
+                    &"Some(...)"
+                } else {
+                    &"None"
+                },
+            )
+            .finish()
+    }
+}
+
 // ── Internal shared pipeline ────────────────────────────────────────────────
 
 /// Controls whether (and how) ELM is emitted after semantic analysis.
@@ -59,9 +133,8 @@ enum PipelineEmitMode {
 
 /// Configuration for [`run_compile_pipeline`].
 struct PipelineConfig {
-    options: CompilerOptions,
-    /// When `None`, the default FHIR R4 provider is used.
-    model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
+    /// Shared compilation environment (options + optional model provider).
+    context: CompilationContext,
     emit_mode: PipelineEmitMode,
 }
 
@@ -95,14 +168,12 @@ fn run_compile_pipeline(
         .map_err(|e| CompilationError::Parse(e.to_string()))?;
 
     // 2. Resolve model provider
-    let provider = config
-        .model_provider
-        .unwrap_or_else(|| Arc::new(crate::provider::fhir_r4_provider_from_package()));
+    let provider = config.context.resolve_provider();
 
     // 3. Semantic analysis
     let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
         Arc::clone(&provider),
-        config.options.clone(),
+        config.context.options.clone(),
     );
     let (typed_library, raw_diagnostics) = analyzer.analyze(ast);
 
@@ -118,7 +189,7 @@ fn run_compile_pipeline(
         }),
 
         PipelineEmitMode::Elm => {
-            let mut emitter = crate::emit::ElmEmitter::new(config.options.clone());
+            let mut emitter = crate::emit::ElmEmitter::new(config.context.options.clone());
             let library = emitter.emit(typed_library);
             Ok(PipelineOutput {
                 typed_library: None,
@@ -129,7 +200,7 @@ fn run_compile_pipeline(
         }
 
         PipelineEmitMode::ElmWithSourceMap { library_uri } => {
-            let mut emitter = crate::emit::ElmEmitter::new(config.options.clone());
+            let mut emitter = crate::emit::ElmEmitter::new(config.context.options.clone());
             let library = emitter.emit(typed_library);
             let mut source_map = emitter.take_source_map();
 
@@ -305,8 +376,7 @@ pub fn compile_with_model(
     let output = run_compile_pipeline(
         source,
         PipelineConfig {
-            options: options.clone(),
-            model_provider,
+            context: CompilationContext::new(options.clone(), model_provider),
             emit_mode: PipelineEmitMode::Elm,
         },
     )?;
@@ -459,8 +529,7 @@ pub fn compile_to_elm_with_sourcemap(
     let output = run_compile_pipeline(
         source,
         PipelineConfig {
-            options: options.clone(),
-            model_provider: None,
+            context: CompilationContext::new(options.clone(), None),
             emit_mode: PipelineEmitMode::ElmWithSourceMap {
                 library_uri: library_uri.map(str::to_owned),
             },
@@ -515,8 +584,7 @@ pub fn validate(
     let output = run_compile_pipeline(
         source,
         PipelineConfig {
-            options: options.clone(),
-            model_provider: None,
+            context: CompilationContext::new(options.clone(), None),
             emit_mode: PipelineEmitMode::None,
         },
     )?;
@@ -630,8 +698,7 @@ pub fn explain_compile(
     let output = run_compile_pipeline(
         source,
         PipelineConfig {
-            options,
-            model_provider: None,
+            context: CompilationContext::new(options, None),
             emit_mode: PipelineEmitMode::None,
         },
     )?;

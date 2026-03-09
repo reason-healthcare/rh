@@ -80,9 +80,9 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 12. Internal Context Consolidation
 
-- [ ] 12.1 Introduce a `CompilationContext` to streamline function signatures in the compiler and semantics modules
-- [ ] 12.2 Consolidate options, providers, and registries into a shared context object passed through the pipeline
-- [ ] 12.3 Reduce parameter drilling in the evaluation engine using a consolidated `EvalContext`
+- [x] 12.1 Introduce a `CompilationContext` to streamline function signatures in the compiler and semantics modules
+- [x] 12.2 Consolidate options, providers, and registries into a shared context object passed through the pipeline
+- [x] 12.3 Reduce parameter drilling in the evaluation engine using a consolidated `EvalContext`
 
 ## 13. XML Parsing Modernization
 

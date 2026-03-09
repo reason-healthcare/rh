@@ -97,8 +97,8 @@ pub mod types;
 // Primary public API - compile CQL to ELM
 pub use compiler::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_model, explain_compile,
-    explain_parse, validate, CompilationError, CompilationResult, SourceMapCompilationResult,
-    ValidationResult,
+    explain_parse, validate, CompilationContext, CompilationError, CompilationResult,
+    SourceMapCompilationResult, ValidationResult,
 };
 pub use explain::explain_eval;
 
