@@ -134,7 +134,8 @@ pub use provider::{
     MemoryModelInfoProvider, ModelInfoProvider,
 };
 pub use reporting::{
-    CqlCompilerException, ExceptionCollector, ExceptionType, Severity, SourceLocator,
+    CqlCompilerException, Diagnostic, DiagnosticCode, DiagnosticCollection, DiagnosticStage,
+    ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
 #[deprecated(
     since = "0.1.0",

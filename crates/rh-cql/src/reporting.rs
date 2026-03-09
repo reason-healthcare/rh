@@ -647,6 +647,406 @@ impl From<CqlCompilerException> for CqlToElmError {
     }
 }
 
+// ── Unified Diagnostic System (§9) ──────────────────────────────────────────
+
+/// Unique, machine-readable error codes identifying specific diagnostic
+/// conditions across all CQL pipeline stages.
+///
+/// Codes are grouped by stage prefix:
+/// - `CQL-1xxx` — Parse stage
+/// - `CQL-2xxx` — Semantic stage
+/// - `CQL-3xxx` — Emit stage
+/// - `CQL-4xxx` — Eval (runtime) stage
+/// - `CQL-0000` — Unknown / unclassified
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DiagnosticCode {
+    // ── Parse stage (CQL-1xxx) ──────────────────────────────────────────────
+    /// Unexpected token encountered during parsing.
+    ParseUnexpectedToken,
+    /// Unexpected end of input during parsing.
+    ParseUnexpectedEof,
+    /// General syntax error during parsing.
+    ParseSyntax,
+
+    // ── Semantic stage (CQL-2xxx) ───────────────────────────────────────────
+    /// Reference to an undefined symbol.
+    SemanticUndefinedSymbol,
+    /// Type mismatch between operands or in assignment.
+    SemanticTypeMismatch,
+    /// Call to an undefined or unresolvable function.
+    SemanticUndefinedFunction,
+    /// Reference to an undefined type.
+    SemanticUndefinedType,
+    /// Included library could not be found.
+    SemanticIncludeNotFound,
+    /// General semantic analysis error.
+    SemanticGeneral,
+
+    // ── Emit stage (CQL-3xxx) ───────────────────────────────────────────────
+    /// Internal ELM emitter error.
+    EmitInternal,
+
+    // ── Eval stage (CQL-4xxx) ───────────────────────────────────────────────
+    /// A `Retrieve` operation failed at runtime.
+    EvalRetrieveFailed,
+    /// A terminology operation failed at runtime.
+    EvalTerminologyFailed,
+    /// An expression was not found in the library at runtime.
+    EvalExpressionNotFound,
+    /// General runtime evaluation error.
+    EvalGeneral,
+
+    // ── Unknown (CQL-0000) ──────────────────────────────────────────────────
+    /// Unclassified diagnostic.
+    Unknown,
+}
+
+impl DiagnosticCode {
+    /// Return a short, human-readable code string (e.g. `"CQL-2001"`).
+    pub fn as_code_str(&self) -> &'static str {
+        match self {
+            DiagnosticCode::ParseUnexpectedToken => "CQL-1001",
+            DiagnosticCode::ParseUnexpectedEof => "CQL-1002",
+            DiagnosticCode::ParseSyntax => "CQL-1003",
+            DiagnosticCode::SemanticUndefinedSymbol => "CQL-2001",
+            DiagnosticCode::SemanticTypeMismatch => "CQL-2002",
+            DiagnosticCode::SemanticUndefinedFunction => "CQL-2003",
+            DiagnosticCode::SemanticUndefinedType => "CQL-2004",
+            DiagnosticCode::SemanticIncludeNotFound => "CQL-2005",
+            DiagnosticCode::SemanticGeneral => "CQL-2000",
+            DiagnosticCode::EmitInternal => "CQL-3001",
+            DiagnosticCode::EvalRetrieveFailed => "CQL-4001",
+            DiagnosticCode::EvalTerminologyFailed => "CQL-4002",
+            DiagnosticCode::EvalExpressionNotFound => "CQL-4003",
+            DiagnosticCode::EvalGeneral => "CQL-4000",
+            DiagnosticCode::Unknown => "CQL-0000",
+        }
+    }
+}
+
+impl std::fmt::Display for DiagnosticCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_code_str())
+    }
+}
+
+/// The CQL pipeline stage that produced a diagnostic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum DiagnosticStage {
+    /// CQL source parsing stage.
+    Parse,
+    /// Semantic analysis stage.
+    #[default]
+    Semantic,
+    /// ELM emission stage.
+    Emit,
+    /// CQL evaluation (runtime) stage.
+    Eval,
+}
+
+impl std::fmt::Display for DiagnosticStage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            DiagnosticStage::Parse => "parse",
+            DiagnosticStage::Semantic => "semantic",
+            DiagnosticStage::Emit => "emit",
+            DiagnosticStage::Eval => "eval",
+        };
+        write!(f, "{s}")
+    }
+}
+
+/// A unified diagnostic produced at any stage of CQL processing.
+///
+/// `Diagnostic` is the canonical representation of all issues — errors,
+/// warnings, and informational messages — covering the **Parse**, **Semantic**,
+/// **Emit**, and **Eval** pipeline stages.  It is the aggregation type used by
+/// [`CompilationResult`], [`ValidationResult`], and [`DiagnosticCollection`].
+///
+/// [`CompilationResult`]: crate::compiler::CompilationResult
+/// [`ValidationResult`]: crate::compiler::ValidationResult
+///
+/// # Fields
+///
+/// | Field      | Description |
+/// |------------|-------------|
+/// | `message`  | Human-readable description of the issue. |
+/// | `span`     | Optional source location ([`crate::sourcemap::SourceSpan`]). |
+/// | `severity` | [`Severity`] level (error / warning / info). |
+/// | `code`     | Machine-readable [`DiagnosticCode`] for tooling / filtering. |
+/// | `stage`    | [`DiagnosticStage`] that produced this diagnostic. |
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::reporting::{Diagnostic, DiagnosticCode, DiagnosticStage, Severity};
+///
+/// let d = Diagnostic::new("Undefined symbol 'foo'")
+///     .with_severity(Severity::Error)
+///     .with_code(DiagnosticCode::SemanticUndefinedSymbol)
+///     .with_stage(DiagnosticStage::Semantic);
+///
+/// assert!(d.is_error());
+/// assert_eq!(d.code.as_code_str(), "CQL-2001");
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnostic {
+    /// Human-readable description of the issue.
+    pub message: String,
+    /// Source location where the issue was detected (if available).
+    ///
+    /// Line and column values follow the `sourcemap` convention: **1-based**.
+    pub span: Option<crate::sourcemap::SourceSpan>,
+    /// Severity of this diagnostic.
+    pub severity: Severity,
+    /// Machine-readable error code for tooling and filtering.
+    pub code: DiagnosticCode,
+    /// Pipeline stage that produced this diagnostic.
+    pub stage: DiagnosticStage,
+}
+
+impl Diagnostic {
+    /// Create a new diagnostic with the given message.
+    ///
+    /// Defaults to [`Severity::Error`], [`DiagnosticCode::Unknown`], and
+    /// [`DiagnosticStage::Semantic`].
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            span: None,
+            severity: Severity::Error,
+            code: DiagnosticCode::Unknown,
+            stage: DiagnosticStage::Semantic,
+        }
+    }
+
+    /// Attach a source span.
+    pub fn with_span(mut self, span: crate::sourcemap::SourceSpan) -> Self {
+        self.span = Some(span);
+        self
+    }
+
+    /// Set the severity.
+    pub fn with_severity(mut self, severity: Severity) -> Self {
+        self.severity = severity;
+        self
+    }
+
+    /// Set the error code.
+    pub fn with_code(mut self, code: DiagnosticCode) -> Self {
+        self.code = code;
+        self
+    }
+
+    /// Set the pipeline stage.
+    pub fn with_stage(mut self, stage: DiagnosticStage) -> Self {
+        self.stage = stage;
+        self
+    }
+
+    /// Returns `true` if this is an error-level diagnostic.
+    pub fn is_error(&self) -> bool {
+        matches!(self.severity, Severity::Error)
+    }
+
+    /// Returns `true` if this is a warning-level diagnostic.
+    pub fn is_warning(&self) -> bool {
+        matches!(self.severity, Severity::Warning)
+    }
+
+    /// Returns `true` if this is an info-level diagnostic.
+    pub fn is_info(&self) -> bool {
+        matches!(self.severity, Severity::Info)
+    }
+
+    /// Format as a concise, human-readable string.
+    pub fn to_display_string(&self) -> String {
+        let loc = match &self.span {
+            Some(span) => format!(
+                " [{}:{}-{}:{}]",
+                span.start.line, span.start.column, span.end.line, span.end.column
+            ),
+            None => String::new(),
+        };
+        format!(
+            "{} [{}] ({}{}): {}",
+            self.severity, self.code, self.stage, loc, self.message
+        )
+    }
+}
+
+impl std::fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_display_string())
+    }
+}
+
+impl std::error::Error for Diagnostic {}
+
+impl From<CqlCompilerException> for Diagnostic {
+    fn from(exc: CqlCompilerException) -> Self {
+        let (code, stage) = match exc.error_type() {
+            ExceptionType::Syntax => (DiagnosticCode::ParseSyntax, DiagnosticStage::Parse),
+            ExceptionType::Semantic => (DiagnosticCode::SemanticGeneral, DiagnosticStage::Semantic),
+            ExceptionType::Include => {
+                (DiagnosticCode::SemanticIncludeNotFound, DiagnosticStage::Semantic)
+            }
+            ExceptionType::Internal => (DiagnosticCode::EmitInternal, DiagnosticStage::Emit),
+        };
+        // Convert SourceLocator (line: 1-based, char: 0-based) →
+        // sourcemap::SourceSpan (line: 1-based, column: 1-based).
+        let span = exc.locator().map(|loc| crate::sourcemap::SourceSpan {
+            start: crate::sourcemap::SourceLocation {
+                line: loc.start_line.max(0) as usize,
+                column: (loc.start_char + 1).max(0) as usize,
+                offset: 0,
+            },
+            end: crate::sourcemap::SourceLocation {
+                line: loc.end_line.max(0) as usize,
+                column: (loc.end_char + 1).max(0) as usize,
+                offset: 0,
+            },
+        });
+        Diagnostic {
+            message: exc.full_message(),
+            span,
+            severity: exc.severity(),
+            code,
+            stage,
+        }
+    }
+}
+
+impl From<crate::eval::context::EvalError> for Diagnostic {
+    fn from(err: crate::eval::context::EvalError) -> Self {
+        let (code, message) = match &err {
+            crate::eval::context::EvalError::RetrieveError(msg) => {
+                (DiagnosticCode::EvalRetrieveFailed, msg.clone())
+            }
+            crate::eval::context::EvalError::TerminologyError(msg) => {
+                (DiagnosticCode::EvalTerminologyFailed, msg.clone())
+            }
+            crate::eval::context::EvalError::ExpressionNotFound(name) => {
+                (DiagnosticCode::EvalExpressionNotFound, name.clone())
+            }
+            crate::eval::context::EvalError::General(msg) => {
+                (DiagnosticCode::EvalGeneral, msg.clone())
+            }
+        };
+        Diagnostic {
+            message,
+            span: None,
+            severity: Severity::Error,
+            code,
+            stage: DiagnosticStage::Eval,
+        }
+    }
+}
+
+/// An ordered collection of [`Diagnostic`] items with categorized access.
+///
+/// `DiagnosticCollection` is the aggregation point for diagnostics produced
+/// across all stages of the CQL compiler pipeline.  It provides fast
+/// filtering by severity and straightforward iteration.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::reporting::{DiagnosticCollection, Diagnostic};
+///
+/// let mut collection = DiagnosticCollection::new();
+/// collection.push(Diagnostic::new("Undefined symbol 'foo'"));
+/// assert!(!collection.is_clean());
+/// assert_eq!(collection.errors().count(), 1);
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct DiagnosticCollection {
+    diagnostics: Vec<Diagnostic>,
+}
+
+impl DiagnosticCollection {
+    /// Create a new empty collection.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Append a diagnostic.
+    pub fn push(&mut self, diagnostic: Diagnostic) {
+        self.diagnostics.push(diagnostic);
+    }
+
+    /// Extend the collection from an iterator over [`Diagnostic`].
+    pub fn extend(&mut self, iter: impl IntoIterator<Item = Diagnostic>) {
+        self.diagnostics.extend(iter);
+    }
+
+    /// Returns `true` if there are no error-level diagnostics.
+    pub fn is_clean(&self) -> bool {
+        !self.diagnostics.iter().any(Diagnostic::is_error)
+    }
+
+    /// Iterate over all diagnostics.
+    pub fn iter(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics.iter()
+    }
+
+    /// Iterate over error-level diagnostics.
+    pub fn errors(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics.iter().filter(|d| d.is_error())
+    }
+
+    /// Iterate over warning-level diagnostics.
+    pub fn warnings(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics.iter().filter(|d| d.is_warning())
+    }
+
+    /// Iterate over info-level diagnostics.
+    pub fn infos(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics.iter().filter(|d| d.is_info())
+    }
+
+    /// Total number of diagnostics across all severities.
+    pub fn len(&self) -> usize {
+        self.diagnostics.len()
+    }
+
+    /// Returns `true` if there are no diagnostics.
+    pub fn is_empty(&self) -> bool {
+        self.diagnostics.is_empty()
+    }
+
+    /// Consume the collection into the underlying `Vec<Diagnostic>`.
+    pub fn into_vec(self) -> Vec<Diagnostic> {
+        self.diagnostics
+    }
+}
+
+impl From<Vec<Diagnostic>> for DiagnosticCollection {
+    fn from(v: Vec<Diagnostic>) -> Self {
+        Self { diagnostics: v }
+    }
+}
+
+impl IntoIterator for DiagnosticCollection {
+    type Item = Diagnostic;
+    type IntoIter = std::vec::IntoIter<Diagnostic>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.diagnostics.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a DiagnosticCollection {
+    type Item = &'a Diagnostic;
+    type IntoIter = std::slice::Iter<'a, Diagnostic>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.diagnostics.iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

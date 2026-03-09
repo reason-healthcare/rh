@@ -75,7 +75,7 @@ fn simple_compilation() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         println!("✗ Compilation failed with {} errors", result.errors.len());
         for err in &result.errors {
-            println!("  Error: {}", err.message());
+            println!("  Error: {}", err.message);
         }
     }
 
@@ -206,7 +206,7 @@ fn complex_library() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         println!("✗ Compilation failed:");
         for err in &result.errors {
-            println!("  {}", err.message());
+            println!("  {}", err.message);
         }
     }
 

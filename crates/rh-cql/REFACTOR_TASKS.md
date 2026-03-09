@@ -62,9 +62,9 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 9. Unified Diagnostic System
 
-- [ ] 9.1 Define a consistent `Diagnostic` type used across Parse, Semantic, Emit, and Eval stages
-- [ ] 9.2 Include `SourceSpan`, `Severity`, and unique error codes in the unified diagnostic structure
-- [ ] 9.3 Implement diagnostic aggregation in the consolidated pipeline to ensure consistent reporting
+- [x] 9.1 Define a consistent `Diagnostic` type used across Parse, Semantic, Emit, and Eval stages
+- [x] 9.2 Include `SourceSpan`, `Severity`, and unique error codes in the unified diagnostic structure
+- [x] 9.3 Implement diagnostic aggregation in the consolidated pipeline to ensure consistent reporting
 
 ## 10. Performance and Benchmarking
 

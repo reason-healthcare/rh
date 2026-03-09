@@ -38,7 +38,7 @@ use crate::elm;
 use crate::options::CompilerOptions;
 use crate::output::{library_to_compact_json, library_to_json_with_options};
 use crate::parser::CqlParser;
-use crate::reporting::{CqlCompilerException, Severity};
+use crate::reporting::{Diagnostic, Severity};
 use crate::semantics::typed_ast::TypedLibrary;
 use std::sync::Arc;
 
@@ -75,8 +75,9 @@ struct PipelineOutput {
     library: Option<elm::Library>,
     /// Populated when `emit_mode` is [`PipelineEmitMode::ElmWithSourceMap`].
     source_map: Option<crate::sourcemap::SourceMap>,
-    /// All diagnostics emitted during parse + analysis.
-    diagnostics: Vec<CqlCompilerException>,
+    /// All diagnostics emitted during parse + analysis, converted to the
+    /// unified [`Diagnostic`] type.
+    diagnostics: Vec<Diagnostic>,
 }
 
 /// Shared internal compilation pipeline.
@@ -105,7 +106,8 @@ fn run_compile_pipeline(
     );
     let (typed_library, raw_diagnostics) = analyzer.analyze(ast);
 
-    let diagnostics: Vec<CqlCompilerException> = raw_diagnostics;
+    let diagnostics: Vec<Diagnostic> =
+        raw_diagnostics.into_iter().map(Diagnostic::from).collect();
 
     // 4. Optionally emit ELM and/or source map
     match config.emit_mode {
@@ -174,17 +176,20 @@ fn run_compile_pipeline(
 /// The result of compiling CQL source code.
 ///
 /// Contains the translated ELM library along with any errors or warnings
-/// that occurred during compilation.
+/// that occurred during compilation.  Diagnostics use the unified
+/// [`Diagnostic`] type which carries a [`crate::reporting::DiagnosticCode`],
+/// pipeline [`crate::reporting::DiagnosticStage`], optional source span, and
+/// severity.
 #[derive(Debug, Clone)]
 pub struct CompilationResult {
     /// The translated ELM library.
     pub library: elm::Library,
-    /// Errors that occurred during compilation.
-    pub errors: Vec<CqlCompilerException>,
-    /// Warnings that occurred during compilation.
-    pub warnings: Vec<CqlCompilerException>,
-    /// Informational messages from compilation.
-    pub messages: Vec<CqlCompilerException>,
+    /// Error-level diagnostics from compilation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics from compilation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages from compilation.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl CompilationResult {
@@ -354,7 +359,7 @@ pub fn compile_to_json(
     if !result.is_success() {
         // Return the first error message
         if let Some(err) = result.errors.first() {
-            return Err(CompilationError::Semantic(err.message().to_string()));
+            return Err(CompilationError::Semantic(err.message.clone()));
         }
     }
 
@@ -372,12 +377,12 @@ pub struct SourceMapCompilationResult {
     pub library: elm::Library,
     /// Source-map correlating CQL spans to ELM nodes.
     pub source_map: crate::sourcemap::SourceMap,
-    /// Errors that occurred during compilation.
-    pub errors: Vec<crate::reporting::CqlCompilerException>,
-    /// Warnings that occurred during compilation.
-    pub warnings: Vec<crate::reporting::CqlCompilerException>,
-    /// Informational messages from compilation.
-    pub messages: Vec<crate::reporting::CqlCompilerException>,
+    /// Error-level diagnostics from compilation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics from compilation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages from compilation.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl SourceMapCompilationResult {
@@ -532,12 +537,12 @@ pub fn validate(
 pub struct ValidationResult {
     /// Whether the source is valid (no errors).
     pub is_valid: bool,
-    /// Errors found during validation.
-    pub errors: Vec<CqlCompilerException>,
-    /// Warnings found during validation.
-    pub warnings: Vec<CqlCompilerException>,
-    /// Informational messages.
-    pub messages: Vec<CqlCompilerException>,
+    /// Error-level diagnostics found during validation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics found during validation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl ValidationResult {
@@ -637,26 +642,20 @@ pub fn explain_compile(
     Ok(crate::explain::explain_compile(&typed_library))
 }
 
-/// Categorize exceptions by severity.
+/// Categorize a flat list of [`Diagnostic`] items by severity.
 fn categorize_exceptions(
-    exceptions: &[crate::reporting::CqlCompilerException],
+    diagnostics: &[Diagnostic],
     _options: &CompilerOptions,
-) -> (
-    Vec<CqlCompilerException>,
-    Vec<CqlCompilerException>,
-    Vec<CqlCompilerException>,
-) {
+) -> (Vec<Diagnostic>, Vec<Diagnostic>, Vec<Diagnostic>) {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
     let mut messages = Vec::new();
 
-    for err in exceptions {
-        let exception = err.clone();
-
-        match exception.severity() {
-            Severity::Error => errors.push(exception),
-            Severity::Warning => warnings.push(exception),
-            Severity::Info => messages.push(exception),
+    for d in diagnostics {
+        match d.severity {
+            Severity::Error => errors.push(d.clone()),
+            Severity::Warning => warnings.push(d.clone()),
+            Severity::Info => messages.push(d.clone()),
         }
     }
 

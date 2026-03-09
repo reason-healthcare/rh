@@ -10,7 +10,7 @@ use tracing::{error, info};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
     evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
-    CqlCompilerException, CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
+    Diagnostic, CqlDateTime, EvalContextBuilder, FixedClock, SignatureLevel,
 };
 
 #[derive(Subcommand)]
@@ -173,20 +173,20 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
 /// `prefix` is the symbol shown before each item (e.g. "✗" or "⚠").
 /// When `with_location` is true the source location line/column is appended
 /// to the same line as the message when it is available.
-fn print_diagnostic_list(items: &[CqlCompilerException], prefix: &str, with_location: bool) {
+fn print_diagnostic_list(items: &[Diagnostic], prefix: &str, with_location: bool) {
     for item in items {
         if with_location {
-            if let Some(loc) = item.locator() {
+            if let Some(span) = &item.span {
                 eprintln!(
                     "  {prefix} {} (line {}, col {})",
-                    item.message(),
-                    loc.start_line,
-                    loc.start_char + 1
+                    item.message,
+                    span.start.line,
+                    span.start.column
                 );
                 continue;
             }
         }
-        eprintln!("  {prefix} {}", item.message());
+        eprintln!("  {prefix} {}", item.message);
     }
 }
 
@@ -195,8 +195,8 @@ fn print_diagnostic_list(items: &[CqlCompilerException], prefix: &str, with_loca
 /// Should be called when a compilation result is not successful. Returns an
 /// `anyhow::Error` so callers can propagate with `return Err(...)` or `?`.
 fn report_compile_failure(
-    errors: &[CqlCompilerException],
-    warnings: &[CqlCompilerException],
+    errors: &[Diagnostic],
+    warnings: &[Diagnostic],
 ) -> anyhow::Error {
     eprintln!("✗ Compilation failed with {} error(s):\n", errors.len());
     print_diagnostic_list(errors, "✗", true);
@@ -439,17 +439,17 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             println!("\nWarnings ({}):", result.warnings.len());
             for warning in &result.warnings {
                 if verbose {
-                    if let Some(loc) = warning.locator() {
+                    if let Some(span) = &warning.span {
                         println!(
                             "  ⚠ {} (line {}, col {})",
-                            warning.message(),
-                            loc.start_line,
-                            loc.start_char + 1
+                            warning.message,
+                            span.start.line,
+                            span.start.column
                         );
                         continue;
                     }
                 }
-                println!("  ⚠ {}", warning.message());
+                println!("  ⚠ {}", warning.message);
             }
         }
     } else {
@@ -457,15 +457,15 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
 
         println!("Errors ({}):", result.errors.len());
         for err in &result.errors {
-            if let Some(loc) = err.locator() {
+            if let Some(span) = &err.span {
                 println!(
                     "  ✗ {} (line {}, col {})",
-                    err.message(),
-                    loc.start_line,
-                    loc.start_char + 1
+                    err.message,
+                    span.start.line,
+                    span.start.column
                 );
             } else {
-                println!("  ✗ {}", err.message());
+                println!("  ✗ {}", err.message);
             }
         }
 
@@ -473,17 +473,17 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             println!("\nWarnings ({}):", result.warnings.len());
             for warning in &result.warnings {
                 if verbose {
-                    if let Some(loc) = warning.locator() {
+                    if let Some(span) = &warning.span {
                         println!(
                             "  ⚠ {} (line {}, col {})",
-                            warning.message(),
-                            loc.start_line,
-                            loc.start_char + 1
+                            warning.message,
+                            span.start.line,
+                            span.start.column
                         );
                         continue;
                     }
                 }
-                println!("  ⚠ {}", warning.message());
+                println!("  ⚠ {}", warning.message);
             }
         }
 
