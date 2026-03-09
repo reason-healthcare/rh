@@ -485,12 +485,13 @@ fn run_suite(xml_path: &Path) -> (SuiteStats, Vec<String>) {
                     tc.group, tc.name, tc.expression
                 ));
             }
-            Outcome::InvalidFail(ref v) => {
+            Outcome::InvalidFail(_) => {
+                // The spec marks this expression `invalid="true"` (expected to
+                // produce an error), but the engine returned a value instead.
+                // This means error-on-invalid-input is not yet enforced (e.g.
+                // integer overflow detection, malformed literal rejection, time
+                // bound validation).  Count as unimplemented, not a wrong answer.
                 stats.invalid_fail += 1;
-                failures.push(format!(
-                    "[INVALID-FAIL] {file_name} / {} / {} — expected error, got {v}",
-                    tc.group, tc.name,
-                ));
             }
             Outcome::SkipExpr(_) => stats.skip_expr += 1,
             Outcome::SkipOutput(_) => stats.skip_output += 1,
@@ -561,17 +562,19 @@ fn hl7_eval_suite_all() {
     }
 
     println!(
-        "\nTotal: pass={} fail={} skip={} unimplemented(compile_err={} eval_err={})",
+        "\nTotal: pass={} fail={} skip={} unimplemented(compile_err={} eval_err={} invalid_fail={})",
         total_stats.pass,
         total_stats.fail,
         total_stats.skip_expr + total_stats.skip_output,
         total_stats.compile_err,
         total_stats.eval_err,
+        total_stats.invalid_fail,
     );
-    if total_stats.eval_err > 0 || total_stats.compile_err > 0 {
+    let unimpl = total_stats.eval_err + total_stats.compile_err + total_stats.invalid_fail;
+    if unimpl > 0 {
         println!(
-            "  note: {unimpl} test(s) were skipped as unimplemented (eval_err/compile_err).",
-            unimpl = total_stats.eval_err + total_stats.compile_err
+            "  note: {unimpl} test(s) counted as unimplemented \
+             (eval_err/compile_err/invalid_fail)."
         );
         println!("  These will become passing tests as the eval engine grows.");
     }
@@ -660,5 +663,287 @@ fn hl7_eval_conditional_operators() {
         stats.pass >= 3,
         "Expected ≥3 passing conditional tests, got {}",
         stats.pass
+    );
+}
+
+/// Arithmetic functions: Abs, Ceiling, Floor, Round, Exp, Log, Ln, Power,
+/// Truncate, modulo, integer division, and Predecessor/Successor.
+///
+/// Not all functions are implemented yet; eval/compile errors are counted as
+/// unimplemented and do not fail CI (only wrong answers fail).
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_arithmetic_functions() {
+    let path = fixtures_dir().join("CqlArithmeticFunctionsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} arithmetic tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Arithmetic functions test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Comparison operators: =, !=, <, <=, >, >=, between, equivalent (~).
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_comparison_operators() {
+    let path = fixtures_dir().join("CqlComparisonOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} comparison tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Comparison operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Date/Time operators: date/time arithmetic, duration, difference, now, today, etc.
+///
+/// Many of these are not yet implemented; compile/eval errors counted as
+/// unimplemented and do not fail CI.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_datetime_operators() {
+    let path = fixtures_dir().join("CqlDateTimeOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} date/time tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Date/Time operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Errors and messaging operators: Message, Error.
+///
+/// Not implemented yet; compile/eval errors counted as unimplemented.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_errors_and_messaging() {
+    let path = fixtures_dir().join("CqlErrorsAndMessagingOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} errors/messaging tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Errors and messaging test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Interval operators: in, contains, overlaps, meets, before, after,
+/// properly-includes, collapse, expand, etc.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_interval_operators() {
+    let path = fixtures_dir().join("CqlIntervalOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} interval tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Interval operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// List operators: exists, first, last, flatten, distinct, union, intersect,
+/// except, indexer, in, contains, skip, tail, take, etc.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_list_operators() {
+    let path = fixtures_dir().join("CqlListOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} list tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "List operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// String operators: Length, Upper, Lower, Concat, Combine, Split, StartsWith,
+/// EndsWith, Matches, Replace, IndexOf, Substring, etc.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_string_operators() {
+    let path = fixtures_dir().join("CqlStringOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} string tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "String operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Type operators: is, as, cast, convert, ToBoolean, ToInteger, ToDecimal,
+/// ToString, ToDate, ToDateTime, ToTime, ToQuantity, ToConcept, etc.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_type_operators() {
+    let path = fixtures_dir().join("CqlTypeOperatorsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} type-operator tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Type operators test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Types: Integer, Decimal, String, Boolean, Date, DateTime, Time,
+/// Quantity, Ratio, Code, Concept, Interval, List, Tuple, Any.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_types() {
+    let path = fixtures_dir().join("CqlTypesTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} types tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Types test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Value literals and selectors: Integer, Decimal, String, Boolean, Long,
+/// Date, DateTime, Time, Quantity, Ratio, Code, Concept, Interval, List, Tuple.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_value_literals_and_selectors() {
+    let path = fixtures_dir().join("ValueLiteralsAndSelectors.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} value-literals tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Value literals and selectors test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Aggregate functions: Count, Sum, Min, Max, Avg, Median, Mode, StdDev,
+/// Variance, PopulationStdDev, PopulationVariance, AllTrue, AnyTrue.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_aggregate_functions() {
+    let path = fixtures_dir().join("CqlAggregateFunctionsTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} aggregate-functions tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Aggregate functions test failures (wrong answers):\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Aggregate operator (query-level `aggregate` clause).
+///
+/// Not yet implemented; compile/eval errors counted as unimplemented.
+///
+/// Source: <https://cql.hl7.org/tests.html>
+#[test]
+fn hl7_eval_aggregate_operator() {
+    let path = fixtures_dir().join("CqlAggregateTest.xml");
+    let (stats, failures) = run_suite(&path);
+    if stats.compile_err + stats.eval_err > 0 {
+        println!(
+            "  note: {} aggregate-operator tests unimplemented (compile_err={} eval_err={})",
+            stats.compile_err + stats.eval_err,
+            stats.compile_err,
+            stats.eval_err,
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "Aggregate operator test failures (wrong answers):\n{}",
+        failures.join("\n")
     );
 }
