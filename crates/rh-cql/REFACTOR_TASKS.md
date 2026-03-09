@@ -86,8 +86,8 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 13. XML Parsing Modernization
 
-- [ ] 13.1 Refactor `src/modelinfo_xml.rs` to use a more modular approach for parsing `TypeInfo` variants
-- [ ] 13.2 Split the large 1300+ line parser into smaller submodules or explore a more declarative parsing strategy
+- [x] 13.1 Refactor `src/modelinfo_xml.rs` to use a more modular approach for parsing `TypeInfo` variants
+- [x] 13.2 Split the large 1300+ line parser into smaller submodules or explore a more declarative parsing strategy
 
 ## Recommended Order
 
