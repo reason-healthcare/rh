@@ -74,9 +74,9 @@ This document captures the follow-up refactor plan for the current `rh-cql` impl
 
 ## 11. "Golden File" Verification
 
-- [ ] 11.1 Implement or expand "golden" integration tests comparing ELM output against known-good baselines
-- [ ] 11.2 Use golden files to verify that the multi-stage pipeline produces bit-identical or semantically equivalent output during refactoring
-- [ ] 11.3 Add verification tests for evaluation results against stable result sets
+- [x] 11.1 Implement or expand "golden" integration tests comparing ELM output against known-good baselines - use https://cql.hl7.org/tests.html
+- [x] 11.2 Use golden files to verify that the multi-stage pipeline produces bit-identical or semantically equivalent output during refactoring
+- [x] 11.3 Add verification tests for evaluation results against stable result sets
 
 ## 12. Internal Context Consolidation
 

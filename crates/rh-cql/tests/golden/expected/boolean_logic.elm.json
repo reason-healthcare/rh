@@ -1,0 +1,272 @@
+{
+  "library": {
+    "identifier": {
+      "id": "GoldenBooleanLogic",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "statements": {
+      "def": [
+        {
+          "name": "TrueAndTrue",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "And",
+            "localId": "1",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "2",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              },
+              {
+                "type": "Literal",
+                "localId": "3",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              }
+            ]
+          }
+        },
+        {
+          "name": "TrueAndFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "And",
+            "localId": "4",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "5",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              },
+              {
+                "type": "Literal",
+                "localId": "6",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "FalseAndFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "And",
+            "localId": "7",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "8",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              },
+              {
+                "type": "Literal",
+                "localId": "9",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "TrueOrFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Or",
+            "localId": "10",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "11",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              },
+              {
+                "type": "Literal",
+                "localId": "12",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "FalseOrFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Or",
+            "localId": "13",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "14",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              },
+              {
+                "type": "Literal",
+                "localId": "15",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "NotTrue",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Not",
+            "localId": "16",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "17",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+              "value": "true"
+            }
+          }
+        },
+        {
+          "name": "NotFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Not",
+            "localId": "18",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "19",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+              "value": "false"
+            }
+          }
+        },
+        {
+          "name": "NullAndTrue",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "And",
+            "localId": "20",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Null",
+                "localId": "21",
+                "locator": "0-0:0-0"
+              },
+              {
+                "type": "Literal",
+                "localId": "22",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              }
+            ]
+          }
+        },
+        {
+          "name": "NullAndFalse",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "And",
+            "localId": "23",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Null",
+                "localId": "24",
+                "locator": "0-0:0-0"
+              },
+              {
+                "type": "Literal",
+                "localId": "25",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        {
+          "name": "TrueOrNull",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Or",
+            "localId": "26",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "27",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "true"
+              },
+              {
+                "type": "Null",
+                "localId": "28",
+                "locator": "0-0:0-0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "FalseOrNull",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Or",
+            "localId": "29",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "30",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+                "value": "false"
+              },
+              {
+                "type": "Null",
+                "localId": "31",
+                "locator": "0-0:0-0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annotation": [
+      {
+        "type": "CqlToElmInfo",
+        "translatorVersion": "0.1.0",
+        "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+      }
+    ]
+  }
+}

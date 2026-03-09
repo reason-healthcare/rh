@@ -1,0 +1,328 @@
+{
+  "library": {
+    "identifier": {
+      "id": "GoldenArithmetic",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "statements": {
+      "def": [
+        {
+          "name": "Add",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Add",
+            "localId": "1",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "2",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "1"
+              },
+              {
+                "type": "Literal",
+                "localId": "3",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "2"
+              }
+            ]
+          }
+        },
+        {
+          "name": "AddDec",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Add",
+            "localId": "4",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "5",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+                "value": "1.5"
+              },
+              {
+                "type": "Literal",
+                "localId": "6",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+                "value": "2.5"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Sub",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Subtract",
+            "localId": "7",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "8",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "10"
+              },
+              {
+                "type": "Literal",
+                "localId": "9",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Mul",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Multiply",
+            "localId": "10",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "11",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "4"
+              },
+              {
+                "type": "Literal",
+                "localId": "12",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "5"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Div",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Divide",
+            "localId": "13",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "ToDecimal",
+                "localId": "16",
+                "locator": "0-0:0-0",
+                "operand": {
+                  "type": "Literal",
+                  "localId": "14",
+                  "locator": "0-0:0-0",
+                  "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                  "value": "10"
+                }
+              },
+              {
+                "type": "ToDecimal",
+                "localId": "17",
+                "locator": "0-0:0-0",
+                "operand": {
+                  "type": "Literal",
+                  "localId": "15",
+                  "locator": "0-0:0-0",
+                  "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                  "value": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "DivDecimal",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Divide",
+            "localId": "18",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "ToDecimal",
+                "localId": "21",
+                "locator": "0-0:0-0",
+                "operand": {
+                  "type": "Literal",
+                  "localId": "19",
+                  "locator": "0-0:0-0",
+                  "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                  "value": "7"
+                }
+              },
+              {
+                "type": "ToDecimal",
+                "localId": "22",
+                "locator": "0-0:0-0",
+                "operand": {
+                  "type": "Literal",
+                  "localId": "20",
+                  "locator": "0-0:0-0",
+                  "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                  "value": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Mod",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Modulo",
+            "localId": "23",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "24",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "7"
+              },
+              {
+                "type": "Literal",
+                "localId": "25",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Negate",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Negate",
+            "localId": "26",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "27",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+              "value": "5"
+            }
+          }
+        },
+        {
+          "name": "Power",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Power",
+            "localId": "28",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "29",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "2"
+              },
+              {
+                "type": "Literal",
+                "localId": "30",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "8"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Abs",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Abs",
+            "localId": "31",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Negate",
+              "localId": "32",
+              "locator": "0-0:0-0",
+              "operand": {
+                "type": "Literal",
+                "localId": "33",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "42"
+              }
+            }
+          }
+        },
+        {
+          "name": "Ceiling",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Ceiling",
+            "localId": "34",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "35",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+              "value": "2.3"
+            }
+          }
+        },
+        {
+          "name": "Floor",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Floor",
+            "localId": "36",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "37",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+              "value": "2.9"
+            }
+          }
+        },
+        {
+          "name": "Truncate",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Truncate",
+            "localId": "38",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "localId": "39",
+              "locator": "0-0:0-0",
+              "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+              "value": "2.9"
+            }
+          }
+        }
+      ]
+    },
+    "annotation": [
+      {
+        "type": "CqlToElmInfo",
+        "translatorVersion": "0.1.0",
+        "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+      }
+    ]
+  }
+}

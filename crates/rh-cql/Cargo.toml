@@ -20,6 +20,7 @@ rh-foundation = { path = "../rh-foundation" }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+quick-xml = { workspace = true }
 
 [[bench]]
 name = "bench_compile"
