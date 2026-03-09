@@ -57,19 +57,19 @@ Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
 | CqlAggregateFunctionsTest | 10 | 0 | 0 | 2 | 0 | 27 | 39 |
 | CqlAggregateTest | 0 | 0 | 0 | 0 | 2 | 0 | 2 |
 | CqlArithmeticFunctionsTest | 42 | 0 | 7 | 0 | 0 | 12 | 61 |
-| CqlComparisonOperatorsTest | 120 | **3** | 27 | 0 | 0 | 33 | 183 |
+| CqlComparisonOperatorsTest | 123 | 0 | 27 | 0 | 0 | 33 | 183 |
 | CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
 | CqlDateTimeOperatorsTest | 0 | 0 | 0 | 9 | 55 | 227 | 294 |
 | CqlErrorsAndMessagingOperatorsTest | 0 | 0 | 4 | 0 | 0 | 0 | 4 |
-| CqlIntervalOperatorsTest | 96 | **16** | 8 | 37 | 63 | 138 | 358 |
-| CqlListOperatorsTest | 68 | **21** | 2 | 31 | 6 | 78 | 207 |
+| CqlIntervalOperatorsTest | 112 | 0 | 8 | 37 | 63 | 138 | 358 |
+| CqlListOperatorsTest | 89 | 0 | 2 | 31 | 6 | 78 | 207 |
 | CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
 | CqlNullologicalOperatorsTest | 0 | 0 | 0 | 0 | 0 | 22 | 22 |
 | CqlStringOperatorsTest | 2 | 0 | 2 | 0 | 0 | 77 | 81 |
 | CqlTypeOperatorsTest | 7 | 0 | 16 | 3 | 0 | 4 | 30 |
-| CqlTypesTest | 1 | **1** | 1 | 7 | 2 | 10 | 24 |
+| CqlTypesTest | 2 | 0 | 1 | 7 | 2 | 10 | 24 |
 | ValueLiteralsAndSelectors | 0 | 0 | 0 | 38 | 21 | 0 | 59 |
-| **Total** | **394** | **41** | **67** | **127** | **149** | **628** | **1 412** |
+| **Total** | **435** | **0** | **67** | **127** | **149** | **628** | **1 412** |
 
 **Outcome definitions**
 
@@ -82,20 +82,22 @@ Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
 | Compile err | Expression raised a compile error — unimplemented language feature |
 | Eval err | Compiled but evaluation raised an error — unimplemented operator/function |
 
-> **41 wrong-answer failures exist** across Comparison (3), Interval (16), List (21), and Types (1).
+> **Zero wrong-answer failures.** All 435 evaluated expressions return the correct result.
 > All other outcomes (compile err, eval err, skip) represent unimplemented features, not bugs.
-> CI asserts that no *new* wrong answers are introduced (the Fail count must not grow).
+> CI asserts that no wrong answers are introduced (the Fail count must remain 0).
 
 ### 1.3 Known failures and unimplemented categories
 
-**Wrong-answer failures (41 total)**
+**Wrong-answer failures: none.**
 
-| Suite | Count | Root cause |
+All previously tracked failures were resolved on 2026-03-09:
+
+| Suite | Fixed | Root cause |
 |---|---|---|
-| CqlListOperatorsTest | 21 | Null-propagation in `Contains`/`Includes`/`ProperlyIncludes`, 0-based vs 1-based `Indexer`, Time-value equality |
-| CqlIntervalOperatorsTest | 16 | Null semantics in `Contains`/`Except`/`In`/`Equal`, integer/decimal `Meets` successor arithmetic, DateTime precision in `IncludedIn` |
-| CqlComparisonOperatorsTest | 3 | `1.0 = 1` — Decimal/Integer cross-type equality not yet promoted |
-| CqlTypesTest | 1 | Single-quote escape parsing: `\'` not decoded to `'` in string literals |
+| CqlListOperatorsTest | 21 | Null-propagation in `Contains`/`Includes`/`ProperlyIncludes`; Time-value precision equality; unicode escape decoding |
+| CqlIntervalOperatorsTest | 16 | Null semantics in `Contains`/`Except`/`In`/`Equal`; null-endpoint interval construction; `collapse()` with all-null intervals |
+| CqlComparisonOperatorsTest | 3 | `1.0 = 1` — Decimal/Integer cross-type equality and equivalence (`1.0 ~ 1`) |
+| CqlTypesTest | 1 | Single-quote escape: `\'` decoded to `'`; `ToString(@T09:30)` omits leading `T` |
 
 **Skipped expressions (67 total)**
 - Quantity literals, e.g., `1'cm'` — the lexer does not yet produce Quantity tokens.
@@ -257,10 +259,10 @@ All tests run via `cargo test -p rh-cql`.
 | golden_elm_tests | 8 | ✅ all pass |
 | emit_conformance_tests | 52 | ✅ all pass |
 | pipeline_comparison_tests | 3 | ✅ all pass |
-| hl7_eval_tests | 16 | ⚠️ 41 wrong-answer failures (Comparison 3, Interval 16, List 21, Types 1); 1 412 total expressions evaluated |
+| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 435 pass / 1 412 total expressions evaluated |
 | semantic_tests | 11 | ✅ all pass |
 | eval_integration_tests | 2 | ✅ all pass |
-| **Total** | **924** | **⚠️ 41 hl7 wrong-answer failures; all other tests pass** |
+| **Total** | **924** | **✅ all pass** |
 
 > Run `cargo test -p rh-cql --quiet` to execute the full suite.
 > Run `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings` to verify lint hygiene.
@@ -283,21 +285,23 @@ When a new CQL specification version ships, update the fixtures:
 
 Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content:
 
-### High priority (wrong-answer risk or large eval-error count)
+### Completed (2026-03-09)
 
-1. **Null-propagation in list operators** — `Contains`, `Includes`, `ProperlyIncludes`, `In`
-   need correct three-valued null semantics. Fixes 21 wrong-answer failures in
+1. ✅ **Null-propagation in list operators** — `Contains`, `Includes`, `ProperlyIncludes`, `In`
+   now implement correct three-valued null semantics. Fixed 21 wrong-answer failures in
    `CqlListOperatorsTest`.
 
-2. **Null semantics in interval operators** — `Contains`/`Except`/`In`/`Equal` with null
-   endpoints, integer/decimal `Meets` successor arithmetic, DateTime precision in `IncludedIn`.
-   Fixes 16 wrong-answer failures in `CqlIntervalOperatorsTest`.
+2. ✅ **Null semantics in interval operators** — `Contains`/`Except`/`In`/`Equal` with null
+   endpoints, null-bounded interval construction, `collapse()` with all-null intervals.
+   Fixed 16 wrong-answer failures in `CqlIntervalOperatorsTest`.
 
-3. **Decimal/Integer cross-type equality** — promote `1.0 = 1` to same type before comparison.
-   Fixes 3 wrong-answer failures in `CqlComparisonOperatorsTest`.
+3. ✅ **Decimal/Integer cross-type equality** — `1.0 = 1` and `1.0 ~ 1` now compare correctly
+   across types. Fixed 3 wrong-answer failures in `CqlComparisonOperatorsTest`.
 
-4. **String escape decoding** — `\'` should decode to `'` in CQL string literals.
-   Fixes 1 wrong-answer failure in `CqlTypesTest`.
+4. ✅ **String escape / Time display** — `\'` decoded to `'`; `ToString(@T09:30)` omits
+   leading `T`. Fixed 1 wrong-answer failure in `CqlTypesTest`.
+
+### High priority (large eval-error count)
 
 5. **System function resolution in emitter** — emit `Abs`, `Ceiling`, `Floor`,
    `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power` as their specific ELM types
