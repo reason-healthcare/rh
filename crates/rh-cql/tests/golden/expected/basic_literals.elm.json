@@ -1,0 +1,112 @@
+{
+  "library": {
+    "identifier": {
+      "id": "GoldenBasicLiterals",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "statements": {
+      "def": [
+        {
+          "name": "IntLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "1",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+            "value": "42"
+          }
+        },
+        {
+          "name": "NegIntLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Negate",
+            "localId": "2",
+            "locator": "0-0:0-0",
+            "operand": {
+              "type": "Literal",
+              "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+              "value": "7"
+            }
+          }
+        },
+        {
+          "name": "DecimalLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "3",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+            "value": "3.14"
+          }
+        },
+        {
+          "name": "StrLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "4",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}String",
+            "value": "hello world"
+          }
+        },
+        {
+          "name": "EmptyStr",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "5",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}String",
+            "value": ""
+          }
+        },
+        {
+          "name": "TrueLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "6",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+            "value": "true"
+          }
+        },
+        {
+          "name": "FalseLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Literal",
+            "localId": "7",
+            "locator": "0-0:0-0",
+            "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
+            "value": "false"
+          }
+        },
+        {
+          "name": "NullLiteral",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Null",
+            "localId": "8",
+            "locator": "0-0:0-0"
+          }
+        }
+      ]
+    },
+    "annotation": [
+      {
+        "type": "CqlToElmInfo",
+        "translatorVersion": "0.1.0",
+        "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+      }
+    ]
+  }
+}

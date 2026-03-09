@@ -1,40 +1,52 @@
 # rh-cql Architecture
 
-This document describes the architectural design of the rh-cql CQL-to-ELM compiler, highlighting key design choices and their benefits.
+This document describes the architectural design of the rh-cql CQL-to-ELM compiler,
+highlighting key design choices and their benefits.
 
 ## Overview
 
-The rh-cql compiler transforms Clinical Quality Language (CQL) source code into Expression Logical Model (ELM) representation. The architecture follows a clean separation between parsing, semantic analysis, and code generation.
+The rh-cql compiler transforms Clinical Quality Language (CQL) source code into
+Expression Logical Model (ELM) representation. The architecture follows a strict
+three-stage pipeline: parse, semantic analysis, and ELM emission.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       CQL Source                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Parser (pest)                           │
-│                   parser/cql.pest                           │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      CQL AST                                │
-│                   parser/ast.rs                             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Semantic Analysis                          │
-│    LibraryBuilder + ExpressionTranslator (builder.rs)       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     ELM Output                              │
-│                      elm/*.rs                               │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            CQL Source                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                   Stage 1 — Parser  (nom combinators)                        │
+│   parser/lexer.rs · parser/statement.rs · parser/expression/*               │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  CQL AST  (parser/ast.rs)
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│             Stage 2 — Semantic Analysis  (SemanticAnalyzer)                  │
+│        semantics/analyzer.rs · semantics/scope.rs · semantics/typed_ast.rs  │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  TypedLibrary  (semantics/typed_ast.rs)
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                Stage 3 — ELM Emission  (ElmEmitter)                         │
+│   emit/{literals,operators,queries,conditionals,clinical,references,types}   │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  elm::Library  (elm/)
+                                    ▼
+               ┌───────────────────────────────────────┐
+               │  Source Map  (sourcemap.rs, optional)  │
+               │  JSON output  (output.rs)              │
+               └───────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│              Evaluation Engine  (eval/)  — optional runtime                  │
+│   eval/engine.rs · eval/operators/* · eval/queries.rs · eval/context.rs     │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+All public functions in `compiler.rs` are thin wrappers over the shared
+`run_compile_pipeline` internal function.
 
 ## Design Principles
 

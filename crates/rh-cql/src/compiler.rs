@@ -1,8 +1,18 @@
 //! Public CQL compiler API.
 //!
 //! This module provides the main entry point for compiling CQL source code to ELM.
-//! It integrates the parser, preprocessor, builder, and output generation into
-//! a single, easy-to-use API.
+//! It integrates the parser, semantic analyzer, ELM emitter, and output generation
+//! into a single, easy-to-use API through a shared internal compilation pipeline.
+//!
+//! # Pipeline
+//!
+//! All public functions are thin wrappers over the shared internal
+//! [`run_compile_pipeline`] function which performs:
+//!
+//! 1. **Parse** — CQL source → AST via [`CqlParser`]
+//! 2. **Analyze** — AST → [`TypedLibrary`] + diagnostics via [`SemanticAnalyzer`]
+//! 3. **Emit** (optional) — [`TypedLibrary`] → [`elm::Library`] via [`ElmEmitter`]
+//! 4. **Source map** (optional) — emitter side-channel populated during emit
 //!
 //! # Example
 //!
@@ -24,28 +34,232 @@
 //! assert!(output.errors.is_empty());
 //! ```
 
-use crate::builder::LibraryBuilder;
 use crate::elm;
 use crate::options::CompilerOptions;
 use crate::output::{library_to_compact_json, library_to_json_with_options};
 use crate::parser::CqlParser;
-use crate::reporting::{CqlCompilerException, Severity};
+use crate::reporting::{Diagnostic, Severity};
+use crate::semantics::typed_ast::TypedLibrary;
 use std::sync::Arc;
+
+// ── CompilationContext ───────────────────────────────────────────────────────
+
+/// Shared compilation environment passed through the compiler and semantics
+/// pipeline stages.
+///
+/// `CompilationContext` consolidates [`CompilerOptions`] and an optional
+/// [`ModelInfoProvider`][crate::provider::ModelInfoProvider] so that the same
+/// context object can be constructed once and threaded through
+/// `run_compile_pipeline`, `SemanticAnalyzer`, and the ELM emitter without
+/// repeating the same pair of arguments at every call site.
+///
+/// # Example
+///
+/// ```rust
+/// use rh_cql::{CompilationContext, CompilerOptions, SignatureLevel};
+///
+/// let ctx = CompilationContext::new(
+///     CompilerOptions::default().with_signature_level(SignatureLevel::All),
+///     None,
+/// );
+/// assert!(ctx.model_provider().is_none());
+/// ```
+#[derive(Clone, Default)]
+pub struct CompilationContext {
+    /// Compiler options controlling translation behaviour.
+    pub options: CompilerOptions,
+    /// Optional model provider; `None` falls back to the bundled FHIR R4
+    /// provider at the point of use.
+    model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
+}
+
+impl CompilationContext {
+    /// Create a new context with the given options and an optional model
+    /// provider.
+    pub fn new(
+        options: CompilerOptions,
+        model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
+    ) -> Self {
+        CompilationContext {
+            options,
+            model_provider,
+        }
+    }
+
+    /// Return the model provider if one was supplied, or `None`.
+    pub fn model_provider(&self) -> Option<&Arc<dyn crate::provider::ModelInfoProvider>> {
+        self.model_provider.as_ref()
+    }
+
+    /// Resolve to a concrete provider: the stored one, or the default FHIR R4
+    /// provider.
+    pub(crate) fn resolve_provider(&self) -> Arc<dyn crate::provider::ModelInfoProvider> {
+        self.model_provider
+            .clone()
+            .unwrap_or_else(|| Arc::new(crate::provider::fhir_r4_provider_from_package()))
+    }
+}
+
+impl std::fmt::Debug for CompilationContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompilationContext")
+            .field("options", &self.options)
+            .field(
+                "model_provider",
+                if self.model_provider.is_some() {
+                    &"Some(...)"
+                } else {
+                    &"None"
+                },
+            )
+            .finish()
+    }
+}
+
+// ── Internal shared pipeline ────────────────────────────────────────────────
+
+/// Controls whether (and how) ELM is emitted after semantic analysis.
+enum PipelineEmitMode {
+    /// Skip ELM emission entirely (validate-only or explain paths).
+    None,
+    /// Emit ELM; do **not** build a source map.
+    Elm,
+    /// Emit ELM and build a source map.
+    ElmWithSourceMap {
+        /// Optional canonical URI written into [`SourceDocument`] entries.
+        library_uri: Option<String>,
+    },
+}
+
+/// Configuration for [`run_compile_pipeline`].
+struct PipelineConfig {
+    /// Shared compilation environment (options + optional model provider).
+    context: CompilationContext,
+    emit_mode: PipelineEmitMode,
+}
+
+/// Output produced by [`run_compile_pipeline`].
+struct PipelineOutput {
+    /// Populated when `emit_mode` is [`PipelineEmitMode::None`]; the typed
+    /// library has **not** been consumed by the emitter.
+    typed_library: Option<TypedLibrary>,
+    /// Populated when `emit_mode` is [`PipelineEmitMode::Elm`] or
+    /// [`PipelineEmitMode::ElmWithSourceMap`].
+    library: Option<elm::Library>,
+    /// Populated when `emit_mode` is [`PipelineEmitMode::ElmWithSourceMap`].
+    source_map: Option<crate::sourcemap::SourceMap>,
+    /// All diagnostics emitted during parse + analysis, converted to the
+    /// unified [`Diagnostic`] type.
+    diagnostics: Vec<Diagnostic>,
+}
+
+/// Shared internal compilation pipeline.
+///
+/// Parse → Analyze → (optionally) Emit ELM → (optionally) build source map.
+/// All public compiler functions delegate to this.
+fn run_compile_pipeline(
+    source: &str,
+    config: PipelineConfig,
+) -> Result<PipelineOutput, CompilationError> {
+    // 1. Parse
+    let parser = CqlParser::new();
+    let ast = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+    // 2. Resolve model provider
+    let provider = config.context.resolve_provider();
+
+    // 3. Semantic analysis
+    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
+        Arc::clone(&provider),
+        config.context.options.clone(),
+    );
+    let (typed_library, raw_diagnostics) = analyzer.analyze(ast);
+
+    let diagnostics: Vec<Diagnostic> = raw_diagnostics.into_iter().map(Diagnostic::from).collect();
+
+    // 4. Optionally emit ELM and/or source map
+    match config.emit_mode {
+        PipelineEmitMode::None => Ok(PipelineOutput {
+            typed_library: Some(typed_library),
+            library: None,
+            source_map: None,
+            diagnostics,
+        }),
+
+        PipelineEmitMode::Elm => {
+            let mut emitter = crate::emit::ElmEmitter::new(config.context.options.clone());
+            let library = emitter.emit(typed_library);
+            Ok(PipelineOutput {
+                typed_library: None,
+                library: Some(library),
+                source_map: None,
+                diagnostics,
+            })
+        }
+
+        PipelineEmitMode::ElmWithSourceMap { library_uri } => {
+            let mut emitter = crate::emit::ElmEmitter::new(config.context.options.clone());
+            let library = emitter.emit(typed_library);
+            let mut source_map = emitter.take_source_map();
+
+            // Populate doc_id from the library identifier
+            let lib_id = library
+                .identifier
+                .as_ref()
+                .and_then(|i| i.id.as_deref())
+                .unwrap_or("");
+            let lib_version = library
+                .identifier
+                .as_ref()
+                .and_then(|i| i.version.as_deref())
+                .unwrap_or("");
+            let uri = library_uri.as_deref().unwrap_or("");
+            let doc_id = crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
+
+            source_map
+                .source_documents
+                .push(crate::sourcemap::SourceDocument {
+                    doc_id: doc_id.clone(),
+                    uri: uri.to_string(),
+                    checksum: None,
+                    line_index: None,
+                });
+
+            for mapping in &mut source_map.mappings {
+                if mapping.doc_id.is_empty() {
+                    mapping.doc_id = doc_id.clone();
+                }
+            }
+
+            Ok(PipelineOutput {
+                typed_library: None,
+                library: Some(library),
+                source_map: Some(source_map),
+                diagnostics,
+            })
+        }
+    }
+}
 
 /// The result of compiling CQL source code.
 ///
 /// Contains the translated ELM library along with any errors or warnings
-/// that occurred during compilation.
+/// that occurred during compilation.  Diagnostics use the unified
+/// [`Diagnostic`] type which carries a [`crate::reporting::DiagnosticCode`],
+/// pipeline [`crate::reporting::DiagnosticStage`], optional source span, and
+/// severity.
 #[derive(Debug, Clone)]
 pub struct CompilationResult {
     /// The translated ELM library.
     pub library: elm::Library,
-    /// Errors that occurred during compilation.
-    pub errors: Vec<CqlCompilerException>,
-    /// Warnings that occurred during compilation.
-    pub warnings: Vec<CqlCompilerException>,
-    /// Informational messages from compilation.
-    pub messages: Vec<CqlCompilerException>,
+    /// Error-level diagnostics from compilation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics from compilation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages from compilation.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl CompilationResult {
@@ -100,8 +314,8 @@ pub enum CompilationError {
 
 /// Compile CQL source code to ELM.
 ///
-/// This is the main entry point for the CQL compiler. It parses the CQL source,
-/// performs semantic analysis, and produces an ELM library.
+/// This is the main entry point for the CQL compiler. Uses the multi-stage
+/// pipeline: parse → semantic analysis → ELM emission.
 ///
 /// # Arguments
 ///
@@ -133,22 +347,21 @@ pub fn compile(
     source: &str,
     options: Option<CompilerOptions>,
 ) -> Result<CompilationResult, CompilationError> {
-    // Use FHIR R4 model provider - prefer package with full ModelInfo,
-    // fall back to built-in minimal info if package not available
-    let provider = crate::provider::fhir_r4_provider_from_package();
-    compile_with_model(source, options, Some(&provider))
+    compile_with_model(source, options, None)
 }
 
-/// Compile CQL source code to ELM with a custom model provider.
+/// Compile CQL source code to ELM with an optional custom model provider.
 ///
 /// This allows specifying a custom model provider for type resolution.
-/// For most FHIR-based CQL, use `compile()` which provides FHIR R4 by default.
+/// For most FHIR-based CQL, `compile()` (which uses FHIR R4 by default) is
+/// sufficient.
 ///
 /// # Arguments
 ///
 /// * `source` - The CQL source code to compile.
 /// * `options` - Optional compiler options. If None, default options are used.
-/// * `model_provider` - Optional model provider for type resolution.
+/// * `model_provider` - Optional model provider for type resolution. When
+///   `None`, the bundled FHIR R4 provider is used.
 ///
 /// # Returns
 ///
@@ -157,38 +370,21 @@ pub fn compile(
 pub fn compile_with_model(
     source: &str,
     options: Option<CompilerOptions>,
-    model_provider: Option<&dyn crate::provider::ModelInfoProvider>,
+    model_provider: Option<Arc<dyn crate::provider::ModelInfoProvider>>,
 ) -> Result<CompilationResult, CompilationError> {
     let options = options.unwrap_or_default();
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options.clone(), model_provider),
+            emit_mode: PipelineEmitMode::Elm,
+        },
+    )?;
 
-    // Parse the CQL source
-    let parser = CqlParser::new();
-    let ast = parser
-        .parse(source)
-        .map_err(|e| CompilationError::Parse(e.to_string()))?;
-
-    // Create the builder and translate
-    let mut builder = LibraryBuilder::new();
-    builder.set_options(options.clone());
-
-    // Set model provider if provided
-    if let Some(provider) = model_provider {
-        builder.set_model_provider(provider);
-
-        // Load conversion registry from ModelInfo if available
-        // The CQL file typically includes FHIR model via 'using FHIR version ...'
-        // We load conversions from the FHIR ModelInfo which contains
-        // FHIRHelpers conversion definitions.
-        if let Some(model_info) = provider.get_model("FHIR", None) {
-            let registry = crate::conversion::ConversionRegistry::from_model_info(&model_info);
-            builder.set_conversion_registry(registry);
-        }
-    }
-
-    let library = builder.build(&ast);
-
-    // Collect errors/warnings from builder
-    let (errors, warnings, messages) = categorize_exceptions(builder.errors(), &options);
+    let library = output
+        .library
+        .expect("pipeline with Elm mode must return a library");
+    let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
 
     Ok(CompilationResult {
         library,
@@ -232,7 +428,7 @@ pub fn compile_to_json(
     if !result.is_success() {
         // Return the first error message
         if let Some(err) = result.errors.first() {
-            return Err(CompilationError::Semantic(err.message().to_string()));
+            return Err(CompilationError::Semantic(err.message.clone()));
         }
     }
 
@@ -250,18 +446,40 @@ pub struct SourceMapCompilationResult {
     pub library: elm::Library,
     /// Source-map correlating CQL spans to ELM nodes.
     pub source_map: crate::sourcemap::SourceMap,
-    /// Errors that occurred during compilation.
-    pub errors: Vec<crate::reporting::CqlCompilerException>,
-    /// Warnings that occurred during compilation.
-    pub warnings: Vec<crate::reporting::CqlCompilerException>,
-    /// Informational messages from compilation.
-    pub messages: Vec<crate::reporting::CqlCompilerException>,
+    /// Error-level diagnostics from compilation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics from compilation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages from compilation.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl SourceMapCompilationResult {
     /// Returns true if compilation completed without errors.
     pub fn is_success(&self) -> bool {
         self.errors.is_empty()
+    }
+
+    /// Returns true if compilation had any warnings.
+    pub fn has_warnings(&self) -> bool {
+        !self.warnings.is_empty()
+    }
+
+    /// Get the total count of all issues (errors + warnings + messages).
+    pub fn issue_count(&self) -> usize {
+        self.errors.len() + self.warnings.len() + self.messages.len()
+    }
+
+    /// Convert the library to JSON string with pretty formatting.
+    pub fn to_json(&self) -> Result<String, CompilationError> {
+        let options = CompilerOptions::default();
+        library_to_json_with_options(&self.library, &options)
+            .map_err(|e| CompilationError::Output(e.to_string()))
+    }
+
+    /// Convert the library to compact JSON string.
+    pub fn to_compact_json(&self) -> Result<String, CompilationError> {
+        library_to_compact_json(&self.library).map_err(|e| CompilationError::Output(e.to_string()))
     }
 
     /// Serialize the source map to a sidecar JSON string (`*.elm.sourcemap.json`).
@@ -274,10 +492,10 @@ impl SourceMapCompilationResult {
 
 /// Compile CQL source code to ELM and produce a source map.
 ///
-/// Uses the multi-stage pipeline: parse → semantic analysis (`SemanticAnalyzer`)
-/// → ELM emission (`ElmEmitter`).  The emitter records a [`SourceMap`] as a
-/// side-channel during emission, correlating [`SourceSpan`] on each
-/// [`TypedNode`] to the ELM node ids it produces.
+/// Uses the shared multi-stage pipeline: parse → semantic analysis
+/// (`SemanticAnalyzer`) → ELM emission (`ElmEmitter`).  The emitter records a
+/// [`SourceMap`] as a side-channel during emission, correlating [`SourceSpan`]
+/// on each [`TypedNode`] to the ELM node ids it produces.
 ///
 /// # Arguments
 ///
@@ -307,60 +525,24 @@ pub fn compile_to_elm_with_sourcemap(
     options: Option<CompilerOptions>,
     library_uri: Option<&str>,
 ) -> Result<SourceMapCompilationResult, CompilationError> {
-    use std::sync::Arc;
-
     let options = options.unwrap_or_default();
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options.clone(), None),
+            emit_mode: PipelineEmitMode::ElmWithSourceMap {
+                library_uri: library_uri.map(str::to_owned),
+            },
+        },
+    )?;
 
-    // Parse
-    let parser = CqlParser::new();
-    let ast = parser
-        .parse(source)
-        .map_err(|e| CompilationError::Parse(e.to_string()))?;
-
-    // Semantic analysis
-    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
-        Arc::new(crate::provider::fhir_r4_provider_from_package());
-    let analyzer =
-        crate::semantics::analyzer::SemanticAnalyzer::new(Arc::clone(&provider), options.clone());
-    let (typed_library, diagnostics) = analyzer.analyze(ast);
-
-    // ELM emission — builds source map as a side-channel
-    let mut emitter = crate::emit::ElmEmitter::new(options.clone());
-    let library = emitter.emit(typed_library);
-    let mut source_map = emitter.take_source_map();
-
-    // Populate doc_id in the source map now that we know the library identifier
-    let lib_id = library
-        .identifier
-        .as_ref()
-        .and_then(|i| i.id.as_deref())
-        .unwrap_or("");
-    let lib_version = library
-        .identifier
-        .as_ref()
-        .and_then(|i| i.version.as_deref())
-        .unwrap_or("");
-    let uri = library_uri.unwrap_or("");
-    let doc_id = crate::sourcemap::generate_doc_id(lib_id, lib_version, uri);
-
-    // Register the source document
-    source_map
-        .source_documents
-        .push(crate::sourcemap::SourceDocument {
-            doc_id: doc_id.clone(),
-            uri: uri.to_string(),
-            checksum: None,
-            line_index: None,
-        });
-
-    // Back-fill the doc_id into every mapping that was recorded with an empty one
-    for mapping in &mut source_map.mappings {
-        if mapping.doc_id.is_empty() {
-            mapping.doc_id = doc_id.clone();
-        }
-    }
-
-    let (errors, warnings, messages) = categorize_exceptions(&diagnostics, &options);
+    let library = output
+        .library
+        .expect("pipeline with ElmWithSourceMap mode must return a library");
+    let source_map = output
+        .source_map
+        .expect("pipeline with ElmWithSourceMap mode must return a source map");
+    let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
 
     Ok(SourceMapCompilationResult {
         library,
@@ -373,9 +555,8 @@ pub fn compile_to_elm_with_sourcemap(
 
 /// Validate CQL source code without producing ELM output.
 ///
-/// This function parses and performs semantic analysis on the CQL source
-/// using `SemanticAnalyzer` directly, skipping the ELM emit step.
-/// Only validation results are returned.
+/// Runs parse + semantic analysis via the shared pipeline (skipping ELM
+/// emission).  Only validation diagnostics are returned.
 ///
 /// # Arguments
 ///
@@ -400,20 +581,15 @@ pub fn validate(
     options: Option<CompilerOptions>,
 ) -> Result<ValidationResult, CompilationError> {
     let options = options.unwrap_or_default();
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options.clone(), None),
+            emit_mode: PipelineEmitMode::None,
+        },
+    )?;
 
-    // Parse the CQL source
-    let parser = CqlParser::new();
-    let ast = parser
-        .parse(source)
-        .map_err(|e| CompilationError::Parse(e.to_string()))?;
-
-    // Use SemanticAnalyzer directly — parse + analyze only, no ELM emit
-    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
-        Arc::new(crate::provider::fhir_r4_provider_from_package());
-    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(provider, options.clone());
-    let (_, diagnostics) = analyzer.analyze(ast);
-
-    let (errors, warnings, messages) = categorize_exceptions(&diagnostics, &options);
+    let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
 
     Ok(ValidationResult {
         is_valid: errors.is_empty(),
@@ -428,12 +604,12 @@ pub fn validate(
 pub struct ValidationResult {
     /// Whether the source is valid (no errors).
     pub is_valid: bool,
-    /// Errors found during validation.
-    pub errors: Vec<CqlCompilerException>,
-    /// Warnings found during validation.
-    pub warnings: Vec<CqlCompilerException>,
-    /// Informational messages.
-    pub messages: Vec<CqlCompilerException>,
+    /// Error-level diagnostics found during validation.
+    pub errors: Vec<Diagnostic>,
+    /// Warning-level diagnostics found during validation.
+    pub warnings: Vec<Diagnostic>,
+    /// Info-level messages.
+    pub messages: Vec<Diagnostic>,
 }
 
 impl ValidationResult {
@@ -519,37 +695,33 @@ pub fn explain_compile(
     options: Option<CompilerOptions>,
 ) -> Result<String, CompilationError> {
     let options = options.unwrap_or_default();
-    let parser = CqlParser::new();
-    let ast = parser
-        .parse(source)
-        .map_err(|e| CompilationError::Parse(e.to_string()))?;
-    let provider: Arc<dyn crate::provider::ModelInfoProvider> =
-        Arc::new(crate::provider::fhir_r4_provider_from_package());
-    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(provider, options);
-    let (typed_library, _diagnostics) = analyzer.analyze(ast);
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options, None),
+            emit_mode: PipelineEmitMode::None,
+        },
+    )?;
+    let typed_library = output
+        .typed_library
+        .expect("pipeline with None emit mode must return typed_library");
     Ok(crate::explain::explain_compile(&typed_library))
 }
 
-/// Categorize exceptions by severity.
+/// Categorize a flat list of [`Diagnostic`] items by severity.
 fn categorize_exceptions(
-    exceptions: &[crate::reporting::CqlCompilerException],
+    diagnostics: &[Diagnostic],
     _options: &CompilerOptions,
-) -> (
-    Vec<CqlCompilerException>,
-    Vec<CqlCompilerException>,
-    Vec<CqlCompilerException>,
-) {
+) -> (Vec<Diagnostic>, Vec<Diagnostic>, Vec<Diagnostic>) {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
     let mut messages = Vec::new();
 
-    for err in exceptions {
-        let exception = err.clone();
-
-        match exception.severity() {
-            Severity::Error => errors.push(exception),
-            Severity::Warning => warnings.push(exception),
-            Severity::Info => messages.push(exception),
+    for d in diagnostics {
+        match d.severity {
+            Severity::Error => errors.push(d.clone()),
+            Severity::Warning => warnings.push(d.clone()),
+            Severity::Info => messages.push(d.clone()),
         }
     }
 
@@ -872,5 +1044,122 @@ mod tests {
         assert!(result.library.parameters.is_some());
         assert!(result.library.contexts.is_some());
         assert!(result.library.statements.is_some());
+    }
+
+    // ── Task 1.4 regression tests: consistent diagnostics across all pipeline
+    // entry-points.  Each pair asserts that the same source produces the same
+    // errors/warnings regardless of which public function is called. ─────────
+
+    /// Source that compiles cleanly — used to verify zero-error consistency.
+    const CLEAN_SOURCE: &str = "library T version '1.0' define X: 1 + 2";
+    /// Source that causes a semantic error (undefined reference).
+    const ERROR_SOURCE: &str = "library T version '1.0' define X: UndefinedRef + 1";
+
+    #[test]
+    fn test_consistent_diagnostics_clean_compile_vs_validate() {
+        let c = compile(CLEAN_SOURCE, None).unwrap();
+        let v = validate(CLEAN_SOURCE, None).unwrap();
+        assert_eq!(
+            c.errors.len(),
+            v.errors.len(),
+            "error count must match between compile and validate"
+        );
+        assert_eq!(
+            c.warnings.len(),
+            v.warnings.len(),
+            "warning count must match between compile and validate"
+        );
+    }
+
+    #[test]
+    fn test_consistent_diagnostics_error_compile_vs_validate() {
+        let c = compile(ERROR_SOURCE, None).unwrap();
+        let v = validate(ERROR_SOURCE, None).unwrap();
+        assert_eq!(
+            c.errors.len(),
+            v.errors.len(),
+            "error count must match between compile and validate (error source)"
+        );
+    }
+
+    #[test]
+    fn test_consistent_diagnostics_compile_vs_sourcemap() {
+        let c = compile(CLEAN_SOURCE, None).unwrap();
+        let sm = compile_to_elm_with_sourcemap(CLEAN_SOURCE, None, None).unwrap();
+        assert_eq!(
+            c.errors.len(),
+            sm.errors.len(),
+            "error count must match between compile and compile_to_elm_with_sourcemap"
+        );
+        assert_eq!(
+            c.warnings.len(),
+            sm.warnings.len(),
+            "warning count must match between compile and compile_to_elm_with_sourcemap"
+        );
+    }
+
+    #[test]
+    fn test_consistent_diagnostics_error_compile_vs_sourcemap() {
+        let c = compile(ERROR_SOURCE, None).unwrap();
+        let sm = compile_to_elm_with_sourcemap(ERROR_SOURCE, None, None).unwrap();
+        assert_eq!(
+            c.errors.len(),
+            sm.errors.len(),
+            "error count must match between compile and compile_to_elm_with_sourcemap (error source)"
+        );
+    }
+
+    #[test]
+    fn test_compile_with_model_none_matches_compile() {
+        // compile_with_model(src, None, None) must behave identically to compile(src, None).
+        let c = compile(CLEAN_SOURCE, None).unwrap();
+        let m = compile_with_model(CLEAN_SOURCE, None, None).unwrap();
+        assert_eq!(c.errors.len(), m.errors.len());
+        assert_eq!(c.warnings.len(), m.warnings.len());
+        // Both should produce a library with the same identifier
+        let c_id = c.library.identifier.as_ref().and_then(|i| i.id.as_deref());
+        let m_id = m.library.identifier.as_ref().and_then(|i| i.id.as_deref());
+        assert_eq!(c_id, m_id);
+    }
+
+    #[test]
+    fn test_sourcemap_result_has_json_helpers() {
+        // Verify to_json / to_compact_json / source_map_json work on
+        // SourceMapCompilationResult (not just CompilationResult).
+        let sm = compile_to_elm_with_sourcemap(CLEAN_SOURCE, None, None).unwrap();
+        assert!(sm.is_success());
+        let json = sm.to_json().unwrap();
+        assert!(
+            json.contains("\"id\": \"T\""),
+            "pretty JSON must contain id: {json}"
+        );
+        let compact = sm.to_compact_json().unwrap();
+        assert!(
+            compact.contains("\"id\":\"T\""),
+            "compact JSON must contain id: {compact}"
+        );
+        let _sm_json = sm.source_map_json().unwrap(); // must not panic
+    }
+
+    #[test]
+    fn test_explain_compile_consistent_with_compile_defs() {
+        // explain_compile must surface the same top-level definitions as compile.
+        let source = r#"library T version '1.0' define A: 1 define B: 2"#;
+        let c = compile(source, None).unwrap();
+        let exp = explain_compile(source, None).unwrap();
+
+        // compile should report the same number of statement defs
+        let stmt_count = c
+            .library
+            .statements
+            .as_ref()
+            .map(|s| s.defs.len())
+            .unwrap_or(0);
+        assert!(
+            stmt_count >= 2,
+            "expected at least 2 defs; got {stmt_count}"
+        );
+        assert!(exp.contains("ExpressionDef(A)"), "explain missing A: {exp}");
+        assert!(exp.contains("ExpressionDef(B)"), "explain missing B: {exp}");
     }
 }

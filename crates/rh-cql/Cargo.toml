@@ -19,6 +19,20 @@ regex = { workspace = true }
 rh-foundation = { path = "../rh-foundation" }
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+quick-xml = { workspace = true }
+
+[[bench]]
+name = "bench_compile"
+harness = false
+
+[[bench]]
+name = "bench_eval"
+harness = false
+
+[[bench]]
+name = "bench_lookup"
+harness = false
 
 [[bin]]
 name = "cql-test-parse"

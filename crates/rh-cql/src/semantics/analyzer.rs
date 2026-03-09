@@ -3,6 +3,7 @@ use crate::operators::OperatorResolver;
 use crate::options::CompilerOptions;
 use crate::parser::ast;
 use crate::provider::ModelInfoProvider;
+use crate::reporting::SourceLocator;
 use crate::semantics::scope::{ScopeManager, Symbol, SymbolKind};
 use crate::semantics::typed_ast::{
     NodeId, SemanticMeta, SourceSpan, TypedExpression, TypedLibrary, TypedNode, TypedParameterDef,
@@ -21,6 +22,8 @@ pub struct SemanticAnalyzer {
 }
 
 impl SemanticAnalyzer {
+    /// Construct a `SemanticAnalyzer` from an explicit model provider and
+    /// options.
     pub fn new(model_provider: Arc<dyn ModelInfoProvider>, options: CompilerOptions) -> Self {
         SemanticAnalyzer {
             scope_manager: ScopeManager::new(),
@@ -30,6 +33,22 @@ impl SemanticAnalyzer {
             next_node_id: 1,
             operator_resolver: OperatorResolver::new(),
         }
+    }
+
+    /// Construct a `SemanticAnalyzer` from a [`CompilationContext`].
+    ///
+    /// This is the preferred constructor when a context is already available,
+    /// as it avoids unpacking the individual fields.
+    ///
+    /// ```rust
+    /// use rh_cql::{CompilationContext, CompilerOptions};
+    /// use rh_cql::semantics::analyzer::SemanticAnalyzer;
+    ///
+    /// let ctx = CompilationContext::new(CompilerOptions::default(), None);
+    /// let analyzer = SemanticAnalyzer::with_context(&ctx);
+    /// ```
+    pub fn with_context(context: &crate::compiler::CompilationContext) -> Self {
+        SemanticAnalyzer::new(context.resolve_provider(), context.options.clone())
     }
 
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
@@ -68,10 +87,13 @@ impl SemanticAnalyzer {
                 Some(s.name.clone()),
             ),
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!(
-                    "Could not resolve identifier: {}",
-                    e.name
-                )));
+                let exc =
+                    CqlCompilerException::new(format!("Could not resolve identifier: {}", e.name));
+                let exc = match e.location {
+                    Some(loc) => exc.with_locator(SourceLocator::from(loc)),
+                    None => exc,
+                };
+                self.diagnostics.push(exc);
                 (DataType::Unknown, None)
             }
         };
@@ -107,10 +129,15 @@ impl SemanticAnalyzer {
                 )
             }
             None => {
-                self.diagnostics.push(CqlCompilerException::new(format!(
+                let exc = CqlCompilerException::new(format!(
                     "Could not resolve qualified identifier: {}.{}",
                     e.qualifier, e.name
-                )));
+                ));
+                let exc = match e.location {
+                    Some(loc) => exc.with_locator(SourceLocator::from(loc)),
+                    None => exc,
+                };
+                self.diagnostics.push(exc);
                 (DataType::Unknown, None)
             }
         };

@@ -81,7 +81,7 @@ fn test0_compiles_without_fatal_errors() {
         .errors
         .iter()
         .filter(|e| {
-            let msg = e.message().to_lowercase();
+            let msg = e.message.to_lowercase();
             !msg.contains("not found")
                 && !msg.contains("unknown")
                 && !msg.contains("unresolved")
@@ -156,7 +156,7 @@ fn test2_compiles_without_fatal_errors() {
         .errors
         .iter()
         .filter(|e| {
-            let msg = e.message().to_lowercase();
+            let msg = e.message.to_lowercase();
             !msg.contains("not found")
                 && !msg.contains("unknown")
                 && !msg.contains("unresolved")
@@ -286,9 +286,9 @@ fn simple_test_compiles_without_errors() {
         .errors
         .iter()
         .filter(|e| {
-            !e.message().contains("not found")
-                && !e.message().contains("unknown")
-                && !e.message().contains("unresolved")
+            !e.message.contains("not found")
+                && !e.message.contains("unknown")
+                && !e.message.contains("unresolved")
         })
         .collect();
     assert!(fatal.is_empty(), "unexpected fatal errors: {fatal:?}");

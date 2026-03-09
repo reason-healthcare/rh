@@ -1,0 +1,269 @@
+{
+  "library": {
+    "identifier": {
+      "id": "GoldenComparisons",
+      "version": "1.0.0"
+    },
+    "schemaIdentifier": {
+      "id": "urn:hl7-org:elm",
+      "version": "r1"
+    },
+    "statements": {
+      "def": [
+        {
+          "name": "IntLT",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Less",
+            "localId": "1",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "2",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "1"
+              },
+              {
+                "type": "Literal",
+                "localId": "3",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "2"
+              }
+            ]
+          }
+        },
+        {
+          "name": "IntGT",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Greater",
+            "localId": "4",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "5",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "5"
+              },
+              {
+                "type": "Literal",
+                "localId": "6",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "name": "IntLTE",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "LessOrEqual",
+            "localId": "7",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "8",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              },
+              {
+                "type": "Literal",
+                "localId": "9",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "name": "IntGTE",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "GreaterOrEqual",
+            "localId": "10",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "11",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "4"
+              },
+              {
+                "type": "Literal",
+                "localId": "12",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "3"
+              }
+            ]
+          }
+        },
+        {
+          "name": "IntEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Equal",
+            "localId": "13",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "14",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "7"
+              },
+              {
+                "type": "Literal",
+                "localId": "15",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "7"
+              }
+            ]
+          }
+        },
+        {
+          "name": "IntNEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "NotEqual",
+            "localId": "16",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "17",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "1"
+              },
+              {
+                "type": "Literal",
+                "localId": "18",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Integer",
+                "value": "2"
+              }
+            ]
+          }
+        },
+        {
+          "name": "DecEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Equal",
+            "localId": "19",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "20",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+                "value": "1.0"
+              },
+              {
+                "type": "Literal",
+                "localId": "21",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
+                "value": "1.0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "StrEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Equal",
+            "localId": "22",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "23",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}String",
+                "value": "abc"
+              },
+              {
+                "type": "Literal",
+                "localId": "24",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}String",
+                "value": "abc"
+              }
+            ]
+          }
+        },
+        {
+          "name": "StrNEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Equal",
+            "localId": "25",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Literal",
+                "localId": "26",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}String",
+                "value": "abc"
+              },
+              {
+                "type": "Literal",
+                "localId": "27",
+                "locator": "0-0:0-0",
+                "valueType": "{urn:hl7-org:elm-types:r1}String",
+                "value": "def"
+              }
+            ]
+          }
+        },
+        {
+          "name": "NullEQ",
+          "accessLevel": "Public",
+          "expression": {
+            "type": "Equal",
+            "localId": "28",
+            "locator": "0-0:0-0",
+            "operand": [
+              {
+                "type": "Null",
+                "localId": "29",
+                "locator": "0-0:0-0"
+              },
+              {
+                "type": "Null",
+                "localId": "30",
+                "locator": "0-0:0-0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annotation": [
+      {
+        "type": "CqlToElmInfo",
+        "translatorVersion": "0.1.0",
+        "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
+      }
+    ]
+  }
+}

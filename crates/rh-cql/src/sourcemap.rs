@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 // ---------------------------------------------------------------------------
 
 /// A single point in a source document (line/column are 1-based).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceLocation {
     pub line: usize,
     pub column: usize,
@@ -20,7 +20,7 @@ pub struct SourceLocation {
 }
 
 /// A contiguous span of source text (start inclusive, end exclusive).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceSpan {
     pub start: SourceLocation,
     pub end: SourceLocation,
