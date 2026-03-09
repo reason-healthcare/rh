@@ -211,10 +211,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         id
     }
 
-    fn eval_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             // ----- Literals -----
             Expression::Null(_) => Ok(Value::Null),
@@ -1000,8 +997,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
             Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
             Expression::SameAs(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first())?
-;                let b = self.eval_expr_opt(tb.operand.get(1))?;
+                let a = self.eval_expr_opt(tb.operand.first())?;
+                let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::same_as(&a, &b, tb.precision.as_deref())
             }
             Expression::SameOrBefore(tb) => {
@@ -1083,10 +1080,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// Evaluate logical and null-propagation expressions:
     /// `And`, `Or`, `Not`, `Xor`, `Implies`, `IsNull`, `IsTrue`, `IsFalse`,
     /// `Coalesce`.
-    fn eval_logical_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_logical_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::And(nary) => {
                 let vals = self.eval_nary_args(nary)?;
@@ -1138,10 +1132,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     }
 
     /// Evaluate control-flow expressions: `If`, `Case`.
-    fn eval_control_flow_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_control_flow_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::If(if_expr) => {
                 let cond = self.eval_expr_opt(if_expr.condition.as_deref())?;
@@ -1178,10 +1169,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// `Intersect`, `Except`, `Sort`, `Median`, `Mode`, `Variance`,
     /// `StdDev`, `PopulationVariance`, `PopulationStdDev`, `AllTrue`,
     /// `AnyTrue`, `Repeat`.
-    fn eval_list_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_list_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::List(list_expr) => {
                 let mut items = Vec::new();
@@ -1329,10 +1317,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// `MeetsAfter`, `Includes`, `IncludedIn`, `Starts`, `Ends`, `Collapse`,
     /// `Expand`, `ProperContains`, `ProperIn`, `ProperIncludes`,
     /// `ProperIncludedIn`.
-    fn eval_interval_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_interval_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::Interval(iv) => {
                 let low = match &iv.low {
@@ -1504,10 +1489,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     }
 
     /// Evaluate query and retrieve expressions: `Query`, `Retrieve`.
-    fn eval_query_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_query_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::Query(q) => {
                 let snapshot = self.snapshot_scope();
@@ -1560,10 +1542,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// URI so they can be consumed by membership-test expressions.
     /// `InValueSet` / `InCodeSystem` delegate membership tests to the runtime
     /// [`EvalContext`].
-    fn eval_terminology_expr(
-        &mut self,
-        expr: &Expression,
-    ) -> Result<Value, EvalError> {
+    fn eval_terminology_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         use super::value::{CqlCode, CqlConcept};
 
         match expr {
@@ -1851,20 +1830,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
     // ----- Helpers -----
 
-    fn eval_nary_args(
-        &mut self,
-        nary: &NaryExpression,
-    ) -> Result<Vec<Value>, EvalError> {
-        nary.operand
-            .iter()
-            .map(|e| self.eval_expr(e))
-            .collect()
+    fn eval_nary_args(&mut self, nary: &NaryExpression) -> Result<Vec<Value>, EvalError> {
+        nary.operand.iter().map(|e| self.eval_expr(e)).collect()
     }
 
-    fn eval_binary_args(
-        &mut self,
-        bin: &BinaryExpression,
-    ) -> Result<(Value, Value), EvalError> {
+    fn eval_binary_args(&mut self, bin: &BinaryExpression) -> Result<(Value, Value), EvalError> {
         let a = bin
             .operand
             .first()
@@ -1878,20 +1848,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         Ok((a, b))
     }
 
-    fn eval_unary_arg(
-        &mut self,
-        unary: &UnaryExpression,
-    ) -> Result<Value, EvalError> {
+    fn eval_unary_arg(&mut self, unary: &UnaryExpression) -> Result<Value, EvalError> {
         match &unary.operand {
             Some(e) => self.eval_expr(e),
             None => Ok(Value::Null),
         }
     }
 
-    fn eval_expr_opt(
-        &mut self,
-        expr: Option<&Expression>,
-    ) -> Result<Value, EvalError> {
+    fn eval_expr_opt(&mut self, expr: Option<&Expression>) -> Result<Value, EvalError> {
         match expr {
             Some(e) => self.eval_expr(e),
             None => Ok(Value::Null),

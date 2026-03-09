@@ -4,9 +4,7 @@
 //! by the `xsi:type` attribute on the enclosing `<typeInfo>` element.
 
 use super::type_specifier::{parse_type_specifier_attrs, parse_type_specifier_element};
-use super::util::{
-    get_xsi_type, parse_relationship_info, parse_type_parameter_info, skip_element,
-};
+use super::util::{get_xsi_type, parse_relationship_info, parse_type_parameter_info, skip_element};
 use crate::modelinfo::{
     ChoiceTypeInfo, ClassInfo, ClassInfoElement, IntervalTypeInfo, ListTypeInfo, ProfileInfo,
     SimpleTypeInfo, TupleTypeInfo, TupleTypeInfoElement, TypeInfo, TypeSpecifier,
@@ -96,51 +94,47 @@ fn parse_class_info_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => {
-                match e.name().as_ref() {
-                    b"element" => {
-                        let elem = parse_class_info_element(reader, &e)?;
-                        info.element.push(elem);
-                    }
-                    b"parameter" => {
-                        let param = parse_type_parameter_info(reader, &e)?;
-                        info.parameter.push(param);
-                    }
-                    b"contextRelationship" => {
-                        let rel = parse_relationship_info(&e)?;
-                        info.context_relationship.push(rel);
-                        skip_element(reader)?;
-                    }
-                    b"targetContextRelationship" => {
-                        let rel = parse_relationship_info(&e)?;
-                        info.target_context_relationship.push(rel);
-                        skip_element(reader)?;
-                    }
-                    b"baseTypeSpecifier" => {
-                        if let Some(spec) = parse_type_specifier_element(reader, &e)? {
-                            info.base_type_specifier = Some(spec);
-                        }
-                    }
-                    _ => skip_element(reader)?,
+            Event::Start(e) => match e.name().as_ref() {
+                b"element" => {
+                    let elem = parse_class_info_element(reader, &e)?;
+                    info.element.push(elem);
                 }
-            }
-            Event::Empty(e) => {
-                match e.name().as_ref() {
-                    b"element" => {
-                        let elem = parse_class_info_element_attrs(&e)?;
-                        info.element.push(elem);
-                    }
-                    b"contextRelationship" => {
-                        let rel = parse_relationship_info(&e)?;
-                        info.context_relationship.push(rel);
-                    }
-                    b"targetContextRelationship" => {
-                        let rel = parse_relationship_info(&e)?;
-                        info.target_context_relationship.push(rel);
-                    }
-                    _ => {}
+                b"parameter" => {
+                    let param = parse_type_parameter_info(reader, &e)?;
+                    info.parameter.push(param);
                 }
-            }
+                b"contextRelationship" => {
+                    let rel = parse_relationship_info(&e)?;
+                    info.context_relationship.push(rel);
+                    skip_element(reader)?;
+                }
+                b"targetContextRelationship" => {
+                    let rel = parse_relationship_info(&e)?;
+                    info.target_context_relationship.push(rel);
+                    skip_element(reader)?;
+                }
+                b"baseTypeSpecifier" => {
+                    if let Some(spec) = parse_type_specifier_element(reader, &e)? {
+                        info.base_type_specifier = Some(spec);
+                    }
+                }
+                _ => skip_element(reader)?,
+            },
+            Event::Empty(e) => match e.name().as_ref() {
+                b"element" => {
+                    let elem = parse_class_info_element_attrs(&e)?;
+                    info.element.push(elem);
+                }
+                b"contextRelationship" => {
+                    let rel = parse_relationship_info(&e)?;
+                    info.context_relationship.push(rel);
+                }
+                b"targetContextRelationship" => {
+                    let rel = parse_relationship_info(&e)?;
+                    info.target_context_relationship.push(rel);
+                }
+                _ => {}
+            },
             Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
             Event::Eof => break,
             _ => {}
@@ -189,36 +183,32 @@ fn parse_class_info_element_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => {
-                match e.name().as_ref() {
-                    b"elementTypeSpecifier" => {
-                        if let Some(spec) = parse_type_specifier_element(reader, &e)? {
-                            elem.element_type_specifier = Some(spec);
-                        }
+            Event::Start(e) => match e.name().as_ref() {
+                b"elementTypeSpecifier" => {
+                    if let Some(spec) = parse_type_specifier_element(reader, &e)? {
+                        elem.element_type_specifier = Some(spec);
                     }
-                    b"typeSpecifier" => {
-                        if let Some(spec) = parse_type_specifier_element(reader, &e)? {
-                            elem.type_specifier = Some(spec);
-                        }
-                    }
-                    _ => skip_element(reader)?,
                 }
-            }
-            Event::Empty(e) => {
-                match e.name().as_ref() {
-                    b"elementTypeSpecifier" => {
-                        if let Some(spec) = parse_type_specifier_attrs(&e)? {
-                            elem.element_type_specifier = Some(spec);
-                        }
+                b"typeSpecifier" => {
+                    if let Some(spec) = parse_type_specifier_element(reader, &e)? {
+                        elem.type_specifier = Some(spec);
                     }
-                    b"typeSpecifier" => {
-                        if let Some(spec) = parse_type_specifier_attrs(&e)? {
-                            elem.type_specifier = Some(spec);
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                _ => skip_element(reader)?,
+            },
+            Event::Empty(e) => match e.name().as_ref() {
+                b"elementTypeSpecifier" => {
+                    if let Some(spec) = parse_type_specifier_attrs(&e)? {
+                        elem.element_type_specifier = Some(spec);
+                    }
+                }
+                b"typeSpecifier" => {
+                    if let Some(spec) = parse_type_specifier_attrs(&e)? {
+                        elem.type_specifier = Some(spec);
+                    }
+                }
+                _ => {}
+            },
             Event::End(e) if e.name().as_ref() == b"element" => break,
             Event::Eof => break,
             _ => {}
@@ -259,10 +249,7 @@ fn parse_simple_type_info<R: BufRead>(
 // ProfileInfo
 // ---------------------------------------------------------------------------
 
-fn parse_profile_info<R: BufRead>(
-    reader: &mut Reader<R>,
-    e: &BytesStart,
-) -> Result<ProfileInfo> {
+fn parse_profile_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Result<ProfileInfo> {
     let mut info = ProfileInfo::default();
 
     for attr in e.attributes().flatten() {

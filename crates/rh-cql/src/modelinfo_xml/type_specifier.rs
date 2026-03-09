@@ -3,9 +3,7 @@
 //! Each `parse_*` function corresponds to a concrete `TypeSpecifier` subtype
 //! discriminated by the `xsi:type` attribute on the enclosing element.
 
-use super::util::{
-    get_xsi_type, parse_tuple_element_attrs, skip_element, TupleElementDef,
-};
+use super::util::{get_xsi_type, parse_tuple_element_attrs, skip_element, TupleElementDef};
 use crate::modelinfo::{
     ChoiceTypeSpecifier, IntervalTypeSpecifier, ListTypeSpecifier, NamedTypeSpecifier,
     TupleTypeSpecifier, TypeSpecifier,
@@ -89,9 +87,7 @@ pub(super) fn parse_type_specifier_attrs(e: &BytesStart) -> Result<Option<TypeSp
 }
 
 /// Parse attributes of a `NamedTypeSpecifier` element.
-pub(super) fn parse_named_type_specifier_attrs(
-    e: &BytesStart,
-) -> Result<NamedTypeSpecifier> {
+pub(super) fn parse_named_type_specifier_attrs(e: &BytesStart) -> Result<NamedTypeSpecifier> {
     let mut spec = NamedTypeSpecifier::default();
 
     for attr in e.attributes().flatten() {

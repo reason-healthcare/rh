@@ -23,9 +23,7 @@ mod util;
 use type_info::parse_type_info;
 use util::skip_element;
 
-use crate::modelinfo::{
-    ContextInfo, ConversionInfo, ModelInfo, ModelSpecifier,
-};
+use crate::modelinfo::{ContextInfo, ConversionInfo, ModelInfo, ModelSpecifier};
 use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
@@ -107,45 +105,41 @@ fn parse_model_info_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => {
-                match e.name().as_ref() {
-                    b"requiredModelInfo" => {
-                        let spec = parse_required_model_info(&e)?;
-                        model_info.required_model_info.push(spec);
-                    }
-                    b"typeInfo" => {
-                        if let Some(type_info) = parse_type_info(reader, &e)? {
-                            model_info.type_info.push(type_info);
-                        }
-                    }
-                    b"conversionInfo" => {
-                        let conv = parse_conversion_info(&e)?;
-                        model_info.conversion_info.push(conv);
-                    }
-                    b"contextInfo" => {
-                        let ctx = parse_context_info(&e)?;
-                        model_info.context_info.push(ctx);
-                    }
-                    _ => skip_element(reader)?,
+            Event::Start(e) => match e.name().as_ref() {
+                b"requiredModelInfo" => {
+                    let spec = parse_required_model_info(&e)?;
+                    model_info.required_model_info.push(spec);
                 }
-            }
-            Event::Empty(e) => {
-                match e.name().as_ref() {
-                    b"requiredModelInfo" => {
-                        let spec = parse_required_model_info(&e)?;
-                        model_info.required_model_info.push(spec);
+                b"typeInfo" => {
+                    if let Some(type_info) = parse_type_info(reader, &e)? {
+                        model_info.type_info.push(type_info);
                     }
-                    b"conversionInfo" => {
-                        let conv = parse_conversion_info(&e)?;
-                        model_info.conversion_info.push(conv);
-                    }
-                    b"contextInfo" => {
-                        let ctx = parse_context_info(&e)?;
-                        model_info.context_info.push(ctx);
-                    }
-                    _ => {}
                 }
-            }
+                b"conversionInfo" => {
+                    let conv = parse_conversion_info(&e)?;
+                    model_info.conversion_info.push(conv);
+                }
+                b"contextInfo" => {
+                    let ctx = parse_context_info(&e)?;
+                    model_info.context_info.push(ctx);
+                }
+                _ => skip_element(reader)?,
+            },
+            Event::Empty(e) => match e.name().as_ref() {
+                b"requiredModelInfo" => {
+                    let spec = parse_required_model_info(&e)?;
+                    model_info.required_model_info.push(spec);
+                }
+                b"conversionInfo" => {
+                    let conv = parse_conversion_info(&e)?;
+                    model_info.conversion_info.push(conv);
+                }
+                b"contextInfo" => {
+                    let ctx = parse_context_info(&e)?;
+                    model_info.context_info.push(ctx);
+                }
+                _ => {}
+            },
             Event::End(e) if e.name().as_ref() == b"modelInfo" => break,
             Event::Eof => break,
             _ => {}
