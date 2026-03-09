@@ -21,6 +21,9 @@ pub fn cql_compare(a: &Value, b: &Value) -> Option<Ordering> {
         (Value::Integer(x), Value::Integer(y)) => x.partial_cmp(y),
         (Value::Long(x), Value::Long(y)) => x.partial_cmp(y),
         (Value::Decimal(x), Value::Decimal(y)) => x.partial_cmp(y),
+        // Integer/Decimal cross-type: implicit promotion to Decimal.
+        (Value::Integer(x), Value::Decimal(y)) => (*x as f64).partial_cmp(y),
+        (Value::Decimal(x), Value::Integer(y)) => x.partial_cmp(&(*y as f64)),
         (Value::String(x), Value::String(y)) => Some(x.cmp(y)),
         (Value::Quantity(x), Value::Quantity(y)) if x.unit == y.unit => {
             x.value.partial_cmp(&y.value)
@@ -140,8 +143,33 @@ pub fn equal(a: &Value, b: &Value) -> Value {
 
 /// CQL `Equivalent` (`~`): null-safe equivalence.
 ///
-/// Delegates to [`super::super::value::cql_equivalent`].
+/// For lists, performs element-by-element comparison with null propagation:
+/// extra null elements in a longer list cause the result to be Null.
 pub fn equivalent(a: &Value, b: &Value) -> Value {
+    if let (Value::List(av), Value::List(bv)) = (a, b) {
+        let shorter = av.len().min(bv.len());
+        // Compare shared elements
+        for i in 0..shorter {
+            if !super::super::value::cql_equivalent(&av[i], &bv[i]) {
+                return Value::Boolean(false);
+            }
+        }
+        // Check extra elements in longer list
+        if av.len() != bv.len() {
+            let extra: &[Value] = if av.len() > bv.len() {
+                &av[shorter..]
+            } else {
+                &bv[shorter..]
+            };
+            // Non-null extra elements → not equivalent
+            if extra.iter().any(|v| !matches!(v, Value::Null)) {
+                return Value::Boolean(false);
+            }
+            // All extra elements are null → result is null (null propagation)
+            return Value::Null;
+        }
+        return Value::Boolean(true);
+    }
     Value::Boolean(super::super::value::cql_equivalent(a, b))
 }
 
@@ -273,11 +301,15 @@ mod tests {
     }
 
     #[test]
-    fn compare_different_types_yields_null() {
-        // Integer vs Decimal are different variant arms — not comparable, returns null
+    fn compare_integer_and_decimal() {
+        // Integer and Decimal are comparable via implicit promotion (CQL spec).
         assert_eq!(
             less(&Value::Integer(1), &Value::Decimal(2.0)).unwrap(),
-            Value::Null
+            Value::Boolean(true)
+        );
+        assert_eq!(
+            less(&Value::Integer(3), &Value::Decimal(2.0)).unwrap(),
+            Value::Boolean(false)
         );
     }
 

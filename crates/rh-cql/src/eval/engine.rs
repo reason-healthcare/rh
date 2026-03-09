@@ -1226,7 +1226,10 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (list, idx) = self.eval_binary_args(bin)?;
                 match (&list, &idx) {
                     (Value::List(items), Value::Integer(i)) => {
-                        let i = (*i - 1) as usize; // 1-based
+                        if *i < 0 {
+                            return Ok(Value::Null);
+                        }
+                        let i = *i as usize; // 0-based
                         Ok(items.get(i).cloned().unwrap_or(Value::Null))
                     }
                     (Value::String(_), Value::Integer(_)) => {
@@ -1320,6 +1323,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     fn eval_interval_expr(&mut self, expr: &Expression) -> Result<Value, EvalError> {
         match expr {
             Expression::Interval(iv) => {
+                let low_closed = iv.low_closed.unwrap_or(true);
+                let high_closed = iv.high_closed.unwrap_or(true);
                 let low = match &iv.low {
                     Some(e) => Some(Box::new(self.eval_expr(e)?)),
                     None => None,
@@ -1328,11 +1333,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     Some(e) => Some(Box::new(self.eval_expr(e)?)),
                     None => None,
                 };
+                // If a specified (concrete) bound evaluates to null, the interval is null.
+                // An unspecified bound (None) means unbounded (±∞), which is valid.
+                let low_is_null = low.as_ref().is_some_and(|v| matches!(**v, Value::Null));
+                let high_is_null = high.as_ref().is_some_and(|v| matches!(**v, Value::Null));
+                // Closed null bound always → null interval.
+                // Both bounds null (regardless of open/closed) → null interval.
+                let both_null = low_is_null && high_is_null;
+                let low_null = (low_closed && low_is_null) || both_null;
+                let high_null = (high_closed && high_is_null) || both_null;
+                if low_null || high_null {
+                    return Ok(Value::Null);
+                }
                 Ok(Value::Interval {
                     low,
                     high,
-                    low_closed: iv.low_closed.unwrap_or(true),
-                    high_closed: iv.high_closed.unwrap_or(true),
+                    low_closed,
+                    high_closed,
                 })
             }
             Expression::Start(unary) => {
@@ -1356,7 +1373,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &a {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
-                    Value::Null => Ok(Value::Null),
+                    // Null interval/list = empty, doesn't contain anything
+                    Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
                         "Contains: expected Interval or List".to_string(),
                     )),
@@ -1368,7 +1386,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &b {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
-                    Value::Null => Ok(Value::Null),
+                    // Null interval/list = empty, element can't be in it
+                    Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
                         "In: expected Interval or List".to_string(),
                     )),
@@ -1405,7 +1424,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::List(_), Value::List(_)) => super::lists::list_includes(&a, &b),
+                    // Includes(list, null-element): null element propagation → Null
+                    (Value::List(_), Value::Null) => Ok(Value::Null),
+                    // List includes (null container is treated as empty list)
+                    (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
+                        super::lists::list_includes(&a, &b)
+                    }
                     _ => super::intervals::includes(&a, &b),
                 }
             }
@@ -1413,7 +1437,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::List(_), Value::List(_)) => super::lists::list_included_in(&a, &b),
+                    // IncludedIn(null-element, list): null element propagation → Null
+                    (Value::Null, Value::List(_)) => Ok(Value::Null),
+                    // List included in (null container is treated as empty list)
+                    (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
+                        super::lists::list_included_in(&a, &b)
+                    }
                     _ => super::intervals::included_in(&a, &b),
                 }
             }
@@ -1444,8 +1473,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (a, b) = self.eval_binary_args(bin)?;
                 match &a {
                     Value::Interval { .. } => super::intervals::proper_contains(&a, &b),
-                    Value::List(_) => super::lists::list_contains(&a, &b),
-                    Value::Null => Ok(Value::Null),
+                    Value::List(items) => {
+                        if matches!(b, Value::Null) {
+                            // ProperContains with null element: check if null is physically in list
+                            Ok(Value::Boolean(
+                                items.iter().any(|v| matches!(v, Value::Null)),
+                            ))
+                        } else {
+                            super::lists::list_contains(&a, &b)
+                        }
+                    }
+                    // Null list = empty list, doesn't contain anything
+                    Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
                         "ProperContains: expected Interval or List".to_string(),
                     )),
@@ -1455,8 +1494,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let (a, b) = self.eval_binary_args(bin)?;
                 match &b {
                     Value::Interval { .. } => super::intervals::proper_in(&a, &b),
-                    Value::List(_) => super::lists::in_list(&a, &b),
-                    Value::Null => Ok(Value::Null),
+                    Value::List(items) => {
+                        if matches!(a, Value::Null) {
+                            // ProperIn with null element: check if null is physically in list
+                            Ok(Value::Boolean(
+                                items.iter().any(|v| matches!(v, Value::Null)),
+                            ))
+                        } else {
+                            super::lists::in_list(&a, &b)
+                        }
+                    }
+                    // Null list = empty list, element can't be in it
+                    Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
                         "ProperIn: expected Interval or List".to_string(),
                     )),
@@ -1469,7 +1518,25 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
                         super::intervals::proper_includes(&a, &b)
                     }
-                    (Value::List(_), Value::List(_)) => super::lists::list_includes(&a, &b),
+                    // Null container = empty list, can't properly include anything
+                    (Value::Null, _) => Ok(Value::Boolean(false)),
+                    // List properly includes null (scalar element): check literal null membership
+                    (Value::List(items), Value::Null) => Ok(Value::Boolean(
+                        items.iter().any(|v| matches!(v, Value::Null)),
+                    )),
+                    // List properly includes a scalar element = Contains
+                    (Value::List(_), _) if !matches!(b, Value::List(_)) => {
+                        super::lists::list_contains(&a, &b)
+                    }
+                    // Proper list inclusion: a includes b AND b doesn't include a
+                    (Value::List(_), Value::List(_)) => {
+                        let inc_a_b = super::lists::list_includes(&a, &b)?;
+                        if inc_a_b != Value::Boolean(true) {
+                            return Ok(Value::Boolean(false));
+                        }
+                        let inc_b_a = super::lists::list_includes(&b, &a)?;
+                        Ok(Value::Boolean(inc_b_a != Value::Boolean(true)))
+                    }
                     _ => Ok(Value::Null),
                 }
             }
@@ -1480,7 +1547,25 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
                         super::intervals::proper_included_in(&a, &b)
                     }
-                    (Value::List(_), Value::List(_)) => super::lists::list_included_in(&a, &b),
+                    // Null container = empty list, nothing is properly included in it
+                    (_, Value::Null) => Ok(Value::Boolean(false)),
+                    // Null element properly included in list: check literal null membership
+                    (Value::Null, Value::List(items)) => Ok(Value::Boolean(
+                        items.iter().any(|v| matches!(v, Value::Null)),
+                    )),
+                    // Scalar properly included in list = In (list contains scalar)
+                    (_, Value::List(_)) if !matches!(a, Value::List(_)) => {
+                        super::lists::in_list(&a, &b)
+                    }
+                    // Proper list inclusion: b includes a AND a doesn't include b
+                    (Value::List(_), Value::List(_)) => {
+                        let inc_b_a = super::lists::list_includes(&b, &a)?;
+                        if inc_b_a != Value::Boolean(true) {
+                            return Ok(Value::Boolean(false));
+                        }
+                        let inc_a_b = super::lists::list_includes(&a, &b)?;
+                        Ok(Value::Boolean(inc_a_b != Value::Boolean(true)))
+                    }
                     _ => Ok(Value::Null),
                 }
             }

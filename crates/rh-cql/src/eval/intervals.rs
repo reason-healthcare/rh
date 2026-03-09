@@ -148,8 +148,10 @@ pub fn contains(interval: &Value, point: &Value) -> Result<Value, EvalError> {
     let ge = point_ge_low(point, low, low_closed);
     let le = point_le_high(point, high, high_closed);
     match (ge, le) {
-        (Some(a), Some(b)) => Ok(Value::Boolean(a && b)),
-        _ => Ok(Value::Null),
+        // false dominates: if point is definitively outside either bound, return false
+        (Some(false), _) | (_, Some(false)) => Ok(Value::Boolean(false)),
+        (Some(true), Some(true)) => Ok(Value::Boolean(true)),
+        _ => Ok(Value::Null), // at least one bound is undetermined (null)
     }
 }
 
@@ -302,6 +304,18 @@ pub fn meets_before(a: &Value, b: &Value) -> Result<Value, EvalError> {
                 .ok_or_else(|| EvalError::General("meets: incomparable bounds".to_string()))?;
             Ok(Value::Boolean(match ord {
                 Ordering::Equal => a_hc != b_lc, // one closed, one open → adjacent
+                Ordering::Less => {
+                    // For discrete/minimum-precision types, check if successor(a_high) == b_low.
+                    // This handles [1,10] meets [11,20] (successor(10)=11) and decimal/time.
+                    if a_hc && b_lc {
+                        match super::operators::successor(ah) {
+                            Ok(succ) => cql_compare(&succ, bl) == Some(Ordering::Equal),
+                            Err(_) => false,
+                        }
+                    } else {
+                        false
+                    }
+                }
                 _ => false,
             }))
         }
@@ -428,16 +442,53 @@ pub fn except_interval(a: &Value, b: &Value) -> Result<Value, EvalError> {
     if let Value::Boolean(true) = includes(b, a)? {
         return Ok(Value::Null);
     }
-    // Return the portion of a that comes before b starts.
-    let (_, b_low, _, b_lc) = unwrap_interval(b)?;
-    let (a_low, _a_high, a_lc, _a_hc) = unwrap_interval(a)?;
-    // Return left part of a (before b begins), if any.
-    Ok(Value::Interval {
-        low: a_low.map(|v| Box::new(v.clone())),
-        high: b_low.map(|v| Box::new(v.clone())),
-        low_closed: a_lc,
-        high_closed: !b_lc,
-    })
+    let (a_low, a_high, a_lc, a_hc) = unwrap_interval(a)?;
+    let (b_low, b_high, b_lc, b_hc) = unwrap_interval(b)?;
+
+    // Determine if b's low is strictly after a's low (b doesn't cover a's left end).
+    let b_covers_a_low = match (a_low, b_low) {
+        (None, _) => true,       // a is left-unbounded -> b covers left
+        (Some(_), None) => true, // b is left-unbounded -> b covers left
+        (Some(al), Some(bl)) => match cql_compare(al, bl) {
+            Some(Ordering::Greater) => true,        // b.low < a.low
+            Some(Ordering::Equal) => b_lc || !a_lc, // equal: b covers if b closed or a open
+            _ => false,                             // b.low > a.low -> b doesn't cover a's left end
+        },
+    };
+
+    // Determine if b's high is at or beyond a's high (b covers a's right end).
+    let b_covers_a_high = match (a_high, b_high) {
+        (None, _) => true,       // a is right-unbounded -> b covers right
+        (Some(_), None) => true, // b is right-unbounded -> b covers right
+        (Some(ah), Some(bh)) => match cql_compare(ah, bh) {
+            Some(Ordering::Less) => true, // b.high > a.high -> b covers right
+            Some(Ordering::Equal) => b_hc || !a_hc, // equal: b covers if b closed or a open
+            _ => false,                   // b.high < a.high -> b doesn't cover a's right end
+        },
+    };
+
+    if !b_covers_a_low && !b_covers_a_high {
+        // b is strictly interior to a: result would be non-contiguous -> null
+        return Ok(Value::Null);
+    }
+
+    if b_covers_a_high {
+        // b covers right end: return left part [a.low, b.low)
+        Ok(Value::Interval {
+            low: a_low.map(|v| Box::new(v.clone())),
+            high: b_low.map(|v| Box::new(v.clone())),
+            low_closed: a_lc,
+            high_closed: !b_lc,
+        })
+    } else {
+        // b covers left end: return right part (b.high, a.high]
+        Ok(Value::Interval {
+            low: b_high.map(|v| Box::new(v.clone())),
+            high: a_high.map(|v| Box::new(v.clone())),
+            low_closed: !b_hc,
+            high_closed: a_hc,
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -483,7 +534,11 @@ pub fn proper_in(point: &Value, interval: &Value) -> Result<Value, EvalError> {
 /// Works for interval ⊃ interval. For interval ⊃ point, `proper_contains` should
 /// be used instead.
 pub fn proper_includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    if matches!(a, Value::Null) || matches!(b, Value::Null) {
+    // Null container = empty interval; can't properly include anything.
+    if matches!(a, Value::Null) {
+        return Ok(Value::Boolean(false));
+    }
+    if matches!(b, Value::Null) {
         return Ok(Value::Null);
     }
     match includes(a, b)? {
@@ -588,6 +643,11 @@ pub fn collapse(list: &Value, _per: Option<&Value>) -> Result<Value, EvalError> 
         .filter(|v| !matches!(v, Value::Null))
         .cloned()
         .collect();
+
+    // If all intervals were null/invalid, treat as null (null elements propagate).
+    if intervals.is_empty() {
+        return Ok(Value::Null);
+    }
     // Stable sort by low bound.
     intervals.sort_by(|a, b| {
         let (al, _, _, _) = unwrap_interval(a).ok().unwrap_or((None, None, true, true));
