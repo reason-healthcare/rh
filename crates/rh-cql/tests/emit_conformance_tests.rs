@@ -331,7 +331,11 @@ fn test_conformance_substring_2arg_emits_native_node() {
 
     match &expr {
         elm::Expression::Substring(s) => {
-            assert!(s.length.is_none(), "2-arg Substring should have length: None, got {:?}", s.length);
+            assert!(
+                s.length.is_none(),
+                "2-arg Substring should have length: None, got {:?}",
+                s.length
+            );
         }
         other => panic!("Expected Substring, got {other:?}"),
     }
