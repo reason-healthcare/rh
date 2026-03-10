@@ -1,6 +1,6 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-03-09 (full 15-suite run)
+**Last updated**: 2026-03-09 (post-wave-1 full 15-suite run)
 **CQL specification**: 1.5.3 (https://cql.hl7.org)
 **Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
 
@@ -52,6 +52,18 @@ checked in under `tests/fixtures/hl7_cql_tests/` and run in CI.
 
 Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
 
+### 1.2.1 Wave-1 baseline delta (2026-03-09)
+
+Baseline for this wave: pre-change snapshot in this document (2026-03-09).
+Post-wave command: `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture` (2026-03-09).
+
+| Metric | Baseline | Post-wave | Delta |
+|---|---:|---:|---:|
+| Pass | 435 | 475 | +40 |
+| **Fail (wrong answers)** | **0** | **0** | **0** |
+| Compile err | 149 | 149 | 0 |
+| Eval err | 628 | 572 | -56 |
+
 | Suite | Pass | **Fail** | Skip (expr) | Skip (output) | Compile err | Eval err | Total |
 |---|---|---|---|---|---|---|---|
 | CqlAggregateFunctionsTest | 10 | 0 | 0 | 2 | 0 | 27 | 39 |
@@ -61,15 +73,15 @@ Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
 | CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
 | CqlDateTimeOperatorsTest | 0 | 0 | 0 | 9 | 55 | 227 | 294 |
 | CqlErrorsAndMessagingOperatorsTest | 0 | 0 | 4 | 0 | 0 | 0 | 4 |
-| CqlIntervalOperatorsTest | 112 | 0 | 8 | 37 | 63 | 138 | 358 |
-| CqlListOperatorsTest | 89 | 0 | 2 | 31 | 6 | 78 | 207 |
+| CqlIntervalOperatorsTest | 114 | 0 | 8 | 37 | 63 | 136 | 358 |
+| CqlListOperatorsTest | 99 | 0 | 2 | 44 | 6 | 55 | 206 |
 | CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
 | CqlNullologicalOperatorsTest | 0 | 0 | 0 | 0 | 0 | 22 | 22 |
-| CqlStringOperatorsTest | 2 | 0 | 2 | 0 | 0 | 77 | 81 |
+| CqlStringOperatorsTest | 30 | 0 | 2 | 3 | 0 | 46 | 81 |
 | CqlTypeOperatorsTest | 7 | 0 | 16 | 3 | 0 | 4 | 30 |
 | CqlTypesTest | 2 | 0 | 1 | 7 | 2 | 10 | 24 |
 | ValueLiteralsAndSelectors | 0 | 0 | 0 | 38 | 21 | 0 | 59 |
-| **Total** | **435** | **0** | **67** | **127** | **149** | **628** | **1 412** |
+| **Total** | **475** | **0** | **67** | **143** | **149** | **572** | **1 406** |
 
 **Outcome definitions**
 
@@ -82,7 +94,7 @@ Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
 | Compile err | Expression raised a compile error — unimplemented language feature |
 | Eval err | Compiled but evaluation raised an error — unimplemented operator/function |
 
-> **Zero wrong-answer failures.** All 435 evaluated expressions return the correct result.
+> **Zero wrong-answer failures.** All 475 evaluated expressions return the correct result.
 > All other outcomes (compile err, eval err, skip) represent unimplemented features, not bugs.
 > CI asserts that no wrong answers are introduced (the Fail count must remain 0).
 
@@ -115,14 +127,14 @@ All previously tracked failures were resolved on 2026-03-09:
 | CqlTypesTest | 2 | Ratio, Concept type literals |
 | CqlAggregateTest | 2 | `aggregate` clause in query |
 
-**Eval errors (628 total — unimplemented operators/functions)**
+**Eval errors (572 total — unimplemented operators/functions)**
 
 | Suite | Count | Root cause |
 |---|---|---|
 | CqlDateTimeOperatorsTest | 227 | Date/Time operators: `after`, `before`, `during`, `between`, `Add`/`Subtract` durations |
-| CqlIntervalOperatorsTest | 138 | Interval timing operators: `meets`, `overlaps`, `starts`, `ends`, `during` (date precision) |
-| CqlStringOperatorsTest | 77 | String functions: `Length`, `Upper`, `Lower`, `Concat`, `Split`, etc. |
-| CqlListOperatorsTest | 78 | List functions: `First`, `Last`, `Skip`, `Tail`, `Take`, `Flatten`, `Sort`, `Distinct`, etc. |
+| CqlIntervalOperatorsTest | 136 | Interval timing operators: `meets`, `overlaps`, `starts`, `ends`, `during` (date precision) |
+| CqlStringOperatorsTest | 46 | Remaining string-function gaps after wave-1 wiring closure |
+| CqlListOperatorsTest | 55 | Remaining list-function/query gaps after wave-1 list-slice closure |
 | CqlAggregateFunctionsTest | 27 | Aggregate functions: `Count`, `Sum`, `Min`, `Max`, `Avg`, `Median`, etc. |
 | CqlNullologicalOperatorsTest | 22 | `IsNull`, `IsTrue`, `IsFalse`, `Coalesce` not yet in `eval/engine.rs` dispatch |
 | CqlArithmeticFunctionsTest | 12 | `Truncate`, `Round`, `Ln`, `Exp`, `Log` emitted as `FunctionRef` |
@@ -146,13 +158,12 @@ reference translator (cqframework/clinical_quality_language v4.2.0) via
 | Annotation `type` discriminator | Now includes `"type": "CqlToElmInfo"` |
 | Default context | `"context": "Unfiltered"` emitted on expression defs when no context is declared |
 | `ToDecimal` promotion for integer division | Operands wrapped in `ToDecimal` |
+| System function emission parity | `Abs`/`Ceiling`/`Floor`/`Truncate`/`Round`/`Ln`/`Exp`/`Log`/`Power` emit native ELM nodes (not `FunctionRef`) |
+| Negative numeric literal shape | `-n` emits `Negate(Literal("n"))` |
 
 ### 2.2 Remaining semantic differences
 
-| Issue | Java behavior | rh-cql behavior | Priority |
-|---|---|---|---|
-| System function resolution | `Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power` emitted as their specific ELM types | Emitted as `FunctionRef` | High |
-| Negative literal representation | `-5` → `Negate(Literal("5"))` | `-5` → `Literal("-5")` | High |
+No high-priority emitter mismatches from the previous wave remain in this category.
 
 ### 2.3 Intentional / low-priority differences
 
@@ -255,14 +266,14 @@ All tests run via `cargo test -p rh-cql`.
 
 | Test binary | Tests | Last result |
 |---|---|---|
-| Unit tests (lib) | 781 | ✅ all pass |
-| golden_elm_tests | 8 | ✅ all pass |
-| emit_conformance_tests | 52 | ✅ all pass |
-| pipeline_comparison_tests | 3 | ✅ all pass |
-| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 435 pass / 1 412 total expressions evaluated |
-| semantic_tests | 11 | ✅ all pass |
-| eval_integration_tests | 2 | ✅ all pass |
-| **Total** | **924** | **✅ all pass** |
+| Unit tests (lib) | 786 | ✅ all pass |
+| golden_elm_tests | 3 | ✅ all pass |
+| emit_conformance_tests | 12 | ✅ all pass |
+| pipeline_comparison_tests | 11 | ✅ all pass |
+| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 475 pass / 1 406 total expressions evaluated |
+| semantic_tests | 2 | ✅ all pass |
+| eval_integration_tests | 60 | ✅ all pass |
+| **Total** | **890** | **✅ all pass** |
 
 > Run `cargo test -p rh-cql --quiet` to execute the full suite.
 > Run `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings` to verify lint hygiene.
@@ -301,23 +312,24 @@ Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content
 4. ✅ **String escape / Time display** — `\'` decoded to `'`; `ToString(@T09:30)` omits
    leading `T`. Fixed 1 wrong-answer failure in `CqlTypesTest`.
 
-### High priority (large eval-error count)
+5. ✅ **Wave-1 emitter parity + wiring closures** — native system-function emission,
+   canonical negative literal emission, string dispatch closures (`Substring`,
+   `PositionOf`, `LastPositionOf`, `SplitOnMatches`, `ReplaceMatches`), and list-slice
+   closures (`Tail`/`Skip`/`Take`/`Slice`) reduced eval errors from 628 to 572 with
+   `Fail = 0` preserved.
 
-5. **System function resolution in emitter** — emit `Abs`, `Ceiling`, `Floor`,
-   `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power` as their specific ELM types
-   instead of `FunctionRef`. This unblocks 12 arithmetic eval-error tests.
+### High priority (large eval-error count)
 
 6. **Nullological operator implementation** — add `IsNull`, `IsTrue`, `IsFalse`,
    `Coalesce` to `eval/engine.rs` dispatch. Unblocks 22 eval-error tests.
 
 ### Medium priority (large unimplemented areas)
 
-7. **String function implementation** — `Length`, `Upper`, `Lower`, `Concat`,
-   `Split`, `StartsWith`, `EndsWith`, `Matches`, `IndexOf`, `Substring`, etc.
-   Unblocks 77 string eval-error tests.
+7. **String function implementation** — close remaining string-function gaps after
+   wave-1 dispatch closures. Remaining string eval-error tests: 46.
 
-8. **List function implementation** — `First`, `Last`, `Skip`, `Tail`, `Take`,
-   `Flatten`, `Sort`, `Distinct`, `IndexOf`, etc. Unblocks 78 list eval-error tests.
+8. **List function implementation** — close remaining list/query gaps after wave-1
+   list-slice closure. Remaining list eval-error tests: 55.
 
 9. **Aggregate function implementation** — `Count`, `Sum`, `Min`, `Max`, `Avg`,
    `Median`, `Mode`, `StdDev`, `Variance`, etc. Unblocks 27 eval-error tests.
@@ -334,8 +346,6 @@ Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content
 ### Lower priority
 
 13. **Long literal support** — `1L` syntax for 64-bit integers.
-14. **Negative literal representation** — represent `-5` as `Negate(Literal("5"))`
-    in ELM output to match the Java reference translator.
-15. **ELM XML output** — emit `library.xml` for interop with Java tooling.
-16. **Multi-source query evaluation** — complete the `from A, B` join evaluation.
-17. **Locator end-position tracking** — emit `"line:start-line:end"` locators.
+14. **ELM XML output** — emit `library.xml` for interop with Java tooling.
+15. **Multi-source query evaluation** — complete the `from A, B` join evaluation.
+16. **Locator end-position tracking** — emit `"line:start-line:end"` locators.

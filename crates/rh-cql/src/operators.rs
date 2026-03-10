@@ -764,6 +764,7 @@ impl OperatorResolver {
         let s = DataType::string();
         let i = DataType::integer();
         let b = DataType::boolean();
+        let list_s = DataType::list(s.clone());
 
         self.register(OperatorSignature::binary(
             "Concatenate",
@@ -804,6 +805,43 @@ impl OperatorResolver {
             s.clone(),
             s.clone(),
             i.clone(),
+        ));
+        self.register(OperatorSignature::binary(
+            "Split",
+            s.clone(),
+            s.clone(),
+            list_s.clone(),
+        ));
+        self.register(OperatorSignature::binary(
+            "SplitOnMatches",
+            s.clone(),
+            s.clone(),
+            list_s,
+        ));
+        self.register(OperatorSignature::binary(
+            "PositionOf",
+            s.clone(),
+            s.clone(),
+            i.clone(),
+        ));
+        self.register(OperatorSignature::binary(
+            "LastPositionOf",
+            s.clone(),
+            s.clone(),
+            i.clone(),
+        ));
+        self.register(OperatorSignature::binary(
+            "Substring",
+            s.clone(),
+            i.clone(),
+            s.clone(),
+        ));
+        self.register(OperatorSignature::ternary(
+            "Substring",
+            s.clone(),
+            i.clone(),
+            i.clone(),
+            s,
         ));
     }
 
@@ -985,6 +1023,7 @@ impl OperatorResolver {
         // Element access
         self.register(OperatorSignature::unary("First", list_t.clone(), t.clone()).generic());
         self.register(OperatorSignature::unary("Last", list_t.clone(), t.clone()).generic());
+        self.register(OperatorSignature::unary("Tail", list_t.clone(), list_t.clone()).generic());
         self.register(
             OperatorSignature::binary("Indexer", list_t.clone(), i.clone(), t.clone()).generic(),
         );
@@ -1051,6 +1090,18 @@ impl OperatorResolver {
         // IndexOf for list
         self.register(
             OperatorSignature::binary("IndexOf", list_t.clone(), t.clone(), i.clone()).generic(),
+        );
+        self.register(
+            OperatorSignature::binary("Skip", list_t.clone(), i.clone(), list_t.clone()).generic(),
+        );
+        self.register(
+            OperatorSignature::binary("Take", list_t.clone(), i.clone(), list_t.clone()).generic(),
+        );
+        self.register(
+            OperatorSignature::binary("Slice", list_t.clone(), i.clone(), list_t.clone()).generic(),
+        );
+        self.register(
+            OperatorSignature::ternary("Slice", list_t.clone(), i.clone(), i, list_t).generic(),
         );
     }
 
@@ -1289,6 +1340,22 @@ impl OperatorResolver {
             d.clone(),
             d.clone(),
             DataType::integer(),
+        ));
+
+        self.register(OperatorSignature::unary(
+            "DateFrom",
+            dt.clone(),
+            DataType::date(),
+        ));
+        self.register(OperatorSignature::unary(
+            "TimeFrom",
+            dt.clone(),
+            DataType::time(),
+        ));
+        self.register(OperatorSignature::unary(
+            "TimezoneOffsetFrom",
+            dt,
+            DataType::decimal(),
         ));
     }
 }
