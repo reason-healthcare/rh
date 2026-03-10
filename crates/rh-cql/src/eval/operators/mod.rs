@@ -208,6 +208,27 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         ("ToTime", [v]) => to_time(v),
         ("ToQuantity", [v]) => to_quantity(v),
         ("ToConcept", [v]) => to_concept(v),
+        // String operators
+        ("SplitOnMatches", [s, pattern]) => split_on_matches(s, pattern),
+        ("PositionOf", [pattern, s]) => position_of(pattern, s),
+        ("LastPositionOf", [pattern, s]) => last_position_of(pattern, s),
+        ("Substring", [s, start]) => substring(s, start, None),
+        ("Substring", [s, start, len]) => substring(s, start, Some(len)),
+        ("ReplaceMatches", [s, pattern, substitution]) => replace_matches(s, pattern, substitution),
+        ("IndexOf", [left, right]) => match left {
+            Value::List(_) => super::lists::index_of(left, right),
+            Value::String(_) => position_of(right, left),
+            Value::Null => Ok(Value::Null),
+            _ => Err(EvalError::General(
+                "IndexOf: unsupported operand types".to_string(),
+            )),
+        },
+        // List slice family
+        ("Tail", [list]) => super::lists::tail(list),
+        ("Skip", [list, n]) => super::lists::skip(list, n),
+        ("Take", [list, n]) => super::lists::take(list, n),
+        ("Slice", [list, start]) => super::lists::slice(list, start, None),
+        ("Slice", [list, start, end]) => super::lists::slice(list, start, Some(end)),
         _ => Err(EvalError::General(format!(
             "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)",
             args.len()

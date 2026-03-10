@@ -549,9 +549,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 );
                 Ok(result)
             }
-            Expression::Round(unary) => {
-                let v = self.eval_unary_arg(unary)?;
-                round(&v, None)
+            Expression::Round(round_expr) => {
+                let v = self.eval_expr_opt(round_expr.operand.as_deref())?;
+                let precision = match round_expr.precision.as_deref() {
+                    Some(p) => Some(self.eval_expr(p)?),
+                    None => None,
+                };
+                round(&v, precision.as_ref())
             }
             Expression::Ln(unary) => {
                 let (v, id_v) = self.eval_unary_arg_with_id(unary)?;
@@ -741,6 +745,36 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     result.clone(),
                 );
                 Ok(result)
+            }
+            Expression::SplitOnMatches(som) => {
+                let source = self.eval_expr_opt(som.string_to_split.as_deref())?;
+                let pattern = self.eval_expr_opt(som.separator_pattern.as_deref())?;
+                super::operators::split_on_matches(&source, &pattern)
+            }
+            Expression::PositionOf(pos) => {
+                let pattern = self.eval_expr_opt(pos.pattern.as_deref())?;
+                let string = self.eval_expr_opt(pos.string.as_deref())?;
+                super::operators::position_of(&pattern, &string)
+            }
+            Expression::LastPositionOf(pos) => {
+                let pattern = self.eval_expr_opt(pos.pattern.as_deref())?;
+                let string = self.eval_expr_opt(pos.string.as_deref())?;
+                super::operators::last_position_of(&pattern, &string)
+            }
+            Expression::Substring(sub) => {
+                let string = self.eval_expr_opt(sub.string_to_sub.as_deref())?;
+                let start = self.eval_expr_opt(sub.start_index.as_deref())?;
+                let length = match sub.length.as_deref() {
+                    Some(expr) => Some(self.eval_expr(expr)?),
+                    None => None,
+                };
+                super::operators::substring(&string, &start, length.as_ref())
+            }
+            Expression::ReplaceMatches(ternary) => {
+                let source = self.eval_expr_opt(ternary.operand.first())?;
+                let pattern = self.eval_expr_opt(ternary.operand.get(1))?;
+                let substitution = self.eval_expr_opt(ternary.operand.get(2))?;
+                super::operators::replace_matches(&source, &pattern, &substitution)
             }
 
             // ----- Type Conversions -----
@@ -933,6 +967,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             | Expression::Distinct(_)
             | Expression::SingletonFrom(_)
             | Expression::Indexer(_)
+            | Expression::Slice(_)
             | Expression::Union(_)
             | Expression::Intersect(_)
             | Expression::Except(_) => self.eval_list_expr(expr),
@@ -996,6 +1031,55 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ----- Date/Time -----
             Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
             Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
+            Expression::DateFrom(unary) => {
+                let value = self.eval_unary_arg(unary)?;
+                match value {
+                    Value::Null => Ok(Value::Null),
+                    Value::Date(d) => Ok(Value::Date(d)),
+                    Value::DateTime(dt) => Ok(Value::Date(crate::eval::value::CqlDate {
+                        year: dt.year,
+                        month: dt.month,
+                        day: dt.day,
+                    })),
+                    _ => Err(EvalError::General(
+                        "DateFrom: expected Date or DateTime".to_string(),
+                    )),
+                }
+            }
+            Expression::TimeFrom(unary) => {
+                let value = self.eval_unary_arg(unary)?;
+                match value {
+                    Value::Null => Ok(Value::Null),
+                    Value::Time(t) => Ok(Value::Time(t)),
+                    Value::DateTime(dt) => match dt.hour {
+                        Some(hour) => Ok(Value::Time(crate::eval::value::CqlTime {
+                            hour,
+                            minute: dt.minute,
+                            second: dt.second,
+                            millisecond: dt.millisecond,
+                        })),
+                        None => Ok(Value::Null),
+                    },
+                    _ => Err(EvalError::General(
+                        "TimeFrom: expected Time or DateTime".to_string(),
+                    )),
+                }
+            }
+            Expression::TimezoneOffsetFrom(unary) => {
+                let value = self.eval_unary_arg(unary)?;
+                match value {
+                    Value::Null => Ok(Value::Null),
+                    Value::DateTime(dt) => {
+                        let offset_secs = dt
+                            .offset_seconds
+                            .unwrap_or(self.ctx.timezone_offset_seconds);
+                        Ok(Value::Decimal(offset_secs as f64 / 3600.0))
+                    }
+                    _ => Err(EvalError::General(
+                        "TimezoneOffsetFrom: expected DateTime".to_string(),
+                    )),
+                }
+            }
             Expression::SameAs(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
@@ -1238,6 +1322,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     (Value::Null, _) | (_, Value::Null) => Ok(Value::Null),
                     _ => Err(EvalError::General("Indexer: unsupported types".to_string())),
                 }
+            }
+            Expression::Slice(slice_expr) => {
+                let source = self.eval_expr_opt(slice_expr.source.as_deref())?;
+                let start = self.eval_expr_opt(slice_expr.start_index.as_deref())?;
+                let end = match slice_expr.end_index.as_deref() {
+                    Some(expr) => Some(self.eval_expr(expr)?),
+                    None => None,
+                };
+                super::lists::slice(&source, &start, end.as_ref())
             }
             Expression::Union(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;

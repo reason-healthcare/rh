@@ -40,16 +40,16 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Nullological | 4 | 3/4 | 3/4 | 4/4 | 4/4 | 4 | 100% |
 | Comparison | 9 | 9/9 | 9/9 | 9/9 | 9/9 | 9 | 100% |
 | Arithmetic | 21 | 10/21 | 18/21 | 21/21 | 18/21 | 18 | 86% |
-| String | 14 | 2/14 | 9/14 | 11/14 | 9/14 | 9 | 64% |
-| Date / Time | 17 | 12/17 | 9/17 | 15/17 | 12/17 | 12 | 71% |
+| String | 15 | 2/15 | 13/15 | 15/15 | 15/15 | 15 | 100% |
+| Date / Time | 17 | 12/17 | 12/17 | 15/17 | 15/17 | 15 | 88% |
 | Interval | 27 | 23/27 | 22/27 | 27/27 | 27/27 | 27 | 100% |
-| List | 28 | 8/28 | 13/28 | 22/28 | 22/28 | 22 | 79% |
+| List | 28 | 8/28 | 17/28 | 26/28 | 26/28 | 26 | 93% |
 | Aggregate | 12 | 0/12 | 0/12 | 12/12 | 12/12 | 12 | 100% |
 | Type / Conversion | 20 | 16/20 | 16/20 | 20/20 | 16/20 | 16 | 80% |
 | Terminology | 9 | 0/9 | 0/9 | 9/9 | 9/9 | 9 | 100% |
 | Clinical | 8 | 0/8 | 0/8 | 0/8 | 0/8 | 0 | 0% |
 | Error | 1 | 0/1 | 0/1 | 0/1 | 0/1 | 0 | 0% |
-| **Total** | **175** | | | | | **143** | **82%** |
+| **Total** | **175** | | | | | **156** | **89%** |
 
 > Counts apply to the **source stage only** (➖ not counted as either present or absent).  
 > **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.
@@ -122,6 +122,7 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Floor | `Floor(x)` | ➖ | ✅ | ✅ | ✅ | `UnaryOperator::Floor` via `emit_system_function` |
 | Truncate | `Truncate(x)` | ➖ | ✅ | ✅ | ✅ | `UnaryOperator::Truncate` via `emit_system_function` |
 | Round | `Round(x)` | ➖ | ✅ | ✅ | ✅ | `UnaryOperator::Round` via `emit_system_function` |
+| Round (precision) | `Round(x, n)` | ➖ | ✅ | ✅ | ✅ | `RoundExpression { precision }` via `emit_system_function` 2-arg path |
 | Negate | `-A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Negate` |
 | Predecessor | `predecessor of A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Predecessor` |
 | Successor | `successor of A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Successor` |
@@ -142,18 +143,18 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Concatenate | `A & B` or `A + B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Concatenate` |
 | Combine | `Combine(list, sep)` | ➖ | ❌ | ✅ | ✅ | `Expression::Combine` in ELM; no op signature |
 | Split | `Split(str, sep)` | ➖ | ❌ | ✅ | ✅ | `Expression::Split` in ELM; no op signature |
-| SplitOnMatches | `SplitOnMatches(str, pat)` | ➖ | ❌ | ❌ | ❌ | `string_ops::split_on_matches` exists, not wired |
+| SplitOnMatches | `SplitOnMatches(str, pat)` | ➖ | ✅ | ✅ | ✅ | `operators.rs` signature + `emit/operators.rs` mapping + `eval/operators/string_ops.rs`; covered by `tests/eval_integration_tests.rs::eval_split_on_matches_function` |
 | Length | `Length(str)` | ➖ | ✅ | ✅ | ✅ | `Expression::Length` in ELM |
 | Upper | `Upper(str)` | ➖ | ✅ | ✅ | ✅ | `Expression::Upper` in ELM |
 | Lower | `Lower(str)` | ➖ | ✅ | ✅ | ✅ | `Expression::Lower` in ELM |
 | StartsWith | `StartsWith(str, prefix)` | ➖ | ✅ | ✅ | ✅ | `Expression::StartsWith` in ELM |
 | EndsWith | `EndsWith(str, suffix)` | ➖ | ✅ | ✅ | ✅ | `Expression::EndsWith` in ELM |
 | Matches | `Matches(str, pattern)` | ➖ | ✅ | ✅ | ✅ | `Expression::Matches` in ELM |
-| ReplaceMatches | `ReplaceMatches(str, p, r)` | ✅ | ✅ | ✅ | ❌ | `TernaryOperator::ReplaceMatches`; eval not dispatched |
-| IndexOf (string) | `IndexOf(str, str)` | ➖ | ✅ | ✅ | ❌ | Registered as string op; eval not dispatched separately |
-| PositionOf | `PositionOf(pat, str)` | ➖ | ❌ | ❌ | ❌ | `string_ops::position_of` exists, not connected |
-| LastPositionOf | `LastPositionOf(pat, str)` | ➖ | ❌ | ❌ | ❌ | `string_ops::last_position_of` exists, not connected |
-| Substring | `Substring(str, i, n)` | ➖ | ❌ | ❌ | ❌ | `string_ops::substring` exists, not connected |
+| ReplaceMatches | `ReplaceMatches(str, p, r)` | ✅ | ✅ | ✅ | ✅ | `eval/engine.rs` dispatch + `eval/operators/string_ops.rs::replace_matches`; covered by `tests/eval_integration_tests.rs::eval_replace_matches_function` |
+| IndexOf (string) | `IndexOf(str, str)` | ➖ | ✅ | ✅ | ✅ | emitted/handled via `PositionOf`/builtin dispatch (`emit/operators.rs`, `eval/operators/mod.rs`) |
+| PositionOf | `PositionOf(pat, str)` | ➖ | ✅ | ✅ | ✅ | `operators.rs` signature + native ELM emit + `eval/operators/string_ops.rs::position_of`; covered by `tests/eval_integration_tests.rs::eval_position_of_function` |
+| LastPositionOf | `LastPositionOf(pat, str)` | ➖ | ✅ | ✅ | ✅ | `operators.rs` signature + native ELM emit + `eval/operators/string_ops.rs::last_position_of`; covered by `tests/eval_integration_tests.rs::eval_last_position_of_function` |
+| Substring | `Substring(str, i, n)` | ➖ | ✅ | ✅ | ✅ | `operators.rs` signatures + native ELM emit + `eval/operators/string_ops.rs::substring`; covered by `tests/eval_integration_tests.rs::eval_substring_function` |
 
 ---
 
@@ -176,9 +177,9 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | After | `A after B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::After`; via timing expression |
 | DurationBetween | `duration in P between A and B` | ✅ | ✅ | ✅ | ✅ | `Expression::DurationBetween` |
 | DifferenceBetween | `difference in P between A and B` | ✅ | ❌ | ✅ | ✅ | `Expression::DifferenceBetween`; no operator sig |
-| DateFrom | `date from A` | ✅ | ❌ | ✅ | ❌ | `UnaryOperator::DateFrom`; eval not dispatched |
-| TimeFrom | `time from A` | ✅ | ❌ | ✅ | ❌ | `UnaryOperator::TimeFrom`; eval not dispatched |
-| TimezoneOffsetFrom | `timezone from A` | ✅ | ❌ | ✅ | ❌ | `UnaryOperator::TimezoneOffsetFrom`; eval not dispatched |
+| DateFrom | `date from A` | ✅ | ✅ | ✅ | ✅ | unary signature in `operators.rs` + dispatch in `eval/engine.rs`; covered by `tests/eval_integration_tests.rs::eval_date_from_and_time_from` |
+| TimeFrom | `time from A` | ✅ | ✅ | ✅ | ✅ | unary signature in `operators.rs` + dispatch in `eval/engine.rs`; covered by `tests/eval_integration_tests.rs::eval_date_from_and_time_from` |
+| TimezoneOffsetFrom | `timezoneoffset from A` | ✅ | ✅ | ✅ | ✅ | unary signature in `operators.rs` + dispatch in `eval/engine.rs`; covered by `tests/eval_integration_tests.rs::eval_timezone_offset_from` |
 | DateTimeComponentFrom | `year from A`, etc. | ✅ | ❌ | ✅ | ✅ | `Expression::DateTimeComponentFrom`; specialized emit/eval |
 
 ---
@@ -248,10 +249,10 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Filter | `A where predicate` (query) | ➖ | ❌ | ✅ | 🚧 | `eval/lists::filter` used internally in query eval |
 | ForEach | `A foreach B` | ➖ | ❌ | ✅ | 🚧 | `eval/lists::for_each` used internally in query eval |
 | Repeat | `Repeat(A, pred)` | ➖ | ❌ | ✅ | 🚧 | `Expression::Repeat`; stub — source-only eval, fixpoint iteration not complete (`eval/engine.rs:1304`) |
-| Tail | `Tail(list)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| Skip | `Skip(list, n)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| Take | `Take(list, n)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| Slice | `Slice(list, start, end)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
+| Tail | `Tail(list)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice` in `emit/operators.rs`; eval in `eval/lists.rs::tail` |
+| Skip | `Skip(list, n)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice`; eval in `eval/lists.rs::skip` |
+| Take | `Take(list, n)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice`; eval in `eval/lists.rs::take` |
+| Slice | `Slice(list, start, end)` | ➖ | ✅ | ✅ | ✅ | signatures in `operators.rs`; native `Expression::Slice` eval in `eval/engine.rs` + `eval/lists.rs::slice` |
 | IndexOf (list/ternary) | `IndexOf(list, elem)` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::IndexOf` |
 
 ---
@@ -480,15 +481,10 @@ implemented** in `rh-cql` at any pipeline stage:
 
 ### High Priority (affect common clinical expressions)
 - **Precision / LowBoundary / HighBoundary** — uncertainty arithmetic for imprecise dates
-- **Substring** — basic string slicing
-- **PositionOf / LastPositionOf** — string search (implementations exist in `string_ops.rs` but are not wired into the pipeline)
-- **DateFrom / TimeFrom / TimezoneOffsetFrom** — extraction from DateTime (parse ✅, eval ❌)
 - **TimeOfDay** — current time-of-day function
 - **Children / Descendents** — FHIR model navigation nodes
 
 ### Medium Priority
-- **Tail / Skip / Take / Slice** — list sub-sequence operators
-- **ReplaceMatches** (eval) — parse ✅ but eval not dispatched
 - **Repeat** (full) — stub only; fixpoint iteration not complete
 - **Product / GeometricMean** — numeric aggregate functions
 - **Size** — interval size operator
@@ -497,9 +493,8 @@ implemented** in `rh-cql` at any pipeline stage:
 - **CalculateAge / AgeIn\*** — require patient birthDate context
 - **Message** — CQL error/trace operator
 - **ToRatio** — ratio conversion from string
-- **SplitOnMatches** — regex-based split (impl exists, not wired)
 
 ---
 
-*Generated from codebase audit of `rh-cql` as of branch `cql-roadmap`.*
+*Generated from codebase audit of `rh-cql` (updated for wave-1 wiring on 2026-03-09).*
 *Operator inventory sourced from: `src/parser/ast.rs`, `src/parser/lexer.rs`, `src/operators.rs`, `src/emit/mod.rs`, `src/emit/operators.rs`, `src/eval/engine.rs`, `src/eval/lists.rs`, `src/eval/intervals.rs`, `src/eval/operators/`.*

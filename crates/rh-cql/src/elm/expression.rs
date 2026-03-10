@@ -72,7 +72,7 @@ pub enum Expression {
     Truncate(UnaryExpression),
     Abs(UnaryExpression),
     Negate(UnaryExpression),
-    Round(UnaryExpression),
+    Round(RoundExpression),
     Ln(UnaryExpression),
     Exp(UnaryExpression),
     Log(BinaryExpression),
@@ -294,6 +294,23 @@ pub struct UnaryExpression {
     pub element: ElementFields,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operand: Option<Box<Expression>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signature: Vec<TypeSpecifier>,
+}
+
+/// Round expression: optional precision distinguishes `Round(x)` from `Round(x, precision)`.
+///
+/// The ELM `Round` node carries a dedicated `precision` child rather than encoding
+/// the two-argument form as a generic binary expression.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoundExpression {
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operand: Option<Box<Expression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<Box<Expression>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<TypeSpecifier>,
 }

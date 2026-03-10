@@ -162,6 +162,97 @@ pub fn last(list: &Value) -> Result<Value, EvalError> {
     Ok(items.last().cloned().unwrap_or(Value::Null))
 }
 
+pub fn tail(list: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    let items = require_list("Tail", list)?;
+    if items.is_empty() {
+        return Ok(Value::List(vec![]));
+    }
+    Ok(Value::List(items[1..].to_vec()))
+}
+
+pub fn skip(list: &Value, count: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    if matches!(count, Value::Null) {
+        return Ok(Value::List(vec![]));
+    }
+    let items = require_list("Skip", list)?;
+    let n = match count {
+        Value::Integer(v) => *v,
+        _ => return Err(err("Skip", "expected Integer count")),
+    };
+    if n <= 0 {
+        return Ok(Value::List(items.to_vec()));
+    }
+    let start = (n as usize).min(items.len());
+    Ok(Value::List(items[start..].to_vec()))
+}
+
+pub fn take(list: &Value, count: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    if matches!(count, Value::Null) {
+        return Ok(Value::List(vec![]));
+    }
+    let items = require_list("Take", list)?;
+    let n = match count {
+        Value::Integer(v) => *v,
+        _ => return Err(err("Take", "expected Integer count")),
+    };
+    if n <= 0 {
+        return Ok(Value::List(vec![]));
+    }
+    let end = (n as usize).min(items.len());
+    Ok(Value::List(items[..end].to_vec()))
+}
+
+pub fn slice(
+    list: &Value,
+    start_index: &Value,
+    end_index: Option<&Value>,
+) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    if matches!(start_index, Value::Null) {
+        return Ok(Value::Null);
+    }
+
+    let items = require_list("Slice", list)?;
+    let start = match start_index {
+        Value::Integer(v) => *v,
+        _ => return Err(err("Slice", "expected Integer start index")),
+    };
+    if start < 0 {
+        return Ok(Value::Null);
+    }
+    let start = start as usize;
+    if start >= items.len() {
+        return Ok(Value::List(vec![]));
+    }
+
+    let end = match end_index {
+        None | Some(Value::Null) => items.len(),
+        Some(Value::Integer(v)) => {
+            if *v < 0 {
+                return Ok(Value::Null);
+            }
+            (*v as usize).min(items.len())
+        }
+        Some(_) => return Err(err("Slice", "expected Integer end index")),
+    };
+
+    if end <= start {
+        return Ok(Value::List(vec![]));
+    }
+    Ok(Value::List(items[start..end].to_vec()))
+}
+
 /// `IndexOf` — returns the 0-based index of the first occurrence of `element`
 /// in `list`, or -1 if not found.
 pub fn index_of(list: &Value, element: &Value) -> Result<Value, EvalError> {
@@ -645,6 +736,46 @@ mod tests {
         let list = int_list(vec![1, 2, 3]);
         assert_eq!(first(&list).unwrap(), Value::Integer(1));
         assert_eq!(last(&list).unwrap(), Value::Integer(3));
+    }
+
+    #[test]
+    fn tail_basic() {
+        let list = int_list(vec![1, 2, 3, 4]);
+        assert_eq!(tail(&list).unwrap(), int_list(vec![2, 3, 4]));
+        assert_eq!(tail(&Value::List(vec![])).unwrap(), Value::List(vec![]));
+    }
+
+    #[test]
+    fn skip_basic() {
+        let list = int_list(vec![1, 2, 3, 4, 5]);
+        assert_eq!(
+            skip(&list, &Value::Integer(2)).unwrap(),
+            int_list(vec![3, 4, 5])
+        );
+        assert_eq!(skip(&list, &Value::Integer(0)).unwrap(), list);
+    }
+
+    #[test]
+    fn take_basic() {
+        let list = int_list(vec![1, 2, 3, 4, 5]);
+        assert_eq!(
+            take(&list, &Value::Integer(3)).unwrap(),
+            int_list(vec![1, 2, 3])
+        );
+        assert_eq!(take(&list, &Value::Null).unwrap(), Value::List(vec![]));
+    }
+
+    #[test]
+    fn slice_basic() {
+        let list = int_list(vec![1, 2, 3, 4, 5]);
+        assert_eq!(
+            slice(&list, &Value::Integer(1), Some(&Value::Integer(4))).unwrap(),
+            int_list(vec![2, 3, 4])
+        );
+        assert_eq!(
+            slice(&list, &Value::Integer(2), None).unwrap(),
+            int_list(vec![3, 4, 5])
+        );
     }
 
     #[test]

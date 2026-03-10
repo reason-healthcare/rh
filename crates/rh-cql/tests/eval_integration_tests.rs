@@ -5,7 +5,8 @@
 //! against an `EvalContext`, asserting on the resulting `Value`.
 
 use rh_cql::{
-    compile_with_model, evaluate_elm, CqlDateTime, EvalContextBuilder, FixedClock, Value,
+    compile_with_model, evaluate_elm, CqlDate, CqlDateTime, CqlTime, EvalContextBuilder,
+    FixedClock, Value,
 };
 
 // ---------------------------------------------------------------------------
@@ -618,4 +619,114 @@ define X: [Observation]";
         Value::List(items) => assert!(items.is_empty(), "expected empty list, got {:?}", items),
         other => panic!("expected List, got {:?}", other),
     }
+}
+
+#[test]
+fn eval_substring_function() {
+    let cql = "library T define X: Substring('abc', 1, 1)";
+    assert_eq!(eval_expr(cql, "X"), Value::String("b".into()));
+}
+
+#[test]
+fn eval_position_of_function() {
+    let cql = "library T define X: PositionOf('b', 'abc')";
+    assert_eq!(eval_expr(cql, "X"), Value::Integer(1));
+}
+
+#[test]
+fn eval_last_position_of_function() {
+    let cql = "library T define X: LastPositionOf('a', 'abca')";
+    assert_eq!(eval_expr(cql, "X"), Value::Integer(3));
+}
+
+#[test]
+fn eval_split_on_matches_function() {
+    let cql = "library T define X: SplitOnMatches('a,b;c', '[,;]')";
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::List(vec![
+            Value::String("a".into()),
+            Value::String("b".into()),
+            Value::String("c".into())
+        ])
+    );
+}
+
+#[test]
+fn eval_replace_matches_function() {
+    let cql = "library T define X: ReplaceMatches('ab ab', 'ab', 'cd')";
+    assert_eq!(eval_expr(cql, "X"), Value::String("cd cd".into()));
+}
+
+#[test]
+fn eval_tail_skip_take_slice_functions() {
+    let tail = "library T define X: Tail({1,2,3,4})";
+    assert_eq!(
+        eval_expr(tail, "X"),
+        Value::List(vec![
+            Value::Integer(2),
+            Value::Integer(3),
+            Value::Integer(4)
+        ])
+    );
+
+    let skip = "library T define X: Skip({1,2,3,4,5}, 2)";
+    assert_eq!(
+        eval_expr(skip, "X"),
+        Value::List(vec![
+            Value::Integer(3),
+            Value::Integer(4),
+            Value::Integer(5)
+        ])
+    );
+
+    let take = "library T define X: Take({1,2,3,4,5}, 3)";
+    assert_eq!(
+        eval_expr(take, "X"),
+        Value::List(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3)
+        ])
+    );
+
+    let slice = "library T define X: Slice({1,2,3,4,5}, 1, 4)";
+    assert_eq!(
+        eval_expr(slice, "X"),
+        Value::List(vec![
+            Value::Integer(2),
+            Value::Integer(3),
+            Value::Integer(4)
+        ])
+    );
+}
+
+#[test]
+fn eval_date_from_and_time_from() {
+    let cql_date = "library T define X: date from @2003-10-29T20:50:33.955+01:00";
+    assert_eq!(
+        eval_expr(cql_date, "X"),
+        Value::Date(CqlDate {
+            year: 2003,
+            month: Some(10),
+            day: Some(29)
+        })
+    );
+
+    let cql_time = "library T define X: time from @2003-10-29T20:50:33.955+01:00";
+    assert_eq!(
+        eval_expr(cql_time, "X"),
+        Value::Time(CqlTime {
+            hour: 20,
+            minute: Some(50),
+            second: Some(33),
+            millisecond: Some(955)
+        })
+    );
+}
+
+#[test]
+fn eval_timezone_offset_from() {
+    let cql = "library T define X: timezoneoffset from @2003-10-29T20:50:33.955+01:00";
+    assert_eq!(eval_expr(cql, "X"), Value::Decimal(1.0));
 }

@@ -5,7 +5,7 @@
 //! [`matches_regex`], [`replace_matches`], [`indexer_str`], [`position_of`],
 //! [`last_position_of`], [`substring`].
 
-use regex::Regex;
+use regex::{NoExpand, Regex};
 
 use super::super::context::EvalError;
 use super::super::value::Value;
@@ -168,12 +168,30 @@ pub fn replace_matches(
         (Value::String(str_val), Value::String(pat), Value::String(sub)) => {
             let re = Regex::new(pat)
                 .map_err(|e| err("ReplaceMatches", &format!("invalid pattern: {e}")))?;
+            let replacement = decode_replacement_literal(sub);
             Ok(Value::String(
-                re.replace_all(str_val, sub.as_str()).to_string(),
+                re.replace_all(str_val, NoExpand(&replacement)).to_string(),
             ))
         }
         _ => Err(err("ReplaceMatches", "expected String arguments")),
     }
+}
+
+fn decode_replacement_literal(raw: &str) -> String {
+    let mut out = String::new();
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(next) = chars.next() {
+                out.push(next);
+            } else {
+                out.push('\\');
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 /// Return the character at 0-based `index` in `s`, or `Null` if out of range.
@@ -394,6 +412,20 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, Value::String("fooNUMbar".into()));
+    }
+
+    #[test]
+    fn replace_matches_escaped_dollar_substitution() {
+        let result = replace_matches(
+            &Value::String("All that glitters is not gold".into()),
+            &Value::String("\\s".into()),
+            &Value::String("\\$".into()),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            Value::String("All$that$glitters$is$not$gold".into())
+        );
     }
 
     #[test]
