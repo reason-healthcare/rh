@@ -245,3 +245,121 @@ fn test_conformance_datatype_to_qname_matches_java_format() {
         "{urn:hl7-org:elm-types:r1}List<Integer>"
     );
 }
+
+#[test]
+fn test_conformance_system_function_abs_emits_native() {
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: Abs(-5)\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    assert!(
+        matches!(expr, elm::Expression::Abs(_)),
+        "Expected Abs, got {expr:?}"
+    );
+}
+
+#[test]
+fn test_conformance_system_function_log_emits_native() {
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: Log(100, 10)\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    assert!(
+        matches!(expr, elm::Expression::Log(_)),
+        "Expected Log, got {expr:?}"
+    );
+}
+
+#[test]
+fn test_conformance_negative_integer_literal_emits_negate_literal() {
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: -5\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    match expr {
+        elm::Expression::Negate(unary) => match unary.operand {
+            Some(inner) => match *inner {
+                elm::Expression::Literal(lit) => {
+                    assert_eq!(lit.value.as_deref(), Some("5"));
+                    assert_eq!(
+                        lit.value_type.as_deref(),
+                        Some("{urn:hl7-org:elm-types:r1}Integer")
+                    );
+                }
+                other => panic!("Expected Literal inside Negate, got {other:?}"),
+            },
+            None => panic!("Negate operand missing"),
+        },
+        other => panic!("Expected Negate, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_conformance_substring_emits_native_node() {
+    let (typed_lib, diags) =
+        analyze("library Test version '1.0'\ndefine Expr: Substring('abc', 1, 1)\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    assert!(
+        matches!(expr, elm::Expression::Substring(_)),
+        "Expected Substring, got {expr:?}"
+    );
+}
+
+#[test]
+fn test_conformance_substring_2arg_emits_native_node() {
+    let (typed_lib, diags) =
+        analyze("library Test version '1.0'\ndefine Expr: Substring('ab', 1)\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    match &expr {
+        elm::Expression::Substring(s) => {
+            assert!(s.length.is_none(), "2-arg Substring should have length: None, got {:?}", s.length);
+        }
+        other => panic!("Expected Substring, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_conformance_negative_decimal_literal_emits_negate_literal() {
+    let (typed_lib, diags) = analyze("library Test version '1.0'\ndefine Expr: -3.14\n");
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let mut ctx = emitter_with_result_types();
+    let expr = ctx.emit_expression(body);
+
+    match expr {
+        elm::Expression::Negate(unary) => match unary.operand {
+            Some(inner) => match *inner {
+                elm::Expression::Literal(lit) => {
+                    assert_eq!(lit.value.as_deref(), Some("3.14"));
+                    assert_eq!(
+                        lit.value_type.as_deref(),
+                        Some("{urn:hl7-org:elm-types:r1}Decimal")
+                    );
+                }
+                other => panic!("Expected Literal inside Negate, got {other:?}"),
+            },
+            None => panic!("Negate operand missing"),
+        },
+        other => panic!("Expected Negate, got {other:?}"),
+    }
+}

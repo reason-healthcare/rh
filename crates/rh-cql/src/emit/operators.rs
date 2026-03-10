@@ -237,6 +237,13 @@ pub fn emit_system_function(
     emit_expr: &impl Fn(&TypedNode<TypedExpression>, &mut ElmEmitter) -> elm::Expression,
 ) -> Option<elm::Expression> {
     let element = ctx.element_fields(node);
+    let int_lit = |value: i64| {
+        elm::Expression::Literal(elm::Literal {
+            element: elm::ElementFields::default(),
+            value_type: Some("{urn:hl7-org:elm-types:r1}Integer".to_string()),
+            value: Some(value.to_string()),
+        })
+    };
 
     if args.len() == 1 {
         let operand = Some(Box::new(emit_expr(&args[0], ctx)));
@@ -251,35 +258,129 @@ pub fn emit_system_function(
             "Ceiling" => Some(elm::Expression::Ceiling(unary)),
             "Floor" => Some(elm::Expression::Floor(unary)),
             "Truncate" => Some(elm::Expression::Truncate(unary)),
-            "Round" => Some(elm::Expression::Round(unary)),
+            "Round" => Some(elm::Expression::Round(elm::RoundExpression {
+                element: unary.element,
+                operand: unary.operand,
+                precision: None,
+                signature: unary.signature,
+            })),
             "Ln" => Some(elm::Expression::Ln(unary)),
             "Exp" => Some(elm::Expression::Exp(unary)),
             "Predecessor" => Some(elm::Expression::Predecessor(unary)),
             "Successor" => Some(elm::Expression::Successor(unary)),
+            "Tail" => Some(elm::Expression::Slice(elm::Slice {
+                element: element.clone(),
+                source: Some(Box::new(emit_expr(&args[0], ctx))),
+                start_index: Some(Box::new(int_lit(1))),
+                end_index: None,
+            })),
             _ => None,
         }
     } else if args.len() == 2 {
         let left = emit_expr(&args[0], ctx);
         let right = emit_expr(&args[1], ctx);
-        let binary = elm::BinaryExpression {
-            element: element.clone(),
-            operand: vec![left, right],
-            signature: Vec::new(),
-        };
 
         match name {
-            "Log" => Some(elm::Expression::Log(binary)),
-            "Power" => Some(elm::Expression::Power(binary)),
-            "Round" => {
-                // Round is unary or binary depending on args. In ELM, it's defined:
-                // Actually wait... is elm::Expression::Round an Nary, Binary, or Unary?
-                // Let's check `translator.rs` to see what it mapped to.
-                // Wait, if elm::Expression only has `Round(UnaryExpression)`, how does Round with precision work?
-                // Old translator didn't implement binary round, or it mapped to Round with precision?
-                // Let's drop Round from binary if it doesn't compile, we will see.
-                // Actually `Round(UnaryExpression)` is the only one we know. We'll use a hack or just return None for now if it breaks.
-                None // Will type check and confirm
+            "Log" => Some(elm::Expression::Log(elm::BinaryExpression {
+                element: element.clone(),
+                operand: vec![left, right],
+                signature: Vec::new(),
+            })),
+            "Power" => Some(elm::Expression::Power(elm::BinaryExpression {
+                element: element.clone(),
+                operand: vec![left, right],
+                signature: Vec::new(),
+            })),
+            "Combine" => Some(elm::Expression::Combine(elm::Combine {
+                element: element.clone(),
+                source: Some(Box::new(left)),
+                separator: Some(Box::new(right)),
+            })),
+            "Split" => Some(elm::Expression::Split(elm::Split {
+                element: element.clone(),
+                string_to_split: Some(Box::new(left)),
+                separator: Some(Box::new(right)),
+            })),
+            "SplitOnMatches" => Some(elm::Expression::SplitOnMatches(elm::SplitOnMatches {
+                element: element.clone(),
+                string_to_split: Some(Box::new(left)),
+                separator_pattern: Some(Box::new(right)),
+            })),
+            "PositionOf" => Some(elm::Expression::PositionOf(elm::PositionOf {
+                element: element.clone(),
+                pattern: Some(Box::new(left)),
+                string: Some(Box::new(right)),
+            })),
+            "LastPositionOf" => Some(elm::Expression::LastPositionOf(elm::PositionOf {
+                element: element.clone(),
+                pattern: Some(Box::new(left)),
+                string: Some(Box::new(right)),
+            })),
+            "Substring" => Some(elm::Expression::Substring(elm::Substring {
+                element: element.clone(),
+                string_to_sub: Some(Box::new(left)),
+                start_index: Some(Box::new(right)),
+                length: None,
+            })),
+            "Skip" => Some(elm::Expression::Slice(elm::Slice {
+                element: element.clone(),
+                source: Some(Box::new(left)),
+                start_index: Some(Box::new(right)),
+                end_index: None,
+            })),
+            "Take" => Some(elm::Expression::Slice(elm::Slice {
+                element: element.clone(),
+                source: Some(Box::new(left)),
+                start_index: Some(Box::new(int_lit(0))),
+                end_index: Some(Box::new(right)),
+            })),
+            "Slice" => Some(elm::Expression::Slice(elm::Slice {
+                element: element.clone(),
+                source: Some(Box::new(left)),
+                start_index: Some(Box::new(right)),
+                end_index: None,
+            })),
+            "IndexOf"
+                if args[0].data_type == crate::datatype::DataType::string()
+                    && args[1].data_type == crate::datatype::DataType::string() =>
+            {
+                Some(elm::Expression::PositionOf(elm::PositionOf {
+                    element: element.clone(),
+                    pattern: Some(Box::new(right)),
+                    string: Some(Box::new(left)),
+                }))
             }
+            "Round" => Some(elm::Expression::Round(elm::RoundExpression {
+                element: element.clone(),
+                operand: Some(Box::new(left)),
+                precision: Some(Box::new(right)),
+                signature: Vec::new(),
+            })),
+            _ => None,
+        }
+    } else if args.len() == 3 {
+        let first = emit_expr(&args[0], ctx);
+        let second = emit_expr(&args[1], ctx);
+        let third = emit_expr(&args[2], ctx);
+
+        match name {
+            "ReplaceMatches" => Some(elm::Expression::ReplaceMatches(elm::TernaryExpression {
+                element: element.clone(),
+                operand: vec![first, second, third],
+                signature: Vec::new(),
+            })),
+            "Substring" => Some(elm::Expression::Substring(elm::Substring {
+                element: element.clone(),
+                string_to_sub: Some(Box::new(first)),
+                start_index: Some(Box::new(second)),
+                length: Some(Box::new(third)),
+            })),
+            "Slice" => Some(elm::Expression::Slice(elm::Slice {
+                element: element.clone(),
+                source: Some(Box::new(first)),
+                start_index: Some(Box::new(second)),
+                end_index: Some(Box::new(third)),
+            })),
             _ => None,
         }
     } else {
