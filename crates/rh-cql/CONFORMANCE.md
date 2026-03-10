@@ -136,8 +136,8 @@ All previously tracked failures were resolved on 2026-03-09:
 | CqlStringOperatorsTest | 46 | Remaining string-function gaps after wave-1 wiring closure |
 | CqlListOperatorsTest | 55 | Remaining list-function/query gaps after wave-1 list-slice closure |
 | CqlAggregateFunctionsTest | 27 | Aggregate functions: `Count`, `Sum`, `Min`, `Max`, `Avg`, `Median`, etc. |
-| CqlNullologicalOperatorsTest | 22 | `IsNull`, `IsTrue`, `IsFalse`, `Coalesce` not yet in `eval/engine.rs` dispatch |
-| CqlArithmeticFunctionsTest | 12 | `Truncate`, `Round`, `Ln`, `Exp`, `Log` emitted as `FunctionRef` |
+| CqlNullologicalOperatorsTest | 22 | Fixtures use function-call syntax (`IsNull(x)`, `IsTrue(x)`, `IsFalse(x)`) which routes through `emit_system_function`; no handler → `FunctionRef` fallback (operator syntax `x is null` works fine); `Coalesce` list forms and DateTime/Time coalesce variants not yet implemented |
+| CqlArithmeticFunctionsTest | 12 | Quantity arithmetic not yet supported (`Abs1cm`, `Add1Q1Q`, `Divide1Q1`/`Divide1Q1Q`/`Divide10Q5I`, `Subtract1CMAnd2CM`, `TruncatedDivide…Quantity`); `HighBoundary`/`LowBoundary` precision functions for Date/Time not yet implemented |
 | CqlComparisonOperatorsTest | 33 | Date/Time comparison, Quantity comparison |
 | CqlTypeOperatorsTest | 4 | `ToDate`, `ToDateTime`, `ToTime` conversion functions |
 | CqlTypesTest | 10 | Time/DateTime value constructors |
