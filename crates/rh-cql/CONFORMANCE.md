@@ -1,6 +1,6 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-03-09 (post-wave-2 full 15-suite run)
+**Last updated**: 2026-03-23 (post-wave-2, test counts verified)
 **CQL specification**: 1.5.3 (https://cql.hl7.org)
 **Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
 
@@ -309,14 +309,15 @@ All tests run via `cargo test -p rh-cql`.
 
 | Test binary | Tests | Last result |
 |---|---|---|
-| Unit tests (lib) | 786 | ✅ all pass |
+| Unit tests (lib) | 788 | ✅ all pass |
 | golden_elm_tests | 3 | ✅ all pass |
-| emit_conformance_tests | 12 | ✅ all pass |
+| emit_conformance_tests | 14 | ✅ all pass |
 | pipeline_comparison_tests | 11 | ✅ all pass |
-| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 475 pass / 1 406 total expressions evaluated |
-| semantic_tests | 2 | ✅ all pass |
-| eval_integration_tests | 60 | ✅ all pass |
-| **Total** | **890** | **✅ all pass** |
+| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 515 pass / 1 406 total expressions evaluated |
+| semantic_tests | 8 | ✅ all pass |
+| eval_integration_tests | 68 | ✅ all pass |
+| Doc tests | 51 | ✅ all pass |
+| **Total** | **959** | **✅ all pass** |
 
 > Run `cargo test -p rh-cql --quiet` to execute the full suite.
 > Run `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings` to verify lint hygiene.
