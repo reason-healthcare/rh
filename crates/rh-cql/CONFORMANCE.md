@@ -339,7 +339,7 @@ When a new CQL specification version ships, update the fixtures:
 
 Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content:
 
-### Completed (2026-03-09)
+### Completed — Wave-1 (2026-03-09)
 
 1. ✅ **Null-propagation in list operators** — `Contains`, `Includes`, `ProperlyIncludes`, `In`
    now implement correct three-valued null semantics. Fixed 21 wrong-answer failures in
@@ -361,34 +361,40 @@ Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content
    closures (`Tail`/`Skip`/`Take`/`Slice`) reduced eval errors from 628 to 572 with
    `Fail = 0` preserved.
 
+### Completed — Wave-2 (2026-03-09)
+
+6. ✅ **Nullological operator implementation** — `IsNull`, `IsTrue`, `IsFalse`,
+   `Coalesce` added to `eval/engine.rs` dispatch. Unblocked 20 eval-error tests.
+
+7. ✅ **Aggregate function implementation** — `AllTrue`, `AnyTrue`, `Median`, `Mode`,
+   `Variance`, `StdDev`, `PopulationVariance`, `PopulationStdDev`, `Product`,
+   `GeometricMean` added. Unblocked 23 eval-error tests.
+
+8. ✅ **Temporal/uncertainty functions** — `TimeOfDay`, `Precision`, `LowBoundary`,
+   `HighBoundary` added. `Size` and `Repeat` (fixpoint) implemented.
+
 ### High priority (large eval-error count)
 
-6. **Nullological operator implementation** — add `IsNull`, `IsTrue`, `IsFalse`,
-   `Coalesce` to `eval/engine.rs` dispatch. Unblocks 22 eval-error tests.
+9. **String function implementation** — close remaining string-function gaps after
+   wave-1 dispatch closures. Remaining string eval-error tests: 46.
+
+10. **List function implementation** — close remaining list/query gaps after wave-1
+    list-slice closure. Remaining list eval-error tests: 55.
 
 ### Medium priority (large unimplemented areas)
 
-7. **String function implementation** — close remaining string-function gaps after
-   wave-1 dispatch closures. Remaining string eval-error tests: 46.
-
-8. **List function implementation** — close remaining list/query gaps after wave-1
-   list-slice closure. Remaining list eval-error tests: 55.
-
-9. **Aggregate function implementation** — `Count`, `Sum`, `Min`, `Max`, `Avg`,
-   `Median`, `Mode`, `StdDev`, `Variance`, etc. Unblocks 27 eval-error tests.
-
-10. **Date/Time operator implementation** — `after`, `before`, `during`, `between`,
+11. **Date/Time operator implementation** — `after`, `before`, `during`, `between`,
     duration arithmetic (`Add`/`Subtract` intervals from dates). Unblocks 227 eval-error tests.
 
-11. **Retrieve execution** — implement data access in the evaluator so that FHIR
+12. **Retrieve execution** — implement data access in the evaluator so that FHIR
     queries can be run end-to-end with an `InMemoryDataProvider`.
 
-12. **Quantity literal support** — lexer/parser extension for `1'cm'` syntax,
+13. **Quantity literal support** — lexer/parser extension for `1'cm'` syntax,
     required for clinical quantity comparisons.
 
 ### Lower priority
 
-13. **Long literal support** — `1L` syntax for 64-bit integers.
-14. **ELM XML output** — emit `library.xml` for interop with Java tooling.
-15. **Multi-source query evaluation** — complete the `from A, B` join evaluation.
-16. **Locator end-position tracking** — emit `"line:start-line:end"` locators.
+14. **Long literal support** — `1L` syntax for 64-bit integers.
+15. **ELM XML output** — emit `library.xml` for interop with Java tooling.
+16. **Multi-source query evaluation** — complete the `from A, B` join evaluation.
+17. **Locator end-position tracking** — emit `"line:start-line:end"` locators.
