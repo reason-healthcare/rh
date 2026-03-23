@@ -309,4 +309,47 @@ mod tests {
             panic!("Expected list expression");
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Wave-2 parser regression tests (task 2.1)
+    // -----------------------------------------------------------------------
+
+    /// `size of <expr>` parses as UnaryExpression(Size, operand) — not an error.
+    #[test]
+    fn test_parse_size_of_interval() {
+        use ast::UnaryOperator;
+        let parser = CqlParser::new();
+        let expr = parser
+            .parse_expression("size of Interval[1, 5]")
+            .expect("`size of Interval[1, 5]` must parse without error");
+        match expr {
+            Expression::UnaryExpression(u) => {
+                assert_eq!(u.operator, UnaryOperator::Size);
+            }
+            other => panic!("Expected UnaryExpression(Size), got {other:?}"),
+        }
+    }
+
+    /// Neighboring interval unary phrases do not regress after the `size of` addition.
+    #[test]
+    fn test_parse_interval_unary_phrases_no_regression() {
+        use ast::UnaryOperator;
+        let parser = CqlParser::new();
+
+        let start = parser
+            .parse_expression("start of Interval[1, 5]")
+            .expect("`start of` must parse");
+        assert!(matches!(
+            start,
+            Expression::UnaryExpression(ref u) if u.operator == UnaryOperator::Start
+        ));
+
+        let end = parser
+            .parse_expression("end of Interval[1, 5]")
+            .expect("`end of` must parse");
+        assert!(matches!(
+            end,
+            Expression::UnaryExpression(ref u) if u.operator == UnaryOperator::End
+        ));
+    }
 }

@@ -123,6 +123,7 @@ pub const KEYWORDS: &[&str] = &[
     "end",
     "of",
     "width",
+    "size",
     "successor",
     "predecessor",
     "singleton",

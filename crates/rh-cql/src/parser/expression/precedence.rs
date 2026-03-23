@@ -1019,6 +1019,20 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
                 })
             },
         ),
+        // "size of" expression (interval/list size)
+        map(
+            preceded(
+                tuple((ws(keyword("size")), ws(keyword("of")))),
+                parse_invocation_expression,
+            ),
+            |operand| {
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Size,
+                    operand: Box::new(operand),
+                    location: None,
+                })
+            },
+        ),
         // "date from" expression
         map(
             preceded(

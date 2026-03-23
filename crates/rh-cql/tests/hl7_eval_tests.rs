@@ -667,8 +667,9 @@ fn hl7_eval_logical_operators() {
 }
 
 /// Nullological operators: IsNull, IsTrue, IsFalse, Coalesce.
-/// Some operators are not yet implemented in the eval engine (IsNull, IsTrue,
-/// IsFalse); those are counted as eval errors and skipped.  The test asserts
+/// All four are fully implemented in the eval engine (wave-2). Any remaining
+/// eval_err reported by this suite is due to other expressions (e.g. output
+/// format parsing), not missing dispatch. The test asserts
 /// that no WRONG ANSWERS are produced — only wrong answers (Fail) fail CI.
 #[test]
 fn hl7_eval_nullological_operators() {

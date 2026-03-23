@@ -428,6 +428,7 @@ pub enum UnaryOperator {
     Start,
     End,
     Width,
+    Size,
     PointFrom,
     Collapse,
     Expand,

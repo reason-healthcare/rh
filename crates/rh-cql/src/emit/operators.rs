@@ -43,6 +43,7 @@ pub fn emit_unary_operator(
         UnaryOperator::Start => elm::Expression::Start(unary),
         UnaryOperator::End => elm::Expression::End(unary),
         UnaryOperator::Width => elm::Expression::Width(unary),
+        UnaryOperator::Size => elm::Expression::Size(unary),
         UnaryOperator::PointFrom => elm::Expression::PointFrom(unary),
         UnaryOperator::Collapse => elm::Expression::Collapse(unary),
         UnaryOperator::Expand => unreachable!("Handled above"),
@@ -245,35 +246,92 @@ pub fn emit_system_function(
         })
     };
 
+    // ----- Variadic functions (checked before arg-count dispatch) -----
+    if name == "Coalesce" {
+        let operands: Vec<elm::Expression> = args.iter().map(|a| emit_expr(a, ctx)).collect();
+        return Some(elm::Expression::Coalesce(elm::NaryExpression {
+            element: element.clone(),
+            operand: operands,
+            signature: Vec::new(),
+        }));
+    }
+
+    // ----- 0-arg (nullary) functions -----
+    if args.is_empty() {
+        return match name {
+            "TimeOfDay" => Some(elm::Expression::TimeOfDay(elm::NullaryExpression {
+                element: element.clone(),
+            })),
+            _ => None,
+        };
+    }
+
     if args.len() == 1 {
         let operand = Some(Box::new(emit_expr(&args[0], ctx)));
         let unary = elm::UnaryExpression {
             element: element.clone(),
-            operand,
+            operand: operand.clone(),
+            signature: Vec::new(),
+        };
+        // Build aggregate expression for aggregate functions (source is the list arg).
+        let aggregate = || elm::AggregateExpression {
+            element: element.clone(),
+            source: operand.clone(),
+            path: None,
             signature: Vec::new(),
         };
 
         match name {
+            // ----- Nullological operators -----
+            "IsNull" => Some(elm::Expression::IsNull(unary)),
+            "IsTrue" => Some(elm::Expression::IsTrue(unary)),
+            "IsFalse" => Some(elm::Expression::IsFalse(unary)),
+
+            // ----- Arithmetic -----
             "Abs" => Some(elm::Expression::Abs(unary)),
             "Ceiling" => Some(elm::Expression::Ceiling(unary)),
             "Floor" => Some(elm::Expression::Floor(unary)),
             "Truncate" => Some(elm::Expression::Truncate(unary)),
             "Round" => Some(elm::Expression::Round(elm::RoundExpression {
-                element: unary.element,
-                operand: unary.operand,
+                element: element.clone(),
+                operand: operand.clone(),
                 precision: None,
-                signature: unary.signature,
+                signature: Vec::new(),
             })),
             "Ln" => Some(elm::Expression::Ln(unary)),
             "Exp" => Some(elm::Expression::Exp(unary)),
             "Predecessor" => Some(elm::Expression::Predecessor(unary)),
             "Successor" => Some(elm::Expression::Successor(unary)),
+
+            // ----- List access -----
             "Tail" => Some(elm::Expression::Slice(elm::Slice {
                 element: element.clone(),
                 source: Some(Box::new(emit_expr(&args[0], ctx))),
                 start_index: Some(Box::new(int_lit(1))),
                 end_index: None,
             })),
+            "Exists" => Some(elm::Expression::Exists(unary)),
+            "Flatten" => Some(elm::Expression::Flatten(unary)),
+            "Distinct" => Some(elm::Expression::Distinct(unary)),
+
+            // ----- Aggregate functions -----
+            "Count" => Some(elm::Expression::Count(aggregate())),
+            "Sum" => Some(elm::Expression::Sum(aggregate())),
+            "Min" => Some(elm::Expression::Min(aggregate())),
+            "Max" => Some(elm::Expression::Max(aggregate())),
+            "Avg" => Some(elm::Expression::Avg(aggregate())),
+            "Median" => Some(elm::Expression::Median(aggregate())),
+            "Mode" => Some(elm::Expression::Mode(aggregate())),
+            "Variance" => Some(elm::Expression::Variance(aggregate())),
+            "StdDev" => Some(elm::Expression::StdDev(aggregate())),
+            "PopulationVariance" => Some(elm::Expression::PopulationVariance(aggregate())),
+            "PopulationStdDev" => Some(elm::Expression::PopulationStdDev(aggregate())),
+            "AllTrue" => Some(elm::Expression::AllTrue(aggregate())),
+            "AnyTrue" => Some(elm::Expression::AnyTrue(aggregate())),
+
+            // ----- Interval -----
+            "Size" => Some(elm::Expression::Size(unary)),
+
             _ => None,
         }
     } else if args.len() == 2 {
@@ -355,6 +413,12 @@ pub fn emit_system_function(
                 operand: Some(Box::new(left)),
                 precision: Some(Box::new(right)),
                 signature: Vec::new(),
+            })),
+            "Repeat" => Some(elm::Expression::Repeat(elm::Repeat {
+                element: element.clone(),
+                source: Some(Box::new(left)),
+                element_expr: Some(Box::new(right)),
+                scope: None,
             })),
             _ => None,
         }

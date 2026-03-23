@@ -730,3 +730,257 @@ fn eval_timezone_offset_from() {
     let cql = "library T define X: timezoneoffset from @2003-10-29T20:50:33.955+01:00";
     assert_eq!(eval_expr(cql, "X"), Value::Decimal(1.0));
 }
+
+// ---------------------------------------------------------------------------
+// Wave-2 conformance gap coverage (CQL spec section coverage)
+// ---------------------------------------------------------------------------
+
+/// Nullological operators — function-call syntax (§19)
+#[test]
+fn eval_wave2_nullological_function_forms() {
+    // IsNull via function call
+    assert_eq!(
+        eval_expr("library T define X: IsNull(null)", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: IsNull(1)", "X"),
+        Value::Boolean(false)
+    );
+
+    // IsTrue / IsFalse via function call
+    assert_eq!(
+        eval_expr("library T define X: IsTrue(true)", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: IsTrue(false)", "X"),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr("library T define X: IsFalse(false)", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: IsFalse(true)", "X"),
+        Value::Boolean(false)
+    );
+
+    // Coalesce — variadic form: first non-null
+    assert_eq!(
+        eval_expr("library T define X: Coalesce(null, 5, null)", "X"),
+        Value::Integer(5)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Coalesce(null, null)", "X"),
+        Value::Null
+    );
+    assert_eq!(
+        eval_expr("library T define X: Coalesce(3, null)", "X"),
+        Value::Integer(3)
+    );
+
+    // Coalesce — single list argument form (§19.1)
+    assert_eq!(
+        eval_expr("library T define X: Coalesce({null, 7, null})", "X"),
+        Value::Integer(7)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Coalesce({})", "X"),
+        Value::Null
+    );
+}
+
+/// Aggregate functions — AllTrue / AnyTrue (§20)
+#[test]
+fn eval_wave2_all_true_any_true() {
+    // AllTrue
+    assert_eq!(
+        eval_expr("library T define X: AllTrue({true, true})", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: AllTrue({true, false})", "X"),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr("library T define X: AllTrue({})", "X"),
+        Value::Boolean(true)
+    ); // vacuous truth
+    assert_eq!(
+        eval_expr("library T define X: AllTrue({null, true})", "X"),
+        Value::Boolean(true)
+    ); // null skipped
+
+    // AnyTrue
+    assert_eq!(
+        eval_expr("library T define X: AnyTrue({false, true})", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: AnyTrue({false, false})", "X"),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr("library T define X: AnyTrue({})", "X"),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr("library T define X: AnyTrue({null, true})", "X"),
+        Value::Boolean(true)
+    ); // null skipped
+}
+
+/// Aggregate functions — Median, Variance, StdDev, Pop* (§20)
+#[test]
+fn eval_wave2_aggregate_statistics() {
+    // Median of {1.0, 3.0} — even count → average of two middle elements
+    assert_eq!(
+        eval_expr("library T define X: Median({1.0, 3.0})", "X"),
+        Value::Decimal(2.0)
+    );
+
+    // Sample variance of {1.0, 3.0}: mean=2, sum-sq-diff=2, denom=n-1=1 → 2.0
+    assert_eq!(
+        eval_expr("library T define X: Variance({1.0, 3.0})", "X"),
+        Value::Decimal(2.0)
+    );
+
+    // PopulationVariance of {1.0, 3.0}: mean=2, sum-sq-diff=2, denom=n=2 → 1.0
+    assert_eq!(
+        eval_expr("library T define X: PopulationVariance({1.0, 3.0})", "X"),
+        Value::Decimal(1.0),
+    );
+
+    // PopulationStdDev of {1.0, 3.0} = sqrt(1.0) = 1.0
+    assert_eq!(
+        eval_expr("library T define X: PopulationStdDev({1.0, 3.0})", "X"),
+        Value::Decimal(1.0),
+    );
+
+    // Mode of {1.0, 2.0, 2.0} → 2.0
+    assert_eq!(
+        eval_expr("library T define X: Mode({1.0, 2.0, 2.0})", "X"),
+        Value::Decimal(2.0),
+    );
+}
+
+/// Aggregate functions — Product, GeometricMean (§20)
+#[test]
+fn eval_wave2_product_geometric_mean() {
+    // Product of {1, 2, 3, 4} = 24
+    assert_eq!(
+        eval_expr("library T define X: Product({1, 2, 3, 4})", "X"),
+        Value::Integer(24),
+    );
+
+    // GeometricMean({1.0, 4.0}) = sqrt(1*4) = 2.0
+    let result = eval_expr("library T define X: GeometricMean({1.0, 4.0})", "X");
+    match result {
+        Value::Decimal(v) => assert!((v - 2.0).abs() < 1e-9, "expected 2.0, got {v}"),
+        other => panic!("expected Decimal, got {other:?}"),
+    }
+
+    // Product of empty list → null
+    assert_eq!(
+        eval_expr("library T define X: Product({})", "X"),
+        Value::Null
+    );
+}
+
+/// Temporal — TimeOfDay() (§21)
+#[test]
+fn eval_wave2_time_of_day() {
+    // test_clock has hour=10, minute=30, second=0
+    let result = eval_expr("library T define X: TimeOfDay()", "X");
+    assert_eq!(
+        result,
+        Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: None,
+        }),
+    );
+}
+
+/// Arithmetic — Precision, LowBoundary, HighBoundary (§16)
+#[test]
+fn eval_wave2_precision_boundary() {
+    // Precision(@2014) = 4 (year only)
+    assert_eq!(
+        eval_expr("library T define X: Precision(@2014)", "X"),
+        Value::Integer(4)
+    );
+
+    // Precision(@T10:30) = 4 (hour=2 + minute=2)
+    assert_eq!(
+        eval_expr("library T define X: Precision(@T10:30)", "X"),
+        Value::Integer(4)
+    );
+
+    // Precision(@T10:30:00.000) = 9 (hour=2 + minute=2 + second=2 + ms=3)
+    assert_eq!(
+        eval_expr("library T define X: Precision(@T10:30:00.000)", "X"),
+        Value::Integer(9),
+    );
+
+    // LowBoundary(@2014, 6) — precision 6 = month → add month=1
+    assert_eq!(
+        eval_expr("library T define X: LowBoundary(@2014, 6)", "X"),
+        Value::Date(CqlDate {
+            year: 2014,
+            month: Some(1),
+            day: None
+        }),
+    );
+
+    // HighBoundary(@2014, 6) — precision 6 = month → add month=12
+    assert_eq!(
+        eval_expr("library T define X: HighBoundary(@2014, 6)", "X"),
+        Value::Date(CqlDate {
+            year: 2014,
+            month: Some(12),
+            day: None
+        }),
+    );
+}
+
+/// List — Size (§20)
+#[test]
+fn eval_wave2_size() {
+    assert_eq!(
+        eval_expr("library T define X: Size({1, 2, 3})", "X"),
+        Value::Integer(3)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Size({})", "X"),
+        Value::Integer(0)
+    );
+}
+
+/// Repeat — deterministic fixpoint evaluation (§19)
+#[test]
+fn eval_wave2_repeat() {
+    // Constant element_expr = 1: each pass maps every element to 1, deduplicates to {1},
+    // then {1} → {1} on the next pass → fixpoint reached.
+    assert_eq!(
+        eval_expr("library T define X: Repeat({1, 2, 3}, 1)", "X"),
+        Value::List(vec![Value::Integer(1)]),
+        "constant element_expr must converge to singleton"
+    );
+
+    // Single-element source already matches element_expr output → immediate fixpoint.
+    assert_eq!(
+        eval_expr("library T define X: Repeat({42}, 42)", "X"),
+        Value::List(vec![Value::Integer(42)]),
+        "single-element source at fixpoint must return unchanged"
+    );
+
+    // Null source: current starts empty → deduped = [] = current → immediate fixpoint.
+    assert_eq!(
+        eval_expr("library T define X: Repeat(null, 1)", "X"),
+        Value::List(vec![]),
+        "null source must produce empty list without error"
+    );
+}

@@ -37,22 +37,23 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Category | Operators | Parse | Semantic | Emit | Eval | ✅ Impl | Coverage % |
 |----------|-----------|-------|----------|------|------|---------|------------|
 | Logical | 5 | 5/5 | 5/5 | 5/5 | 5/5 | 5 | 100% |
-| Nullological | 4 | 3/4 | 3/4 | 4/4 | 4/4 | 4 | 100% |
+| Nullological | 4 | 3/4 | 4/4 | 4/4 | 4/4 | 4 | 100% |
 | Comparison | 9 | 9/9 | 9/9 | 9/9 | 9/9 | 9 | 100% |
-| Arithmetic | 21 | 10/21 | 18/21 | 21/21 | 18/21 | 18 | 86% |
+| Arithmetic | 21 | 10/21 | 21/21 | 21/21 | 21/21 | 21 | 100% |
 | String | 15 | 2/15 | 13/15 | 15/15 | 15/15 | 15 | 100% |
-| Date / Time | 17 | 12/17 | 12/17 | 15/17 | 15/17 | 15 | 88% |
-| Interval | 27 | 23/27 | 22/27 | 27/27 | 27/27 | 27 | 100% |
-| List | 28 | 8/28 | 17/28 | 26/28 | 26/28 | 26 | 93% |
-| Aggregate | 12 | 0/12 | 0/12 | 12/12 | 12/12 | 12 | 100% |
+| Date / Time | 17 | 12/17 | 13/17 | 16/17 | 16/17 | 16 | 94% |
+| Interval | 27 | 23/27 | 23/27 | 27/27 | 27/27 | 27 | 100% |
+| List | 28 | 8/28 | 18/28 | 27/28 | 27/28 | 27 | 96% |
+| Aggregate | 12 | 0/12 | 12/12 | 12/12 | 12/12 | 12 | 100% |
 | Type / Conversion | 20 | 16/20 | 16/20 | 20/20 | 16/20 | 16 | 80% |
 | Terminology | 9 | 0/9 | 0/9 | 9/9 | 9/9 | 9 | 100% |
 | Clinical | 8 | 0/8 | 0/8 | 0/8 | 0/8 | 0 | 0% |
 | Error | 1 | 0/1 | 0/1 | 0/1 | 0/1 | 0 | 0% |
-| **Total** | **175** | | | | | **156** | **89%** |
+| **Total** | **175** | | | | | **161** | **92%** |
 
 > Counts apply to the **source stage only** (➖ not counted as either present or absent).  
-> **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.
+> **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.  
+> Last updated: wave-2 (2026-03-09) — added Precision, LowBoundary, HighBoundary, TimeOfDay, Size, Product, GeometricMean, fixed Coalesce list-overload, registered aggregate/nullological semantic signatures.
 
 ---
 
@@ -79,7 +80,7 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | IsNull | `A is null` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsNull` |
 | IsTrue | `A is true` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsTrue` |
 | IsFalse | `A is false` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsFalse` |
-| Coalesce | `Coalesce(A, B, …)` | ➖ | ❌ | ✅ | ✅ | `Expression::Coalesce`; no operator signature registered |
+| Coalesce | `Coalesce(A, B, …)` | ➖ | ✅ | ✅ | ✅ | `Expression::Coalesce`; list-overload handled in eval; signature registered in `operators.rs` (wave-2) |
 
 ---
 
@@ -128,9 +129,9 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Successor | `successor of A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Successor` |
 | MinValue | `minimum T` | ✅ | ❌ | ✅ | ✅ | `Expression::MinValue`; no sig in `operators.rs` |
 | MaxValue | `maximum T` | ✅ | ❌ | ✅ | ✅ | `Expression::MaxValue`; no sig in `operators.rs` |
-| Precision | `Precision(x)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| LowBoundary | `low boundary of x` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| HighBoundary | `high boundary of x` | ➖ | ❌ | ❌ | ❌ | Not implemented |
+| Precision | `Precision(x)` | ➖ | ✅ | ✅ | ✅ | `eval/operators/mod.rs::eval_precision`; routes via `FunctionRef`; signature in `operators.rs`; tested in `eval_integration_tests` (wave-2). **Wave-3**: add `elm::Expression::Precision` variant and wire canonical emit. |
+| LowBoundary | `low boundary of x` | ➖ | ✅ | ✅ | ✅ | `eval/operators/mod.rs::eval_low_boundary`; routes via `FunctionRef`; signature in `operators.rs`; tested in `eval_integration_tests` (wave-2). **Wave-3**: replace `FunctionRef` route with canonical ELM emit node. |
+| HighBoundary | `high boundary of x` | ➖ | ✅ | ✅ | ✅ | `eval/operators/mod.rs::eval_high_boundary`; routes via `FunctionRef`; signature in `operators.rs`; tested in `eval_integration_tests` (wave-2). **Wave-3**: replace `FunctionRef` route with canonical ELM emit node. |
 
 ---
 
@@ -166,7 +167,7 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 |----------|-----------|-------|----------|------|------|-------|
 | Now | `Now()` | ➖ | ❌ | ✅ | ✅ | `Expression::Now` in ELM |
 | Today | `Today()` | ➖ | ❌ | ✅ | ✅ | `Expression::Today` in ELM |
-| TimeOfDay | `TimeOfDay()` | ➖ | ❌ | ❌ | ❌ | Not implemented |
+| TimeOfDay | `TimeOfDay()` | ➖ | ✅ | ✅ | ✅ | `Expression::TimeOfDay`; `emit_system_function` 0-arg branch; `eval/engine.rs` uses `Clock::time_of_day()`; signature in `operators.rs` (wave-2) |
 | Date | `Date(y, m, d)` | ➖ | ❌ | ✅ | ✅ | `Expression::Date` constructor |
 | DateTime | `DateTime(y, m, d, …)` | ➖ | ❌ | ✅ | ✅ | `Expression::DateTime` constructor |
 | Time | `Time(h, m, s, ms)` | ➖ | ❌ | ✅ | ✅ | `Expression::Time` constructor |
@@ -195,7 +196,7 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | End | `end of A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::End` |
 | Width | `width of A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Width` |
 | PointFrom | `point from A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::PointFrom` |
-| Size | `size of A` | ❌ | ❌ | ❌ | ❌ | Not implemented |
+| Size | `size of A` / `Size(A)` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Size` phrase parser (wave-2); `emit/operators.rs` unary mapping; `eval/engine.rs::eval_interval_expr` dispatches to `lists::count` (list) or `intervals::width` (interval); signature in `operators.rs` (wave-2) |
 | Collapse | `collapse A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Collapse` |
 | Expand | `expand A per P` | ✅ | ❌ | ✅ | ✅ | `UnaryOperator::Expand`; no op sig |
 | Contains | `A contains B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Contains` |
@@ -248,7 +249,7 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Sort | `sort A` / `A sort by x` | ✅ | ❌ | ✅ | ✅ | `Expression::Sort` |
 | Filter | `A where predicate` (query) | ➖ | ❌ | ✅ | 🚧 | `eval/lists::filter` used internally in query eval |
 | ForEach | `A foreach B` | ➖ | ❌ | ✅ | 🚧 | `eval/lists::for_each` used internally in query eval |
-| Repeat | `Repeat(A, pred)` | ➖ | ❌ | ✅ | 🚧 | `Expression::Repeat`; stub — source-only eval, fixpoint iteration not complete (`eval/engine.rs:1304`) |
+| Repeat | `Repeat(A, pred)` | ➖ | ✅ | ✅ | ✅ | `Expression::Repeat`; signature registered in `operators.rs` (wave-2 binary: `List<T>, Any → List<T>`); emitted via `emit/operators.rs` 2-arg path; deterministic fixpoint eval in `eval/engine.rs` (wave-2) |
 | Tail | `Tail(list)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice` in `emit/operators.rs`; eval in `eval/lists.rs::tail` |
 | Skip | `Skip(list, n)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice`; eval in `eval/lists.rs::skip` |
 | Take | `Take(list, n)` | ➖ | ✅ | ✅ | ✅ | signature in `operators.rs`; emitted via `Slice`; eval in `eval/lists.rs::take` |
@@ -265,21 +266,21 @@ These operators all use function-call syntax; Parse column is ➖ for all.
 
 | Operator | CQL Syntax | Parse | Semantic | Emit | Eval | Notes |
 |----------|-----------|-------|----------|------|------|-------|
-| Count | `Count(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Count`; `eval/lists::count` |
-| Sum | `Sum(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Sum`; `eval/lists::sum` |
-| Min (list) | `Min(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Min`; `eval/lists::min` |
-| Max (list) | `Max(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Max`; `eval/lists::max` |
-| Avg | `Avg(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Avg`; `eval/lists::avg` |
-| Median | `Median(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Median`; `eval/lists::median` |
-| Mode | `Mode(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Mode`; `eval/lists::mode` |
-| Variance | `Variance(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::Variance`; `eval/lists::variance` |
-| StdDev | `StdDev(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::StdDev`; `eval/lists::std_dev` |
-| PopulationVariance | `PopulationVariance(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::PopulationVariance` |
-| PopulationStdDev | `PopulationStdDev(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::PopulationStdDev` |
-| AllTrue | `AllTrue(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::AllTrue`; `eval/lists::all_true` |
-| AnyTrue | `AnyTrue(list)` | ➖ | ❌ | ✅ | ✅ | `Expression::AnyTrue`; `eval/lists::any_true` |
-| Product | `Product(list)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
-| GeometricMean | `GeometricMean(list)` | ➖ | ❌ | ❌ | ❌ | Not implemented |
+| Count | `Count(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Count`; `eval/lists::count`; signature in `operators.rs` (wave-2) |
+| Sum | `Sum(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Sum`; `eval/lists::sum`; signature in `operators.rs` (wave-2) |
+| Min (list) | `Min(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Min`; `eval/lists::min`; signature in `operators.rs` (wave-2) |
+| Max (list) | `Max(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Max`; `eval/lists::max`; signature in `operators.rs` (wave-2) |
+| Avg | `Avg(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Avg`; `eval/lists::avg`; signature in `operators.rs` (wave-2) |
+| Median | `Median(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Median`; `eval/lists::median`; signature in `operators.rs` (wave-2) |
+| Mode | `Mode(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Mode`; `eval/lists::mode`; signature in `operators.rs` (wave-2) |
+| Variance | `Variance(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::Variance`; `eval/lists::variance`; signature in `operators.rs` (wave-2) |
+| StdDev | `StdDev(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::StdDev`; `eval/lists::std_dev`; signature in `operators.rs` (wave-2) |
+| PopulationVariance | `PopulationVariance(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::PopulationVariance`; signature in `operators.rs` (wave-2) |
+| PopulationStdDev | `PopulationStdDev(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::PopulationStdDev`; signature in `operators.rs` (wave-2) |
+| AllTrue | `AllTrue(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::AllTrue`; `eval/lists::all_true`; signature in `operators.rs` (wave-2) |
+| AnyTrue | `AnyTrue(list)` | ➖ | ✅ | ✅ | ✅ | `Expression::AnyTrue`; `eval/lists::any_true`; signature in `operators.rs` (wave-2) |
+| Product | `Product(list)` | ➖ | ✅ | ✅ | ✅ | `eval/lists::product`; routes via `FunctionRef` → `eval_builtin_function`; signature in `operators.rs`; tested in `eval_integration_tests` (wave-2) |
+| GeometricMean | `GeometricMean(list)` | ➖ | ✅ | ✅ | ✅ | `eval/lists::geometric_mean`; routes via `FunctionRef` → `eval_builtin_function`; uses natural-log approach; signature in `operators.rs`; tested in `eval_integration_tests` (wave-2) |
 
 > Note: `AnyTrue` and `AllTrue` bring the count to 13 but are often listed under Aggregate; dashboard counts only the 12 distinct from the spec table.
 
@@ -480,19 +481,20 @@ The following operators are recognized by the CQL 1.5.3 specification but are **
 implemented** in `rh-cql` at any pipeline stage:
 
 ### High Priority (affect common clinical expressions)
-- **Precision / LowBoundary / HighBoundary** — uncertainty arithmetic for imprecise dates
-- **TimeOfDay** — current time-of-day function
 - **Children / Descendents** — FHIR model navigation nodes
 
 ### Medium Priority
-- **Repeat** (full) — stub only; fixpoint iteration not complete
-- **Product / GeometricMean** — numeric aggregate functions
-- **Size** — interval size operator
+- **Combine** — list-to-string with separator; no semantic signature yet
+- **ForEach / Filter** — query-internal only; no top-level semantic wiring
+- **Expand** — no semantic signature
 
 ### Low Priority (clinical context-dependent)
 - **CalculateAge / AgeIn\*** — require patient birthDate context
 - **Message** — CQL error/trace operator
 - **ToRatio** — ratio conversion from string
+
+### Wave-3 improvements (functional but non-canonical)
+- **Precision / LowBoundary / HighBoundary** — eval routes via `FunctionRef` instead of canonical ELM emit node; no `elm::Expression::Precision/LowBoundary/HighBoundary` variants exist yet
 
 ---
 

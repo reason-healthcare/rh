@@ -679,6 +679,50 @@ pub fn any_true(list: &Value) -> Result<Value, EvalError> {
     Ok(Value::Boolean(false))
 }
 
+/// `Product` — product of all non-null numeric elements in a list.
+///
+/// An empty list (or all-null list) returns `null`.
+/// Mixed integer/decimal lists promote to decimal.
+pub fn product(list: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    let items = require_list("Product", list)?;
+    let nums: Vec<&Value> = items.iter().filter(|v| !matches!(v, Value::Null)).collect();
+    if nums.is_empty() {
+        return Ok(Value::Null);
+    }
+    let mut acc = nums[0].clone();
+    for v in &nums[1..] {
+        acc = super::operators::multiply(&acc, v)?;
+    }
+    Ok(acc)
+}
+
+/// `GeometricMean` — geometric mean of all non-null positive numeric elements.
+///
+/// Returns `null` for an empty (or all-null) list.
+pub fn geometric_mean(list: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Null);
+    }
+    let items = require_list("GeometricMean", list)?;
+    let nums: Vec<f64> = items
+        .iter()
+        .filter_map(|v| match v {
+            Value::Integer(n) => Some(*n as f64),
+            Value::Decimal(d) => Some(*d),
+            _ => None,
+        })
+        .collect();
+    if nums.is_empty() {
+        return Ok(Value::Null);
+    }
+    let log_sum: f64 = nums.iter().map(|v| v.ln()).sum();
+    let geo_mean = (log_sum / nums.len() as f64).exp();
+    Ok(Value::Decimal(geo_mean))
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------

@@ -670,6 +670,42 @@ impl OperatorResolver {
             ));
             self.register(OperatorSignature::unary("Successor", t.clone(), t.clone()));
         }
+
+        // Precision — number of significant digits / chrono fields
+        for sys in [
+            SystemType::Decimal,
+            SystemType::Date,
+            SystemType::DateTime,
+            SystemType::Time,
+        ] {
+            self.register(OperatorSignature::unary(
+                "Precision",
+                DataType::System(sys),
+                DataType::integer(),
+            ));
+        }
+
+        // LowBoundary / HighBoundary — (value, precision : Integer) → same type
+        for sys in [
+            SystemType::Decimal,
+            SystemType::Date,
+            SystemType::DateTime,
+            SystemType::Time,
+        ] {
+            let t = DataType::System(sys);
+            self.register(OperatorSignature::binary(
+                "LowBoundary",
+                t.clone(),
+                DataType::integer(),
+                t.clone(),
+            ));
+            self.register(OperatorSignature::binary(
+                "HighBoundary",
+                t.clone(),
+                DataType::integer(),
+                t.clone(),
+            ));
+        }
     }
 
     fn register_comparison_operators(&mut self) {
@@ -852,6 +888,10 @@ impl OperatorResolver {
         self.register(OperatorSignature::unary("IsNull", t.clone(), b.clone()).generic());
         self.register(OperatorSignature::unary("IsTrue", b.clone(), b.clone()));
         self.register(OperatorSignature::unary("IsFalse", b.clone(), b.clone()));
+
+        // Coalesce: List<T> overload (single-list form)
+        let list_t = DataType::list(t.clone());
+        self.register(OperatorSignature::unary("Coalesce", list_t, t.clone()).generic());
     }
 
     fn register_type_operators(&mut self) {
@@ -1101,7 +1141,92 @@ impl OperatorResolver {
             OperatorSignature::binary("Slice", list_t.clone(), i.clone(), list_t.clone()).generic(),
         );
         self.register(
-            OperatorSignature::ternary("Slice", list_t.clone(), i.clone(), i, list_t).generic(),
+            OperatorSignature::ternary("Slice", list_t.clone(), i.clone(), i, list_t.clone())
+                .generic(),
+        );
+
+        // Aggregate functions on lists
+        let b = DataType::boolean();
+        let list_bool = DataType::list(b.clone());
+        self.register(OperatorSignature::unary(
+            "AllTrue",
+            list_bool.clone(),
+            b.clone(),
+        ));
+        self.register(OperatorSignature::unary("AnyTrue", list_bool, b));
+
+        let list_t = DataType::list(t.clone());
+        self.register(
+            OperatorSignature::unary("Count", list_t.clone(), DataType::integer()).generic(),
+        );
+        self.register(OperatorSignature::unary("Min", list_t.clone(), t.clone()).generic());
+        self.register(OperatorSignature::unary("Max", list_t.clone(), t.clone()).generic());
+
+        let d = DataType::decimal();
+        let list_decimal = DataType::list(d.clone());
+        self.register(OperatorSignature::unary(
+            "Sum",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "Avg",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "Median",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "Mode",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "Variance",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "StdDev",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "PopulationVariance",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "PopulationStdDev",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+        self.register(OperatorSignature::unary(
+            "GeometricMean",
+            list_decimal.clone(),
+            d.clone(),
+        ));
+
+        // Product: List<Integer> → Integer, List<Decimal> → Decimal
+        let list_int = DataType::list(DataType::integer());
+        self.register(OperatorSignature::unary(
+            "Product",
+            list_int,
+            DataType::integer(),
+        ));
+        self.register(OperatorSignature::unary("Product", list_decimal, d));
+
+        // Size: List<T> → Integer
+        self.register(
+            OperatorSignature::unary("Size", list_t.clone(), DataType::integer()).generic(),
+        );
+
+        // Repeat: (List<T>, predicate) → List<T>
+        self.register(
+            OperatorSignature::binary("Repeat", list_t.clone(), DataType::any(), list_t).generic(),
         );
     }
 
@@ -1135,6 +1260,11 @@ impl OperatorResolver {
                 "Width",
                 interval_t.clone(),
                 point_t.clone(),
+            ));
+            self.register(OperatorSignature::unary(
+                "Size",
+                interval_t.clone(),
+                DataType::integer(),
             ));
             self.register(OperatorSignature::unary(
                 "PointFrom",
@@ -1357,6 +1487,14 @@ impl OperatorResolver {
             dt,
             DataType::decimal(),
         ));
+
+        // TimeOfDay() — nullary, returns Time
+        self.register(OperatorSignature::new(
+            "TimeOfDay",
+            OperatorKind::Nary,
+            vec![],
+            DataType::time(),
+        ));
     }
 }
 
@@ -1380,6 +1518,7 @@ pub fn unary_operator_name(op: UnaryOperator) -> String {
         UnaryOperator::Start => "Start",
         UnaryOperator::End => "End",
         UnaryOperator::Width => "Width",
+        UnaryOperator::Size => "Size",
         UnaryOperator::PointFrom => "PointFrom",
         UnaryOperator::Collapse => "Collapse",
         UnaryOperator::Expand => "Expand",

@@ -1031,6 +1031,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ----- Date/Time -----
             Expression::Today(_) => Ok(Value::Date(self.ctx.today())),
             Expression::Now(_) => Ok(Value::DateTime(self.ctx.now())),
+            Expression::TimeOfDay(_) => Ok(Value::Time(self.ctx.time_of_day())),
             Expression::DateFrom(unary) => {
                 let value = self.eval_unary_arg(unary)?;
                 match value {
@@ -1110,14 +1111,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 )
             }
 
-            // ----- Interval: proper / expand -----
+            // ----- Interval: proper / expand / size -----
             Expression::OverlapsBefore(_)
             | Expression::OverlapsAfter(_)
             | Expression::Expand(_)
             | Expression::ProperContains(_)
             | Expression::ProperIn(_)
             | Expression::ProperIncludes(_)
-            | Expression::ProperIncludedIn(_) => self.eval_interval_expr(expr),
+            | Expression::ProperIncludedIn(_)
+            | Expression::Size(_) => self.eval_interval_expr(expr),
 
             // ----- List: sort + statistical aggregates -----
             Expression::Sort(_)
@@ -1203,6 +1205,26 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 Ok(Value::Boolean(v == Value::Boolean(false)))
             }
             Expression::Coalesce(nary) => {
+                // CQL Coalesce has two overloads:
+                //   Coalesce(a, b, ...) — variadic, first non-null arg wins
+                //   Coalesce(List<T>)   — single list arg, first non-null element wins
+                if nary.operand.len() == 1 {
+                    let v = self.eval_expr(&nary.operand[0])?;
+                    if let Value::List(items) = v {
+                        for item in items {
+                            if !matches!(item, Value::Null) {
+                                return Ok(item);
+                            }
+                        }
+                        return Ok(Value::Null);
+                    } else {
+                        return if matches!(v, Value::Null) {
+                            Ok(Value::Null)
+                        } else {
+                            Ok(v)
+                        };
+                    }
+                }
                 for op in &nary.operand {
                     let v = self.eval_expr(op)?;
                     if !matches!(v, Value::Null) {
@@ -1398,9 +1420,50 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 super::lists::any_true(&v)
             }
             Expression::Repeat(repeat) => {
-                // Repeat: fixpoint iteration — evaluate source only (stub; full
-                // implementation requires per-element scope binding).
-                self.eval_expr_opt(repeat.source.as_deref())
+                // Repeat: deterministic fixpoint iteration.
+                // Evaluates element_expr for each element in source (binding via scope),
+                // deduplicates, and repeats until the result stabilises or a guard
+                // iteration limit is reached.
+                let source = self.eval_expr_opt(repeat.source.as_deref())?;
+                let Some(element_expr) = repeat.element_expr.as_deref() else {
+                    return Ok(source);
+                };
+                let scope_name = repeat.scope.as_deref().unwrap_or("$this");
+
+                let mut current = match source {
+                    Value::List(items) => items,
+                    Value::Null => vec![],
+                    v => vec![v],
+                };
+
+                const MAX_ITER: usize = 100;
+                for _ in 0..MAX_ITER {
+                    let mut next: Vec<Value> = Vec::new();
+                    for item in &current {
+                        let mut frame = std::collections::BTreeMap::new();
+                        frame.insert(scope_name.to_string(), item.clone());
+                        self.push_scope(frame);
+                        let result = self.eval_expr(element_expr)?;
+                        self.pop_scope();
+                        match result {
+                            Value::List(sub) => next.extend(sub),
+                            Value::Null => {} // nulls excluded
+                            v => next.push(v),
+                        }
+                    }
+                    // Deduplicate while preserving order.
+                    let mut deduped: Vec<Value> = Vec::new();
+                    for v in &next {
+                        if !deduped.contains(v) {
+                            deduped.push(v.clone());
+                        }
+                    }
+                    if deduped == current {
+                        break; // fixpoint reached
+                    }
+                    current = deduped;
+                }
+                Ok(Value::List(current))
             }
             _ => unreachable!("eval_list_expr: unexpected expression"),
         }
@@ -1660,6 +1723,17 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                         Ok(Value::Boolean(inc_a_b != Value::Boolean(true)))
                     }
                     _ => Ok(Value::Null),
+                }
+            }
+            Expression::Size(unary) => {
+                let v = self.eval_unary_arg(unary)?;
+                match &v {
+                    Value::Null => Ok(Value::Null),
+                    Value::List(_) => super::lists::count(&v),
+                    Value::Interval { .. } => super::intervals::width(&v),
+                    _ => Err(EvalError::General(
+                        "Size: expected List or Interval".to_string(),
+                    )),
                 }
             }
             _ => unreachable!("eval_interval_expr: unexpected expression"),
