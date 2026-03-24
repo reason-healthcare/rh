@@ -1,7 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Subcommand;
+use glob::glob;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -68,9 +70,9 @@ pub enum CqlCommands {
 
     /// Validate CQL source without generating ELM
     Validate {
-        /// Path to CQL file, or "-" to read from stdin
-        #[clap(value_name = "FILE")]
-        input: String,
+        /// Path(s) to CQL file(s) or glob pattern(s), or "-" to read from stdin
+        #[clap(value_name = "FILE", num_args = 0..)]
+        inputs: Vec<String>,
 
         /// Show detailed error information
         #[clap(long)]
@@ -140,8 +142,8 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 source_map_output.as_deref(),
             )?;
         }
-        CqlCommands::Validate { input, verbose } => {
-            validate_cql(&input, verbose)?;
+        CqlCommands::Validate { inputs, verbose } => {
+            validate_cql_multi(&inputs, verbose)?;
         }
         CqlCommands::Info { input } => {
             show_info(&input)?;
@@ -205,6 +207,82 @@ fn report_compile_failure(errors: &[Diagnostic], warnings: &[Diagnostic]) -> any
 // ---------------------------------------------------------------------------
 // Source I/O
 // ---------------------------------------------------------------------------
+
+/// Expand a list of file paths / glob patterns into a sorted, deduplicated list
+/// of concrete file paths.  Each entry is tried as a literal path first; if it
+/// does not exist on disk it is treated as a glob pattern.
+fn resolve_cql_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
+    let mut resolved = BTreeSet::new();
+    let mut unmatched = Vec::new();
+
+    for input in inputs {
+        let path = PathBuf::from(input);
+        if path.exists() {
+            resolved.insert(path);
+            continue;
+        }
+
+        let mut matched_any = false;
+        let entries =
+            glob(input).with_context(|| format!("Invalid glob pattern: '{input}'"))?;
+        for entry in entries {
+            let entry =
+                entry.with_context(|| format!("Invalid path for pattern: '{input}'"))?;
+            if entry.is_file() {
+                matched_any = true;
+                resolved.insert(entry);
+            }
+        }
+
+        if !matched_any {
+            unmatched.push(input.clone());
+        }
+    }
+
+    if !unmatched.is_empty() {
+        let joined = unmatched
+            .iter()
+            .map(|p| format!("'{p}'"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        bail!("Input pattern matched no files: {joined}");
+    }
+
+    Ok(resolved.into_iter().collect())
+}
+
+/// Validate one or more CQL files (or stdin) specified as paths / glob patterns.
+///
+/// When multiple files match, each file is validated independently and a
+/// summary failure is returned after all files have been processed.
+fn validate_cql_multi(inputs: &[String], verbose: bool) -> Result<()> {
+    // No inputs, or the explicit stdin sentinel "-" → validate from stdin.
+    if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
+        return validate_cql(inputs.first().map_or("-", |s| s.as_str()), verbose);
+    }
+
+    let paths = resolve_cql_paths(inputs)?;
+    let multiple = paths.len() > 1;
+    let mut failure_count = 0usize;
+
+    for path in &paths {
+        let display = path.display().to_string();
+        if multiple {
+            println!("[{display}]");
+        }
+        if validate_cql(&display, verbose).is_err() {
+            failure_count += 1;
+        }
+        if multiple {
+            println!();
+        }
+    }
+
+    if failure_count > 0 {
+        bail!("{failure_count} file(s) failed CQL validation");
+    }
+    Ok(())
+}
 
 /// Read CQL source from file or stdin
 fn read_source(input: &str) -> Result<String> {
