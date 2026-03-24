@@ -79,6 +79,29 @@ Examples:
 9. Commit your changes with conventional commit messages
 10. Push to your fork and create a Pull Request
 
+## Publishing to crates.io
+
+Crates must be published in dependency order. Run `cargo publish` for each crate in the following sequence:
+
+1. `rh-foundation`
+2. `rh-hl7-fhir-r4-core`, `rh-codegen`, `rh-cql` (can be published in parallel)
+3. `rh-fhirpath`, `rh-vcl` (can be published in parallel)
+4. `rh-validator`
+5. `rh-cli`
+
+To dry-run all crates in order:
+
+```bash
+cargo publish --dry-run -p rh-foundation
+cargo publish --dry-run -p rh-hl7-fhir-r4-core
+cargo publish --dry-run -p rh-codegen
+cargo publish --dry-run -p rh-cql
+cargo publish --dry-run -p rh-fhirpath
+cargo publish --dry-run -p rh-vcl
+cargo publish --dry-run -p rh-validator
+cargo publish --dry-run -p rh-cli
+```
+
 ## Release Process
 
 1. Update version numbers in relevant `Cargo.toml` files

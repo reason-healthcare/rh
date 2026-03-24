@@ -14,7 +14,7 @@ categories = ["parser-implementations", "api-bindings"]
 readme = "README.md"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:console_error_panic_hook"]
