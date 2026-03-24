@@ -3,7 +3,7 @@ use clap::Subcommand;
 use glob::glob;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -12,7 +12,8 @@ use tracing::{error, info};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
     evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
-    CqlDateTime, Diagnostic, EvalContextBuilder, FixedClock, SignatureLevel,
+    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FixedClock, InMemoryDataProvider,
+    SignatureLevel, Value,
 };
 
 #[derive(Subcommand)]
@@ -101,13 +102,18 @@ pub enum CqlCommands {
 
     /// Evaluate a named expression in a compiled CQL library
     Eval {
-        /// Path to CQL file, or "-" to read from stdin
+        /// CQL file to evaluate, or "-" to read from stdin
         #[clap(value_name = "FILE")]
-        input: String,
+        file: String,
 
-        /// Name of the expression definition to evaluate
-        #[clap(short = 'e', long)]
+        /// Expression definition name to evaluate
+        #[clap(value_name = "EXPRESSION")]
         expression: String,
+
+        /// FHIR data file (Bundle JSON, NDJSON, or single resource) to use for
+        /// Retrieve operations. Use "-" to read from stdin.
+        #[clap(long, value_name = "FILE")]
+        data: Option<String>,
 
         /// Output a step-by-step evaluation trace
         #[clap(long)]
@@ -155,11 +161,12 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
             run_explain(mode)?;
         }
         CqlCommands::Eval {
-            input,
+            file,
             expression,
+            data,
             trace,
         } => {
-            eval_cql(&input, &expression, trace)?;
+            eval_cql(&file, &expression, data.as_deref(), trace)?;
         }
     }
 
@@ -444,7 +451,7 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Evaluate a named expression in a CQL library
-fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
+fn eval_cql(input: &str, expression: &str, data: Option<&str>, show_trace: bool) -> Result<()> {
     let source = read_source(input)?;
 
     // Compile to ELM
@@ -468,13 +475,23 @@ fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
             offset_seconds: Some(t.offset().local_minus_utc()),
         }
     };
-    let ctx = EvalContextBuilder::new(FixedClock::new(now)).build();
 
+    let mut builder = EvalContextBuilder::new(FixedClock::new(now));
+
+    if let Some(data_path) = data {
+        let (provider, context_value) = load_fhir_data(data_path)?;
+        builder = builder.data_provider(provider);
+        if let Some(cv) = context_value {
+            builder = builder.context_value(cv);
+        }
+    }
+
+    let ctx = builder.build();
     let library = &result.library;
 
     if show_trace {
         let (value, trace) = evaluate_elm_with_trace(library, expression, &ctx)
-            .with_context(|| format!("Failed to evaluate expression '{expression}'"))?;
+            .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("Result: {value}");
         println!();
         println!("Trace ({} events):", trace.len());
@@ -492,11 +509,137 @@ fn eval_cql(input: &str, expression: &str, show_trace: bool) -> Result<()> {
         }
     } else {
         let value = evaluate_elm(library, expression, &ctx)
-            .with_context(|| format!("Failed to evaluate expression '{expression}'"))?;
+            .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("{value}");
     }
 
     Ok(())
+}
+
+/// Convert an `EvalError` into an `anyhow::Error` with a helpful message.
+///
+/// When the error is "expression not found", the available expression names
+/// are appended so the user knows what they can evaluate.
+fn enrich_eval_error(
+    err: EvalError,
+    requested: &str,
+    library: &rh_cql::elm::Library,
+) -> anyhow::Error {
+    let msg = err.to_string();
+    if msg.contains("not found in library") {
+        let names: Vec<String> = library
+            .statements
+            .as_ref()
+            .map(|s| {
+                s.defs
+                    .iter()
+                    .filter_map(|d| match d {
+                        rh_cql::elm::StatementDef::Expression(e) => e.name.clone(),
+                        rh_cql::elm::StatementDef::Function(f) => f.name.clone(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        if names.is_empty() {
+            anyhow::anyhow!("Expression '{}' not found (library defines no expressions)", requested)
+        } else {
+            anyhow::anyhow!(
+                "Expression '{}' not found.\n\nAvailable expressions:\n{}",
+                requested,
+                names
+                    .iter()
+                    .map(|n| format!("  - {n}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+        }
+    } else {
+        anyhow::anyhow!("Failed to evaluate '{}': {}", requested, msg)
+    }
+}
+
+/// Load FHIR resources from a file path (or "-" for stdin) into an
+/// `InMemoryDataProvider` keyed by `resourceType`.  When the input is a
+/// single non-Bundle resource it is also returned as a context value so that
+/// `context Patient`-style expressions work out of the box.
+fn load_fhir_data(path: &str) -> Result<(InMemoryDataProvider, Option<Value>)> {
+    let content = read_source(path)?;
+    let mut provider = InMemoryDataProvider::new();
+    let mut single_context: Option<Value> = None;
+
+    // Try NDJSON: multiple non-empty lines each being a JSON object.
+    let trimmed = content.trim();
+    if trimmed.contains('\n') {
+        let lines: Vec<&str> = trimmed.lines().filter(|l| !l.trim().is_empty()).collect();
+        let parsed: Vec<serde_json::Value> = lines
+            .iter()
+            .map(|l| serde_json::from_str(l))
+            .collect::<std::result::Result<_, _>>()
+            .ok()
+            .unwrap_or_default();
+        if parsed.len() == lines.len() {
+            for resource in parsed {
+                add_fhir_resource(&mut provider, resource);
+            }
+            return Ok((provider, None));
+        }
+    }
+
+    // Fall back to single JSON document.
+    let json: serde_json::Value =
+        serde_json::from_str(trimmed).context("Failed to parse --data file as JSON")?;
+
+    if json.get("resourceType").and_then(|v| v.as_str()) == Some("Bundle") {
+        // FHIR Bundle — extract entries.
+        if let Some(entries) = json.get("entry").and_then(|e| e.as_array()) {
+            for entry in entries {
+                if let Some(resource) = entry.get("resource") {
+                    add_fhir_resource(&mut provider, resource.clone());
+                }
+            }
+        }
+    } else {
+        // Single resource — also set it as context value.
+        let value = json_to_cql_value(json.clone());
+        add_fhir_resource(&mut provider, json);
+        single_context = Some(value);
+    }
+
+    Ok((provider, single_context))
+}
+
+/// Recursively convert a `serde_json::Value` to a CQL `Value`.
+fn json_to_cql_value(v: serde_json::Value) -> Value {
+    match v {
+        serde_json::Value::Null => Value::Null,
+        serde_json::Value::Bool(b) => Value::Boolean(b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Integer(i)
+            } else {
+                Value::Decimal(n.as_f64().unwrap_or(0.0))
+            }
+        }
+        serde_json::Value::String(s) => Value::String(s),
+        serde_json::Value::Array(arr) => {
+            Value::List(arr.into_iter().map(json_to_cql_value).collect())
+        }
+        serde_json::Value::Object(map) => Value::Tuple(
+            map.into_iter()
+                .map(|(k, v)| (k, json_to_cql_value(v)))
+                .collect::<BTreeMap<_, _>>(),
+        ),
+    }
+}
+
+/// Add a FHIR JSON resource to `provider`, keyed by its `resourceType` field.
+/// Resources without a `resourceType` are silently skipped.
+fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::Value) {
+    if let Some(rt) = resource.get("resourceType").and_then(|v| v.as_str()) {
+        let rt = rt.to_string();
+        provider.add_resource(rt, json_to_cql_value(resource));
+    }
 }
 
 /// Validate CQL source

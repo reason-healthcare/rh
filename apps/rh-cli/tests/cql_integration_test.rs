@@ -121,7 +121,7 @@ fn test_explain_compile_file() {
 #[test]
 fn test_eval_integer_expression() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "X"])
+        .args(["cql", "eval", "-", "X"])
         .write_stdin(SIMPLE_CQL)
         .assert()
         .success()
@@ -131,7 +131,7 @@ fn test_eval_integer_expression() {
 #[test]
 fn test_eval_boolean_expression() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "IsTrue"])
+        .args(["cql", "eval", "-", "IsTrue"])
         .write_stdin(BOOL_CQL)
         .assert()
         .success()
@@ -141,7 +141,7 @@ fn test_eval_boolean_expression() {
 #[test]
 fn test_eval_unknown_expression_fails() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "NonExistent"])
+        .args(["cql", "eval", "-", "NonExistent"])
         .write_stdin(SIMPLE_CQL)
         .assert()
         .failure();
@@ -150,7 +150,7 @@ fn test_eval_unknown_expression_fails() {
 #[test]
 fn test_eval_with_trace_flag() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "X", "--trace"])
+        .args(["cql", "eval", "-", "X", "--trace"])
         .write_stdin(SIMPLE_CQL)
         .assert()
         .success()
@@ -162,7 +162,7 @@ fn test_eval_with_trace_flag() {
 #[test]
 fn test_eval_trace_shows_op() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "X", "--trace"])
+        .args(["cql", "eval", "-", "X", "--trace"])
         .write_stdin(SIMPLE_CQL)
         .assert()
         .success()
@@ -173,7 +173,7 @@ fn test_eval_trace_shows_op() {
 #[test]
 fn test_eval_invalid_cql_fails() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "X"])
+        .args(["cql", "eval", "-", "X"])
         .write_stdin("not valid CQL !!!###")
         .assert()
         .failure();
@@ -372,7 +372,7 @@ fn test_info_exits_nonzero_on_invalid_cql() {
 #[test]
 fn test_eval_exits_nonzero_on_invalid_cql() {
     rh_cmd()
-        .args(["cql", "eval", "-", "--expression", "X"])
+        .args(["cql", "eval", "-", "X"])
         .write_stdin(INVALID_CQL)
         .assert()
         .failure()
