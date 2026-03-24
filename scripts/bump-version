@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+"""
+Manage crate versions across the workspace.
+
+Usage:
+  bump-version show
+  bump-version workspace <new-version>
+  bump-version validator <new-version>
+  bump-version all <new-workspace-version> <new-validator-version>
+
+Commands:
+  show        Display current versions for all crates
+  workspace   Bump the shared workspace version (all crates using version.workspace = true)
+              Also updates internal path dependency version specifiers
+  validator   Bump rh-validator's standalone version and its dep entry in rh-cli
+  all         Bump both workspace and validator versions in one pass
+
+Examples:
+  bump-version show
+  bump-version workspace 0.2.0-beta.1
+  bump-version validator 0.3.0-beta.1
+  bump-version all 0.2.0-beta.1 0.3.0-beta.1
+"""
+
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
+VALIDATOR_CARGO = ROOT / "crates/rh-validator/Cargo.toml"
+CLI_CARGO = ROOT / "apps/rh-cli/Cargo.toml"
+
+# Crates that inherit from [workspace.package] (for display only)
+WORKSPACE_CRATES = [
+    "rh-foundation",
+    "rh-hl7-fhir-r4-core",
+    "rh-codegen",
+    "rh-cql",
+    "rh-fhirpath",
+    "rh-vcl",
+    "rh-cli",
+]
+
+
+def current_versions():
+    ws_toml = (ROOT / "Cargo.toml").read_text()
+    # The workspace version is under [workspace.package]
+    m = re.search(
+        r'\[workspace\.package\].*?^version\s*=\s*"([^"]+)"',
+        ws_toml,
+        re.MULTILINE | re.DOTALL,
+    )
+    ws_version = m.group(1) if m else "unknown"
+
+    val_toml = VALIDATOR_CARGO.read_text()
+    m = re.search(r'^version\s*=\s*"([^"]+)"', val_toml, re.MULTILINE)
+    val_version = m.group(1) if m else "unknown"
+
+    return ws_version, val_version
+
+
+def bump_workspace(new_version):
+    old_version, _ = current_versions()
+    changes = []
+
+    # 1. Update [workspace.package] version in root Cargo.toml
+    root_path = ROOT / "Cargo.toml"
+    content = root_path.read_text()
+    new_content = re.sub(
+        r'(\[workspace\.package\].*?^version\s*=\s*)"[^"]+"',
+        rf'\g<1>"{new_version}"',
+        content,
+        count=1,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    if new_content != content:
+        root_path.write_text(new_content)
+        changes.append(f"  Cargo.toml                       {old_version} -> {new_version}  [workspace.package]")
+
+    # 2. Update all internal path dependency version specifiers.
+    #    Only lines that have both `path =` and `version = "OLD"` are internal deps.
+    for toml_path in sorted(ROOT.glob("crates/*/Cargo.toml")) + sorted(ROOT.glob("apps/*/Cargo.toml")):
+        content = toml_path.read_text()
+        if f'version = "{old_version}"' not in content:
+            continue
+        lines = content.splitlines(keepends=True)
+        new_lines = []
+        modified = False
+        for line in lines:
+            if 'path = ' in line and f'version = "{old_version}"' in line:
+                new_line = line.replace(f'version = "{old_version}"', f'version = "{new_version}"')
+                new_lines.append(new_line)
+                modified = True
+            else:
+                new_lines.append(line)
+        if modified:
+            toml_path.write_text("".join(new_lines))
+            rel = toml_path.relative_to(ROOT)
+            changes.append(f"  {str(rel):<36} {old_version} -> {new_version}  (path dep specifiers)")
+
+    return changes
+
+
+def bump_validator(new_version):
+    _, old_version = current_versions()
+    changes = []
+
+    # 1. Update version in crates/rh-validator/Cargo.toml
+    content = VALIDATOR_CARGO.read_text()
+    new_content = re.sub(
+        r'^(version\s*=\s*)"[^"]+"',
+        rf'\g<1>"{new_version}"',
+        content,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if new_content != content:
+        VALIDATOR_CARGO.write_text(new_content)
+        rel = VALIDATOR_CARGO.relative_to(ROOT)
+        changes.append(f"  {str(rel):<36} {old_version} -> {new_version}")
+
+    # 2. Update the rh-validator path dep entry in apps/rh-cli/Cargo.toml
+    content = CLI_CARGO.read_text()
+    lines = content.splitlines(keepends=True)
+    new_lines = []
+    modified = False
+    for line in lines:
+        if 'path = ' in line and 'rh-validator' in line and f'version = "{old_version}"' in line:
+            new_line = line.replace(f'version = "{old_version}"', f'version = "{new_version}"')
+            new_lines.append(new_line)
+            modified = True
+        else:
+            new_lines.append(line)
+    if modified:
+        CLI_CARGO.write_text("".join(new_lines))
+        rel = CLI_CARGO.relative_to(ROOT)
+        changes.append(f"  {str(rel):<36} {old_version} -> {new_version}  (rh-validator dep)")
+
+    return changes
+
+
+def cmd_show():
+    ws_version, val_version = current_versions()
+    print(f"Workspace version : {ws_version}")
+    print(f"Validator version : {val_version}")
+    print()
+    print("Crate versions:")
+    for name in WORKSPACE_CRATES:
+        print(f"  {ws_version}  {name}  (version.workspace = true)")
+    print(f"  {val_version}  rh-validator  (standalone)")
+
+
+def cmd_workspace(args):
+    if not args:
+        print("Usage: bump-version workspace <new-version>", file=sys.stderr)
+        sys.exit(1)
+    new_version = args[0]
+    changes = bump_workspace(new_version)
+    if changes:
+        print("Changes made:")
+        for c in changes:
+            print(c)
+        print(f"\nWorkspace version bumped to {new_version}.")
+        print("Next: cargo check --workspace")
+    else:
+        print(f"No changes — workspace is already at {new_version}.")
+
+
+def cmd_validator(args):
+    if not args:
+        print("Usage: bump-version validator <new-version>", file=sys.stderr)
+        sys.exit(1)
+    new_version = args[0]
+    changes = bump_validator(new_version)
+    if changes:
+        print("Changes made:")
+        for c in changes:
+            print(c)
+        print(f"\nrh-validator bumped to {new_version}.")
+        print("Next: cargo check --workspace")
+    else:
+        print(f"No changes — rh-validator is already at {new_version}.")
+
+
+def cmd_all(args):
+    if len(args) < 2:
+        print("Usage: bump-version all <new-workspace-version> <new-validator-version>", file=sys.stderr)
+        sys.exit(1)
+    ws_new, val_new = args[0], args[1]
+    changes = bump_workspace(ws_new) + bump_validator(val_new)
+    if changes:
+        print("Changes made:")
+        for c in changes:
+            print(c)
+        print(f"\nAll versions bumped (workspace={ws_new}, validator={val_new}).")
+        print("Next: cargo check --workspace")
+    else:
+        print("No changes.")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        sys.exit(0)
+
+    cmd = sys.argv[1]
+    rest = sys.argv[2:]
+
+    if cmd == "show":
+        cmd_show()
+    elif cmd == "workspace":
+        cmd_workspace(rest)
+    elif cmd == "validator":
+        cmd_validator(rest)
+    elif cmd == "all":
+        cmd_all(rest)
+    else:
+        print(f"Unknown command: {cmd}", file=sys.stderr)
+        print(__doc__, file=sys.stderr)
+        sys.exit(1)
