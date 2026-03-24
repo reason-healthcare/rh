@@ -100,8 +100,8 @@ pub trait SearchParameterMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::search_parameter::SearchParameter;
-    /// use hl7_fhir_r4_core::traits::search_parameter::SearchParameterMutators;
+    /// use rh_hl7_fhir_r4_core::resources::search_parameter::SearchParameter;
+    /// use rh_hl7_fhir_r4_core::traits::search_parameter::SearchParameterMutators;
     ///
     /// let resource = SearchParameter::new();
     /// // Can be used with method chaining:

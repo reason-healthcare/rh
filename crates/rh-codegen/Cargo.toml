@@ -1,12 +1,16 @@
 [package]
 name = "rh-codegen"
-version = "0.1.0"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 description = "Code generation library for creating Rust types from FHIR StructureDefinitions"
+keywords = ["fhir", "codegen", "healthcare", "hl7", "rust"]
+categories = ["development-tools", "api-bindings"]
+readme = "README.md"
 
 [dependencies]
 # Workspace dependencies
@@ -26,7 +30,7 @@ chrono = { workspace = true }
 once_cell = "1.19"
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation", features = ["http"] }
+rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1", features = ["http"] }
 
 [dev-dependencies]
 tempfile = "3.0"

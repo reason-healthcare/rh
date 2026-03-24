@@ -32,8 +32,8 @@ pub trait GroupdefinitionMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::groupdefinition::Groupdefinition;
-    /// use hl7_fhir_r4_core::traits::groupdefinition::GroupdefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::groupdefinition::Groupdefinition;
+    /// use rh_hl7_fhir_r4_core::traits::groupdefinition::GroupdefinitionMutators;
     ///
     /// let resource = Groupdefinition::new();
     /// // Can be used with method chaining:

@@ -92,8 +92,8 @@ pub trait QuestionnaireMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::questionnaire::Questionnaire;
-    /// use hl7_fhir_r4_core::traits::questionnaire::QuestionnaireMutators;
+    /// use rh_hl7_fhir_r4_core::resources::questionnaire::Questionnaire;
+    /// use rh_hl7_fhir_r4_core::traits::questionnaire::QuestionnaireMutators;
     ///
     /// let resource = Questionnaire::new();
     /// // Can be used with method chaining:

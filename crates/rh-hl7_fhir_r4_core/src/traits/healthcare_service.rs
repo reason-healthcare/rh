@@ -93,8 +93,8 @@ pub trait HealthcareServiceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::healthcare_service::HealthcareService;
-    /// use hl7_fhir_r4_core::traits::healthcare_service::HealthcareServiceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::healthcare_service::HealthcareService;
+    /// use rh_hl7_fhir_r4_core::traits::healthcare_service::HealthcareServiceMutators;
     ///
     /// let resource = HealthcareService::new();
     /// // Can be used with method chaining:

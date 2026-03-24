@@ -89,6 +89,23 @@ pub struct Composition {
     /// Composition is broken into sections
     pub section: Option<Vec<CompositionSection>>,
 }
+/// Composition nested structure for the 'attester' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionAttester {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// personal | professional | legal | official
+    pub mode: CompositionAttestationMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// When the composition was attested
+    pub time: Option<DateTimeType>,
+    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
+    pub _time: Option<Element>,
+    /// Who attested the composition
+    pub party: Option<Reference>,
+}
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionSection {
@@ -162,23 +179,6 @@ pub struct CompositionEvent {
     /// The event(s) being documented
     pub detail: Option<Vec<Reference>>,
 }
-/// Composition nested structure for the 'attester' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionAttester {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// personal | professional | legal | official
-    pub mode: CompositionAttestationMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// When the composition was attested
-    pub time: Option<DateTimeType>,
-    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
-    pub _time: Option<Element>,
-    /// Who attested the composition
-    pub party: Option<Reference>,
-}
 /// Composition nested structure for the 'relatesTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionRelatesto {
@@ -224,6 +224,19 @@ impl Default for Composition {
     }
 }
 
+impl Default for CompositionAttester {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: CompositionAttestationMode::default(),
+            _mode: Default::default(),
+            time: Default::default(),
+            _time: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
 impl Default for CompositionSection {
     fn default() -> Self {
         Self {
@@ -251,19 +264,6 @@ impl Default for CompositionEvent {
             code: Default::default(),
             period: Default::default(),
             detail: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionAttester {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: CompositionAttestationMode::default(),
-            _mode: Default::default(),
-            time: Default::default(),
-            _time: Default::default(),
-            party: Default::default(),
         }
     }
 }

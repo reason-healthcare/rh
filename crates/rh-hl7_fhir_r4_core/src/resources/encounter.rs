@@ -105,28 +105,6 @@ pub struct Encounter {
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
 }
-/// Encounter nested structure for the 'location' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterLocation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Location the encounter takes place
-    pub location: Reference,
-    /// planned | active | reserved | completed
-    pub status: Option<EncounterLocationStatus>,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The physical type of the location (usually the level in the location hierachy - bed room ward etc.)
-    ///
-    /// Binding: example (Physical form of the location.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/location-physical-type
-    #[serde(rename = "physicalType")]
-    pub physical_type: Option<CodeableConcept>,
-    /// Time period during which the patient was present at the location
-    pub period: Option<Period>,
-}
 /// Encounter nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterParticipant {
@@ -230,19 +208,6 @@ pub struct EncounterHospitalization {
     #[serde(rename = "dischargeDisposition")]
     pub discharge_disposition: Option<CodeableConcept>,
 }
-/// Encounter nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
-    pub status: EncounterStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The time that the episode was in the specified status
-    pub period: Period,
-}
 /// Encounter nested structure for the 'classHistory' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterClasshistory {
@@ -257,6 +222,41 @@ pub struct EncounterClasshistory {
     pub class: Coding,
     /// The time that the episode was in the specified class
     pub period: Period,
+}
+/// Encounter nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
+    pub status: EncounterStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The time that the episode was in the specified status
+    pub period: Period,
+}
+/// Encounter nested structure for the 'location' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterLocation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Location the encounter takes place
+    pub location: Reference,
+    /// planned | active | reserved | completed
+    pub status: Option<EncounterLocationStatus>,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The physical type of the location (usually the level in the location hierachy - bed room ward etc.)
+    ///
+    /// Binding: example (Physical form of the location.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/location-physical-type
+    #[serde(rename = "physicalType")]
+    pub physical_type: Option<CodeableConcept>,
+    /// Time period during which the patient was present at the location
+    pub period: Option<Period>,
 }
 
 impl Default for Encounter {
@@ -287,19 +287,6 @@ impl Default for Encounter {
             location: Default::default(),
             service_provider: Default::default(),
             part_of: Default::default(),
-        }
-    }
-}
-
-impl Default for EncounterLocation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            location: Reference::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            physical_type: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -344,6 +331,16 @@ impl Default for EncounterHospitalization {
     }
 }
 
+impl Default for EncounterClasshistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            class: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for EncounterStatushistory {
     fn default() -> Self {
         Self {
@@ -355,11 +352,14 @@ impl Default for EncounterStatushistory {
     }
 }
 
-impl Default for EncounterClasshistory {
+impl Default for EncounterLocation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            class: Default::default(),
+            location: Reference::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            physical_type: Default::default(),
             period: Default::default(),
         }
     }

@@ -40,8 +40,8 @@ pub trait ResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::resource::Resource;
-    /// use hl7_fhir_r4_core::traits::resource::ResourceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::resource::Resource;
+    /// use rh_hl7_fhir_r4_core::traits::resource::ResourceMutators;
     ///
     /// let resource = Resource::new();
     /// // Can be used with method chaining:

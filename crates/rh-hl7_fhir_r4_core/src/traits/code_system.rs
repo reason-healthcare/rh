@@ -101,8 +101,8 @@ pub trait CodeSystemMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::code_system::CodeSystem;
-    /// use hl7_fhir_r4_core::traits::code_system::CodeSystemMutators;
+    /// use rh_hl7_fhir_r4_core::resources::code_system::CodeSystem;
+    /// use rh_hl7_fhir_r4_core::traits::code_system::CodeSystemMutators;
     ///
     /// let resource = CodeSystem::new();
     /// // Can be used with method chaining:

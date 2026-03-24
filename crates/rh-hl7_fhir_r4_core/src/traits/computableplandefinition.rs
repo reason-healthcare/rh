@@ -32,8 +32,8 @@ pub trait ComputableplandefinitionMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::computableplandefinition::Computableplandefinition;
-    /// use hl7_fhir_r4_core::traits::computableplandefinition::ComputableplandefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::computableplandefinition::Computableplandefinition;
+    /// use rh_hl7_fhir_r4_core::traits::computableplandefinition::ComputableplandefinitionMutators;
     ///
     /// let resource = Computableplandefinition::new();
     /// // Can be used with method chaining:

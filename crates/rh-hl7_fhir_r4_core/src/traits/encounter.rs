@@ -94,8 +94,8 @@ pub trait EncounterMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::encounter::Encounter;
-    /// use hl7_fhir_r4_core::traits::encounter::EncounterMutators;
+    /// use rh_hl7_fhir_r4_core::resources::encounter::Encounter;
+    /// use rh_hl7_fhir_r4_core::traits::encounter::EncounterMutators;
     ///
     /// let resource = Encounter::new();
     /// // Can be used with method chaining:

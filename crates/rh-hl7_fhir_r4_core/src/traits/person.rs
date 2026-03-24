@@ -65,8 +65,8 @@ pub trait PersonMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::person::Person;
-    /// use hl7_fhir_r4_core::traits::person::PersonMutators;
+    /// use rh_hl7_fhir_r4_core::resources::person::Person;
+    /// use rh_hl7_fhir_r4_core::traits::person::PersonMutators;
     ///
     /// let resource = Person::new();
     /// // Can be used with method chaining:

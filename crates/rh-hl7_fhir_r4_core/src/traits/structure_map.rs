@@ -81,8 +81,8 @@ pub trait StructureMapMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::structure_map::StructureMap;
-    /// use hl7_fhir_r4_core::traits::structure_map::StructureMapMutators;
+    /// use rh_hl7_fhir_r4_core::resources::structure_map::StructureMap;
+    /// use rh_hl7_fhir_r4_core::traits::structure_map::StructureMapMutators;
     ///
     /// let resource = StructureMap::new();
     /// // Can be used with method chaining:

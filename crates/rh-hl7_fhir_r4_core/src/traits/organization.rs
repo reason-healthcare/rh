@@ -63,8 +63,8 @@ pub trait OrganizationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::organization::Organization;
-    /// use hl7_fhir_r4_core::traits::organization::OrganizationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::organization::Organization;
+    /// use rh_hl7_fhir_r4_core::traits::organization::OrganizationMutators;
     ///
     /// let resource = Organization::new();
     /// // Can be used with method chaining:

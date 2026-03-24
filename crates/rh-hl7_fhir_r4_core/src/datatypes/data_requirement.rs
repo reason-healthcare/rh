@@ -60,32 +60,6 @@ pub struct DataRequirement {
     /// Order of the results
     pub sort: Option<Vec<Element>>,
 }
-/// DataRequirement nested structure for the 'dateFilter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataRequirementDatefilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A date-valued attribute to filter on
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// A date valued parameter to search on
-    #[serde(rename = "searchParam")]
-    pub search_param: Option<StringType>,
-    /// Extension element for the 'searchParam' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_searchParam")]
-    pub _search_param: Option<Element>,
-    /// The value of the filter, as a Period, DateTime, or Duration value (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: Option<DateTimeType>,
-    /// The value of the filter, as a Period, DateTime, or Duration value (Period)
-    #[serde(rename = "valuePeriod")]
-    pub value_period: Option<Period>,
-    /// The value of the filter, as a Period, DateTime, or Duration value (Duration)
-    #[serde(rename = "valueDuration")]
-    pub value_duration: Option<Duration>,
-}
 /// DataRequirement nested structure for the 'sort' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataRequirementSort {
@@ -126,6 +100,32 @@ pub struct DataRequirementCodefilter {
     /// What code is expected
     pub code: Option<Vec<Coding>>,
 }
+/// DataRequirement nested structure for the 'dateFilter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataRequirementDatefilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A date-valued attribute to filter on
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// A date valued parameter to search on
+    #[serde(rename = "searchParam")]
+    pub search_param: Option<StringType>,
+    /// Extension element for the 'searchParam' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_searchParam")]
+    pub _search_param: Option<Element>,
+    /// The value of the filter, as a Period, DateTime, or Duration value (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: Option<DateTimeType>,
+    /// The value of the filter, as a Period, DateTime, or Duration value (Period)
+    #[serde(rename = "valuePeriod")]
+    pub value_period: Option<Period>,
+    /// The value of the filter, as a Period, DateTime, or Duration value (Duration)
+    #[serde(rename = "valueDuration")]
+    pub value_duration: Option<Duration>,
+}
 
 impl Default for DataRequirement {
     fn default() -> Self {
@@ -144,21 +144,6 @@ impl Default for DataRequirement {
             limit: Default::default(),
             _limit: Default::default(),
             sort: Default::default(),
-        }
-    }
-}
-
-impl Default for DataRequirementDatefilter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            search_param: Default::default(),
-            _search_param: Default::default(),
-            value_date_time: Default::default(),
-            value_period: Default::default(),
-            value_duration: Default::default(),
         }
     }
 }
@@ -186,6 +171,21 @@ impl Default for DataRequirementCodefilter {
             value_set: Default::default(),
             _value_set: Default::default(),
             code: Default::default(),
+        }
+    }
+}
+
+impl Default for DataRequirementDatefilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            search_param: Default::default(),
+            _search_param: Default::default(),
+            value_date_time: Default::default(),
+            value_period: Default::default(),
+            value_duration: Default::default(),
         }
     }
 }

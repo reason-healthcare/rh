@@ -32,8 +32,8 @@ pub trait HeartrateMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::heartrate::Heartrate;
-    /// use hl7_fhir_r4_core::traits::heartrate::HeartrateMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::heartrate::Heartrate;
+    /// use rh_hl7_fhir_r4_core::traits::heartrate::HeartrateMutators;
     ///
     /// let resource = Heartrate::new();
     /// // Can be used with method chaining:

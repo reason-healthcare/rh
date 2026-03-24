@@ -82,8 +82,8 @@ pub trait ClinicalImpressionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::clinical_impression::ClinicalImpression;
-    /// use hl7_fhir_r4_core::traits::clinical_impression::ClinicalImpressionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::clinical_impression::ClinicalImpression;
+    /// use rh_hl7_fhir_r4_core::traits::clinical_impression::ClinicalImpressionMutators;
     ///
     /// let resource = ClinicalImpression::new();
     /// // Can be used with method chaining:

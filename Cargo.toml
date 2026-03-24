@@ -59,8 +59,10 @@ criterion = "0.5"
 
 # Workspace-wide package metadata
 [workspace.package]
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Reason Healthcare <engineering@reason.health>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/your-monorepo"
+repository = "https://github.com/reason-healthcare/rh"
+homepage = "https://github.com/reason-healthcare/rh"
 rust-version = "1.91"
+version = "0.1.0-beta.1"

@@ -67,8 +67,8 @@ pub trait ConsentMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::consent::Consent;
-    /// use hl7_fhir_r4_core::traits::consent::ConsentMutators;
+    /// use rh_hl7_fhir_r4_core::resources::consent::Consent;
+    /// use rh_hl7_fhir_r4_core::traits::consent::ConsentMutators;
     ///
     /// let resource = Consent::new();
     /// // Can be used with method chaining:

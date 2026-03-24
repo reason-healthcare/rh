@@ -32,8 +32,8 @@ pub trait ShareablevaluesetMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareablevalueset::Shareablevalueset;
-    /// use hl7_fhir_r4_core::traits::shareablevalueset::ShareablevaluesetMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareablevalueset::Shareablevalueset;
+    /// use rh_hl7_fhir_r4_core::traits::shareablevalueset::ShareablevaluesetMutators;
     ///
     /// let resource = Shareablevalueset::new();
     /// // Can be used with method chaining:

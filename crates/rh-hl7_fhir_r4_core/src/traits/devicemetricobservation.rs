@@ -32,8 +32,8 @@ pub trait DevicemetricobservationMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::devicemetricobservation::Devicemetricobservation;
-    /// use hl7_fhir_r4_core::traits::devicemetricobservation::DevicemetricobservationMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::devicemetricobservation::Devicemetricobservation;
+    /// use rh_hl7_fhir_r4_core::traits::devicemetricobservation::DevicemetricobservationMutators;
     ///
     /// let resource = Devicemetricobservation::new();
     /// // Can be used with method chaining:

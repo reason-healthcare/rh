@@ -81,8 +81,8 @@ pub trait ValueSetMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::value_set::ValueSet;
-    /// use hl7_fhir_r4_core::traits::value_set::ValueSetMutators;
+    /// use rh_hl7_fhir_r4_core::resources::value_set::ValueSet;
+    /// use rh_hl7_fhir_r4_core::traits::value_set::ValueSetMutators;
     ///
     /// let resource = ValueSet::new();
     /// // Can be used with method chaining:

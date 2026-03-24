@@ -32,8 +32,8 @@ pub trait VitalsignsMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::vitalsigns::Vitalsigns;
-    /// use hl7_fhir_r4_core::traits::vitalsigns::VitalsignsMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::vitalsigns::Vitalsigns;
+    /// use rh_hl7_fhir_r4_core::traits::vitalsigns::VitalsignsMutators;
     ///
     /// let resource = Vitalsigns::new();
     /// // Can be used with method chaining:

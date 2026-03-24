@@ -89,8 +89,8 @@ pub trait DeviceRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::device_request::DeviceRequest;
-    /// use hl7_fhir_r4_core::traits::device_request::DeviceRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::device_request::DeviceRequest;
+    /// use rh_hl7_fhir_r4_core::traits::device_request::DeviceRequestMutators;
     ///
     /// let resource = DeviceRequest::new();
     /// // Can be used with method chaining:

@@ -80,8 +80,8 @@ pub trait NutritionOrderMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::nutrition_order::NutritionOrder;
-    /// use hl7_fhir_r4_core::traits::nutrition_order::NutritionOrderMutators;
+    /// use rh_hl7_fhir_r4_core::resources::nutrition_order::NutritionOrder;
+    /// use rh_hl7_fhir_r4_core::traits::nutrition_order::NutritionOrderMutators;
     ///
     /// let resource = NutritionOrder::new();
     /// // Can be used with method chaining:

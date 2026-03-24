@@ -61,8 +61,8 @@ pub trait MessageHeaderMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::message_header::MessageHeader;
-    /// use hl7_fhir_r4_core::traits::message_header::MessageHeaderMutators;
+    /// use rh_hl7_fhir_r4_core::resources::message_header::MessageHeader;
+    /// use rh_hl7_fhir_r4_core::traits::message_header::MessageHeaderMutators;
     ///
     /// let resource = MessageHeader::new();
     /// // Can be used with method chaining:

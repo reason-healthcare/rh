@@ -87,8 +87,8 @@ pub trait ObservationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::observation::Observation;
-    /// use hl7_fhir_r4_core::traits::observation::ObservationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::observation::Observation;
+    /// use rh_hl7_fhir_r4_core::traits::observation::ObservationMutators;
     ///
     /// let resource = Observation::new();
     /// // Can be used with method chaining:

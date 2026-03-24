@@ -112,8 +112,8 @@ pub trait RiskEvidenceSynthesisMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::risk_evidence_synthesis::RiskEvidenceSynthesis;
-    /// use hl7_fhir_r4_core::traits::risk_evidence_synthesis::RiskEvidenceSynthesisMutators;
+    /// use rh_hl7_fhir_r4_core::resources::risk_evidence_synthesis::RiskEvidenceSynthesis;
+    /// use rh_hl7_fhir_r4_core::traits::risk_evidence_synthesis::RiskEvidenceSynthesisMutators;
     ///
     /// let resource = RiskEvidenceSynthesis::new();
     /// // Can be used with method chaining:

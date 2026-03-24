@@ -74,8 +74,8 @@ pub trait RiskAssessmentMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::risk_assessment::RiskAssessment;
-    /// use hl7_fhir_r4_core::traits::risk_assessment::RiskAssessmentMutators;
+    /// use rh_hl7_fhir_r4_core::resources::risk_assessment::RiskAssessment;
+    /// use rh_hl7_fhir_r4_core::traits::risk_assessment::RiskAssessmentMutators;
     ///
     /// let resource = RiskAssessment::new();
     /// // Can be used with method chaining:

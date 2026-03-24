@@ -100,8 +100,8 @@ pub trait TestScriptMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::test_script::TestScript;
-    /// use hl7_fhir_r4_core::traits::test_script::TestScriptMutators;
+    /// use rh_hl7_fhir_r4_core::resources::test_script::TestScript;
+    /// use rh_hl7_fhir_r4_core::traits::test_script::TestScriptMutators;
     ///
     /// let resource = TestScript::new();
     /// // Can be used with method chaining:

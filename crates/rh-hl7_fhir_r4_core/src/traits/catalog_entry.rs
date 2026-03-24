@@ -69,8 +69,8 @@ pub trait CatalogEntryMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::catalog_entry::CatalogEntry;
-    /// use hl7_fhir_r4_core::traits::catalog_entry::CatalogEntryMutators;
+    /// use rh_hl7_fhir_r4_core::resources::catalog_entry::CatalogEntry;
+    /// use rh_hl7_fhir_r4_core::traits::catalog_entry::CatalogEntryMutators;
     ///
     /// let resource = CatalogEntry::new();
     /// // Can be used with method chaining:

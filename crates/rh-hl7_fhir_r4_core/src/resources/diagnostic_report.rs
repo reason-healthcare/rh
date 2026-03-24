@@ -91,18 +91,21 @@ pub struct DiagnosticReport {
     #[serde(rename = "presentedForm")]
     pub presented_form: Option<Vec<Attachment>>,
 }
-/// DiagnosticReport nested structure for the 'media' field
+/// Summary Of
+///
+/// A summary report that points to subordinate target reports.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportMedia {
+pub struct DiagnosticReportSummaryOf {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Comment about the image (e.g. explanation)
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Reference to the image source
-    pub link: Reference,
+    pub base: Extension,
 }
 /// FamilyMemberHistory
 ///
@@ -136,21 +139,18 @@ pub struct DiagnosticReportGeneticsReferences {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Summary Of
-///
-/// A summary report that points to subordinate target reports.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+/// DiagnosticReport nested structure for the 'media' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportSummaryOf {
+pub struct DiagnosticReportMedia {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: Extension,
+    pub base: BackboneElement,
+    /// Comment about the image (e.g. explanation)
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Reference to the image source
+    pub link: Reference,
 }
 /// Addendum Of
 ///
@@ -199,13 +199,10 @@ impl Default for DiagnosticReport {
     }
 }
 
-impl Default for DiagnosticReportMedia {
+impl Default for DiagnosticReportSummaryOf {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-            link: Reference::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -226,10 +223,13 @@ impl Default for DiagnosticReportGeneticsReferences {
     }
 }
 
-impl Default for DiagnosticReportSummaryOf {
+impl Default for DiagnosticReportMedia {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+            link: Reference::default(),
         }
     }
 }

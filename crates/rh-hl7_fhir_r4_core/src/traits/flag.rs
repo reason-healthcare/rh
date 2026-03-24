@@ -56,8 +56,8 @@ pub trait FlagMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::flag::Flag;
-    /// use hl7_fhir_r4_core::traits::flag::FlagMutators;
+    /// use rh_hl7_fhir_r4_core::resources::flag::Flag;
+    /// use rh_hl7_fhir_r4_core::traits::flag::FlagMutators;
     ///
     /// let resource = Flag::new();
     /// // Can be used with method chaining:

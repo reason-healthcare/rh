@@ -103,8 +103,8 @@ pub trait ImmunizationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::immunization::Immunization;
-    /// use hl7_fhir_r4_core::traits::immunization::ImmunizationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::immunization::Immunization;
+    /// use rh_hl7_fhir_r4_core::traits::immunization::ImmunizationMutators;
     ///
     /// let resource = Immunization::new();
     /// // Can be used with method chaining:

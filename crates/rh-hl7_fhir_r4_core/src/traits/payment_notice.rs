@@ -66,8 +66,8 @@ pub trait PaymentNoticeMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::payment_notice::PaymentNotice;
-    /// use hl7_fhir_r4_core::traits::payment_notice::PaymentNoticeMutators;
+    /// use rh_hl7_fhir_r4_core::resources::payment_notice::PaymentNotice;
+    /// use rh_hl7_fhir_r4_core::traits::payment_notice::PaymentNoticeMutators;
     ///
     /// let resource = PaymentNotice::new();
     /// // Can be used with method chaining:

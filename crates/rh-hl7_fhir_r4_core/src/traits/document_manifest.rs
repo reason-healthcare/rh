@@ -66,8 +66,8 @@ pub trait DocumentManifestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::document_manifest::DocumentManifest;
-    /// use hl7_fhir_r4_core::traits::document_manifest::DocumentManifestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::document_manifest::DocumentManifest;
+    /// use rh_hl7_fhir_r4_core::traits::document_manifest::DocumentManifestMutators;
     ///
     /// let resource = DocumentManifest::new();
     /// // Can be used with method chaining:

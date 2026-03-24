@@ -56,8 +56,8 @@ pub trait ResearchSubjectMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::research_subject::ResearchSubject;
-    /// use hl7_fhir_r4_core::traits::research_subject::ResearchSubjectMutators;
+    /// use rh_hl7_fhir_r4_core::resources::research_subject::ResearchSubject;
+    /// use rh_hl7_fhir_r4_core::traits::research_subject::ResearchSubjectMutators;
     ///
     /// let resource = ResearchSubject::new();
     /// // Can be used with method chaining:

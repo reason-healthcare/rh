@@ -32,8 +32,8 @@ pub trait ServicerequestGeneticsMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::servicerequest_genetics::ServicerequestGenetics;
-    /// use hl7_fhir_r4_core::traits::servicerequest_genetics::ServicerequestGeneticsMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::servicerequest_genetics::ServicerequestGenetics;
+    /// use rh_hl7_fhir_r4_core::traits::servicerequest_genetics::ServicerequestGeneticsMutators;
     ///
     /// let resource = ServicerequestGenetics::new();
     /// // Can be used with method chaining:

@@ -102,8 +102,8 @@ pub trait CapabilityStatementMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::capability_statement::CapabilityStatement;
-    /// use hl7_fhir_r4_core::traits::capability_statement::CapabilityStatementMutators;
+    /// use rh_hl7_fhir_r4_core::resources::capability_statement::CapabilityStatement;
+    /// use rh_hl7_fhir_r4_core::traits::capability_statement::CapabilityStatementMutators;
     ///
     /// let resource = CapabilityStatement::new();
     /// // Can be used with method chaining:

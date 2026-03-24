@@ -70,8 +70,8 @@ pub trait ListMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::list::List;
-    /// use hl7_fhir_r4_core::traits::list::ListMutators;
+    /// use rh_hl7_fhir_r4_core::resources::list::List;
+    /// use rh_hl7_fhir_r4_core::traits::list::ListMutators;
     ///
     /// let resource = List::new();
     /// // Can be used with method chaining:

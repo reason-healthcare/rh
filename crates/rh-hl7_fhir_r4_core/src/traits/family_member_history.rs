@@ -74,8 +74,8 @@ pub trait FamilyMemberHistoryMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::family_member_history::FamilyMemberHistory;
-    /// use hl7_fhir_r4_core::traits::family_member_history::FamilyMemberHistoryMutators;
+    /// use rh_hl7_fhir_r4_core::resources::family_member_history::FamilyMemberHistory;
+    /// use rh_hl7_fhir_r4_core::traits::family_member_history::FamilyMemberHistoryMutators;
     ///
     /// let resource = FamilyMemberHistory::new();
     /// // Can be used with method chaining:

@@ -32,8 +32,8 @@ pub trait ActualgroupMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::actualgroup::Actualgroup;
-    /// use hl7_fhir_r4_core::traits::actualgroup::ActualgroupMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::actualgroup::Actualgroup;
+    /// use rh_hl7_fhir_r4_core::traits::actualgroup::ActualgroupMutators;
     ///
     /// let resource = Actualgroup::new();
     /// // Can be used with method chaining:

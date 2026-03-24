@@ -55,8 +55,8 @@ pub trait SubstanceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::substance::Substance;
-    /// use hl7_fhir_r4_core::traits::substance::SubstanceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::substance::Substance;
+    /// use rh_hl7_fhir_r4_core::traits::substance::SubstanceMutators;
     ///
     /// let resource = Substance::new();
     /// // Can be used with method chaining:

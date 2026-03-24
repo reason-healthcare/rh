@@ -53,8 +53,8 @@ pub trait MedicinalProductContraindicationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medicinal_product_contraindication::MedicinalProductContraindication;
-    /// use hl7_fhir_r4_core::traits::medicinal_product_contraindication::MedicinalProductContraindicationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medicinal_product_contraindication::MedicinalProductContraindication;
+    /// use rh_hl7_fhir_r4_core::traits::medicinal_product_contraindication::MedicinalProductContraindicationMutators;
     ///
     /// let resource = MedicinalProductContraindication::new();
     /// // Can be used with method chaining:

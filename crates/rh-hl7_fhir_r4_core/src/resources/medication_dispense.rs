@@ -109,6 +109,21 @@ pub struct MedicationDispense {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationDispense nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationDispensePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who performed the dispense and what they did
+    ///
+    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
+    pub function: Option<CodeableConcept>,
+    /// Individual who was performing
+    pub actor: Reference,
+}
 /// MedicationDispense nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationDispenseSubstitution {
@@ -137,21 +152,6 @@ pub struct MedicationDispenseSubstitution {
     /// Who is responsible for the substitution
     #[serde(rename = "responsibleParty")]
     pub responsible_party: Option<Vec<Reference>>,
-}
-/// MedicationDispense nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationDispensePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who performed the dispense and what they did
-    ///
-    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
-    pub function: Option<CodeableConcept>,
-    /// Individual who was performing
-    pub actor: Reference,
 }
 
 impl Default for MedicationDispense {
@@ -191,6 +191,16 @@ impl Default for MedicationDispense {
     }
 }
 
+impl Default for MedicationDispensePerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for MedicationDispenseSubstitution {
     fn default() -> Self {
         Self {
@@ -200,16 +210,6 @@ impl Default for MedicationDispenseSubstitution {
             type_: Default::default(),
             reason: Default::default(),
             responsible_party: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationDispensePerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }

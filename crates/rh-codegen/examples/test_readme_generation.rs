@@ -24,6 +24,7 @@ fn main() -> Result<()> {
         author: "Test Author",
         description: "Test FHIR package for README verification",
         command_invoked: "rh codegen test.package.core 1.0.0",
+        crate_name: None,
     })?;
 
     println!(

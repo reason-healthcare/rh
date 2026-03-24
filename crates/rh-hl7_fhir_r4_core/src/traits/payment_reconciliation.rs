@@ -77,8 +77,8 @@ pub trait PaymentReconciliationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::payment_reconciliation::PaymentReconciliation;
-    /// use hl7_fhir_r4_core::traits::payment_reconciliation::PaymentReconciliationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::payment_reconciliation::PaymentReconciliation;
+    /// use rh_hl7_fhir_r4_core::traits::payment_reconciliation::PaymentReconciliationMutators;
     ///
     /// let resource = PaymentReconciliation::new();
     /// // Can be used with method chaining:

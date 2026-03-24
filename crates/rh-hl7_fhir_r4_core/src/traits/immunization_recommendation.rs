@@ -49,8 +49,8 @@ pub trait ImmunizationRecommendationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::immunization_recommendation::ImmunizationRecommendation;
-    /// use hl7_fhir_r4_core::traits::immunization_recommendation::ImmunizationRecommendationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::immunization_recommendation::ImmunizationRecommendation;
+    /// use rh_hl7_fhir_r4_core::traits::immunization_recommendation::ImmunizationRecommendationMutators;
     ///
     /// let resource = ImmunizationRecommendation::new();
     /// // Can be used with method chaining:

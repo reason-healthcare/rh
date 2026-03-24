@@ -108,8 +108,8 @@ pub trait MedicationRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medication_request::MedicationRequest;
-    /// use hl7_fhir_r4_core::traits::medication_request::MedicationRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medication_request::MedicationRequest;
+    /// use rh_hl7_fhir_r4_core::traits::medication_request::MedicationRequestMutators;
     ///
     /// let resource = MedicationRequest::new();
     /// // Can be used with method chaining:

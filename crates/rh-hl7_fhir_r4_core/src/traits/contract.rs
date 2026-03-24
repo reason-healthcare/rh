@@ -110,8 +110,8 @@ pub trait ContractMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::contract::Contract;
-    /// use hl7_fhir_r4_core::traits::contract::ContractMutators;
+    /// use rh_hl7_fhir_r4_core::resources::contract::Contract;
+    /// use rh_hl7_fhir_r4_core::traits::contract::ContractMutators;
     ///
     /// let resource = Contract::new();
     /// // Can be used with method chaining:

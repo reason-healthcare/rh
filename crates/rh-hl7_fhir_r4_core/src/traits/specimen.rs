@@ -70,8 +70,8 @@ pub trait SpecimenMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::specimen::Specimen;
-    /// use hl7_fhir_r4_core::traits::specimen::SpecimenMutators;
+    /// use rh_hl7_fhir_r4_core::resources::specimen::Specimen;
+    /// use rh_hl7_fhir_r4_core::traits::specimen::SpecimenMutators;
     ///
     /// let resource = Specimen::new();
     /// // Can be used with method chaining:

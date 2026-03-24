@@ -105,8 +105,8 @@ pub trait ServiceRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::service_request::ServiceRequest;
-    /// use hl7_fhir_r4_core::traits::service_request::ServiceRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::service_request::ServiceRequest;
+    /// use rh_hl7_fhir_r4_core::traits::service_request::ServiceRequestMutators;
     ///
     /// let resource = ServiceRequest::new();
     /// // Can be used with method chaining:

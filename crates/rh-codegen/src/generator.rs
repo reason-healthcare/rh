@@ -101,7 +101,13 @@ impl CodeGenerator {
         &mut self,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<Vec<RustTrait>> {
-        let mut trait_generator = TraitGenerator::new();
+        let crate_lib_name = self
+            .config
+            .crate_name
+            .as_deref()
+            .map(|n| n.replace('-', "_"))
+            .unwrap_or_else(|| "hl7_fhir_r4_core".to_string());
+        let mut trait_generator = TraitGenerator::new_with_crate_name(crate_lib_name);
         let mut traits = Vec::new();
         let categories = ["Accessors", "Mutators", "Existence"];
 

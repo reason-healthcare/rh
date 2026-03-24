@@ -28,6 +28,9 @@ pub struct CrateGenerationParams<'a> {
     pub description: &'a str,
     /// Command that was invoked to generate this crate
     pub command_invoked: &'a str,
+    /// Optional override for the generated crate name (e.g., "rh-hl7-fhir-r4-core").
+    /// When None, the name is auto-derived from the FHIR package name.
+    pub crate_name: Option<&'a str>,
 }
 
 /// Statistics about generated crate content
@@ -75,7 +78,12 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     )?;
 
     // Generate Cargo.toml
-    let cargo_toml_content = generate_cargo_toml(params.package, params.version, params.output);
+    let cargo_toml_content = generate_cargo_toml(
+        params.package,
+        params.version,
+        params.output,
+        params.crate_name,
+    );
     let cargo_toml_path = params.output.join("Cargo.toml");
     fs::write(&cargo_toml_path, cargo_toml_content)?;
 
@@ -120,6 +128,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
         params.description,
         params.command_invoked,
         &stats,
+        params.crate_name,
     );
     let readme_path = params.output.join("README.md");
     fs::write(&readme_path, readme_content)?;
@@ -133,9 +142,17 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
 }
 
 /// Generate Cargo.toml content for the FHIR crate
-fn generate_cargo_toml(package: &str, version: &str, _output_dir: &Path) -> String {
-    // Convert FHIR package name to a valid Rust crate name
-    let crate_name = package.replace(['.', '-'], "_");
+fn generate_cargo_toml(
+    package: &str,
+    version: &str,
+    _output_dir: &Path,
+    crate_name_override: Option<&str>,
+) -> String {
+    // Derive the package name: use override if provided, else convert FHIR package name
+    let derived = package.replace(['.', '-'], "_");
+    let crate_name = crate_name_override.unwrap_or(&derived);
+    // Lib name must be a valid Rust identifier (no hyphens)
+    let lib_name = crate_name.replace('-', "_");
 
     // Try to find rh-foundation crate path relative to output directory
     let rh_foundation_path = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
@@ -174,7 +191,7 @@ once_cell = "1.19"
 rh-foundation = {{ path = "{rh_foundation_path}" }}
 
 [lib]
-name = "{crate_name}"
+name = "{lib_name}"
 path = "src/lib.rs"
 "#
     )
@@ -397,6 +414,7 @@ fn generate_crate_statistics_from_organized_dirs(
 }
 
 /// Generate README.md content with package information and statistics
+#[allow(clippy::too_many_arguments)]
 fn generate_readme_md(
     package: &str,
     version: &str,
@@ -405,8 +423,11 @@ fn generate_readme_md(
     description: &str,
     command_invoked: &str,
     stats: &CrateStatistics,
+    crate_name_override: Option<&str>,
 ) -> String {
-    let crate_name = package.replace(['.', '-'], "_");
+    let derived = package.replace(['.', '-'], "_");
+    // Use lib name form (underscores) for Rust `use` statements in README
+    let crate_name = crate_name_override.unwrap_or(&derived).replace('-', "_");
     let mut content = String::new();
 
     content.push_str(&format!("# {crate_name}\n\n"));

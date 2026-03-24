@@ -101,8 +101,8 @@ pub trait EventDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::event_definition::EventDefinition;
-    /// use hl7_fhir_r4_core::traits::event_definition::EventDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::event_definition::EventDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::event_definition::EventDefinitionMutators;
     ///
     /// let resource = EventDefinition::new();
     /// // Can be used with method chaining:

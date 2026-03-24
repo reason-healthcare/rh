@@ -143,6 +143,11 @@ docs:
 update:
     cargo update
 
+# Build WASM packages for all WASM-capable crates (rh-fhirpath and rh-vcl)
+wasm:
+    cd crates/rh-fhirpath && just wasm
+    cd crates/rh-vcl && just wasm
+
 # Build WASM package for VCL (web target)
 build-wasm:
     #!/usr/bin/env bash
@@ -177,4 +182,4 @@ build-wasm-bundler:
 test-wasm:
     #!/usr/bin/env bash
     echo "Testing VCL WASM build..."
-    cd crates/rh-vcl && make test-wasm
+    cd crates/rh-vcl && just test-wasm

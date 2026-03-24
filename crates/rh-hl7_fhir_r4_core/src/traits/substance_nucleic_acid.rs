@@ -49,8 +49,8 @@ pub trait SubstanceNucleicAcidMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::substance_nucleic_acid::SubstanceNucleicAcid;
-    /// use hl7_fhir_r4_core::traits::substance_nucleic_acid::SubstanceNucleicAcidMutators;
+    /// use rh_hl7_fhir_r4_core::resources::substance_nucleic_acid::SubstanceNucleicAcid;
+    /// use rh_hl7_fhir_r4_core::traits::substance_nucleic_acid::SubstanceNucleicAcidMutators;
     ///
     /// let resource = SubstanceNucleicAcid::new();
     /// // Can be used with method chaining:

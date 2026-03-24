@@ -81,8 +81,8 @@ pub trait SubstanceSpecificationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::substance_specification::SubstanceSpecification;
-    /// use hl7_fhir_r4_core::traits::substance_specification::SubstanceSpecificationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::substance_specification::SubstanceSpecification;
+    /// use rh_hl7_fhir_r4_core::traits::substance_specification::SubstanceSpecificationMutators;
     ///
     /// let resource = SubstanceSpecification::new();
     /// // Can be used with method chaining:

@@ -66,8 +66,8 @@ pub trait EpisodeOfCareMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::episode_of_care::EpisodeOfCare;
-    /// use hl7_fhir_r4_core::traits::episode_of_care::EpisodeOfCareMutators;
+    /// use rh_hl7_fhir_r4_core::resources::episode_of_care::EpisodeOfCare;
+    /// use rh_hl7_fhir_r4_core::traits::episode_of_care::EpisodeOfCareMutators;
     ///
     /// let resource = EpisodeOfCare::new();
     /// // Can be used with method chaining:

@@ -56,6 +56,17 @@ pub struct MedicinalProductIngredientSpecifiedsubstance {
     /// Confidentiality level of the specified substance as the ingredient
     pub confidentiality: Option<CodeableConcept>,
 }
+/// MedicinalProductIngredient nested structure for the 'substance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The ingredient substance
+    pub code: CodeableConcept,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<StringType>>,
+}
 /// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
@@ -77,17 +88,6 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength
     pub _measurement_point: Option<Element>,
     /// The country or countries for which the strength range applies
     pub country: Option<Vec<CodeableConcept>>,
-}
-/// MedicinalProductIngredient nested structure for the 'substance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The ingredient substance
-    pub code: CodeableConcept,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<StringType>>,
 }
 /// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,6 +142,16 @@ impl Default for MedicinalProductIngredientSpecifiedsubstance {
     }
 }
 
+impl Default for MedicinalProductIngredientSubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            strength: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
     fn default() -> Self {
         Self {
@@ -152,16 +162,6 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencest
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            strength: Default::default(),
         }
     }
 }

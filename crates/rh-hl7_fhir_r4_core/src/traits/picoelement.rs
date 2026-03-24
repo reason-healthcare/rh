@@ -32,8 +32,8 @@ pub trait PicoelementMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::picoelement::Picoelement;
-    /// use hl7_fhir_r4_core::traits::picoelement::PicoelementMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::picoelement::Picoelement;
+    /// use rh_hl7_fhir_r4_core::traits::picoelement::PicoelementMutators;
     ///
     /// let resource = Picoelement::new();
     /// // Can be used with method chaining:

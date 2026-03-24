@@ -33,6 +33,15 @@ impl TraitGenerator {
         }
     }
 
+    /// Create a new trait generator with a specific crate name for generated doc examples
+    pub fn new_with_crate_name(crate_name: impl Into<String>) -> Self {
+        Self {
+            accessor_generator: AccessorTraitGenerator::new(),
+            mutator_generator: MutatorTraitGenerator::with_crate_name(crate_name),
+            existence_generator: ExistenceTraitGenerator::new(),
+        }
+    }
+
     /// Generate a Rust trait from a FHIR StructureDefinition
     pub fn generate_trait(
         &mut self,

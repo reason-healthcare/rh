@@ -63,8 +63,8 @@ pub trait ImmunizationEvaluationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::immunization_evaluation::ImmunizationEvaluation;
-    /// use hl7_fhir_r4_core::traits::immunization_evaluation::ImmunizationEvaluationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::immunization_evaluation::ImmunizationEvaluation;
+    /// use rh_hl7_fhir_r4_core::traits::immunization_evaluation::ImmunizationEvaluationMutators;
     ///
     /// let resource = ImmunizationEvaluation::new();
     /// // Can be used with method chaining:

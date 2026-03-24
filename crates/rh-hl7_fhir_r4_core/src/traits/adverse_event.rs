@@ -81,8 +81,8 @@ pub trait AdverseEventMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::adverse_event::AdverseEvent;
-    /// use hl7_fhir_r4_core::traits::adverse_event::AdverseEventMutators;
+    /// use rh_hl7_fhir_r4_core::resources::adverse_event::AdverseEvent;
+    /// use rh_hl7_fhir_r4_core::traits::adverse_event::AdverseEventMutators;
     ///
     /// let resource = AdverseEvent::new();
     /// // Can be used with method chaining:

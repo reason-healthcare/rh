@@ -32,8 +32,8 @@ pub trait HeadcircumMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::headcircum::Headcircum;
-    /// use hl7_fhir_r4_core::traits::headcircum::HeadcircumMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::headcircum::Headcircum;
+    /// use rh_hl7_fhir_r4_core::traits::headcircum::HeadcircumMutators;
     ///
     /// let resource = Headcircum::new();
     /// // Can be used with method chaining:

@@ -68,19 +68,6 @@ pub struct SpecimenDefinition {
     #[serde(rename = "typeTested")]
     pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
 }
-/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedContainerAdditive {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additive associated with container (CodeableConcept)
-    #[serde(rename = "additiveCodeableConcept")]
-    pub additive_codeable_concept: CodeableConcept,
-    /// Additive associated with container (Reference)
-    #[serde(rename = "additiveReference")]
-    pub additive_reference: Reference,
-}
 /// SpecimenDefinitionTypetested nested structure for the 'handling' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedHandling {
@@ -105,16 +92,29 @@ pub struct SpecimenDefinitionTypetestedHandling {
     /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
     pub _instruction: Option<Element>,
 }
+/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedContainerAdditive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additive associated with container (CodeableConcept)
+    #[serde(rename = "additiveCodeableConcept")]
+    pub additive_codeable_concept: CodeableConcept,
+    /// Additive associated with container (Reference)
+    #[serde(rename = "additiveReference")]
+    pub additive_reference: Reference,
+}
 /// SpecimenDefinition nested structure for the 'typeTested' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetested {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Specimen handling before testing
-    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
     /// The specimen's container
     pub container: Option<SpecimenDefinitionTypetestedContainer>,
+    /// Specimen handling before testing
+    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
     /// Primary or secondary specimen
     #[serde(rename = "isDerived")]
     pub is_derived: Option<BooleanType>,
@@ -208,16 +208,6 @@ impl Default for SpecimenDefinition {
     }
 }
 
-impl Default for SpecimenDefinitionTypetestedContainerAdditive {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            additive_codeable_concept: Default::default(),
-            additive_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for SpecimenDefinitionTypetestedHandling {
     fn default() -> Self {
         Self {
@@ -231,12 +221,22 @@ impl Default for SpecimenDefinitionTypetestedHandling {
     }
 }
 
+impl Default for SpecimenDefinitionTypetestedContainerAdditive {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            additive_codeable_concept: Default::default(),
+            additive_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenDefinitionTypetested {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            handling: Default::default(),
             container: Default::default(),
+            handling: Default::default(),
             is_derived: Default::default(),
             _is_derived: Default::default(),
             type_: Default::default(),

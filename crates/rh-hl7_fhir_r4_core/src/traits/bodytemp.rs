@@ -32,8 +32,8 @@ pub trait BodytempMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::bodytemp::Bodytemp;
-    /// use hl7_fhir_r4_core::traits::bodytemp::BodytempMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::bodytemp::Bodytemp;
+    /// use rh_hl7_fhir_r4_core::traits::bodytemp::BodytempMutators;
     ///
     /// let resource = Bodytemp::new();
     /// // Can be used with method chaining:

@@ -95,8 +95,8 @@ pub trait MedicationKnowledgeMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medication_knowledge::MedicationKnowledge;
-    /// use hl7_fhir_r4_core::traits::medication_knowledge::MedicationKnowledgeMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medication_knowledge::MedicationKnowledge;
+    /// use rh_hl7_fhir_r4_core::traits::medication_knowledge::MedicationKnowledgeMutators;
     ///
     /// let resource = MedicationKnowledge::new();
     /// // Can be used with method chaining:

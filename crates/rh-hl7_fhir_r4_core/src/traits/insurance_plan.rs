@@ -72,8 +72,8 @@ pub trait InsurancePlanMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::insurance_plan::InsurancePlan;
-    /// use hl7_fhir_r4_core::traits::insurance_plan::InsurancePlanMutators;
+    /// use rh_hl7_fhir_r4_core::resources::insurance_plan::InsurancePlan;
+    /// use rh_hl7_fhir_r4_core::traits::insurance_plan::InsurancePlanMutators;
     ///
     /// let resource = InsurancePlan::new();
     /// // Can be used with method chaining:

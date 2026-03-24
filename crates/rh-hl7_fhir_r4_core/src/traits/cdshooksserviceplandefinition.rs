@@ -32,8 +32,8 @@ pub trait CdshooksserviceplandefinitionMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cdshooksserviceplandefinition::Cdshooksserviceplandefinition;
-    /// use hl7_fhir_r4_core::traits::cdshooksserviceplandefinition::CdshooksserviceplandefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cdshooksserviceplandefinition::Cdshooksserviceplandefinition;
+    /// use rh_hl7_fhir_r4_core::traits::cdshooksserviceplandefinition::CdshooksserviceplandefinitionMutators;
     ///
     /// let resource = Cdshooksserviceplandefinition::new();
     /// // Can be used with method chaining:

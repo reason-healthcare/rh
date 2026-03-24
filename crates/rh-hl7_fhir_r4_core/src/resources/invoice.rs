@@ -98,17 +98,6 @@ pub struct InvoiceLineitem {
     #[serde(rename = "chargeItemCodeableConcept")]
     pub charge_item_codeable_concept: CodeableConcept,
 }
-/// Invoice nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
-}
 /// InvoiceLineitem nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLineitemPricecomponent {
@@ -128,6 +117,17 @@ pub struct InvoiceLineitemPricecomponent {
     pub _factor: Option<Element>,
     /// Monetary amount associated with this component
     pub amount: Option<Money>,
+}
+/// Invoice nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvoiceParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
 }
 
 impl Default for Invoice {
@@ -171,16 +171,6 @@ impl Default for InvoiceLineitem {
     }
 }
 
-impl Default for InvoiceParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for InvoiceLineitemPricecomponent {
     fn default() -> Self {
         Self {
@@ -191,6 +181,16 @@ impl Default for InvoiceLineitemPricecomponent {
             factor: Default::default(),
             _factor: Default::default(),
             amount: Default::default(),
+        }
+    }
+}
+
+impl Default for InvoiceParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            actor: Reference::default(),
         }
     }
 }

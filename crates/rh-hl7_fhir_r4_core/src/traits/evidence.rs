@@ -103,8 +103,8 @@ pub trait EvidenceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::evidence::Evidence;
-    /// use hl7_fhir_r4_core::traits::evidence::EvidenceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::evidence::Evidence;
+    /// use rh_hl7_fhir_r4_core::traits::evidence::EvidenceMutators;
     ///
     /// let resource = Evidence::new();
     /// // Can be used with method chaining:

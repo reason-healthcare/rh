@@ -32,8 +32,8 @@ pub trait CatalogMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::catalog::Catalog;
-    /// use hl7_fhir_r4_core::traits::catalog::CatalogMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::catalog::Catalog;
+    /// use rh_hl7_fhir_r4_core::traits::catalog::CatalogMutators;
     ///
     /// let resource = Catalog::new();
     /// // Can be used with method chaining:

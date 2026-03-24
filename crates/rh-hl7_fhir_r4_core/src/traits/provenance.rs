@@ -60,8 +60,8 @@ pub trait ProvenanceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::provenance::Provenance;
-    /// use hl7_fhir_r4_core::traits::provenance::ProvenanceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::provenance::Provenance;
+    /// use rh_hl7_fhir_r4_core::traits::provenance::ProvenanceMutators;
     ///
     /// let resource = Provenance::new();
     /// // Can be used with method chaining:

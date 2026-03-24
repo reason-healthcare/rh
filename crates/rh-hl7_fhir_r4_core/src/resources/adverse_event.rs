@@ -90,6 +90,17 @@ pub struct AdverseEvent {
     /// AdverseEvent.study
     pub study: Option<Vec<Reference>>,
 }
+/// AdverseEvent nested structure for the 'suspectEntity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventSuspectentity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information on the possible cause of the event
+    pub causality: Option<Vec<AdverseEventSuspectentityCausality>>,
+    /// Refers to the specific entity that caused the adverse event
+    pub instance: Reference,
+}
 /// AdverseEventSuspectentity nested structure for the 'causality' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdverseEventSuspectentityCausality {
@@ -116,17 +127,6 @@ pub struct AdverseEventSuspectentityCausality {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-method
     pub method: Option<CodeableConcept>,
-}
-/// AdverseEvent nested structure for the 'suspectEntity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventSuspectentity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information on the possible cause of the event
-    pub causality: Option<Vec<AdverseEventSuspectentityCausality>>,
-    /// Refers to the specific entity that caused the adverse event
-    pub instance: Reference,
 }
 
 impl Default for AdverseEvent {
@@ -161,6 +161,16 @@ impl Default for AdverseEvent {
     }
 }
 
+impl Default for AdverseEventSuspectentity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            causality: Default::default(),
+            instance: Default::default(),
+        }
+    }
+}
+
 impl Default for AdverseEventSuspectentityCausality {
     fn default() -> Self {
         Self {
@@ -170,16 +180,6 @@ impl Default for AdverseEventSuspectentityCausality {
             _product_relatedness: Default::default(),
             author: Default::default(),
             method: Default::default(),
-        }
-    }
-}
-
-impl Default for AdverseEventSuspectentity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            causality: Default::default(),
-            instance: Default::default(),
         }
     }
 }

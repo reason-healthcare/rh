@@ -275,30 +275,28 @@ This crate can be compiled to WebAssembly for use in web applications and Node.j
 
 ```bash
 # Build all WASM targets
-make wasm
+just wasm
 
 # Build specific targets
-make wasm-web      # Web target (ES6 modules)
-make wasm-node     # Node.js target (CommonJS) 
-make wasm-bundler  # Bundler target (webpack, etc.)
+just wasm-web      # Web target (ES6 modules)
+just wasm-node     # Node.js target (CommonJS)
+just wasm-bundler  # Bundler target (webpack, etc.)
 
 # Test the build
-make test-wasm
+just test-wasm
 
 # Clean build artifacts
-make clean-wasm
+just clean-wasm
 
 # Development server for web testing
-make dev-web
+just dev-web
 ```
 
 #### From workspace root:
 
 ```bash
-# Build using justfile (workspace-level)
-just build-wasm        # Web target
-just build-wasm-node   # Node.js target
-just build-wasm-bundler # Bundler target
+# Build all WASM crates
+just wasm
 ```
 
 ### Web Usage

@@ -85,46 +85,6 @@ pub struct MedicinalProduct {
     #[serde(rename = "specialDesignation")]
     pub special_designation: Option<Vec<MedicinalProductSpecialdesignation>>,
 }
-/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductManufacturingbusinessoperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of manufacturing operation
-    #[serde(rename = "operationType")]
-    pub operation_type: Option<CodeableConcept>,
-    /// Regulatory authorization reference number
-    #[serde(rename = "authorisationReferenceNumber")]
-    pub authorisation_reference_number: Option<Identifier>,
-    /// Regulatory authorization date
-    #[serde(rename = "effectiveDate")]
-    pub effective_date: Option<DateTimeType>,
-    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_effectiveDate")]
-    pub _effective_date: Option<Element>,
-    /// To indicate if this proces is commercially confidential
-    #[serde(rename = "confidentialityIndicator")]
-    pub confidentiality_indicator: Option<CodeableConcept>,
-    /// The manufacturer or establishment associated with the process
-    pub manufacturer: Option<Vec<Reference>>,
-    /// A regulator which oversees the operation
-    pub regulator: Option<Reference>,
-}
-/// MedicinalProductName nested structure for the 'namePart' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameNamepart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Idenifying type for this part of the name (e.g. strength part)
-    #[serde(rename = "type")]
-    pub type_: Coding,
-}
 /// MedicinalProduct nested structure for the 'specialDesignation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductSpecialdesignation {
@@ -154,18 +114,31 @@ pub struct MedicinalProductSpecialdesignation {
     /// Animal species for which this applies
     pub species: Option<CodeableConcept>,
 }
-/// MedicinalProductName nested structure for the 'countryLanguage' field
+/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameCountrylanguage {
+pub struct MedicinalProductManufacturingbusinessoperation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Country code for where this name applies
-    pub country: CodeableConcept,
-    /// Jurisdiction code for where this name applies
-    pub jurisdiction: Option<CodeableConcept>,
-    /// Language code for this name
-    pub language: CodeableConcept,
+    /// The type of manufacturing operation
+    #[serde(rename = "operationType")]
+    pub operation_type: Option<CodeableConcept>,
+    /// Regulatory authorization reference number
+    #[serde(rename = "authorisationReferenceNumber")]
+    pub authorisation_reference_number: Option<Identifier>,
+    /// Regulatory authorization date
+    #[serde(rename = "effectiveDate")]
+    pub effective_date: Option<DateTimeType>,
+    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_effectiveDate")]
+    pub _effective_date: Option<Element>,
+    /// To indicate if this proces is commercially confidential
+    #[serde(rename = "confidentialityIndicator")]
+    pub confidentiality_indicator: Option<CodeableConcept>,
+    /// The manufacturer or establishment associated with the process
+    pub manufacturer: Option<Vec<Reference>>,
+    /// A regulator which oversees the operation
+    pub regulator: Option<Reference>,
 }
 /// MedicinalProduct nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,6 +158,33 @@ pub struct MedicinalProductName {
     /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
     #[serde(rename = "_productName")]
     pub _product_name: Option<Element>,
+}
+/// MedicinalProductName nested structure for the 'countryLanguage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameCountrylanguage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Country code for where this name applies
+    pub country: CodeableConcept,
+    /// Jurisdiction code for where this name applies
+    pub jurisdiction: Option<CodeableConcept>,
+    /// Language code for this name
+    pub language: CodeableConcept,
+}
+/// MedicinalProductName nested structure for the 'namePart' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameNamepart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Idenifying type for this part of the name (e.g. strength part)
+    #[serde(rename = "type")]
+    pub type_: Coding,
 }
 
 impl Default for MedicinalProduct {
@@ -216,32 +216,6 @@ impl Default for MedicinalProduct {
     }
 }
 
-impl Default for MedicinalProductManufacturingbusinessoperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation_type: Default::default(),
-            authorisation_reference_number: Default::default(),
-            effective_date: Default::default(),
-            _effective_date: Default::default(),
-            confidentiality_indicator: Default::default(),
-            manufacturer: Default::default(),
-            regulator: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductNameNamepart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductSpecialdesignation {
     fn default() -> Self {
         Self {
@@ -259,13 +233,17 @@ impl Default for MedicinalProductSpecialdesignation {
     }
 }
 
-impl Default for MedicinalProductNameCountrylanguage {
+impl Default for MedicinalProductManufacturingbusinessoperation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            country: Default::default(),
-            jurisdiction: Default::default(),
-            language: Default::default(),
+            operation_type: Default::default(),
+            authorisation_reference_number: Default::default(),
+            effective_date: Default::default(),
+            _effective_date: Default::default(),
+            confidentiality_indicator: Default::default(),
+            manufacturer: Default::default(),
+            regulator: Default::default(),
         }
     }
 }
@@ -278,6 +256,28 @@ impl Default for MedicinalProductName {
             name_part: Default::default(),
             product_name: StringType::default(),
             _product_name: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameCountrylanguage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            country: Default::default(),
+            jurisdiction: Default::default(),
+            language: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameNamepart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            _part: Default::default(),
+            type_: Default::default(),
         }
     }
 }

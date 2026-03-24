@@ -65,8 +65,8 @@ pub trait OrganizationAffiliationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::organization_affiliation::OrganizationAffiliation;
-    /// use hl7_fhir_r4_core::traits::organization_affiliation::OrganizationAffiliationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::organization_affiliation::OrganizationAffiliation;
+    /// use rh_hl7_fhir_r4_core::traits::organization_affiliation::OrganizationAffiliationMutators;
     ///
     /// let resource = OrganizationAffiliation::new();
     /// // Can be used with method chaining:

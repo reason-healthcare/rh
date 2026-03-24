@@ -32,8 +32,8 @@ pub trait ShareablemeasureMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareablemeasure::Shareablemeasure;
-    /// use hl7_fhir_r4_core::traits::shareablemeasure::ShareablemeasureMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareablemeasure::Shareablemeasure;
+    /// use rh_hl7_fhir_r4_core::traits::shareablemeasure::ShareablemeasureMutators;
     ///
     /// let resource = Shareablemeasure::new();
     /// // Can be used with method chaining:

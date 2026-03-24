@@ -56,8 +56,8 @@ pub trait BundleMutators: ResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::bundle::Bundle;
-    /// use hl7_fhir_r4_core::traits::bundle::BundleMutators;
+    /// use rh_hl7_fhir_r4_core::resources::bundle::Bundle;
+    /// use rh_hl7_fhir_r4_core::traits::bundle::BundleMutators;
     ///
     /// let resource = Bundle::new();
     /// // Can be used with method chaining:

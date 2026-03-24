@@ -108,8 +108,8 @@ pub trait PlanDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::plan_definition::PlanDefinition;
-    /// use hl7_fhir_r4_core::traits::plan_definition::PlanDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::plan_definition::PlanDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::plan_definition::PlanDefinitionMutators;
     ///
     /// let resource = PlanDefinition::new();
     /// // Can be used with method chaining:

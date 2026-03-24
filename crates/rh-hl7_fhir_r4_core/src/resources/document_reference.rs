@@ -109,34 +109,6 @@ pub struct DocumentReference {
     /// Clinical context of document
     pub context: Option<DocumentReferenceContext>,
 }
-/// DocumentReference nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship
-    pub target: Reference,
-}
-/// DocumentReference nested structure for the 'content' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Where to access the document
-    pub attachment: Attachment,
-    /// Format/content rules for the document
-    ///
-    /// Binding: preferred (Document Format Codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
-    pub format: Option<Coding>,
-}
 /// DocumentReference nested structure for the 'context' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReferenceContext {
@@ -195,6 +167,34 @@ pub struct DocumentReferenceContext {
     /// Related identifiers or resources
     pub related: Option<Vec<Reference>>,
 }
+/// DocumentReference nested structure for the 'content' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Where to access the document
+    pub attachment: Attachment,
+    /// Format/content rules for the document
+    ///
+    /// Binding: preferred (Document Format Codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
+    pub format: Option<Coding>,
+}
+/// DocumentReference nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship
+    pub target: Reference,
+}
 
 impl Default for DocumentReference {
     fn default() -> Self {
@@ -224,13 +224,17 @@ impl Default for DocumentReference {
     }
 }
 
-impl Default for DocumentReferenceRelatesto {
+impl Default for DocumentReferenceContext {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target: Default::default(),
+            encounter: Default::default(),
+            event: Default::default(),
+            period: Default::default(),
+            facility_type: Default::default(),
+            practice_setting: Default::default(),
+            source_patient_info: Default::default(),
+            related: Default::default(),
         }
     }
 }
@@ -245,17 +249,13 @@ impl Default for DocumentReferenceContent {
     }
 }
 
-impl Default for DocumentReferenceContext {
+impl Default for DocumentReferenceRelatesto {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            encounter: Default::default(),
-            event: Default::default(),
-            period: Default::default(),
-            facility_type: Default::default(),
-            practice_setting: Default::default(),
-            source_patient_info: Default::default(),
-            related: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target: Default::default(),
         }
     }
 }

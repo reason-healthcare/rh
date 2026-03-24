@@ -22,11 +22,11 @@ wasm-web: check-wasm-pack
     mkdir -p pkg/web
     if command -v rustup >/dev/null 2>&1; then
         PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
-            wasm-pack build --target web --out-dir pkg/web
+            wasm-pack build --target web --out-dir pkg/web --features wasm
     else
-        wasm-pack build --target web --out-dir pkg/web
+        wasm-pack build --target web --out-dir pkg/web --features wasm
     fi
-    echo "✅ Web WASM build complete! Output in pkg/web/"
+    echo "Web WASM build complete! Output in pkg/web/"
 
 # Build for Node.js (CommonJS)
 wasm-node: check-wasm-pack
@@ -35,11 +35,11 @@ wasm-node: check-wasm-pack
     mkdir -p pkg/node
     if command -v rustup >/dev/null 2>&1; then
         PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
-            wasm-pack build --target nodejs --out-dir pkg/node
+            wasm-pack build --target nodejs --out-dir pkg/node --features wasm
     else
-        wasm-pack build --target nodejs --out-dir pkg/node
+        wasm-pack build --target nodejs --out-dir pkg/node --features wasm
     fi
-    echo "✅ Node.js WASM build complete! Output in pkg/node/"
+    echo "Node.js WASM build complete! Output in pkg/node/"
 
 # Build for bundlers (webpack, rollup, etc.)
 wasm-bundler: check-wasm-pack
@@ -48,24 +48,24 @@ wasm-bundler: check-wasm-pack
     mkdir -p pkg/bundler
     if command -v rustup >/dev/null 2>&1; then
         PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
-            wasm-pack build --target bundler --out-dir pkg/bundler
+            wasm-pack build --target bundler --out-dir pkg/bundler --features wasm
     else
-        wasm-pack build --target bundler --out-dir pkg/bundler
+        wasm-pack build --target bundler --out-dir pkg/bundler --features wasm
     fi
-    echo "✅ Bundler WASM build complete! Output in pkg/bundler/"
+    echo "Bundler WASM build complete! Output in pkg/bundler/"
 
 # Clean WASM build artifacts
 clean-wasm:
     @echo "Cleaning WASM build artifacts..."
     @rm -rf pkg/
-    @echo "✅ WASM artifacts cleaned"
+    @echo "WASM artifacts cleaned"
 
 # Test WASM builds
 test-wasm: wasm-node
     #!/usr/bin/env bash
     echo "Testing Node.js WASM build..."
     cd pkg/node && node -e "const {get_version,parse_fhirpath,evaluate_fhirpath}=require('./rh_fhirpath.js'); console.log('Version:',get_version()); const result=parse_fhirpath('Patient.name.given'); console.log('Parse test:',result.success ? 'PASS' : 'FAIL');"
-    echo "✅ WASM test complete!"
+    echo "WASM test complete!"
 
 # Development: build web target and start local server for testing
 dev-web: wasm-web
@@ -89,7 +89,7 @@ build-demo: wasm-web
     cp pkg/web/rh_fhirpath.js build/
     cp pkg/web/rh_fhirpath_bg.wasm build/
     
-    echo "✅ Demo build complete! Output in build/"
+    echo "Demo build complete! Output in build/"
     echo "  - Open build/index.html in a browser"
     echo "  - Or run: cd build && python3 -m http.server 8000"
 

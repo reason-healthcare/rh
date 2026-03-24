@@ -54,8 +54,8 @@ pub trait SubscriptionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::subscription::Subscription;
-    /// use hl7_fhir_r4_core::traits::subscription::SubscriptionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::subscription::Subscription;
+    /// use rh_hl7_fhir_r4_core::traits::subscription::SubscriptionMutators;
     ///
     /// let resource = Subscription::new();
     /// // Can be used with method chaining:

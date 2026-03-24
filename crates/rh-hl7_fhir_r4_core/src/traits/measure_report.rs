@@ -66,8 +66,8 @@ pub trait MeasureReportMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::measure_report::MeasureReport;
-    /// use hl7_fhir_r4_core::traits::measure_report::MeasureReportMutators;
+    /// use rh_hl7_fhir_r4_core::resources::measure_report::MeasureReport;
+    /// use rh_hl7_fhir_r4_core::traits::measure_report::MeasureReportMutators;
     ///
     /// let resource = MeasureReport::new();
     /// // Can be used with method chaining:

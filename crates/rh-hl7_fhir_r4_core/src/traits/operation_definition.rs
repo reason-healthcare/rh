@@ -98,8 +98,8 @@ pub trait OperationDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::operation_definition::OperationDefinition;
-    /// use hl7_fhir_r4_core::traits::operation_definition::OperationDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::operation_definition::OperationDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::operation_definition::OperationDefinitionMutators;
     ///
     /// let resource = OperationDefinition::new();
     /// // Can be used with method chaining:

@@ -32,8 +32,8 @@ pub trait BodyweightMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::bodyweight::Bodyweight;
-    /// use hl7_fhir_r4_core::traits::bodyweight::BodyweightMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::bodyweight::Bodyweight;
+    /// use rh_hl7_fhir_r4_core::traits::bodyweight::BodyweightMutators;
     ///
     /// let resource = Bodyweight::new();
     /// // Can be used with method chaining:

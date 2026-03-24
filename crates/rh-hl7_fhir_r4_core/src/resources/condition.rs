@@ -630,19 +630,19 @@ impl crate::traits::condition::ConditionExistence for Condition {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_abatement(&self) -> bool {
-        self.abatement_date_time.is_some()
-            || self.abatement_age.is_some()
-            || self.abatement_period.is_some()
-            || self.abatement_range.is_some()
-            || self.abatement_string.is_some()
-    }
     fn has_onset(&self) -> bool {
         self.onset_date_time.is_some()
             || self.onset_age.is_some()
             || self.onset_period.is_some()
             || self.onset_range.is_some()
             || self.onset_string.is_some()
+    }
+    fn has_abatement(&self) -> bool {
+        self.abatement_date_time.is_some()
+            || self.abatement_age.is_some()
+            || self.abatement_period.is_some()
+            || self.abatement_range.is_some()
+            || self.abatement_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

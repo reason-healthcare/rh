@@ -176,6 +176,38 @@ pub struct Procedure {
     #[serde(rename = "usedCode")]
     pub used_code: Option<Vec<CodeableConcept>>,
 }
+/// incisionDateTime
+///
+/// The time of the first incision.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureIncisionDateTime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// schedule
+///
+/// The schedule that was followed.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureSchedule {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// method
 ///
 /// The method used to perform this procedure.
@@ -191,6 +223,21 @@ pub struct ProcedureMethod {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// Procedure nested structure for the 'focalDevice' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureFocaldevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Kind of change to device
+    ///
+    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
+    pub action: Option<CodeableConcept>,
+    /// Device that was changed
+    pub manipulated: Reference,
 }
 /// directedBy
 ///
@@ -220,53 +267,6 @@ pub struct ProcedureDirectedBy {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcedureCausedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// incisionDateTime
-///
-/// The time of the first incision.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureIncisionDateTime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Procedure nested structure for the 'focalDevice' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureFocaldevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Kind of change to device
-    ///
-    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
-    pub action: Option<CodeableConcept>,
-    /// Device that was changed
-    pub manipulated: Reference,
-}
-/// targetBodyStructure
-///
-/// The target body site used for this procedure.  Multiple locations are allowed.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureTargetBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -305,18 +305,18 @@ pub struct ProcedurePerformer {
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
 }
-/// schedule
+/// targetBodyStructure
 ///
-/// The schedule that was followed.
+/// The target body site used for this procedure.  Multiple locations are allowed.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-schedule
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureSchedule {
+pub struct ProcedureTargetBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -381,31 +381,23 @@ impl Default for Procedure {
     }
 }
 
-impl Default for ProcedureMethod {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureDirectedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureCausedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for ProcedureIncisionDateTime {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureSchedule {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureMethod {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -423,7 +415,15 @@ impl Default for ProcedureFocaldevice {
     }
 }
 
-impl Default for ProcedureTargetBodyStructure {
+impl Default for ProcedureDirectedBy {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureCausedBy {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -450,7 +450,7 @@ impl Default for ProcedurePerformer {
     }
 }
 
-impl Default for ProcedureSchedule {
+impl Default for ProcedureTargetBodyStructure {
     fn default() -> Self {
         Self {
             base: Extension::default(),

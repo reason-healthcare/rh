@@ -200,19 +200,23 @@ pub struct Measure {
     #[serde(rename = "supplementalData")]
     pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
 }
-/// MeasureGroupStratifier nested structure for the 'component' field
+/// MeasureGroup nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifierComponent {
+pub struct MeasureGroupPopulation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Meaning of the stratifier component
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
     pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier component
+    /// The human readable description of this population criteria
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// Component of how the measure should be stratified
+    /// The criteria that defines this population
     pub criteria: Expression,
 }
 /// MeasureGroup nested structure for the 'stratifier' field
@@ -257,10 +261,10 @@ pub struct MeasureGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Stratifier criteria for the measure
     pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Meaning of the group
     pub code: Option<CodeableConcept>,
     /// Summary description
@@ -268,23 +272,19 @@ pub struct MeasureGroup {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// MeasureGroup nested structure for the 'population' field
+/// MeasureGroupStratifier nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupPopulation {
+pub struct MeasureGroupStratifierComponent {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    /// Meaning of the stratifier component
     pub code: Option<CodeableConcept>,
-    /// The human readable description of this population criteria
+    /// The human readable description of this stratifier component
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// The criteria that defines this population
+    /// Component of how the measure should be stratified
     pub criteria: Expression,
 }
 
@@ -361,7 +361,7 @@ impl Default for Measure {
     }
 }
 
-impl Default for MeasureGroupStratifierComponent {
+impl Default for MeasureGroupPopulation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -402,8 +402,8 @@ impl Default for MeasureGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            population: Default::default(),
             stratifier: Default::default(),
+            population: Default::default(),
             code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
@@ -411,7 +411,7 @@ impl Default for MeasureGroup {
     }
 }
 
-impl Default for MeasureGroupPopulation {
+impl Default for MeasureGroupStratifierComponent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),

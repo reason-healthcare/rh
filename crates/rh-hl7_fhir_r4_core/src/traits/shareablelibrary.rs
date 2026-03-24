@@ -32,8 +32,8 @@ pub trait ShareablelibraryMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareablelibrary::Shareablelibrary;
-    /// use hl7_fhir_r4_core::traits::shareablelibrary::ShareablelibraryMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareablelibrary::Shareablelibrary;
+    /// use rh_hl7_fhir_r4_core::traits::shareablelibrary::ShareablelibraryMutators;
     ///
     /// let resource = Shareablelibrary::new();
     /// // Can be used with method chaining:

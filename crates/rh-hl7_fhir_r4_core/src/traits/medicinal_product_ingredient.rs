@@ -53,8 +53,8 @@ pub trait MedicinalProductIngredientMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medicinal_product_ingredient::MedicinalProductIngredient;
-    /// use hl7_fhir_r4_core::traits::medicinal_product_ingredient::MedicinalProductIngredientMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medicinal_product_ingredient::MedicinalProductIngredient;
+    /// use rh_hl7_fhir_r4_core::traits::medicinal_product_ingredient::MedicinalProductIngredientMutators;
     ///
     /// let resource = MedicinalProductIngredient::new();
     /// // Can be used with method chaining:

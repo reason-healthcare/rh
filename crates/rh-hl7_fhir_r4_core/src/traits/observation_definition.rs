@@ -69,8 +69,8 @@ pub trait ObservationDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::observation_definition::ObservationDefinition;
-    /// use hl7_fhir_r4_core::traits::observation_definition::ObservationDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::observation_definition::ObservationDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::observation_definition::ObservationDefinitionMutators;
     ///
     /// let resource = ObservationDefinition::new();
     /// // Can be used with method chaining:

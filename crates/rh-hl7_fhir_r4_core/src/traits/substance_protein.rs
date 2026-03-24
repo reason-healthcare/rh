@@ -47,8 +47,8 @@ pub trait SubstanceProteinMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::substance_protein::SubstanceProtein;
-    /// use hl7_fhir_r4_core::traits::substance_protein::SubstanceProteinMutators;
+    /// use rh_hl7_fhir_r4_core::resources::substance_protein::SubstanceProtein;
+    /// use rh_hl7_fhir_r4_core::traits::substance_protein::SubstanceProteinMutators;
     ///
     /// let resource = SubstanceProtein::new();
     /// // Can be used with method chaining:

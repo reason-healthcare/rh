@@ -144,8 +144,8 @@ pub trait ExplanationOfBenefitMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::explanation_of_benefit::ExplanationOfBenefit;
-    /// use hl7_fhir_r4_core::traits::explanation_of_benefit::ExplanationOfBenefitMutators;
+    /// use rh_hl7_fhir_r4_core::resources::explanation_of_benefit::ExplanationOfBenefit;
+    /// use rh_hl7_fhir_r4_core::traits::explanation_of_benefit::ExplanationOfBenefitMutators;
     ///
     /// let resource = ExplanationOfBenefit::new();
     /// // Can be used with method chaining:

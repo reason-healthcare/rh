@@ -69,8 +69,8 @@ pub trait SupplyRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::supply_request::SupplyRequest;
-    /// use hl7_fhir_r4_core::traits::supply_request::SupplyRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::supply_request::SupplyRequest;
+    /// use rh_hl7_fhir_r4_core::traits::supply_request::SupplyRequestMutators;
     ///
     /// let resource = SupplyRequest::new();
     /// // Can be used with method chaining:

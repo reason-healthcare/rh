@@ -38,8 +38,8 @@ pub trait OperationOutcomeMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::operation_outcome::OperationOutcome;
-    /// use hl7_fhir_r4_core::traits::operation_outcome::OperationOutcomeMutators;
+    /// use rh_hl7_fhir_r4_core::resources::operation_outcome::OperationOutcome;
+    /// use rh_hl7_fhir_r4_core::traits::operation_outcome::OperationOutcomeMutators;
     ///
     /// let resource = OperationOutcome::new();
     /// // Can be used with method chaining:

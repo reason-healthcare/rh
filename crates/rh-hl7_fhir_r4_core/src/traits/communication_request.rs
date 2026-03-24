@@ -86,8 +86,8 @@ pub trait CommunicationRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::communication_request::CommunicationRequest;
-    /// use hl7_fhir_r4_core::traits::communication_request::CommunicationRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::communication_request::CommunicationRequest;
+    /// use rh_hl7_fhir_r4_core::traits::communication_request::CommunicationRequestMutators;
     ///
     /// let resource = CommunicationRequest::new();
     /// // Can be used with method chaining:

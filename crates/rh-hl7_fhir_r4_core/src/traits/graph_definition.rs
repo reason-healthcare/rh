@@ -74,8 +74,8 @@ pub trait GraphDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::graph_definition::GraphDefinition;
-    /// use hl7_fhir_r4_core::traits::graph_definition::GraphDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::graph_definition::GraphDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::graph_definition::GraphDefinitionMutators;
     ///
     /// let resource = GraphDefinition::new();
     /// // Can be used with method chaining:

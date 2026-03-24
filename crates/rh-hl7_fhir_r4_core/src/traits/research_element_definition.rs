@@ -113,8 +113,8 @@ pub trait ResearchElementDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::research_element_definition::ResearchElementDefinition;
-    /// use hl7_fhir_r4_core::traits::research_element_definition::ResearchElementDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::research_element_definition::ResearchElementDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::research_element_definition::ResearchElementDefinitionMutators;
     ///
     /// let resource = ResearchElementDefinition::new();
     /// // Can be used with method chaining:

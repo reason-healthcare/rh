@@ -32,8 +32,8 @@ pub trait ShareableplandefinitionMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareableplandefinition::Shareableplandefinition;
-    /// use hl7_fhir_r4_core::traits::shareableplandefinition::ShareableplandefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareableplandefinition::Shareableplandefinition;
+    /// use rh_hl7_fhir_r4_core::traits::shareableplandefinition::ShareableplandefinitionMutators;
     ///
     /// let resource = Shareableplandefinition::new();
     /// // Can be used with method chaining:

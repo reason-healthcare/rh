@@ -72,8 +72,8 @@ pub trait ConditionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::condition::Condition;
-    /// use hl7_fhir_r4_core::traits::condition::ConditionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::condition::Condition;
+    /// use rh_hl7_fhir_r4_core::traits::condition::ConditionMutators;
     ///
     /// let resource = Condition::new();
     /// // Can be used with method chaining:

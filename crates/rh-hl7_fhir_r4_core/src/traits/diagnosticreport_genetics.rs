@@ -32,8 +32,8 @@ pub trait DiagnosticreportGeneticsMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::diagnosticreport_genetics::DiagnosticreportGenetics;
-    /// use hl7_fhir_r4_core::traits::diagnosticreport_genetics::DiagnosticreportGeneticsMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::diagnosticreport_genetics::DiagnosticreportGenetics;
+    /// use rh_hl7_fhir_r4_core::traits::diagnosticreport_genetics::DiagnosticreportGeneticsMutators;
     ///
     /// let resource = DiagnosticreportGenetics::new();
     /// // Can be used with method chaining:

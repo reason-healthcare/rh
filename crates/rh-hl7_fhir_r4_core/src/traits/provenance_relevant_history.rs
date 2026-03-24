@@ -32,8 +32,8 @@ pub trait ProvenanceRelevantHistoryMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::provenance_relevant_history::ProvenanceRelevantHistory;
-    /// use hl7_fhir_r4_core::traits::provenance_relevant_history::ProvenanceRelevantHistoryMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::provenance_relevant_history::ProvenanceRelevantHistory;
+    /// use rh_hl7_fhir_r4_core::traits::provenance_relevant_history::ProvenanceRelevantHistoryMutators;
     ///
     /// let resource = ProvenanceRelevantHistory::new();
     /// // Can be used with method chaining:

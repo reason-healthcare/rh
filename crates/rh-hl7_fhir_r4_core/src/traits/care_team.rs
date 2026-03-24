@@ -70,8 +70,8 @@ pub trait CareTeamMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::care_team::CareTeam;
-    /// use hl7_fhir_r4_core::traits::care_team::CareTeamMutators;
+    /// use rh_hl7_fhir_r4_core::resources::care_team::CareTeam;
+    /// use rh_hl7_fhir_r4_core::traits::care_team::CareTeamMutators;
     ///
     /// let resource = CareTeam::new();
     /// // Can be used with method chaining:

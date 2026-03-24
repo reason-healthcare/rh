@@ -32,8 +32,8 @@ pub trait EhrsrleProvenanceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::ehrsrle_provenance::EhrsrleProvenance;
-    /// use hl7_fhir_r4_core::traits::ehrsrle_provenance::EhrsrleProvenanceMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::ehrsrle_provenance::EhrsrleProvenance;
+    /// use rh_hl7_fhir_r4_core::traits::ehrsrle_provenance::EhrsrleProvenanceMutators;
     ///
     /// let resource = EhrsrleProvenance::new();
     /// // Can be used with method chaining:

@@ -44,8 +44,8 @@ pub trait LinkageMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::linkage::Linkage;
-    /// use hl7_fhir_r4_core::traits::linkage::LinkageMutators;
+    /// use rh_hl7_fhir_r4_core::resources::linkage::Linkage;
+    /// use rh_hl7_fhir_r4_core::traits::linkage::LinkageMutators;
     ///
     /// let resource = Linkage::new();
     /// // Can be used with method chaining:

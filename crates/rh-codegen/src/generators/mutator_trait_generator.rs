@@ -4,12 +4,27 @@ use crate::generators::TypeUtilities;
 use crate::rust_types::{RustTrait, RustTraitMethod, RustType};
 use crate::CodegenResult;
 
-#[derive(Default)]
-pub struct MutatorTraitGenerator {}
+pub struct MutatorTraitGenerator {
+    crate_name: String,
+}
+
+impl Default for MutatorTraitGenerator {
+    fn default() -> Self {
+        Self {
+            crate_name: "hl7_fhir_r4_core".to_string(),
+        }
+    }
+}
 
 impl MutatorTraitGenerator {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_crate_name(crate_name: impl Into<String>) -> Self {
+        Self {
+            crate_name: crate_name.into(),
+        }
     }
 
     pub fn add_mutator_methods(
@@ -189,8 +204,14 @@ impl MutatorTraitGenerator {
         let is_profile = crate::generators::type_registry::TypeRegistry::is_profile(structure_def);
         let module = if is_profile { "profiles" } else { "resources" };
         let snake_name = crate::naming::Naming::to_snake_case(&struct_name);
-        let struct_import = format!("hl7_fhir_r4_core::{module}::{snake_name}::{struct_name}");
-        let trait_import = format!("hl7_fhir_r4_core::traits::{snake_name}::{struct_name}Mutators");
+        let struct_import = format!(
+            "{crate_name}::{module}::{snake_name}::{struct_name}",
+            crate_name = &self.crate_name
+        );
+        let trait_import = format!(
+            "{crate_name}::traits::{snake_name}::{struct_name}Mutators",
+            crate_name = &self.crate_name
+        );
 
         // Basic constructor with no parameters - supports method chaining
         let new_method = RustTraitMethod::new("new".to_string())

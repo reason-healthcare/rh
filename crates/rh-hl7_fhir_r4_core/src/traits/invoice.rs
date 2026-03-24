@@ -75,8 +75,8 @@ pub trait InvoiceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::invoice::Invoice;
-    /// use hl7_fhir_r4_core::traits::invoice::InvoiceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::invoice::Invoice;
+    /// use rh_hl7_fhir_r4_core::traits::invoice::InvoiceMutators;
     ///
     /// let resource = Invoice::new();
     /// // Can be used with method chaining:

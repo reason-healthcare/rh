@@ -73,8 +73,8 @@ pub trait VerificationResultMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::verification_result::VerificationResult;
-    /// use hl7_fhir_r4_core::traits::verification_result::VerificationResultMutators;
+    /// use rh_hl7_fhir_r4_core::resources::verification_result::VerificationResult;
+    /// use rh_hl7_fhir_r4_core::traits::verification_result::VerificationResultMutators;
     ///
     /// let resource = VerificationResult::new();
     /// // Can be used with method chaining:

@@ -64,8 +64,8 @@ pub trait GroupMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::group::Group;
-    /// use hl7_fhir_r4_core::traits::group::GroupMutators;
+    /// use rh_hl7_fhir_r4_core::resources::group::Group;
+    /// use rh_hl7_fhir_r4_core::traits::group::GroupMutators;
     ///
     /// let resource = Group::new();
     /// // Can be used with method chaining:

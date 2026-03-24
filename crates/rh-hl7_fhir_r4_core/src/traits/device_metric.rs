@@ -63,8 +63,8 @@ pub trait DeviceMetricMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::device_metric::DeviceMetric;
-    /// use hl7_fhir_r4_core::traits::device_metric::DeviceMetricMutators;
+    /// use rh_hl7_fhir_r4_core::resources::device_metric::DeviceMetric;
+    /// use rh_hl7_fhir_r4_core::traits::device_metric::DeviceMetricMutators;
     ///
     /// let resource = DeviceMetric::new();
     /// // Can be used with method chaining:

@@ -129,22 +129,6 @@ pub struct Device {
     /// The parent device
     pub parent: Option<Reference>,
 }
-/// Device nested structure for the 'version' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceVersion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of the device version
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A single component of the device version
-    pub component: Option<Identifier>,
-    /// The version text
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// Status of Implantable Devices
 ///
 /// Codes to represent the functional status of a device implanted in a patient.  Both overall device status and an implant status need to be considered. The implant status should only be used when the [device status](device-definitions.html#Device.status) is `active `.
@@ -176,22 +160,6 @@ pub struct DeviceDevicename {
     pub type_: DeviceNametype,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
-}
-/// Device nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Property value as a quantity
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Vec<Quantity>>,
-    /// Property value as a code, e.g., NTP4 (synced to NTP)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<Vec<CodeableConcept>>,
 }
 /// Device nested structure for the 'udiCarrier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -246,6 +214,38 @@ pub struct DeviceSpecialization {
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
 }
+/// Device nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of the device version
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// A single component of the device version
+    pub component: Option<Identifier>,
+    /// The version text
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// Device nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Property value as a quantity
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Vec<Quantity>>,
+    /// Property value as a code, e.g., NTP4 (synced to NTP)
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<Vec<CodeableConcept>>,
+}
 
 impl Default for Device {
     fn default() -> Self {
@@ -291,18 +291,6 @@ impl Default for Device {
     }
 }
 
-impl Default for DeviceVersion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            component: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceImplantStatus {
     fn default() -> Self {
         Self {
@@ -319,17 +307,6 @@ impl Default for DeviceDevicename {
             _name: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_code: Default::default(),
         }
     }
 }
@@ -361,6 +338,29 @@ impl Default for DeviceSpecialization {
             system_type: CodeableConcept::default(),
             version: Default::default(),
             _version: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            component: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_code: Default::default(),
         }
     }
 }

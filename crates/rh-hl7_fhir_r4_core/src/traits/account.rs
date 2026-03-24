@@ -65,8 +65,8 @@ pub trait AccountMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::account::Account;
-    /// use hl7_fhir_r4_core::traits::account::AccountMutators;
+    /// use rh_hl7_fhir_r4_core::resources::account::Account;
+    /// use rh_hl7_fhir_r4_core::traits::account::AccountMutators;
     ///
     /// let resource = Account::new();
     /// // Can be used with method chaining:

@@ -70,8 +70,8 @@ pub trait TestReportMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::test_report::TestReport;
-    /// use hl7_fhir_r4_core::traits::test_report::TestReportMutators;
+    /// use rh_hl7_fhir_r4_core::resources::test_report::TestReport;
+    /// use rh_hl7_fhir_r4_core::traits::test_report::TestReportMutators;
     ///
     /// let resource = TestReport::new();
     /// // Can be used with method chaining:

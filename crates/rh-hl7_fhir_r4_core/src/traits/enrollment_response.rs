@@ -57,8 +57,8 @@ pub trait EnrollmentResponseMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::enrollment_response::EnrollmentResponse;
-    /// use hl7_fhir_r4_core::traits::enrollment_response::EnrollmentResponseMutators;
+    /// use rh_hl7_fhir_r4_core::resources::enrollment_response::EnrollmentResponse;
+    /// use rh_hl7_fhir_r4_core::traits::enrollment_response::EnrollmentResponseMutators;
     ///
     /// let resource = EnrollmentResponse::new();
     /// // Can be used with method chaining:

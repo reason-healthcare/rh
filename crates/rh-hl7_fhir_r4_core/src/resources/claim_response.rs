@@ -134,99 +134,6 @@ pub struct ClaimResponse {
     /// Processing errors
     pub error: Option<Vec<ClaimResponseError>>,
 }
-/// ClaimResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Item sequence number
-    #[serde(rename = "itemSequence")]
-    pub item_sequence: Option<PositiveIntType>,
-    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_itemSequence")]
-    pub _item_sequence: Option<Element>,
-    /// Detail sequence number
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: Option<PositiveIntType>,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Subdetail sequence number
-    #[serde(rename = "subDetailSequence")]
-    pub sub_detail_sequence: Option<PositiveIntType>,
-    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subDetailSequence")]
-    pub _sub_detail_sequence: Option<Element>,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The adjudication error codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
-/// ClaimResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Insurance instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Coverage to be used for adjudication
-    pub focal: BooleanType,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Additional provider contract number
-    #[serde(rename = "businessArrangement")]
-    pub business_arrangement: Option<StringType>,
-    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_businessArrangement")]
-    pub _business_arrangement: Option<Element>,
-    /// Adjudication results
-    #[serde(rename = "claimResponse")]
-    pub claim_response: Option<Reference>,
-}
-/// ClaimResponse nested structure for the 'total' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseTotal {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of adjudication information
-    ///
-    /// Binding: example (The adjudication codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
-    pub category: CodeableConcept,
-    /// Financial total for the category
-    pub amount: Money,
-}
-/// ClaimResponseItem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Claim detail instance identifier
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: PositiveIntType,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Detail level adjudication details
-    pub adjudication: Vec<StringType>,
-}
 /// ClaimResponseAdditem nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimResponseAdditemDetail {
@@ -297,31 +204,6 @@ pub struct ClaimResponsePayment {
     /// Business identifier for the payment
     pub identifier: Option<Identifier>,
 }
-/// ClaimResponseItem nested structure for the 'adjudication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemAdjudication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of adjudication information
-    ///
-    /// Binding: example (The adjudication codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
-    pub category: CodeableConcept,
-    /// Explanation of adjudication outcome
-    ///
-    /// Binding: example (The adjudication reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
-    pub reason: Option<CodeableConcept>,
-    /// Monetary amount
-    pub amount: Option<Money>,
-    /// Non-monetary value
-    pub value: Option<DecimalType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// ClaimResponseItemDetail nested structure for the 'subDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimResponseItemDetailSubdetail {
@@ -343,44 +225,31 @@ pub struct ClaimResponseItemDetailSubdetail {
     /// Subdetail level adjudication details
     pub adjudication: Option<Vec<StringType>>,
 }
-/// ClaimResponseAdditemDetail nested structure for the 'subDetail' field
+/// ClaimResponse nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseAdditemDetailSubdetail {
+pub struct ClaimResponseInsurance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items detail adjudication
-    pub adjudication: Vec<StringType>,
+    /// Insurance instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Coverage to be used for adjudication
+    pub focal: BooleanType,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Additional provider contract number
+    #[serde(rename = "businessArrangement")]
+    pub business_arrangement: Option<StringType>,
+    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_businessArrangement")]
+    pub _business_arrangement: Option<Element>,
+    /// Adjudication results
+    #[serde(rename = "claimResponse")]
+    pub claim_response: Option<Reference>,
 }
 /// ClaimResponse nested structure for the 'processNote' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -418,6 +287,100 @@ pub struct ClaimResponseProcessnote {
     /// - `en`: English
     /// - ... and 46 more values
     pub language: Option<CodeableConcept>,
+}
+/// ClaimResponse nested structure for the 'total' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseTotal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of adjudication information
+    ///
+    /// Binding: example (The adjudication codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    pub category: CodeableConcept,
+    /// Financial total for the category
+    pub amount: Money,
+}
+/// ClaimResponseItem nested structure for the 'adjudication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemAdjudication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of adjudication information
+    ///
+    /// Binding: example (The adjudication codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    pub category: CodeableConcept,
+    /// Explanation of adjudication outcome
+    ///
+    /// Binding: example (The adjudication reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
+    pub reason: Option<CodeableConcept>,
+    /// Monetary amount
+    pub amount: Option<Money>,
+    /// Non-monetary value
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ClaimResponse nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Adjudication for claim details
+    pub detail: Option<Vec<ClaimResponseItemDetail>>,
+    /// Adjudication details
+    pub adjudication: Vec<ClaimResponseItemAdjudication>,
+    /// Claim item instance identifier
+    #[serde(rename = "itemSequence")]
+    pub item_sequence: PositiveIntType,
+    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_itemSequence")]
+    pub _item_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+}
+/// ClaimResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Item sequence number
+    #[serde(rename = "itemSequence")]
+    pub item_sequence: Option<PositiveIntType>,
+    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_itemSequence")]
+    pub _item_sequence: Option<Element>,
+    /// Detail sequence number
+    #[serde(rename = "detailSequence")]
+    pub detail_sequence: Option<PositiveIntType>,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    pub _detail_sequence: Option<Element>,
+    /// Subdetail sequence number
+    #[serde(rename = "subDetailSequence")]
+    pub sub_detail_sequence: Option<PositiveIntType>,
+    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subDetailSequence")]
+    pub _sub_detail_sequence: Option<Element>,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The adjudication error codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
 }
 /// ClaimResponse nested structure for the 'addItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -516,28 +479,65 @@ pub struct ClaimResponseAdditem {
     /// Added items adjudication
     pub adjudication: Vec<StringType>,
 }
-/// ClaimResponse nested structure for the 'item' field
+/// ClaimResponseAdditemDetail nested structure for the 'subDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItem {
+pub struct ClaimResponseAdditemDetailSubdetail {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Adjudication details
-    pub adjudication: Vec<ClaimResponseItemAdjudication>,
-    /// Adjudication for claim details
-    pub detail: Option<Vec<ClaimResponseItemDetail>>,
-    /// Claim item instance identifier
-    #[serde(rename = "itemSequence")]
-    pub item_sequence: PositiveIntType,
-    /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_itemSequence")]
-    pub _item_sequence: Option<Element>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    pub modifier: Option<Vec<CodeableConcept>>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
     /// Applicable note numbers
     #[serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveIntType>>,
     /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noteNumber")]
     pub _note_number: Option<Element>,
+    /// Added items detail adjudication
+    pub adjudication: Vec<StringType>,
+}
+/// ClaimResponseItem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Claim detail instance identifier
+    #[serde(rename = "detailSequence")]
+    pub detail_sequence: PositiveIntType,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    pub _detail_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    pub note_number: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    pub _note_number: Option<Element>,
+    /// Detail level adjudication details
+    pub adjudication: Vec<StringType>,
 }
 
 impl Default for ClaimResponse {
@@ -581,60 +581,6 @@ impl Default for ClaimResponse {
     }
 }
 
-impl Default for ClaimResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item_sequence: Default::default(),
-            _item_sequence: Default::default(),
-            detail_sequence: Default::default(),
-            _detail_sequence: Default::default(),
-            sub_detail_sequence: Default::default(),
-            _sub_detail_sequence: Default::default(),
-            code: CodeableConcept::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            focal: BooleanType::default(),
-            _focal: Default::default(),
-            coverage: Reference::default(),
-            business_arrangement: Default::default(),
-            _business_arrangement: Default::default(),
-            claim_response: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseTotal {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: CodeableConcept::default(),
-            amount: Money::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail_sequence: Default::default(),
-            _detail_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
 impl Default for ClaimResponseAdditemDetail {
     fn default() -> Self {
         Self {
@@ -668,19 +614,6 @@ impl Default for ClaimResponsePayment {
     }
 }
 
-impl Default for ClaimResponseItemAdjudication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            reason: Default::default(),
-            amount: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
 impl Default for ClaimResponseItemDetailSubdetail {
     fn default() -> Self {
         Self {
@@ -694,20 +627,18 @@ impl Default for ClaimResponseItemDetailSubdetail {
     }
 }
 
-impl Default for ClaimResponseAdditemDetailSubdetail {
+impl Default for ClaimResponseInsurance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            focal: BooleanType::default(),
+            _focal: Default::default(),
+            coverage: Reference::default(),
+            business_arrangement: Default::default(),
+            _business_arrangement: Default::default(),
+            claim_response: Default::default(),
         }
     }
 }
@@ -723,6 +654,58 @@ impl Default for ClaimResponseProcessnote {
             text: Default::default(),
             _text: Default::default(),
             language: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseTotal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: CodeableConcept::default(),
+            amount: Money::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemAdjudication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            reason: Default::default(),
+            amount: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail: Default::default(),
+            adjudication: Vec::new(),
+            item_sequence: PositiveIntType::default(),
+            _item_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item_sequence: Default::default(),
+            _item_sequence: Default::default(),
+            detail_sequence: Default::default(),
+            _detail_sequence: Default::default(),
+            sub_detail_sequence: Default::default(),
+            _sub_detail_sequence: Default::default(),
+            code: CodeableConcept::default(),
         }
     }
 }
@@ -761,16 +744,33 @@ impl Default for ClaimResponseAdditem {
     }
 }
 
-impl Default for ClaimResponseItem {
+impl Default for ClaimResponseAdditemDetailSubdetail {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            adjudication: Vec::new(),
-            detail: Default::default(),
-            item_sequence: PositiveIntType::default(),
-            _item_sequence: Default::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
             note_number: Default::default(),
             _note_number: Default::default(),
+            adjudication: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail_sequence: Default::default(),
+            _detail_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
         }
     }
 }

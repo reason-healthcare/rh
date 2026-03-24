@@ -105,8 +105,8 @@ pub trait StructureDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::structure_definition::StructureDefinition;
-    /// use hl7_fhir_r4_core::traits::structure_definition::StructureDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::structure_definition::StructureDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::structure_definition::StructureDefinitionMutators;
     ///
     /// let resource = StructureDefinition::new();
     /// // Can be used with method chaining:

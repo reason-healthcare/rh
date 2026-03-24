@@ -61,31 +61,6 @@ pub struct QuestionnaireResponse {
     /// Groups and questions
     pub item: Option<Vec<QuestionnaireResponseItem>>,
 }
-/// QuestionnaireResponse nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireResponseItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The response(s) to the question
-    pub answer: Option<Vec<QuestionnaireResponseItemAnswer>>,
-    /// Pointer to specific item from Questionnaire
-    #[serde(rename = "linkId")]
-    pub link_id: StringType,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// ElementDefinition - details for the item
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Name for group or question text
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-    /// Nested questionnaire response items
-    pub item: Option<Vec<StringType>>,
-}
 /// QuestionnaireResponseItem nested structure for the 'answer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireResponseItemAnswer {
@@ -131,6 +106,31 @@ pub struct QuestionnaireResponseItemAnswer {
     /// Nested groups and questions
     pub item: Option<Vec<StringType>>,
 }
+/// QuestionnaireResponse nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireResponseItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The response(s) to the question
+    pub answer: Option<Vec<QuestionnaireResponseItemAnswer>>,
+    /// Pointer to specific item from Questionnaire
+    #[serde(rename = "linkId")]
+    pub link_id: StringType,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// ElementDefinition - details for the item
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Name for group or question text
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Nested questionnaire response items
+    pub item: Option<Vec<StringType>>,
+}
 
 impl Default for QuestionnaireResponse {
     fn default() -> Self {
@@ -154,22 +154,6 @@ impl Default for QuestionnaireResponse {
     }
 }
 
-impl Default for QuestionnaireResponseItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            answer: Default::default(),
-            link_id: StringType::default(),
-            _link_id: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-            item: Default::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireResponseItemAnswer {
     fn default() -> Self {
         Self {
@@ -186,6 +170,22 @@ impl Default for QuestionnaireResponseItemAnswer {
             value_coding: Default::default(),
             value_quantity: Default::default(),
             value_reference: Default::default(),
+            item: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireResponseItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            answer: Default::default(),
+            link_id: StringType::default(),
+            _link_id: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
             item: Default::default(),
         }
     }

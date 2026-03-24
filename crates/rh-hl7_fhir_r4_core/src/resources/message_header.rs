@@ -56,23 +56,6 @@ pub struct MessageHeader {
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
 }
-/// MessageHeader nested structure for the 'response' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderResponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Id of original message
-    pub identifier: StringType,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// ok | transient-error | fatal-error
-    pub code: ResponseCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Specific list of hints/warnings/errors
-    pub details: Option<Reference>,
-}
 /// MessageHeader nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageHeaderSource {
@@ -117,6 +100,23 @@ pub struct MessageHeaderDestination {
     /// Intended "real-world" recipient for the data
     pub receiver: Option<Reference>,
 }
+/// MessageHeader nested structure for the 'response' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderResponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Id of original message
+    pub identifier: StringType,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// ok | transient-error | fatal-error
+    pub code: ResponseCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Specific list of hints/warnings/errors
+    pub details: Option<Reference>,
+}
 
 impl Default for MessageHeader {
     fn default() -> Self {
@@ -135,19 +135,6 @@ impl Default for MessageHeader {
             focus: Default::default(),
             definition: Default::default(),
             _definition: Default::default(),
-        }
-    }
-}
-
-impl Default for MessageHeaderResponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: StringType::default(),
-            _identifier: Default::default(),
-            code: ResponseCode::default(),
-            _code: Default::default(),
-            details: Default::default(),
         }
     }
 }
@@ -179,6 +166,19 @@ impl Default for MessageHeaderDestination {
             endpoint: StringType::default(),
             _endpoint: Default::default(),
             receiver: Default::default(),
+        }
+    }
+}
+
+impl Default for MessageHeaderResponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: StringType::default(),
+            _identifier: Default::default(),
+            code: ResponseCode::default(),
+            _code: Default::default(),
+            details: Default::default(),
         }
     }
 }

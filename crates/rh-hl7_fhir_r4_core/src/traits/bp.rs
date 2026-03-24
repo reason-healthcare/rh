@@ -32,8 +32,8 @@ pub trait BpMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::bp::Bp;
-    /// use hl7_fhir_r4_core::traits::bp::BpMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::bp::Bp;
+    /// use rh_hl7_fhir_r4_core::traits::bp::BpMutators;
     ///
     /// let resource = Bp::new();
     /// // Can be used with method chaining:

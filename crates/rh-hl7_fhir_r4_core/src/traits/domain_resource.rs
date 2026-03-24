@@ -46,8 +46,8 @@ pub trait DomainResourceMutators: ResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::domain_resource::DomainResource;
-    /// use hl7_fhir_r4_core::traits::domain_resource::DomainResourceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::domain_resource::DomainResource;
+    /// use rh_hl7_fhir_r4_core::traits::domain_resource::DomainResourceMutators;
     ///
     /// let resource = DomainResource::new();
     /// // Can be used with method chaining:

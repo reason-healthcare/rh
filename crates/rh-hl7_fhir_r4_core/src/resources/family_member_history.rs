@@ -724,15 +724,15 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
     fn has_born(&self) -> bool {
         self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
     }
-    fn has_age(&self) -> bool {
-        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
-    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some()
             || self.deceased_age.is_some()
             || self.deceased_range.is_some()
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
+    }
+    fn has_age(&self) -> bool {
+        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

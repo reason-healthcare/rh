@@ -73,8 +73,8 @@ pub trait CoverageEligibilityResponseMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::coverage_eligibility_response::CoverageEligibilityResponse;
-    /// use hl7_fhir_r4_core::traits::coverage_eligibility_response::CoverageEligibilityResponseMutators;
+    /// use rh_hl7_fhir_r4_core::resources::coverage_eligibility_response::CoverageEligibilityResponse;
+    /// use rh_hl7_fhir_r4_core::traits::coverage_eligibility_response::CoverageEligibilityResponseMutators;
     ///
     /// let resource = CoverageEligibilityResponse::new();
     /// // Can be used with method chaining:

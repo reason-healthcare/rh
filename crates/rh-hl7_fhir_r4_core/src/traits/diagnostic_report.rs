@@ -77,8 +77,8 @@ pub trait DiagnosticReportMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::diagnostic_report::DiagnosticReport;
-    /// use hl7_fhir_r4_core::traits::diagnostic_report::DiagnosticReportMutators;
+    /// use rh_hl7_fhir_r4_core::resources::diagnostic_report::DiagnosticReport;
+    /// use rh_hl7_fhir_r4_core::traits::diagnostic_report::DiagnosticReportMutators;
     ///
     /// let resource = DiagnosticReport::new();
     /// // Can be used with method chaining:

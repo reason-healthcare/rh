@@ -87,56 +87,6 @@ pub struct GraphDefinition {
     /// Links this graph makes rules about
     pub link: Option<Vec<GraphDefinitionLink>>,
 }
-/// GraphDefinitionLink nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLinkTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of resource this link refers to
-    #[serde(rename = "type")]
-    pub type_: ResourceTypes,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Criteria for reverse lookup
-    pub params: Option<StringType>,
-    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
-    pub _params: Option<Element>,
-    /// Profile for the target resource
-    pub profile: Option<StringType>,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-    /// Additional links from target resource
-    pub link: Option<Vec<StringType>>,
-}
-/// GraphDefinitionLinkTarget nested structure for the 'compartment' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLinkTargetCompartment {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// condition | requirement
-    #[serde(rename = "use")]
-    pub use_: GraphCompartmentUse,
-    /// Extension element for the 'use' primitive field. Contains metadata and extensions.
-    pub _use: Option<Element>,
-    /// Patient | Encounter | RelatedPerson | Practitioner | Device
-    pub code: CompartmentType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// identical | matching | different | custom
-    pub rule: GraphCompartmentRule,
-    /// Extension element for the 'rule' primitive field. Contains metadata and extensions.
-    pub _rule: Option<Element>,
-    /// Custom rule, as a FHIRPath expression
-    pub expression: Option<StringType>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-    /// Documentation for FHIRPath expression
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 /// GraphDefinition nested structure for the 'link' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLink {
@@ -167,6 +117,56 @@ pub struct GraphDefinitionLink {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+}
+/// GraphDefinitionLinkTarget nested structure for the 'compartment' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLinkTargetCompartment {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// condition | requirement
+    #[serde(rename = "use")]
+    pub use_: GraphCompartmentUse,
+    /// Extension element for the 'use' primitive field. Contains metadata and extensions.
+    pub _use: Option<Element>,
+    /// Patient | Encounter | RelatedPerson | Practitioner | Device
+    pub code: CompartmentType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// identical | matching | different | custom
+    pub rule: GraphCompartmentRule,
+    /// Extension element for the 'rule' primitive field. Contains metadata and extensions.
+    pub _rule: Option<Element>,
+    /// Custom rule, as a FHIRPath expression
+    pub expression: Option<StringType>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+    /// Documentation for FHIRPath expression
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// GraphDefinitionLink nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLinkTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of resource this link refers to
+    #[serde(rename = "type")]
+    pub type_: ResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Criteria for reverse lookup
+    pub params: Option<StringType>,
+    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
+    pub _params: Option<Element>,
+    /// Profile for the target resource
+    pub profile: Option<StringType>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+    /// Additional links from target resource
+    pub link: Option<Vec<StringType>>,
 }
 
 impl Default for GraphDefinition {
@@ -203,17 +203,21 @@ impl Default for GraphDefinition {
     }
 }
 
-impl Default for GraphDefinitionLinkTarget {
+impl Default for GraphDefinitionLink {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            params: Default::default(),
-            _params: Default::default(),
-            profile: Default::default(),
-            _profile: Default::default(),
-            link: Default::default(),
+            target: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            slice_name: Default::default(),
+            _slice_name: Default::default(),
+            min: Default::default(),
+            _min: Default::default(),
+            max: Default::default(),
+            _max: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
         }
     }
 }
@@ -236,21 +240,17 @@ impl Default for GraphDefinitionLinkTargetCompartment {
     }
 }
 
-impl Default for GraphDefinitionLink {
+impl Default for GraphDefinitionLinkTarget {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            target: Default::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            slice_name: Default::default(),
-            _slice_name: Default::default(),
-            min: Default::default(),
-            _min: Default::default(),
-            max: Default::default(),
-            _max: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            params: Default::default(),
+            _params: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            link: Default::default(),
         }
     }
 }

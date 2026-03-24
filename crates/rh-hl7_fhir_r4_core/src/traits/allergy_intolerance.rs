@@ -74,8 +74,8 @@ pub trait AllergyIntoleranceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::allergy_intolerance::AllergyIntolerance;
-    /// use hl7_fhir_r4_core::traits::allergy_intolerance::AllergyIntoleranceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::allergy_intolerance::AllergyIntolerance;
+    /// use rh_hl7_fhir_r4_core::traits::allergy_intolerance::AllergyIntoleranceMutators;
     ///
     /// let resource = AllergyIntolerance::new();
     /// // Can be used with method chaining:

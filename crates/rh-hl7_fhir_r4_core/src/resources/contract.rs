@@ -166,6 +166,19 @@ pub struct Contract {
     #[serde(rename = "legallyBindingReference")]
     pub legally_binding_reference: Option<Reference>,
 }
+/// Contract nested structure for the 'friendly' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractFriendly {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Easily comprehended representation of this Contract (Attachment)
+    #[serde(rename = "contentAttachment")]
+    pub content_attachment: Attachment,
+    /// Easily comprehended representation of this Contract (Reference)
+    #[serde(rename = "contentReference")]
+    pub content_reference: Reference,
+}
 /// Contract nested structure for the 'rule' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractRule {
@@ -178,6 +191,96 @@ pub struct ContractRule {
     /// Computable Contract Rules (Reference)
     #[serde(rename = "contentReference")]
     pub content_reference: Reference,
+}
+/// ContractTermOffer nested structure for the 'party' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractTermOfferParty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Referenced entity
+    pub reference: Vec<Reference>,
+    /// Participant engagement type
+    ///
+    /// Binding: example (Codes for offer participant roles.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-party-role
+    pub role: CodeableConcept,
+}
+/// Contract nested structure for the 'legal' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractLegal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Contract Legal Text (Attachment)
+    #[serde(rename = "contentAttachment")]
+    pub content_attachment: Attachment,
+    /// Contract Legal Text (Reference)
+    #[serde(rename = "contentReference")]
+    pub content_reference: Reference,
+}
+/// ContractTerm nested structure for the 'offer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractTermOffer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Offer business ID
+    pub identifier: Option<Vec<Identifier>>,
+    /// Negotiable offer asset
+    pub topic: Option<Reference>,
+    /// Contract Offer Type or Form
+    ///
+    /// Binding: example (Detailed codes for the types of contract provisions.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Accepting party choice
+    ///
+    /// Binding: extensible (The type of decision made by a grantor with respect to an offer made by a grantee.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActConsentDirective
+    pub decision: Option<CodeableConcept>,
+    /// How decision is conveyed
+    ///
+    /// Binding: example (Codes for conveying a decision.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-decision-mode
+    #[serde(rename = "decisionMode")]
+    pub decision_mode: Option<Vec<CodeableConcept>>,
+    /// Human readable offer text
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Pointer to text
+    #[serde(rename = "linkId")]
+    pub link_id: Option<Vec<StringType>>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Offer restriction numbers
+    #[serde(rename = "securityLabelNumber")]
+    pub security_label_number: Option<Vec<UnsignedIntType>>,
+    /// Extension element for the 'securityLabelNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_securityLabelNumber")]
+    pub _security_label_number: Option<Element>,
+}
+/// ContractTermAction nested structure for the 'subject' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractTermActionSubject {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Entity of the action
+    pub reference: Vec<Reference>,
+    /// Role type of the agent
+    ///
+    /// Binding: example (Detailed codes for the contract actor role.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-actorrole
+    pub role: Option<CodeableConcept>,
 }
 /// Contract nested structure for the 'signer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,91 +300,146 @@ pub struct ContractSigner {
     /// Contract Documentation Signature
     pub signature: Vec<Signature>,
 }
-/// ContractTermOffer nested structure for the 'party' field
+/// ContractTerm nested structure for the 'securityLabel' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermOfferParty {
+pub struct ContractTermSecuritylabel {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Referenced entity
-    pub reference: Vec<Reference>,
-    /// Participant engagement type
+    /// Link to Security Labels
+    pub number: Option<Vec<UnsignedIntType>>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// Confidentiality Protection
     ///
-    /// Binding: example (Codes for offer participant roles.)
+    /// Binding: example (Codes for confidentiality protection.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-party-role
-    pub role: CodeableConcept,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-classification
+    pub classification: Coding,
+    /// Applicable Policy
+    ///
+    /// Binding: example (Codes for policy category.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-category
+    pub category: Option<Vec<Coding>>,
+    /// Handling Instructions
+    ///
+    /// Binding: example (Codes for handling instructions.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-control
+    pub control: Option<Vec<Coding>>,
 }
-/// ContractTerm nested structure for the 'asset' field
+/// ContractTermAsset nested structure for the 'valuedItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermAsset {
+pub struct ContractTermAssetValueditem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Range of asset
-    ///
-    /// Binding: example (Codes for scoping an asset.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetscope
-    pub scope: Option<CodeableConcept>,
-    /// Asset category
-    ///
-    /// Binding: example (Condes for the type of an asset.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assettype
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Associated entities
-    #[serde(rename = "typeReference")]
-    pub type_reference: Option<Vec<Reference>>,
-    /// Asset sub-category
-    ///
-    /// Binding: example (Condes for the sub-type of an asset.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetsubtype
-    pub subtype: Option<Vec<CodeableConcept>>,
-    /// Kinship of the asset
-    ///
-    /// Binding: extensible (The class (type) of information a consent rule covers.)
-    ///
-    /// Available values:
-    /// - `http://hl7.org/fhir/StructureDefinition/lipidprofile`: Lipid Lab Report
-    /// - `application/hl7-cda+xml`: CDA Documents
-    pub relationship: Option<Coding>,
-    /// Quality desctiption of asset
-    pub condition: Option<StringType>,
-    /// Extension element for the 'condition' primitive field. Contains metadata and extensions.
-    pub _condition: Option<Element>,
-    /// Asset availability types
-    ///
-    /// Binding: example (Codes for asset availability.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/asset-availability
-    #[serde(rename = "periodType")]
-    pub period_type: Option<Vec<CodeableConcept>>,
-    /// Time period of the asset
-    pub period: Option<Vec<Period>>,
-    /// Time period
-    #[serde(rename = "usePeriod")]
-    pub use_period: Option<Vec<Period>>,
-    /// Asset clause or question text
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-    /// Pointer to asset text
+    /// Contract Valued Item Type (CodeableConcept)
+    #[serde(rename = "entityCodeableConcept")]
+    pub entity_codeable_concept: Option<CodeableConcept>,
+    /// Contract Valued Item Type (Reference)
+    #[serde(rename = "entityReference")]
+    pub entity_reference: Option<Reference>,
+    /// Contract Valued Item Number
+    pub identifier: Option<Identifier>,
+    /// Contract Valued Item Effective Tiem
+    #[serde(rename = "effectiveTime")]
+    pub effective_time: Option<DateTimeType>,
+    /// Extension element for the 'effectiveTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_effectiveTime")]
+    pub _effective_time: Option<Element>,
+    /// Count of Contract Valued Items
+    pub quantity: Option<Quantity>,
+    /// Contract Valued Item fee, charge, or cost
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Contract Valued Item Price Scaling Factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Contract Valued Item Difficulty Scaling Factor
+    pub points: Option<DecimalType>,
+    /// Extension element for the 'points' primitive field. Contains metadata and extensions.
+    pub _points: Option<Element>,
+    /// Total Contract Valued Item Value
+    pub net: Option<Money>,
+    /// Terms of valuation
+    pub payment: Option<StringType>,
+    /// Extension element for the 'payment' primitive field. Contains metadata and extensions.
+    pub _payment: Option<Element>,
+    /// When payment is due
+    #[serde(rename = "paymentDate")]
+    pub payment_date: Option<DateTimeType>,
+    /// Extension element for the 'paymentDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_paymentDate")]
+    pub _payment_date: Option<Element>,
+    /// Who will make payment
+    pub responsible: Option<Reference>,
+    /// Who will receive payment
+    pub recipient: Option<Reference>,
+    /// Pointer to specific item
     #[serde(rename = "linkId")]
     pub link_id: Option<Vec<StringType>>,
     /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_linkId")]
     pub _link_id: Option<Element>,
-    /// Response to assets
-    pub answer: Option<Vec<StringType>>,
-    /// Asset restriction numbers
+    /// Security Labels that define affected terms
     #[serde(rename = "securityLabelNumber")]
     pub security_label_number: Option<Vec<UnsignedIntType>>,
     /// Extension element for the 'securityLabelNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_securityLabelNumber")]
     pub _security_label_number: Option<Element>,
+}
+/// Contract nested structure for the 'term' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractTerm {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Context of the Contract term
+    pub offer: ContractTermOffer,
+    /// Entity being ascribed responsibility
+    pub action: Option<Vec<ContractTermAction>>,
+    /// Protection for the Term
+    #[serde(rename = "securityLabel")]
+    pub security_label: Option<Vec<ContractTermSecuritylabel>>,
+    /// Contract Term Asset List
+    pub asset: Option<Vec<ContractTermAsset>>,
+    /// Contract Term Number
+    pub identifier: Option<Identifier>,
+    /// Contract Term Issue Date Time
+    pub issued: Option<DateTimeType>,
+    /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
+    pub _issued: Option<Element>,
+    /// Contract Term Effective Time
+    pub applies: Option<Period>,
+    /// Term Concern (CodeableConcept)
+    #[serde(rename = "topicCodeableConcept")]
+    pub topic_codeable_concept: Option<CodeableConcept>,
+    /// Term Concern (Reference)
+    #[serde(rename = "topicReference")]
+    pub topic_reference: Option<Reference>,
+    /// Contract Term Type or Form
+    ///
+    /// Binding: example (Detailed codes for the types of contract provisions.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Contract Term Type specific classification
+    ///
+    /// Binding: example (Detailed codes for the subtypes of contract provisions.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-subtype
+    #[serde(rename = "subType")]
+    pub sub_type: Option<CodeableConcept>,
+    /// Term Statement
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Nested Contract Term Group
+    pub group: Option<Vec<StringType>>,
 }
 /// ContractTermOffer nested structure for the 'answer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -325,6 +483,25 @@ pub struct ContractTermOfferAnswer {
     /// The actual answer response (Reference)
     #[serde(rename = "valueReference")]
     pub value_reference: Reference,
+}
+/// ContractTermAsset nested structure for the 'context' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractTermAssetContext {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Creator,custodian or owner
+    pub reference: Option<Reference>,
+    /// Codeable asset context
+    ///
+    /// Binding: example (Codes for the context of the asset.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetcontext
+    pub code: Option<Vec<CodeableConcept>>,
+    /// Context description
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
 }
 /// ContractTerm nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -478,248 +655,71 @@ pub struct ContractContentdefinition {
     /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
     pub _copyright: Option<Element>,
 }
-/// ContractTerm nested structure for the 'offer' field
+/// ContractTerm nested structure for the 'asset' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermOffer {
+pub struct ContractTermAsset {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Offer business ID
-    pub identifier: Option<Vec<Identifier>>,
-    /// Negotiable offer asset
-    pub topic: Option<Reference>,
-    /// Contract Offer Type or Form
+    /// Range of asset
     ///
-    /// Binding: example (Detailed codes for the types of contract provisions.)
+    /// Binding: example (Codes for scoping an asset.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetscope
+    pub scope: Option<CodeableConcept>,
+    /// Asset category
+    ///
+    /// Binding: example (Condes for the type of an asset.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assettype
     #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Accepting party choice
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Associated entities
+    #[serde(rename = "typeReference")]
+    pub type_reference: Option<Vec<Reference>>,
+    /// Asset sub-category
     ///
-    /// Binding: extensible (The type of decision made by a grantor with respect to an offer made by a grantee.)
+    /// Binding: example (Condes for the sub-type of an asset.)
     ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActConsentDirective
-    pub decision: Option<CodeableConcept>,
-    /// How decision is conveyed
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetsubtype
+    pub subtype: Option<Vec<CodeableConcept>>,
+    /// Kinship of the asset
     ///
-    /// Binding: example (Codes for conveying a decision.)
+    /// Binding: extensible (The class (type) of information a consent rule covers.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-decision-mode
-    #[serde(rename = "decisionMode")]
-    pub decision_mode: Option<Vec<CodeableConcept>>,
-    /// Human readable offer text
+    /// Available values:
+    /// - `http://hl7.org/fhir/StructureDefinition/lipidprofile`: Lipid Lab Report
+    /// - `application/hl7-cda+xml`: CDA Documents
+    pub relationship: Option<Coding>,
+    /// Quality desctiption of asset
+    pub condition: Option<StringType>,
+    /// Extension element for the 'condition' primitive field. Contains metadata and extensions.
+    pub _condition: Option<Element>,
+    /// Asset availability types
+    ///
+    /// Binding: example (Codes for asset availability.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/asset-availability
+    #[serde(rename = "periodType")]
+    pub period_type: Option<Vec<CodeableConcept>>,
+    /// Time period of the asset
+    pub period: Option<Vec<Period>>,
+    /// Time period
+    #[serde(rename = "usePeriod")]
+    pub use_period: Option<Vec<Period>>,
+    /// Asset clause or question text
     pub text: Option<StringType>,
     /// Extension element for the 'text' primitive field. Contains metadata and extensions.
     pub _text: Option<Element>,
-    /// Pointer to text
+    /// Pointer to asset text
     #[serde(rename = "linkId")]
     pub link_id: Option<Vec<StringType>>,
     /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_linkId")]
     pub _link_id: Option<Element>,
-    /// Offer restriction numbers
-    #[serde(rename = "securityLabelNumber")]
-    pub security_label_number: Option<Vec<UnsignedIntType>>,
-    /// Extension element for the 'securityLabelNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_securityLabelNumber")]
-    pub _security_label_number: Option<Element>,
-}
-/// Contract nested structure for the 'legal' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractLegal {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Contract Legal Text (Attachment)
-    #[serde(rename = "contentAttachment")]
-    pub content_attachment: Attachment,
-    /// Contract Legal Text (Reference)
-    #[serde(rename = "contentReference")]
-    pub content_reference: Reference,
-}
-/// ContractTerm nested structure for the 'securityLabel' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermSecuritylabel {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Link to Security Labels
-    pub number: Option<Vec<UnsignedIntType>>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// Confidentiality Protection
-    ///
-    /// Binding: example (Codes for confidentiality protection.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-classification
-    pub classification: Coding,
-    /// Applicable Policy
-    ///
-    /// Binding: example (Codes for policy category.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-category
-    pub category: Option<Vec<Coding>>,
-    /// Handling Instructions
-    ///
-    /// Binding: example (Codes for handling instructions.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-security-control
-    pub control: Option<Vec<Coding>>,
-}
-/// ContractTermAction nested structure for the 'subject' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermActionSubject {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Entity of the action
-    pub reference: Vec<Reference>,
-    /// Role type of the agent
-    ///
-    /// Binding: example (Detailed codes for the contract actor role.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-actorrole
-    pub role: Option<CodeableConcept>,
-}
-/// Contract nested structure for the 'friendly' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractFriendly {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Easily comprehended representation of this Contract (Attachment)
-    #[serde(rename = "contentAttachment")]
-    pub content_attachment: Attachment,
-    /// Easily comprehended representation of this Contract (Reference)
-    #[serde(rename = "contentReference")]
-    pub content_reference: Reference,
-}
-/// Contract nested structure for the 'term' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTerm {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Contract Term Asset List
-    pub asset: Option<Vec<ContractTermAsset>>,
-    /// Entity being ascribed responsibility
-    pub action: Option<Vec<ContractTermAction>>,
-    /// Protection for the Term
-    #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<ContractTermSecuritylabel>>,
-    /// Context of the Contract term
-    pub offer: ContractTermOffer,
-    /// Contract Term Number
-    pub identifier: Option<Identifier>,
-    /// Contract Term Issue Date Time
-    pub issued: Option<DateTimeType>,
-    /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
-    pub _issued: Option<Element>,
-    /// Contract Term Effective Time
-    pub applies: Option<Period>,
-    /// Term Concern (CodeableConcept)
-    #[serde(rename = "topicCodeableConcept")]
-    pub topic_codeable_concept: Option<CodeableConcept>,
-    /// Term Concern (Reference)
-    #[serde(rename = "topicReference")]
-    pub topic_reference: Option<Reference>,
-    /// Contract Term Type or Form
-    ///
-    /// Binding: example (Detailed codes for the types of contract provisions.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Contract Term Type specific classification
-    ///
-    /// Binding: example (Detailed codes for the subtypes of contract provisions.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-term-subtype
-    #[serde(rename = "subType")]
-    pub sub_type: Option<CodeableConcept>,
-    /// Term Statement
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-    /// Nested Contract Term Group
-    pub group: Option<Vec<StringType>>,
-}
-/// ContractTermAsset nested structure for the 'context' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermAssetContext {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Creator,custodian or owner
-    pub reference: Option<Reference>,
-    /// Codeable asset context
-    ///
-    /// Binding: example (Codes for the context of the asset.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contract-assetcontext
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Context description
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
-/// ContractTermAsset nested structure for the 'valuedItem' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractTermAssetValueditem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Contract Valued Item Type (CodeableConcept)
-    #[serde(rename = "entityCodeableConcept")]
-    pub entity_codeable_concept: Option<CodeableConcept>,
-    /// Contract Valued Item Type (Reference)
-    #[serde(rename = "entityReference")]
-    pub entity_reference: Option<Reference>,
-    /// Contract Valued Item Number
-    pub identifier: Option<Identifier>,
-    /// Contract Valued Item Effective Tiem
-    #[serde(rename = "effectiveTime")]
-    pub effective_time: Option<DateTimeType>,
-    /// Extension element for the 'effectiveTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_effectiveTime")]
-    pub _effective_time: Option<Element>,
-    /// Count of Contract Valued Items
-    pub quantity: Option<Quantity>,
-    /// Contract Valued Item fee, charge, or cost
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Contract Valued Item Price Scaling Factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Contract Valued Item Difficulty Scaling Factor
-    pub points: Option<DecimalType>,
-    /// Extension element for the 'points' primitive field. Contains metadata and extensions.
-    pub _points: Option<Element>,
-    /// Total Contract Valued Item Value
-    pub net: Option<Money>,
-    /// Terms of valuation
-    pub payment: Option<StringType>,
-    /// Extension element for the 'payment' primitive field. Contains metadata and extensions.
-    pub _payment: Option<Element>,
-    /// When payment is due
-    #[serde(rename = "paymentDate")]
-    pub payment_date: Option<DateTimeType>,
-    /// Extension element for the 'paymentDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_paymentDate")]
-    pub _payment_date: Option<Element>,
-    /// Who will make payment
-    pub responsible: Option<Reference>,
-    /// Who will receive payment
-    pub recipient: Option<Reference>,
-    /// Pointer to specific item
-    #[serde(rename = "linkId")]
-    pub link_id: Option<Vec<StringType>>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// Security Labels that define affected terms
+    /// Response to assets
+    pub answer: Option<Vec<StringType>>,
+    /// Asset restriction numbers
     #[serde(rename = "securityLabelNumber")]
     pub security_label_number: Option<Vec<UnsignedIntType>>,
     /// Extension element for the 'securityLabelNumber' primitive field. Contains metadata and extensions.
@@ -779,12 +779,71 @@ impl Default for Contract {
     }
 }
 
+impl Default for ContractFriendly {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            content_attachment: Default::default(),
+            content_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for ContractRule {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             content_attachment: Default::default(),
             content_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractTermOfferParty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            role: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractLegal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            content_attachment: Default::default(),
+            content_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractTermOffer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            topic: Default::default(),
+            type_: Default::default(),
+            decision: Default::default(),
+            decision_mode: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            security_label_number: Default::default(),
+            _security_label_number: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractTermActionSubject {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            role: Default::default(),
         }
     }
 }
@@ -800,37 +859,68 @@ impl Default for ContractSigner {
     }
 }
 
-impl Default for ContractTermOfferParty {
+impl Default for ContractTermSecuritylabel {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            reference: Default::default(),
-            role: Default::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            classification: Default::default(),
+            category: Default::default(),
+            control: Default::default(),
         }
     }
 }
 
-impl Default for ContractTermAsset {
+impl Default for ContractTermAssetValueditem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            scope: Default::default(),
-            type_: Default::default(),
-            type_reference: Default::default(),
-            subtype: Default::default(),
-            relationship: Default::default(),
-            condition: Default::default(),
-            _condition: Default::default(),
-            period_type: Default::default(),
-            period: Default::default(),
-            use_period: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
+            entity_codeable_concept: Default::default(),
+            entity_reference: Default::default(),
+            identifier: Default::default(),
+            effective_time: Default::default(),
+            _effective_time: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            points: Default::default(),
+            _points: Default::default(),
+            net: Default::default(),
+            payment: Default::default(),
+            _payment: Default::default(),
+            payment_date: Default::default(),
+            _payment_date: Default::default(),
+            responsible: Default::default(),
+            recipient: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
-            answer: Default::default(),
             security_label_number: Default::default(),
             _security_label_number: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractTerm {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            offer: ContractTermOffer::default(),
+            action: Default::default(),
+            security_label: Default::default(),
+            asset: Default::default(),
+            identifier: Default::default(),
+            issued: Default::default(),
+            _issued: Default::default(),
+            applies: Default::default(),
+            topic_codeable_concept: Default::default(),
+            topic_reference: Default::default(),
+            type_: Default::default(),
+            sub_type: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            group: Default::default(),
         }
     }
 }
@@ -851,6 +941,18 @@ impl Default for ContractTermOfferAnswer {
             value_coding: Default::default(),
             value_quantity: Default::default(),
             value_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ContractTermAssetContext {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            code: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
         }
     }
 }
@@ -910,127 +1012,25 @@ impl Default for ContractContentdefinition {
     }
 }
 
-impl Default for ContractTermOffer {
+impl Default for ContractTermAsset {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            identifier: Default::default(),
-            topic: Default::default(),
+            scope: Default::default(),
             type_: Default::default(),
-            decision: Default::default(),
-            decision_mode: Default::default(),
+            type_reference: Default::default(),
+            subtype: Default::default(),
+            relationship: Default::default(),
+            condition: Default::default(),
+            _condition: Default::default(),
+            period_type: Default::default(),
+            period: Default::default(),
+            use_period: Default::default(),
             text: Default::default(),
             _text: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
-            security_label_number: Default::default(),
-            _security_label_number: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractLegal {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            content_attachment: Default::default(),
-            content_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractTermSecuritylabel {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            classification: Default::default(),
-            category: Default::default(),
-            control: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractTermActionSubject {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            reference: Default::default(),
-            role: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractFriendly {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            content_attachment: Default::default(),
-            content_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractTerm {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            asset: Default::default(),
-            action: Default::default(),
-            security_label: Default::default(),
-            offer: ContractTermOffer::default(),
-            identifier: Default::default(),
-            issued: Default::default(),
-            _issued: Default::default(),
-            applies: Default::default(),
-            topic_codeable_concept: Default::default(),
-            topic_reference: Default::default(),
-            type_: Default::default(),
-            sub_type: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-            group: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractTermAssetContext {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            reference: Default::default(),
-            code: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-        }
-    }
-}
-
-impl Default for ContractTermAssetValueditem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            entity_codeable_concept: Default::default(),
-            entity_reference: Default::default(),
-            identifier: Default::default(),
-            effective_time: Default::default(),
-            _effective_time: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            points: Default::default(),
-            _points: Default::default(),
-            net: Default::default(),
-            payment: Default::default(),
-            _payment: Default::default(),
-            payment_date: Default::default(),
-            _payment_date: Default::default(),
-            responsible: Default::default(),
-            recipient: Default::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
+            answer: Default::default(),
             security_label_number: Default::default(),
             _security_label_number: Default::default(),
         }
@@ -1951,11 +1951,11 @@ impl crate::traits::contract::ContractExistence for Contract {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_topic(&self) -> bool {
-        self.topic_codeable_concept.is_some() || self.topic_reference.is_some()
-    }
     fn has_legally_binding(&self) -> bool {
         self.legally_binding_attachment.is_some() || self.legally_binding_reference.is_some()
+    }
+    fn has_topic(&self) -> bool {
+        self.topic_codeable_concept.is_some() || self.topic_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

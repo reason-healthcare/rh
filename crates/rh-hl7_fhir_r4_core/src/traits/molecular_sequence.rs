@@ -78,8 +78,8 @@ pub trait MolecularSequenceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::molecular_sequence::MolecularSequence;
-    /// use hl7_fhir_r4_core::traits::molecular_sequence::MolecularSequenceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::molecular_sequence::MolecularSequence;
+    /// use rh_hl7_fhir_r4_core::traits::molecular_sequence::MolecularSequenceMutators;
     ///
     /// let resource = MolecularSequence::new();
     /// // Can be used with method chaining:

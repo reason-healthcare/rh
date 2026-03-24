@@ -97,8 +97,8 @@ pub trait ProcedureMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::procedure::Procedure;
-    /// use hl7_fhir_r4_core::traits::procedure::ProcedureMutators;
+    /// use rh_hl7_fhir_r4_core::resources::procedure::Procedure;
+    /// use rh_hl7_fhir_r4_core::traits::procedure::ProcedureMutators;
     ///
     /// let resource = Procedure::new();
     /// // Can be used with method chaining:

@@ -91,8 +91,8 @@ pub trait CarePlanMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::care_plan::CarePlan;
-    /// use hl7_fhir_r4_core::traits::care_plan::CarePlanMutators;
+    /// use rh_hl7_fhir_r4_core::resources::care_plan::CarePlan;
+    /// use rh_hl7_fhir_r4_core::traits::care_plan::CarePlanMutators;
     ///
     /// let resource = CarePlan::new();
     /// // Can be used with method chaining:

@@ -174,47 +174,6 @@ pub struct Immunization {
     #[serde(rename = "protocolApplied")]
     pub protocol_applied: Option<Vec<ImmunizationProtocolapplied>>,
 }
-/// Immunization nested structure for the 'protocolApplied' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationProtocolapplied {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of vaccine series
-    pub series: Option<StringType>,
-    /// Extension element for the 'series' primitive field. Contains metadata and extensions.
-    pub _series: Option<Element>,
-    /// Who is responsible for publishing the recommendations
-    pub authority: Option<Reference>,
-    /// Vaccine preventatable disease being targetted
-    ///
-    /// Binding: example (The vaccine preventable disease the dose is being administered for.)
-    ///
-    /// Available values:
-    /// - `1857005`
-    /// - `397430003`
-    /// - `14189004`
-    /// - `36989005`
-    /// - `36653000`
-    /// - `76902006`
-    /// - `709410003`
-    /// - `27836007`
-    /// - `398102009`
-    #[serde(rename = "targetDisease")]
-    pub target_disease: Option<Vec<CodeableConcept>>,
-    /// Dose number within series (positiveInt)
-    #[serde(rename = "doseNumberPositiveInt")]
-    pub dose_number_positive_int: PositiveIntType,
-    /// Dose number within series (string)
-    #[serde(rename = "doseNumberString")]
-    pub dose_number_string: StringType,
-    /// Recommended number of doses for immunity (positiveInt)
-    #[serde(rename = "seriesDosesPositiveInt")]
-    pub series_doses_positive_int: Option<PositiveIntType>,
-    /// Recommended number of doses for immunity (string)
-    #[serde(rename = "seriesDosesString")]
-    pub series_doses_string: Option<StringType>,
-}
 /// Immunization nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationReaction {
@@ -278,6 +237,47 @@ pub struct ImmunizationPerformer {
     /// Individual or organization who was performing
     pub actor: Reference,
 }
+/// Immunization nested structure for the 'protocolApplied' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationProtocolapplied {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of vaccine series
+    pub series: Option<StringType>,
+    /// Extension element for the 'series' primitive field. Contains metadata and extensions.
+    pub _series: Option<Element>,
+    /// Who is responsible for publishing the recommendations
+    pub authority: Option<Reference>,
+    /// Vaccine preventatable disease being targetted
+    ///
+    /// Binding: example (The vaccine preventable disease the dose is being administered for.)
+    ///
+    /// Available values:
+    /// - `1857005`
+    /// - `397430003`
+    /// - `14189004`
+    /// - `36989005`
+    /// - `36653000`
+    /// - `76902006`
+    /// - `709410003`
+    /// - `27836007`
+    /// - `398102009`
+    #[serde(rename = "targetDisease")]
+    pub target_disease: Option<Vec<CodeableConcept>>,
+    /// Dose number within series (positiveInt)
+    #[serde(rename = "doseNumberPositiveInt")]
+    pub dose_number_positive_int: PositiveIntType,
+    /// Dose number within series (string)
+    #[serde(rename = "doseNumberString")]
+    pub dose_number_string: StringType,
+    /// Recommended number of doses for immunity (positiveInt)
+    #[serde(rename = "seriesDosesPositiveInt")]
+    pub series_doses_positive_int: Option<PositiveIntType>,
+    /// Recommended number of doses for immunity (string)
+    #[serde(rename = "seriesDosesString")]
+    pub series_doses_string: Option<StringType>,
+}
 
 impl Default for Immunization {
     fn default() -> Self {
@@ -322,22 +322,6 @@ impl Default for Immunization {
     }
 }
 
-impl Default for ImmunizationProtocolapplied {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            series: Default::default(),
-            _series: Default::default(),
-            authority: Default::default(),
-            target_disease: Default::default(),
-            dose_number_positive_int: Default::default(),
-            dose_number_string: Default::default(),
-            series_doses_positive_int: Default::default(),
-            series_doses_string: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationReaction {
     fn default() -> Self {
         Self {
@@ -373,6 +357,22 @@ impl Default for ImmunizationPerformer {
             base: BackboneElement::default(),
             function: Default::default(),
             actor: Reference::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationProtocolapplied {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            series: Default::default(),
+            _series: Default::default(),
+            authority: Default::default(),
+            target_disease: Default::default(),
+            dose_number_positive_int: Default::default(),
+            dose_number_string: Default::default(),
+            series_doses_positive_int: Default::default(),
+            series_doses_string: Default::default(),
         }
     }
 }

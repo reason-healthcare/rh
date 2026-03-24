@@ -67,8 +67,8 @@ pub trait AuditEventMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::audit_event::AuditEvent;
-    /// use hl7_fhir_r4_core::traits::audit_event::AuditEventMutators;
+    /// use rh_hl7_fhir_r4_core::resources::audit_event::AuditEvent;
+    /// use rh_hl7_fhir_r4_core::traits::audit_event::AuditEventMutators;
     ///
     /// let resource = AuditEvent::new();
     /// // Can be used with method chaining:

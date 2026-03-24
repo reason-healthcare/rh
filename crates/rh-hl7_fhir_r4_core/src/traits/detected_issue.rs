@@ -65,8 +65,8 @@ pub trait DetectedIssueMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::detected_issue::DetectedIssue;
-    /// use hl7_fhir_r4_core::traits::detected_issue::DetectedIssueMutators;
+    /// use rh_hl7_fhir_r4_core::resources::detected_issue::DetectedIssue;
+    /// use rh_hl7_fhir_r4_core::traits::detected_issue::DetectedIssueMutators;
     ///
     /// let resource = DetectedIssue::new();
     /// // Can be used with method chaining:

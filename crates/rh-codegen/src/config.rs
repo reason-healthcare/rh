@@ -21,6 +21,9 @@ pub struct CodegenConfig {
     pub use_macro_calls: bool,
     /// Custom type mappings from FHIR to Rust types
     pub type_mappings: HashMap<String, String>,
+    /// Optional override for the generated crate name (e.g., "rh-hl7-fhir-r4-core").
+    /// When None, the name is auto-derived from the FHIR package name.
+    pub crate_name: Option<String>,
 }
 
 impl Default for CodegenConfig {
@@ -53,6 +56,7 @@ impl Default for CodegenConfig {
             with_docs: true,
             use_macro_calls: false, // Disabled by default for backward compatibility
             type_mappings,
+            crate_name: None,
         }
     }
 }

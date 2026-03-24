@@ -73,8 +73,8 @@ pub trait GoalMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::goal::Goal;
-    /// use hl7_fhir_r4_core::traits::goal::GoalMutators;
+    /// use rh_hl7_fhir_r4_core::resources::goal::Goal;
+    /// use rh_hl7_fhir_r4_core::traits::goal::GoalMutators;
     ///
     /// let resource = Goal::new();
     /// // Can be used with method chaining:

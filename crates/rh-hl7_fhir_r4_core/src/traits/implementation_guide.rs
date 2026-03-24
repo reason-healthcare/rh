@@ -88,8 +88,8 @@ pub trait ImplementationGuideMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::implementation_guide::ImplementationGuide;
-    /// use hl7_fhir_r4_core::traits::implementation_guide::ImplementationGuideMutators;
+    /// use rh_hl7_fhir_r4_core::resources::implementation_guide::ImplementationGuide;
+    /// use rh_hl7_fhir_r4_core::traits::implementation_guide::ImplementationGuideMutators;
     ///
     /// let resource = ImplementationGuide::new();
     /// // Can be used with method chaining:

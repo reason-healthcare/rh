@@ -83,6 +83,56 @@ pub struct CoverageEligibilityResponse {
     /// Processing errors
     pub error: Option<Vec<CoverageEligibilityResponseError>>,
 }
+/// CoverageEligibilityResponse nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefits and authorization details
+    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Coverage inforce indicator
+    pub inforce: Option<BooleanType>,
+    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
+    pub _inforce: Option<Element>,
+    /// When the benefits are applicable
+    #[serde(rename = "benefitPeriod")]
+    pub benefit_period: Option<Period>,
+}
+/// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsuranceItemBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefit classification
+    ///
+    /// Binding: example (Deductable, visits, co-pay, etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Benefits allowed (unsignedInt)
+    #[serde(rename = "allowedUnsignedInt")]
+    pub allowed_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits allowed (string)
+    #[serde(rename = "allowedString")]
+    pub allowed_string: Option<StringType>,
+    /// Benefits allowed (Money)
+    #[serde(rename = "allowedMoney")]
+    pub allowed_money: Option<Money>,
+    /// Benefits used (unsignedInt)
+    #[serde(rename = "usedUnsignedInt")]
+    pub used_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits used (string)
+    #[serde(rename = "usedString")]
+    pub used_string: Option<StringType>,
+    /// Benefits used (Money)
+    #[serde(rename = "usedMoney")]
+    pub used_money: Option<Money>,
+}
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItem {
@@ -173,56 +223,6 @@ pub struct CoverageEligibilityResponseError {
     /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
     pub code: CodeableConcept,
 }
-/// CoverageEligibilityResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefits and authorization details
-    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Coverage inforce indicator
-    pub inforce: Option<BooleanType>,
-    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
-    pub _inforce: Option<Element>,
-    /// When the benefits are applicable
-    #[serde(rename = "benefitPeriod")]
-    pub benefit_period: Option<Period>,
-}
-/// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsuranceItemBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefit classification
-    ///
-    /// Binding: example (Deductable, visits, co-pay, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Benefits allowed (unsignedInt)
-    #[serde(rename = "allowedUnsignedInt")]
-    pub allowed_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits allowed (string)
-    #[serde(rename = "allowedString")]
-    pub allowed_string: Option<StringType>,
-    /// Benefits allowed (Money)
-    #[serde(rename = "allowedMoney")]
-    pub allowed_money: Option<Money>,
-    /// Benefits used (unsignedInt)
-    #[serde(rename = "usedUnsignedInt")]
-    pub used_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits used (string)
-    #[serde(rename = "usedString")]
-    pub used_string: Option<StringType>,
-    /// Benefits used (Money)
-    #[serde(rename = "usedMoney")]
-    pub used_money: Option<Money>,
-}
 
 impl Default for CoverageEligibilityResponse {
     fn default() -> Self {
@@ -250,6 +250,34 @@ impl Default for CoverageEligibilityResponse {
             _pre_auth_ref: Default::default(),
             form: Default::default(),
             error: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            coverage: Reference::default(),
+            inforce: Default::default(),
+            _inforce: Default::default(),
+            benefit_period: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            allowed_unsigned_int: Default::default(),
+            allowed_string: Default::default(),
+            allowed_money: Default::default(),
+            used_unsigned_int: Default::default(),
+            used_string: Default::default(),
+            used_money: Default::default(),
         }
     }
 }
@@ -285,34 +313,6 @@ impl Default for CoverageEligibilityResponseError {
         Self {
             base: BackboneElement::default(),
             code: CodeableConcept::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            coverage: Reference::default(),
-            inforce: Default::default(),
-            _inforce: Default::default(),
-            benefit_period: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            allowed_unsigned_int: Default::default(),
-            allowed_string: Default::default(),
-            allowed_money: Default::default(),
-            used_unsigned_int: Default::default(),
-            used_string: Default::default(),
-            used_money: Default::default(),
         }
     }
 }

@@ -128,8 +128,8 @@ pub trait MeasureMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::measure::Measure;
-    /// use hl7_fhir_r4_core::traits::measure::MeasureMutators;
+    /// use rh_hl7_fhir_r4_core::resources::measure::Measure;
+    /// use rh_hl7_fhir_r4_core::traits::measure::MeasureMutators;
     ///
     /// let resource = Measure::new();
     /// // Can be used with method chaining:

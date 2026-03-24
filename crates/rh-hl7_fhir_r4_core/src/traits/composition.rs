@@ -76,8 +76,8 @@ pub trait CompositionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::composition::Composition;
-    /// use hl7_fhir_r4_core::traits::composition::CompositionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::composition::Composition;
+    /// use rh_hl7_fhir_r4_core::traits::composition::CompositionMutators;
     ///
     /// let resource = Composition::new();
     /// // Can be used with method chaining:

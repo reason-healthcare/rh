@@ -76,8 +76,8 @@ pub trait MedicinalProductAuthorizationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medicinal_product_authorization::MedicinalProductAuthorization;
-    /// use hl7_fhir_r4_core::traits::medicinal_product_authorization::MedicinalProductAuthorizationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medicinal_product_authorization::MedicinalProductAuthorization;
+    /// use rh_hl7_fhir_r4_core::traits::medicinal_product_authorization::MedicinalProductAuthorizationMutators;
     ///
     /// let resource = MedicinalProductAuthorization::new();
     /// // Can be used with method chaining:

@@ -49,8 +49,8 @@ pub trait BasicMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::basic::Basic;
-    /// use hl7_fhir_r4_core::traits::basic::BasicMutators;
+    /// use rh_hl7_fhir_r4_core::resources::basic::Basic;
+    /// use rh_hl7_fhir_r4_core::traits::basic::BasicMutators;
     ///
     /// let resource = Basic::new();
     /// // Can be used with method chaining:

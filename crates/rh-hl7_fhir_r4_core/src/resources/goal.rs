@@ -104,54 +104,6 @@ pub struct Goal {
     #[serde(rename = "outcomeReference")]
     pub outcome_reference: Option<Vec<Reference>>,
 }
-/// reason rejected
-///
-/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalReasonRejected {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// related goal
-///
-/// Establishes a relationship between this goal and other goals.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Goal acceptance
-///
-/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalAcceptance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Goal nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalTarget {
@@ -192,6 +144,54 @@ pub struct GoalTarget {
     #[serde(rename = "dueDuration")]
     pub due_duration: Option<Duration>,
 }
+/// related goal
+///
+/// Establishes a relationship between this goal and other goals.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalRelationship {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Goal acceptance
+///
+/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalAcceptance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// reason rejected
+///
+/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalReasonRejected {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Goal {
     fn default() -> Self {
@@ -221,10 +221,20 @@ impl Default for Goal {
     }
 }
 
-impl Default for GoalReasonRejected {
+impl Default for GoalTarget {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            measure: Default::default(),
+            detail_quantity: Default::default(),
+            detail_range: Default::default(),
+            detail_codeable_concept: Default::default(),
+            detail_string: Default::default(),
+            detail_boolean: Default::default(),
+            detail_integer: Default::default(),
+            detail_ratio: Default::default(),
+            due_date: Default::default(),
+            due_duration: Default::default(),
         }
     }
 }
@@ -245,20 +255,10 @@ impl Default for GoalAcceptance {
     }
 }
 
-impl Default for GoalTarget {
+impl Default for GoalReasonRejected {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            measure: Default::default(),
-            detail_quantity: Default::default(),
-            detail_range: Default::default(),
-            detail_codeable_concept: Default::default(),
-            detail_string: Default::default(),
-            detail_boolean: Default::default(),
-            detail_integer: Default::default(),
-            detail_ratio: Default::default(),
-            due_date: Default::default(),
-            due_duration: Default::default(),
+            base: Extension::default(),
         }
     }
 }

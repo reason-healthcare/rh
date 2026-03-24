@@ -94,8 +94,8 @@ pub trait ChargeItemDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::charge_item_definition::ChargeItemDefinition;
-    /// use hl7_fhir_r4_core::traits::charge_item_definition::ChargeItemDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::charge_item_definition::ChargeItemDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::charge_item_definition::ChargeItemDefinitionMutators;
     ///
     /// let resource = ChargeItemDefinition::new();
     /// // Can be used with method chaining:

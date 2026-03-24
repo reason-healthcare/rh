@@ -32,8 +32,8 @@ pub trait CdshooksguidanceresponseMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cdshooksguidanceresponse::Cdshooksguidanceresponse;
-    /// use hl7_fhir_r4_core::traits::cdshooksguidanceresponse::CdshooksguidanceresponseMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cdshooksguidanceresponse::Cdshooksguidanceresponse;
+    /// use rh_hl7_fhir_r4_core::traits::cdshooksguidanceresponse::CdshooksguidanceresponseMutators;
     ///
     /// let resource = Cdshooksguidanceresponse::new();
     /// // Can be used with method chaining:

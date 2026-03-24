@@ -6,7 +6,7 @@
 //! See: https://www.hl7.org/fhir/fhirpath.html
 
 use crate::evaluator::types::FhirPathValue;
-use hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType};
+use rh_hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType};
 
 /// Get the FHIR type for a field in a resource
 ///
@@ -17,7 +17,7 @@ use hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType};
 /// # Returns
 /// The FHIR field type if found, None otherwise
 pub fn get_field_type(resource_type: &str, field_name: &str) -> Option<&'static FhirFieldType> {
-    hl7_fhir_r4_core::metadata::get_field_info(resource_type, field_name)
+    rh_hl7_fhir_r4_core::metadata::get_field_info(resource_type, field_name)
         .map(|info| &info.field_type)
 }
 

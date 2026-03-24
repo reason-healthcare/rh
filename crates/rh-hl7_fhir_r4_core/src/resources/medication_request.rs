@@ -161,6 +161,25 @@ pub struct MedicationRequest {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationRequest nested structure for the 'substitution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestSubstitution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether substitution is allowed or not (boolean)
+    #[serde(rename = "allowedBoolean")]
+    pub allowed_boolean: BooleanType,
+    /// Whether substitution is allowed or not (CodeableConcept)
+    #[serde(rename = "allowedCodeableConcept")]
+    pub allowed_codeable_concept: CodeableConcept,
+    /// Why should (not) substitution be made
+    ///
+    /// Binding: example (A coded concept describing the reason that a different medication should (or should not) be substituted from what was prescribed.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
+    pub reason: Option<CodeableConcept>,
+}
 /// MedicationRequest nested structure for the 'dispenseRequest' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationRequestDispenserequest {
@@ -189,25 +208,6 @@ pub struct MedicationRequestDispenserequest {
     pub expected_supply_duration: Option<Duration>,
     /// Intended dispenser
     pub performer: Option<Reference>,
-}
-/// MedicationRequest nested structure for the 'substitution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestSubstitution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether substitution is allowed or not (boolean)
-    #[serde(rename = "allowedBoolean")]
-    pub allowed_boolean: BooleanType,
-    /// Whether substitution is allowed or not (CodeableConcept)
-    #[serde(rename = "allowedCodeableConcept")]
-    pub allowed_codeable_concept: CodeableConcept,
-    /// Why should (not) substitution be made
-    ///
-    /// Binding: example (A coded concept describing the reason that a different medication should (or should not) be substituted from what was prescribed.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
-    pub reason: Option<CodeableConcept>,
 }
 /// MedicationRequestDispenserequest nested structure for the 'initialFill' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,6 +270,17 @@ impl Default for MedicationRequest {
     }
 }
 
+impl Default for MedicationRequestSubstitution {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            allowed_boolean: Default::default(),
+            allowed_codeable_concept: Default::default(),
+            reason: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationRequestDispenserequest {
     fn default() -> Self {
         Self {
@@ -282,17 +293,6 @@ impl Default for MedicationRequestDispenserequest {
             quantity: Default::default(),
             expected_supply_duration: Default::default(),
             performer: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationRequestSubstitution {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            allowed_boolean: Default::default(),
-            allowed_codeable_concept: Default::default(),
-            reason: Default::default(),
         }
     }
 }
@@ -1016,11 +1016,11 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_reported(&self) -> bool {
-        self.reported_boolean.is_some() || self.reported_reference.is_some()
-    }
     fn has_medication(&self) -> bool {
         true
+    }
+    fn has_reported(&self) -> bool {
+        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

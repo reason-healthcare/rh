@@ -139,23 +139,6 @@ pub struct OperationDefinition {
     /// Define overloaded variants for when  generating code
     pub overload: Option<Vec<OperationDefinitionOverload>>,
 }
-/// OperationDefinitionParameter nested structure for the 'binding' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationDefinitionParameterBinding {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// required | extensible | preferred | example
-    pub strength: BindingStrength,
-    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
-    pub _strength: Option<Element>,
-    /// Source of value set
-    #[serde(rename = "valueSet")]
-    pub value_set: StringType,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-}
 /// OperationDefinition nested structure for the 'overload' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationDefinitionOverload {
@@ -172,6 +155,23 @@ pub struct OperationDefinitionOverload {
     pub comment: Option<StringType>,
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
+}
+/// OperationDefinitionParameter nested structure for the 'binding' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationDefinitionParameterBinding {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// required | extensible | preferred | example
+    pub strength: BindingStrength,
+    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
+    pub _strength: Option<Element>,
+    /// Source of value set
+    #[serde(rename = "valueSet")]
+    pub value_set: StringType,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
 }
 /// OperationDefinitionParameter nested structure for the 'referencedFrom' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,11 +196,11 @@ pub struct OperationDefinitionParameter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// ValueSet details if this is coded
-    pub binding: Option<OperationDefinitionParameterBinding>,
     /// References to this parameter
     #[serde(rename = "referencedFrom")]
     pub referenced_from: Option<Vec<OperationDefinitionParameterReferencedfrom>>,
+    /// ValueSet details if this is coded
+    pub binding: Option<OperationDefinitionParameterBinding>,
     /// Name in Parameters.parameter.name or in URL
     pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -298,18 +298,6 @@ impl Default for OperationDefinition {
     }
 }
 
-impl Default for OperationDefinitionParameterBinding {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            _strength: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-        }
-    }
-}
-
 impl Default for OperationDefinitionOverload {
     fn default() -> Self {
         Self {
@@ -318,6 +306,18 @@ impl Default for OperationDefinitionOverload {
             _parameter_name: Default::default(),
             comment: Default::default(),
             _comment: Default::default(),
+        }
+    }
+}
+
+impl Default for OperationDefinitionParameterBinding {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            _strength: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
         }
     }
 }
@@ -338,8 +338,8 @@ impl Default for OperationDefinitionParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            binding: Default::default(),
             referenced_from: Default::default(),
+            binding: Default::default(),
             name: StringType::default(),
             _name: Default::default(),
             use_: Default::default(),

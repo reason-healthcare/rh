@@ -32,8 +32,8 @@ pub trait CdshooksrequestgroupMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cdshooksrequestgroup::Cdshooksrequestgroup;
-    /// use hl7_fhir_r4_core::traits::cdshooksrequestgroup::CdshooksrequestgroupMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cdshooksrequestgroup::Cdshooksrequestgroup;
+    /// use rh_hl7_fhir_r4_core::traits::cdshooksrequestgroup::CdshooksrequestgroupMutators;
     ///
     /// let resource = Cdshooksrequestgroup::new();
     /// // Can be used with method chaining:

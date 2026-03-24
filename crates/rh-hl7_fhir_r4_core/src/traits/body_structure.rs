@@ -57,8 +57,8 @@ pub trait BodyStructureMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::body_structure::BodyStructure;
-    /// use hl7_fhir_r4_core::traits::body_structure::BodyStructureMutators;
+    /// use rh_hl7_fhir_r4_core::resources::body_structure::BodyStructure;
+    /// use rh_hl7_fhir_r4_core::traits::body_structure::BodyStructureMutators;
     ///
     /// let resource = BodyStructure::new();
     /// // Can be used with method chaining:

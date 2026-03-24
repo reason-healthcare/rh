@@ -109,8 +109,8 @@ pub trait LibraryMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::library::Library;
-    /// use hl7_fhir_r4_core::traits::library::LibraryMutators;
+    /// use rh_hl7_fhir_r4_core::resources::library::Library;
+    /// use rh_hl7_fhir_r4_core::traits::library::LibraryMutators;
     ///
     /// let resource = Library::new();
     /// // Can be used with method chaining:

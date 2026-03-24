@@ -32,8 +32,8 @@ pub trait ResprateMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::resprate::Resprate;
-    /// use hl7_fhir_r4_core::traits::resprate::ResprateMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::resprate::Resprate;
+    /// use rh_hl7_fhir_r4_core::traits::resprate::ResprateMutators;
     ///
     /// let resource = Resprate::new();
     /// // Can be used with method chaining:

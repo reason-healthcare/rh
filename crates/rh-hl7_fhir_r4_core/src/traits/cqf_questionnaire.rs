@@ -32,8 +32,8 @@ pub trait CQFQuestionnaireMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cqf_questionnaire::CQFQuestionnaire;
-    /// use hl7_fhir_r4_core::traits::cqf_questionnaire::CQFQuestionnaireMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cqf_questionnaire::CQFQuestionnaire;
+    /// use rh_hl7_fhir_r4_core::traits::cqf_questionnaire::CQFQuestionnaireMutators;
     ///
     /// let resource = CQFQuestionnaire::new();
     /// // Can be used with method chaining:

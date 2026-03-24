@@ -150,6 +150,33 @@ pub struct EffectEvidenceSynthesis {
     /// How certain is the effect
     pub certainty: Option<Vec<EffectEvidenceSynthesisCertainty>>,
 }
+/// EffectEvidenceSynthesis nested structure for the 'resultsByExposure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisResultsbyexposure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of results by exposure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// exposure | exposure-alternative
+    #[serde(rename = "exposureState")]
+    pub exposure_state: Option<ExposureState>,
+    /// Extension element for the 'exposureState' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_exposureState")]
+    pub _exposure_state: Option<Element>,
+    /// Variant exposure states
+    ///
+    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
+    #[serde(rename = "variantState")]
+    pub variant_state: Option<CodeableConcept>,
+    /// Risk evidence synthesis
+    #[serde(rename = "riskEvidenceSynthesis")]
+    pub risk_evidence_synthesis: Reference,
+}
 /// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectEvidenceSynthesisEffectestimate {
@@ -184,33 +211,6 @@ pub struct EffectEvidenceSynthesisEffectestimate {
     /// What unit is the outcome described in?
     #[serde(rename = "unitOfMeasure")]
     pub unit_of_measure: Option<CodeableConcept>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'resultsByExposure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisResultsbyexposure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of results by exposure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// exposure | exposure-alternative
-    #[serde(rename = "exposureState")]
-    pub exposure_state: Option<ExposureState>,
-    /// Extension element for the 'exposureState' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_exposureState")]
-    pub _exposure_state: Option<Element>,
-    /// Variant exposure states
-    ///
-    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
-    #[serde(rename = "variantState")]
-    pub variant_state: Option<CodeableConcept>,
-    /// Risk evidence synthesis
-    #[serde(rename = "riskEvidenceSynthesis")]
-    pub risk_evidence_synthesis: Reference,
 }
 /// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -354,6 +354,20 @@ impl Default for EffectEvidenceSynthesis {
     }
 }
 
+impl Default for EffectEvidenceSynthesisResultsbyexposure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            exposure_state: Default::default(),
+            _exposure_state: Default::default(),
+            variant_state: Default::default(),
+            risk_evidence_synthesis: Default::default(),
+        }
+    }
+}
+
 impl Default for EffectEvidenceSynthesisEffectestimate {
     fn default() -> Self {
         Self {
@@ -366,20 +380,6 @@ impl Default for EffectEvidenceSynthesisEffectestimate {
             value: Default::default(),
             _value: Default::default(),
             unit_of_measure: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisResultsbyexposure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            exposure_state: Default::default(),
-            _exposure_state: Default::default(),
-            variant_state: Default::default(),
-            risk_evidence_synthesis: Default::default(),
         }
     }
 }

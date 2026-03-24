@@ -91,10 +91,10 @@ pub struct SubstanceNucleicAcidSubunit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// 5.3.6.8.1 Sugar ID (Mandatory)
-    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
     /// The linkages between sugar residues will also be captured
     pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
+    /// 5.3.6.8.1 Sugar ID (Mandatory)
+    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
     /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
     pub subunit: Option<IntegerType>,
     /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
@@ -165,8 +165,8 @@ impl Default for SubstanceNucleicAcidSubunit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sugar: Default::default(),
             linkage: Default::default(),
+            sugar: Default::default(),
             subunit: Default::default(),
             _subunit: Default::default(),
             sequence: Default::default(),

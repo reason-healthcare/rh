@@ -76,8 +76,8 @@ pub trait ConceptMapMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::concept_map::ConceptMap;
-    /// use hl7_fhir_r4_core::traits::concept_map::ConceptMapMutators;
+    /// use rh_hl7_fhir_r4_core::resources::concept_map::ConceptMap;
+    /// use rh_hl7_fhir_r4_core::traits::concept_map::ConceptMapMutators;
     ///
     /// let resource = ConceptMap::new();
     /// // Can be used with method chaining:

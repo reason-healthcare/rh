@@ -98,25 +98,31 @@ pub struct ImagingStudy {
     /// Each study has one or more series of instances
     pub series: Option<Vec<ImagingStudySeries>>,
 }
-/// ImagingStudySeries nested structure for the 'performer' field
+/// ImagingStudySeries nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingStudySeriesPerformer {
+pub struct ImagingStudySeriesInstance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of performance
+    /// DICOM SOP Instance UID
+    pub uid: StringType,
+    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
+    pub _uid: Option<Element>,
+    /// DICOM class type
     ///
-    /// Binding: extensible (The type of involvement of the performer.)
+    /// Binding: extensible (The sopClass for the instance.)
     ///
-    /// Available values:
-    /// - `CON`: consultant
-    /// - `VRF`: verifier
-    /// - `PRF`: performer
-    /// - `SPRF`: secondary performer
-    /// - `REF`: referrer
-    pub function: Option<CodeableConcept>,
-    /// Who performed the series
-    pub actor: Reference,
+    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
+    #[serde(rename = "sopClass")]
+    pub sop_class: Coding,
+    /// The number of this instance in the series
+    pub number: Option<UnsignedIntType>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// Description of instance
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
 }
 /// ImagingStudy nested structure for the 'series' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,31 +183,25 @@ pub struct ImagingStudySeries {
     /// Extension element for the 'started' primitive field. Contains metadata and extensions.
     pub _started: Option<Element>,
 }
-/// ImagingStudySeries nested structure for the 'instance' field
+/// ImagingStudySeries nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingStudySeriesInstance {
+pub struct ImagingStudySeriesPerformer {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// DICOM SOP Instance UID
-    pub uid: StringType,
-    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
-    pub _uid: Option<Element>,
-    /// DICOM class type
+    /// Type of performance
     ///
-    /// Binding: extensible (The sopClass for the instance.)
+    /// Binding: extensible (The type of involvement of the performer.)
     ///
-    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
-    #[serde(rename = "sopClass")]
-    pub sop_class: Coding,
-    /// The number of this instance in the series
-    pub number: Option<UnsignedIntType>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// Description of instance
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
+    /// Available values:
+    /// - `CON`: consultant
+    /// - `VRF`: verifier
+    /// - `PRF`: performer
+    /// - `SPRF`: secondary performer
+    /// - `REF`: referrer
+    pub function: Option<CodeableConcept>,
+    /// Who performed the series
+    pub actor: Reference,
 }
 
 impl Default for ImagingStudy {
@@ -237,12 +237,17 @@ impl Default for ImagingStudy {
     }
 }
 
-impl Default for ImagingStudySeriesPerformer {
+impl Default for ImagingStudySeriesInstance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Default::default(),
+            uid: Default::default(),
+            _uid: Default::default(),
+            sop_class: Default::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
         }
     }
 }
@@ -272,17 +277,12 @@ impl Default for ImagingStudySeries {
     }
 }
 
-impl Default for ImagingStudySeriesInstance {
+impl Default for ImagingStudySeriesPerformer {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            uid: Default::default(),
-            _uid: Default::default(),
-            sop_class: Default::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
+            function: Default::default(),
+            actor: Default::default(),
         }
     }
 }

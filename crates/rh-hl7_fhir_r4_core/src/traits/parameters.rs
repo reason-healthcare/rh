@@ -38,8 +38,8 @@ pub trait ParametersMutators: ResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::parameters::Parameters;
-    /// use hl7_fhir_r4_core::traits::parameters::ParametersMutators;
+    /// use rh_hl7_fhir_r4_core::resources::parameters::Parameters;
+    /// use rh_hl7_fhir_r4_core::traits::parameters::ParametersMutators;
     ///
     /// let resource = Parameters::new();
     /// // Can be used with method chaining:

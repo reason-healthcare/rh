@@ -89,8 +89,8 @@ pub trait MedicationDispenseMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medication_dispense::MedicationDispense;
-    /// use hl7_fhir_r4_core::traits::medication_dispense::MedicationDispenseMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medication_dispense::MedicationDispense;
+    /// use rh_hl7_fhir_r4_core::traits::medication_dispense::MedicationDispenseMutators;
     ///
     /// let resource = MedicationDispense::new();
     /// // Can be used with method chaining:

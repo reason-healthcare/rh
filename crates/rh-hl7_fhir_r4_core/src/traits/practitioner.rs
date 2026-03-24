@@ -65,8 +65,8 @@ pub trait PractitionerMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::practitioner::Practitioner;
-    /// use hl7_fhir_r4_core::traits::practitioner::PractitionerMutators;
+    /// use rh_hl7_fhir_r4_core::resources::practitioner::Practitioner;
+    /// use rh_hl7_fhir_r4_core::traits::practitioner::PractitionerMutators;
     ///
     /// let resource = Practitioner::new();
     /// // Can be used with method chaining:

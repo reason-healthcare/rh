@@ -52,6 +52,11 @@ pub struct CodegenArgs {
     /// Force overwrite of non-empty output directory
     #[arg(long)]
     pub force: bool,
+
+    /// Override the generated crate name (e.g., "rh-hl7-fhir-r4-core").
+    /// When not provided, the name is auto-derived from the FHIR package name.
+    #[arg(long)]
+    pub crate_name: Option<String>,
 }
 
 pub async fn handle_command(args: CodegenArgs) -> Result<()> {
@@ -117,8 +122,11 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
             .await?;
     }
 
-    // Use default configuration
-    let config = CodegenConfig::default();
+    // Use default configuration with optional crate name override
+    let config = CodegenConfig {
+        crate_name: args.crate_name.clone(),
+        ..CodegenConfig::default()
+    };
 
     // Set up package directory
     let package_dir = pkg_dir
@@ -150,7 +158,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
 
     // Generate complete crate structure metadata first
     let command_invoked = format!(
-        "rh codegen {} {} --output {}{}{}{}",
+        "rh codegen {} {} --output {}{}{}{}{}",
         args.package,
         version,
         args.output,
@@ -160,7 +168,12 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
             String::new()
         },
         if args.overwrite { " --overwrite" } else { "" },
-        if args.force { " --force" } else { "" }
+        if args.force { " --force" } else { "" },
+        if let Some(cn) = &args.crate_name {
+            format!(" --crate-name {cn}")
+        } else {
+            String::new()
+        },
     );
 
     let (canonical, author, description) =
@@ -178,6 +191,7 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
         author: &author,
         description: &description,
         command_invoked: &command_invoked,
+        crate_name: args.crate_name.as_deref(),
     })?;
 
     info!("Generated initial crate structure with Cargo.toml and directories");

@@ -69,8 +69,8 @@ pub trait NamingSystemMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::naming_system::NamingSystem;
-    /// use hl7_fhir_r4_core::traits::naming_system::NamingSystemMutators;
+    /// use rh_hl7_fhir_r4_core::resources::naming_system::NamingSystem;
+    /// use rh_hl7_fhir_r4_core::traits::naming_system::NamingSystemMutators;
     ///
     /// let resource = NamingSystem::new();
     /// // Can be used with method chaining:

@@ -32,8 +32,8 @@ pub trait LipidprofileMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::lipidprofile::Lipidprofile;
-    /// use hl7_fhir_r4_core::traits::lipidprofile::LipidprofileMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::lipidprofile::Lipidprofile;
+    /// use rh_hl7_fhir_r4_core::traits::lipidprofile::LipidprofileMutators;
     ///
     /// let resource = Lipidprofile::new();
     /// // Can be used with method chaining:

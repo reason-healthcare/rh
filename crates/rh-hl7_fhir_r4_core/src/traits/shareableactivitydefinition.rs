@@ -32,8 +32,8 @@ pub trait ShareableactivitydefinitionMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareableactivitydefinition::Shareableactivitydefinition;
-    /// use hl7_fhir_r4_core::traits::shareableactivitydefinition::ShareableactivitydefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareableactivitydefinition::Shareableactivitydefinition;
+    /// use rh_hl7_fhir_r4_core::traits::shareableactivitydefinition::ShareableactivitydefinitionMutators;
     ///
     /// let resource = Shareableactivitydefinition::new();
     /// // Can be used with method chaining:

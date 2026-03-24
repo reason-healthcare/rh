@@ -110,22 +110,6 @@ pub struct DeviceDefinition {
     /// A substance used to create the material(s) of which the device is made
     pub material: Option<Vec<DeviceDefinitionMaterial>>,
 }
-/// DeviceDefinition nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Property value as a quantity
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Vec<Quantity>>,
-    /// Property value as a code, e.g., NTP4 (synced to NTP)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<Vec<CodeableConcept>>,
-}
 /// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionUdideviceidentifier {
@@ -147,6 +131,22 @@ pub struct DeviceDefinitionUdideviceidentifier {
     /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
     pub _jurisdiction: Option<Element>,
 }
+/// DeviceDefinition nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Property value as a quantity
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Vec<Quantity>>,
+    /// Property value as a code, e.g., NTP4 (synced to NTP)
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<Vec<CodeableConcept>>,
+}
 /// DeviceDefinition nested structure for the 'specialization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionSpecialization {
@@ -163,6 +163,34 @@ pub struct DeviceDefinitionSpecialization {
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'deviceName' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionDevicename {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of capability
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Description of capability
+    pub description: Option<Vec<CodeableConcept>>,
 }
 /// DeviceDefinition nested structure for the 'material' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,34 +210,6 @@ pub struct DeviceDefinitionMaterial {
     /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
     #[serde(rename = "_allergenicIndicator")]
     pub _allergenic_indicator: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'capability' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionCapability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of capability
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Description of capability
-    pub description: Option<Vec<CodeableConcept>>,
-}
-/// DeviceDefinition nested structure for the 'deviceName' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionDevicename {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
 }
 
 impl Default for DeviceDefinition {
@@ -247,17 +247,6 @@ impl Default for DeviceDefinition {
     }
 }
 
-impl Default for DeviceDefinitionProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_code: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceDefinitionUdideviceidentifier {
     fn default() -> Self {
         Self {
@@ -268,6 +257,17 @@ impl Default for DeviceDefinitionUdideviceidentifier {
             _issuer: Default::default(),
             jurisdiction: Default::default(),
             _jurisdiction: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_code: Default::default(),
         }
     }
 }
@@ -284,15 +284,14 @@ impl Default for DeviceDefinitionSpecialization {
     }
 }
 
-impl Default for DeviceDefinitionMaterial {
+impl Default for DeviceDefinitionDevicename {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            substance: CodeableConcept::default(),
-            alternate: Default::default(),
-            _alternate: Default::default(),
-            allergenic_indicator: Default::default(),
-            _allergenic_indicator: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
         }
     }
 }
@@ -307,14 +306,15 @@ impl Default for DeviceDefinitionCapability {
     }
 }
 
-impl Default for DeviceDefinitionDevicename {
+impl Default for DeviceDefinitionMaterial {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
+            substance: CodeableConcept::default(),
+            alternate: Default::default(),
+            _alternate: Default::default(),
+            allergenic_indicator: Default::default(),
+            _allergenic_indicator: Default::default(),
         }
     }
 }

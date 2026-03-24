@@ -32,8 +32,8 @@ pub trait HlaresultMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::hlaresult::Hlaresult;
-    /// use hl7_fhir_r4_core::traits::hlaresult::HlaresultMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::hlaresult::Hlaresult;
+    /// use rh_hl7_fhir_r4_core::traits::hlaresult::HlaresultMutators;
     ///
     /// let resource = Hlaresult::new();
     /// // Can be used with method chaining:

@@ -747,13 +747,13 @@ impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_code(&self) -> bool {
-        true
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
+    }
+    fn has_code(&self) -> bool {
+        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

@@ -93,8 +93,8 @@ pub trait MessageDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::message_definition::MessageDefinition;
-    /// use hl7_fhir_r4_core::traits::message_definition::MessageDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::message_definition::MessageDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::message_definition::MessageDefinitionMutators;
     ///
     /// let resource = MessageDefinition::new();
     /// // Can be used with method chaining:

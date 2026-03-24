@@ -99,8 +99,8 @@ pub trait TerminologyCapabilitiesMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::terminology_capabilities::TerminologyCapabilities;
-    /// use hl7_fhir_r4_core::traits::terminology_capabilities::TerminologyCapabilitiesMutators;
+    /// use rh_hl7_fhir_r4_core::resources::terminology_capabilities::TerminologyCapabilities;
+    /// use rh_hl7_fhir_r4_core::traits::terminology_capabilities::TerminologyCapabilitiesMutators;
     ///
     /// let resource = TerminologyCapabilities::new();
     /// // Can be used with method chaining:

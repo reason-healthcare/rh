@@ -77,8 +77,8 @@ pub trait DocumentReferenceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::document_reference::DocumentReference;
-    /// use hl7_fhir_r4_core::traits::document_reference::DocumentReferenceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::document_reference::DocumentReference;
+    /// use rh_hl7_fhir_r4_core::traits::document_reference::DocumentReferenceMutators;
     ///
     /// let resource = DocumentReference::new();
     /// // Can be used with method chaining:

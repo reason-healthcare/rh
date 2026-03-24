@@ -32,8 +32,8 @@ pub trait FamilymemberhistoryGeneticMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::familymemberhistory_genetic::FamilymemberhistoryGenetic;
-    /// use hl7_fhir_r4_core::traits::familymemberhistory_genetic::FamilymemberhistoryGeneticMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::familymemberhistory_genetic::FamilymemberhistoryGenetic;
+    /// use rh_hl7_fhir_r4_core::traits::familymemberhistory_genetic::FamilymemberhistoryGeneticMutators;
     ///
     /// let resource = FamilymemberhistoryGenetic::new();
     /// // Can be used with method chaining:

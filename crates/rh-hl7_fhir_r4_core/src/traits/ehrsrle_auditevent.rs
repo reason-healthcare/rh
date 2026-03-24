@@ -32,8 +32,8 @@ pub trait EhrsrleAuditeventMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::ehrsrle_auditevent::EhrsrleAuditevent;
-    /// use hl7_fhir_r4_core::traits::ehrsrle_auditevent::EhrsrleAuditeventMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::ehrsrle_auditevent::EhrsrleAuditevent;
+    /// use rh_hl7_fhir_r4_core::traits::ehrsrle_auditevent::EhrsrleAuditeventMutators;
     ///
     /// let resource = EhrsrleAuditevent::new();
     /// // Can be used with method chaining:

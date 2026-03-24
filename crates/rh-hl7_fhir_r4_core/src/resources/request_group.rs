@@ -99,42 +99,6 @@ pub struct RequestGroup {
     /// Proposed actions, if any
     pub action: Option<Vec<RequestGroupAction>>,
 }
-/// RequestGroupAction nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestGroupActionCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// applicability | start | stop
-    pub kind: ActionConditionKind,
-    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
-    pub _kind: Option<Element>,
-    /// Boolean-valued expression
-    pub expression: Option<Expression>,
-}
-/// RequestGroupAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestGroupActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action this is related to
-    #[serde(rename = "actionId")]
-    pub action_id: StringType,
-    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actionId")]
-    pub _action_id: Option<Element>,
-    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
-}
 /// RequestGroup nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestGroupAction {
@@ -234,6 +198,42 @@ pub struct RequestGroupAction {
     /// Sub action
     pub action: Option<Vec<StringType>>,
 }
+/// RequestGroupAction nested structure for the 'condition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestGroupActionCondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// applicability | start | stop
+    pub kind: ActionConditionKind,
+    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
+    pub _kind: Option<Element>,
+    /// Boolean-valued expression
+    pub expression: Option<Expression>,
+}
+/// RequestGroupAction nested structure for the 'relatedAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestGroupActionRelatedaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What action this is related to
+    #[serde(rename = "actionId")]
+    pub action_id: StringType,
+    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actionId")]
+    pub _action_id: Option<Element>,
+    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
+}
 
 impl Default for RequestGroup {
     fn default() -> Self {
@@ -263,31 +263,6 @@ impl Default for RequestGroup {
             reason_reference: Default::default(),
             note: Default::default(),
             action: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestGroupActionCondition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            kind: Default::default(),
-            _kind: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestGroupActionRelatedaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action_id: Default::default(),
-            _action_id: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            offset_duration: Default::default(),
-            offset_range: Default::default(),
         }
     }
 }
@@ -330,6 +305,31 @@ impl Default for RequestGroupAction {
             _cardinality_behavior: Default::default(),
             resource: Default::default(),
             action: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestGroupActionCondition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            kind: Default::default(),
+            _kind: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestGroupActionRelatedaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action_id: Default::default(),
+            _action_id: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            offset_duration: Default::default(),
+            offset_range: Default::default(),
         }
     }
 }

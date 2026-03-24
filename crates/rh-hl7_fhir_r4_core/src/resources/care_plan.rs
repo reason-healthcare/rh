@@ -104,6 +104,29 @@ pub struct CarePlan {
     /// Comments about the plan
     pub note: Option<Vec<Annotation>>,
 }
+/// CarePlan nested structure for the 'activity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CarePlanActivity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// In-line definition of activity
+    pub detail: Option<CarePlanActivityDetail>,
+    /// Results of the activity
+    ///
+    /// Binding: example (Identifies the results of the activity.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-activity-outcome
+    #[serde(rename = "outcomeCodeableConcept")]
+    pub outcome_codeable_concept: Option<Vec<CodeableConcept>>,
+    /// Appointment, Encounter, Procedure, etc.
+    #[serde(rename = "outcomeReference")]
+    pub outcome_reference: Option<Vec<Reference>>,
+    /// Comments about the activity status/progress
+    pub progress: Option<Vec<Annotation>>,
+    /// Activity details defined in specific resource
+    pub reference: Option<Reference>,
+}
 /// CarePlanActivity nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CarePlanActivityDetail {
@@ -186,29 +209,6 @@ pub struct CarePlanActivityDetail {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// CarePlan nested structure for the 'activity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CarePlanActivity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// In-line definition of activity
-    pub detail: Option<CarePlanActivityDetail>,
-    /// Results of the activity
-    ///
-    /// Binding: example (Identifies the results of the activity.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-activity-outcome
-    #[serde(rename = "outcomeCodeableConcept")]
-    pub outcome_codeable_concept: Option<Vec<CodeableConcept>>,
-    /// Appointment, Encounter, Procedure, etc.
-    #[serde(rename = "outcomeReference")]
-    pub outcome_reference: Option<Vec<Reference>>,
-    /// Comments about the activity status/progress
-    pub progress: Option<Vec<Annotation>>,
-    /// Activity details defined in specific resource
-    pub reference: Option<Reference>,
-}
 
 impl Default for CarePlan {
     fn default() -> Self {
@@ -248,6 +248,19 @@ impl Default for CarePlan {
     }
 }
 
+impl Default for CarePlanActivity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail: Default::default(),
+            outcome_codeable_concept: Default::default(),
+            outcome_reference: Default::default(),
+            progress: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
 impl Default for CarePlanActivityDetail {
     fn default() -> Self {
         Self {
@@ -278,19 +291,6 @@ impl Default for CarePlanActivityDetail {
             quantity: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-        }
-    }
-}
-
-impl Default for CarePlanActivity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail: Default::default(),
-            outcome_codeable_concept: Default::default(),
-            outcome_reference: Default::default(),
-            progress: Default::default(),
-            reference: Default::default(),
         }
     }
 }

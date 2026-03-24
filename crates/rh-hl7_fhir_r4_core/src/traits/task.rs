@@ -110,8 +110,8 @@ pub trait TaskMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::task::Task;
-    /// use hl7_fhir_r4_core::traits::task::TaskMutators;
+    /// use rh_hl7_fhir_r4_core::resources::task::Task;
+    /// use rh_hl7_fhir_r4_core::traits::task::TaskMutators;
     ///
     /// let resource = Task::new();
     /// // Can be used with method chaining:

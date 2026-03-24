@@ -32,8 +32,8 @@ pub trait OxygensatMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::oxygensat::Oxygensat;
-    /// use hl7_fhir_r4_core::traits::oxygensat::OxygensatMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::oxygensat::Oxygensat;
+    /// use rh_hl7_fhir_r4_core::traits::oxygensat::OxygensatMutators;
     ///
     /// let resource = Oxygensat::new();
     /// // Can be used with method chaining:

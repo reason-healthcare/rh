@@ -32,8 +32,8 @@ pub trait TriglycerideMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::triglyceride::Triglyceride;
-    /// use hl7_fhir_r4_core::traits::triglyceride::TriglycerideMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::triglyceride::Triglyceride;
+    /// use rh_hl7_fhir_r4_core::traits::triglyceride::TriglycerideMutators;
     ///
     /// let resource = Triglyceride::new();
     /// // Can be used with method chaining:

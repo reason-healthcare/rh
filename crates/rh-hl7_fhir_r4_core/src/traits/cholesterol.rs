@@ -32,8 +32,8 @@ pub trait CholesterolMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cholesterol::Cholesterol;
-    /// use hl7_fhir_r4_core::traits::cholesterol::CholesterolMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cholesterol::Cholesterol;
+    /// use rh_hl7_fhir_r4_core::traits::cholesterol::CholesterolMutators;
     ///
     /// let resource = Cholesterol::new();
     /// // Can be used with method chaining:

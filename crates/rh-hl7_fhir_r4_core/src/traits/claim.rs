@@ -106,8 +106,8 @@ pub trait ClaimMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::claim::Claim;
-    /// use hl7_fhir_r4_core::traits::claim::ClaimMutators;
+    /// use rh_hl7_fhir_r4_core::resources::claim::Claim;
+    /// use rh_hl7_fhir_r4_core::traits::claim::ClaimMutators;
     ///
     /// let resource = Claim::new();
     /// // Can be used with method chaining:

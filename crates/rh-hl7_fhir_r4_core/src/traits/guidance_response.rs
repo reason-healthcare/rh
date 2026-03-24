@@ -70,8 +70,8 @@ pub trait GuidanceResponseMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::guidance_response::GuidanceResponse;
-    /// use hl7_fhir_r4_core::traits::guidance_response::GuidanceResponseMutators;
+    /// use rh_hl7_fhir_r4_core::resources::guidance_response::GuidanceResponse;
+    /// use rh_hl7_fhir_r4_core::traits::guidance_response::GuidanceResponseMutators;
     ///
     /// let resource = GuidanceResponse::new();
     /// // Can be used with method chaining:

@@ -105,10 +105,10 @@ pub struct ConceptMapGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// What to do when there is no mapping for the source concept
-    pub unmapped: Option<ConceptMapGroupUnmapped>,
     /// Mappings for a concept from the source set
     pub element: Vec<ConceptMapGroupElement>,
+    /// What to do when there is no mapping for the source concept
+    pub unmapped: Option<ConceptMapGroupUnmapped>,
     /// Source system where concepts to be mapped are defined
     pub source: Option<StringType>,
     /// Extension element for the 'source' primitive field. Contains metadata and extensions.
@@ -129,6 +129,44 @@ pub struct ConceptMapGroup {
     /// Extension element for the 'targetVersion' primitive field. Contains metadata and extensions.
     #[serde(rename = "_targetVersion")]
     pub _target_version: Option<Element>,
+}
+/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTargetDependson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to property mapping depends on
+    pub property: StringType,
+    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
+    pub _property: Option<Element>,
+    /// Code System (if necessary)
+    pub system: Option<StringType>,
+    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
+    pub _system: Option<Element>,
+    /// Value of the referenced element
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// Display for the code (if value is a code)
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
+/// ConceptMapGroup nested structure for the 'element' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies element being mapped
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
 }
 /// ConceptMapGroup nested structure for the 'unmapped' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,44 +216,6 @@ pub struct ConceptMapGroupElementTarget {
     /// Other concepts that this mapping also produces
     pub product: Option<Vec<StringType>>,
 }
-/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetDependson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to property mapping depends on
-    pub property: StringType,
-    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
-    pub _property: Option<Element>,
-    /// Code System (if necessary)
-    pub system: Option<StringType>,
-    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
-    pub _system: Option<Element>,
-    /// Value of the referenced element
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// Display for the code (if value is a code)
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
-/// ConceptMapGroup nested structure for the 'element' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies element being mapped
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
 
 impl Default for ConceptMap {
     fn default() -> Self {
@@ -260,8 +260,8 @@ impl Default for ConceptMapGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            unmapped: Default::default(),
             element: Vec::new(),
+            unmapped: Default::default(),
             source: Default::default(),
             _source: Default::default(),
             source_version: Default::default(),
@@ -270,6 +270,34 @@ impl Default for ConceptMapGroup {
             _target: Default::default(),
             target_version: Default::default(),
             _target_version: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElementTargetDependson {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            property: Default::default(),
+            _property: Default::default(),
+            system: Default::default(),
+            _system: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
         }
     }
 }
@@ -303,34 +331,6 @@ impl Default for ConceptMapGroupElementTarget {
             comment: Default::default(),
             _comment: Default::default(),
             product: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElementTargetDependson {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            property: Default::default(),
-            _property: Default::default(),
-            system: Default::default(),
-            _system: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
         }
     }
 }
@@ -872,11 +872,11 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_target(&self) -> bool {
-        self.target_uri.is_some() || self.target_canonical.is_some()
-    }
     fn has_source(&self) -> bool {
         self.source_uri.is_some() || self.source_canonical.is_some()
+    }
+    fn has_target(&self) -> bool {
+        self.target_uri.is_some() || self.target_canonical.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

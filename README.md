@@ -88,7 +88,7 @@ Tips:
 - After setup, run:
   ```bash
   just check
-  cargo run -p rh -- --help
+  rh --help
   ```
 
 ### Building
@@ -133,13 +133,13 @@ All functionality is available through the unified `rh` CLI.
 **Unified CLI (recommended):**
 ```bash
 # Code generation
-cargo run -p rh -- codegen --help
+rh codegen --help
 
 # FHIRPath operations
-cargo run -p rh -- fhirpath --help
+rh fhirpath --help
 
 # ValueSet Compose Language (VCL) operations
-cargo run -p rh -- vcl --help
+rh vcl --help
 ```
 
 Check code formatting:

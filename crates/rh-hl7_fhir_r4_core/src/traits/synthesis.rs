@@ -32,8 +32,8 @@ pub trait SynthesisMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::synthesis::Synthesis;
-    /// use hl7_fhir_r4_core::traits::synthesis::SynthesisMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::synthesis::Synthesis;
+    /// use rh_hl7_fhir_r4_core::traits::synthesis::SynthesisMutators;
     ///
     /// let resource = Synthesis::new();
     /// // Can be used with method chaining:

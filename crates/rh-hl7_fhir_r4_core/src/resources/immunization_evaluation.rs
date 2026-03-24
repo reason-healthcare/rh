@@ -511,11 +511,11 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationExistence
             .as_ref()
             .is_some_and(|m| !m.is_empty())
     }
-    fn has_series_doses(&self) -> bool {
-        self.series_doses_positive_int.is_some() || self.series_doses_string.is_some()
-    }
     fn has_dose_number(&self) -> bool {
         self.dose_number_positive_int.is_some() || self.dose_number_string.is_some()
+    }
+    fn has_series_doses(&self) -> bool {
+        self.series_doses_positive_int.is_some() || self.series_doses_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

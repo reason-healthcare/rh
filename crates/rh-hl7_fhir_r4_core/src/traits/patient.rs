@@ -76,8 +76,8 @@ pub trait PatientMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::patient::Patient;
-    /// use hl7_fhir_r4_core::traits::patient::PatientMutators;
+    /// use rh_hl7_fhir_r4_core::resources::patient::Patient;
+    /// use rh_hl7_fhir_r4_core::traits::patient::PatientMutators;
     ///
     /// let resource = Patient::new();
     /// // Can be used with method chaining:

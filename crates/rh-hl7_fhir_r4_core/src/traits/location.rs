@@ -80,8 +80,8 @@ pub trait LocationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::location::Location;
-    /// use hl7_fhir_r4_core::traits::location::LocationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::location::Location;
+    /// use rh_hl7_fhir_r4_core::traits::location::LocationMutators;
     ///
     /// let resource = Location::new();
     /// // Can be used with method chaining:

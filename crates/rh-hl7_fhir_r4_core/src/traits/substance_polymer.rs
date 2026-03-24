@@ -51,8 +51,8 @@ pub trait SubstancePolymerMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::substance_polymer::SubstancePolymer;
-    /// use hl7_fhir_r4_core::traits::substance_polymer::SubstancePolymerMutators;
+    /// use rh_hl7_fhir_r4_core::resources::substance_polymer::SubstancePolymer;
+    /// use rh_hl7_fhir_r4_core::traits::substance_polymer::SubstancePolymerMutators;
     ///
     /// let resource = SubstancePolymer::new();
     /// // Can be used with method chaining:

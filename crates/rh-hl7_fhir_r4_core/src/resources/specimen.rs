@@ -71,70 +71,6 @@ pub struct Specimen {
     /// Comments
     pub note: Option<Vec<Annotation>>,
 }
-/// sequenceNumber
-///
-/// An assigned number on the specimen denoting the order of collection.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenSequenceNumber {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Specimen nested structure for the 'collection' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenCollection {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who collected the specimen
-    pub collector: Option<Reference>,
-    /// Collection time (dateTime)
-    #[serde(rename = "collectedDateTime")]
-    pub collected_date_time: Option<DateTimeType>,
-    /// Collection time (Period)
-    #[serde(rename = "collectedPeriod")]
-    pub collected_period: Option<Period>,
-    /// How long it took to collect specimen
-    pub duration: Option<Duration>,
-    /// The quantity of specimen collected
-    pub quantity: Option<Quantity>,
-    /// Technique used to perform collection
-    ///
-    /// Binding: example (The  technique that is used to perform the procedure.)
-    ///
-    /// Available values:
-    /// - `129316008`: Aspiration - action
-    /// - `129314006`: Biopsy - action
-    /// - `129300006`: Puncture - action
-    /// - `129304002`: Excision - action
-    /// - `129323009`: Scraping - action
-    /// - `73416001`: Urine specimen collection, clean catch
-    /// - `225113003`: Timed urine collection
-    /// - `70777001`: Urine specimen collection, catheterized
-    /// - `386089008`: Collection of coughed sputum
-    /// - `278450005`: Finger-prick sampling
-    pub method: Option<CodeableConcept>,
-    /// Anatomical collection site
-    ///
-    /// Binding: example (Codes describing anatomical locations. May include laterality.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
-    #[serde(rename = "bodySite")]
-    pub body_site: Option<CodeableConcept>,
-    /// Whether or how long patient abstained from food and/or drink (CodeableConcept)
-    #[serde(rename = "fastingStatusCodeableConcept")]
-    pub fasting_status_codeable_concept: Option<CodeableConcept>,
-    /// Whether or how long patient abstained from food and/or drink (Duration)
-    #[serde(rename = "fastingStatusDuration")]
-    pub fasting_status_duration: Option<Duration>,
-}
 /// Specimen nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenContainer {
@@ -191,6 +127,70 @@ pub struct SpecimenProcessing {
     #[serde(rename = "timePeriod")]
     pub time_period: Option<Period>,
 }
+/// Specimen nested structure for the 'collection' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenCollection {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who collected the specimen
+    pub collector: Option<Reference>,
+    /// Collection time (dateTime)
+    #[serde(rename = "collectedDateTime")]
+    pub collected_date_time: Option<DateTimeType>,
+    /// Collection time (Period)
+    #[serde(rename = "collectedPeriod")]
+    pub collected_period: Option<Period>,
+    /// How long it took to collect specimen
+    pub duration: Option<Duration>,
+    /// The quantity of specimen collected
+    pub quantity: Option<Quantity>,
+    /// Technique used to perform collection
+    ///
+    /// Binding: example (The  technique that is used to perform the procedure.)
+    ///
+    /// Available values:
+    /// - `129316008`: Aspiration - action
+    /// - `129314006`: Biopsy - action
+    /// - `129300006`: Puncture - action
+    /// - `129304002`: Excision - action
+    /// - `129323009`: Scraping - action
+    /// - `73416001`: Urine specimen collection, clean catch
+    /// - `225113003`: Timed urine collection
+    /// - `70777001`: Urine specimen collection, catheterized
+    /// - `386089008`: Collection of coughed sputum
+    /// - `278450005`: Finger-prick sampling
+    pub method: Option<CodeableConcept>,
+    /// Anatomical collection site
+    ///
+    /// Binding: example (Codes describing anatomical locations. May include laterality.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<CodeableConcept>,
+    /// Whether or how long patient abstained from food and/or drink (CodeableConcept)
+    #[serde(rename = "fastingStatusCodeableConcept")]
+    pub fasting_status_codeable_concept: Option<CodeableConcept>,
+    /// Whether or how long patient abstained from food and/or drink (Duration)
+    #[serde(rename = "fastingStatusDuration")]
+    pub fasting_status_duration: Option<Duration>,
+}
+/// sequenceNumber
+///
+/// An assigned number on the specimen denoting the order of collection.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenSequenceNumber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Specimen {
     fn default() -> Self {
@@ -211,31 +211,6 @@ impl Default for Specimen {
             container: Default::default(),
             condition: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenSequenceNumber {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for SpecimenCollection {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            collector: Default::default(),
-            collected_date_time: Default::default(),
-            collected_period: Default::default(),
-            duration: Default::default(),
-            quantity: Default::default(),
-            method: Default::default(),
-            body_site: Default::default(),
-            fasting_status_codeable_concept: Default::default(),
-            fasting_status_duration: Default::default(),
         }
     }
 }
@@ -266,6 +241,31 @@ impl Default for SpecimenProcessing {
             additive: Default::default(),
             time_date_time: Default::default(),
             time_period: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenCollection {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            collector: Default::default(),
+            collected_date_time: Default::default(),
+            collected_period: Default::default(),
+            duration: Default::default(),
+            quantity: Default::default(),
+            method: Default::default(),
+            body_site: Default::default(),
+            fasting_status_codeable_concept: Default::default(),
+            fasting_status_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenSequenceNumber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }

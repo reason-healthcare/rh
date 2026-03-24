@@ -1,12 +1,15 @@
 [package]
 name = "rh-cql"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "CQL (Clinical Quality Language) capabilities including CQL-to-ELM translation and execution"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/reason-healthcare/rh"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
 keywords = ["cql", "elm", "fhir", "clinical-quality-language", "healthcare"]
 categories = ["science", "parser-implementations"]
+readme = "README.md"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -16,7 +19,7 @@ serde_json = { workspace = true }
 nom = { workspace = true }
 quick-xml = { workspace = true }
 regex = { workspace = true }
-rh-foundation = { path = "../rh-foundation" }
+rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1" }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

@@ -67,8 +67,8 @@ pub trait BiologicallyDerivedProductMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::biologically_derived_product::BiologicallyDerivedProduct;
-    /// use hl7_fhir_r4_core::traits::biologically_derived_product::BiologicallyDerivedProductMutators;
+    /// use rh_hl7_fhir_r4_core::resources::biologically_derived_product::BiologicallyDerivedProduct;
+    /// use rh_hl7_fhir_r4_core::traits::biologically_derived_product::BiologicallyDerivedProductMutators;
     ///
     /// let resource = BiologicallyDerivedProduct::new();
     /// // Can be used with method chaining:

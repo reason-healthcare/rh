@@ -52,21 +52,6 @@ pub struct Substance {
     /// Composition information about the substance
     pub ingredient: Option<Vec<SubstanceIngredient>>,
 }
-/// Substance nested structure for the 'ingredient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceIngredient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Optional amount (concentration)
-    pub quantity: Option<Ratio>,
-    /// A component of the substance (CodeableConcept)
-    #[serde(rename = "substanceCodeableConcept")]
-    pub substance_codeable_concept: CodeableConcept,
-    /// A component of the substance (Reference)
-    #[serde(rename = "substanceReference")]
-    pub substance_reference: Reference,
-}
 /// Substance nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceInstance {
@@ -81,6 +66,21 @@ pub struct SubstanceInstance {
     pub _expiry: Option<Element>,
     /// Amount of substance in the package
     pub quantity: Option<Quantity>,
+}
+/// Substance nested structure for the 'ingredient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceIngredient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Optional amount (concentration)
+    pub quantity: Option<Ratio>,
+    /// A component of the substance (CodeableConcept)
+    #[serde(rename = "substanceCodeableConcept")]
+    pub substance_codeable_concept: CodeableConcept,
+    /// A component of the substance (Reference)
+    #[serde(rename = "substanceReference")]
+    pub substance_reference: Reference,
 }
 
 impl Default for Substance {
@@ -100,17 +100,6 @@ impl Default for Substance {
     }
 }
 
-impl Default for SubstanceIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            substance_codeable_concept: Default::default(),
-            substance_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceInstance {
     fn default() -> Self {
         Self {
@@ -119,6 +108,17 @@ impl Default for SubstanceInstance {
             expiry: Default::default(),
             _expiry: Default::default(),
             quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            substance_codeable_concept: Default::default(),
+            substance_reference: Default::default(),
         }
     }
 }

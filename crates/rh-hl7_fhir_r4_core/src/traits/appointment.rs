@@ -90,8 +90,8 @@ pub trait AppointmentMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::appointment::Appointment;
-    /// use hl7_fhir_r4_core::traits::appointment::AppointmentMutators;
+    /// use rh_hl7_fhir_r4_core::resources::appointment::Appointment;
+    /// use rh_hl7_fhir_r4_core::traits::appointment::AppointmentMutators;
     ///
     /// let resource = Appointment::new();
     /// // Can be used with method chaining:

@@ -140,8 +140,8 @@ pub trait ActivityDefinitionMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::activity_definition::ActivityDefinition;
-    /// use hl7_fhir_r4_core::traits::activity_definition::ActivityDefinitionMutators;
+    /// use rh_hl7_fhir_r4_core::resources::activity_definition::ActivityDefinition;
+    /// use rh_hl7_fhir_r4_core::traits::activity_definition::ActivityDefinitionMutators;
     ///
     /// let resource = ActivityDefinition::new();
     /// // Can be used with method chaining:

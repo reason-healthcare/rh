@@ -40,6 +40,35 @@ pub struct SubstancePolymer {
     /// Todo
     pub repeat: Option<Vec<SubstancePolymerRepeat>>,
 }
+/// SubstancePolymerRepeatRepeatunit nested structure for the 'structuralRepresentation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub representation: Option<StringType>,
+    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
+    pub _representation: Option<Element>,
+    /// Todo
+    pub attachment: Option<Attachment>,
+}
+/// SubstancePolymer nested structure for the 'monomerSet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomerset {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "startingMaterial")]
+    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
+    /// Todo
+    #[serde(rename = "ratioType")]
+    pub ratio_type: Option<CodeableConcept>,
+}
 /// SubstancePolymer nested structure for the 'repeat' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerRepeat {
@@ -65,23 +94,14 @@ pub struct SubstancePolymerRepeat {
     #[serde(rename = "repeatUnitAmountType")]
     pub repeat_unit_amount_type: Option<CodeableConcept>,
 }
-/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
+/// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomersetStartingmaterial {
+pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Todo
-    pub material: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "isDefining")]
-    pub is_defining: Option<BooleanType>,
-    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDefining")]
-    pub _is_defining: Option<Element>,
+    pub degree: Option<CodeableConcept>,
     /// Todo
     pub amount: Option<SubstanceAmount>,
 }
@@ -103,43 +123,23 @@ pub struct SubstancePolymerRepeatRepeatunit {
     /// Todo
     pub amount: Option<SubstanceAmount>,
 }
-/// SubstancePolymer nested structure for the 'monomerSet' field
+/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomerset {
+pub struct SubstancePolymerMonomersetStartingmaterial {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Todo
-    #[serde(rename = "startingMaterial")]
-    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
-    /// Todo
-    #[serde(rename = "ratioType")]
-    pub ratio_type: Option<CodeableConcept>,
-}
-/// SubstancePolymerRepeatRepeatunit nested structure for the 'structuralRepresentation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
+    pub material: Option<CodeableConcept>,
     /// Todo
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
     /// Todo
-    pub representation: Option<StringType>,
-    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
-    pub _representation: Option<Element>,
-    /// Todo
-    pub attachment: Option<Attachment>,
-}
-/// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub degree: Option<CodeableConcept>,
+    #[serde(rename = "isDefining")]
+    pub is_defining: Option<BooleanType>,
+    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDefining")]
+    pub _is_defining: Option<Element>,
     /// Todo
     pub amount: Option<SubstanceAmount>,
 }
@@ -159,6 +159,28 @@ impl Default for SubstancePolymer {
     }
 }
 
+impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            representation: Default::default(),
+            _representation: Default::default(),
+            attachment: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerMonomerset {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            starting_material: Default::default(),
+            ratio_type: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstancePolymerRepeat {
     fn default() -> Self {
         Self {
@@ -173,14 +195,11 @@ impl Default for SubstancePolymerRepeat {
     }
 }
 
-impl Default for SubstancePolymerMonomersetStartingmaterial {
+impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            material: Default::default(),
-            type_: Default::default(),
-            is_defining: Default::default(),
-            _is_defining: Default::default(),
+            degree: Default::default(),
             amount: Default::default(),
         }
     }
@@ -198,33 +217,14 @@ impl Default for SubstancePolymerRepeatRepeatunit {
     }
 }
 
-impl Default for SubstancePolymerMonomerset {
+impl Default for SubstancePolymerMonomersetStartingmaterial {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            starting_material: Default::default(),
-            ratio_type: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
+            material: Default::default(),
             type_: Default::default(),
-            representation: Default::default(),
-            _representation: Default::default(),
-            attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            degree: Default::default(),
+            is_defining: Default::default(),
+            _is_defining: Default::default(),
             amount: Default::default(),
         }
     }

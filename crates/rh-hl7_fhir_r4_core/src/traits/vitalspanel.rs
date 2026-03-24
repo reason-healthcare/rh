@@ -32,8 +32,8 @@ pub trait VitalspanelMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::vitalspanel::Vitalspanel;
-    /// use hl7_fhir_r4_core::traits::vitalspanel::VitalspanelMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::vitalspanel::Vitalspanel;
+    /// use rh_hl7_fhir_r4_core::traits::vitalspanel::VitalspanelMutators;
     ///
     /// let resource = Vitalspanel::new();
     /// // Can be used with method chaining:

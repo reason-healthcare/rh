@@ -77,8 +77,8 @@ pub trait MedicationAdministrationMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medication_administration::MedicationAdministration;
-    /// use hl7_fhir_r4_core::traits::medication_administration::MedicationAdministrationMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medication_administration::MedicationAdministration;
+    /// use rh_hl7_fhir_r4_core::traits::medication_administration::MedicationAdministrationMutators;
     ///
     /// let resource = MedicationAdministration::new();
     /// // Can be used with method chaining:

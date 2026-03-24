@@ -97,44 +97,6 @@ pub struct AuditEvent {
     /// Data or objects used
     pub entity: Option<Vec<AuditEventEntity>>,
 }
-/// AuditEventEntity nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntityDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of the property
-    #[serde(rename = "type")]
-    pub type_: StringType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Property value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Property value (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-}
-/// AuditEvent nested structure for the 'source' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventSource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Logical source location within the enterprise
-    pub site: Option<StringType>,
-    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
-    pub _site: Option<Element>,
-    /// The identity of source detecting the event
-    pub observer: Reference,
-    /// The type of source where event originated
-    ///
-    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<Coding>>,
-}
 /// AuditEvent nested structure for the 'entity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEventEntity {
@@ -184,21 +146,23 @@ pub struct AuditEventEntity {
     /// Extension element for the 'query' primitive field. Contains metadata and extensions.
     pub _query: Option<Element>,
 }
-/// AuditEventAgent nested structure for the 'network' field
+/// AuditEventEntity nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventAgentNetwork {
+pub struct AuditEventEntityDetail {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Identifier for the network access point of the user device
-    pub address: Option<StringType>,
-    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
-    pub _address: Option<Element>,
-    /// The type of network access point
+    /// Name of the property
     #[serde(rename = "type")]
-    pub type_: Option<NetworkType>,
+    pub type_: StringType,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
+    /// Property value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Property value (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
 }
 /// AuditEvent nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -289,6 +253,42 @@ pub struct AuditEventAgent {
     #[serde(rename = "purposeOfUse")]
     pub purpose_of_use: Option<Vec<CodeableConcept>>,
 }
+/// AuditEventAgent nested structure for the 'network' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventAgentNetwork {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier for the network access point of the user device
+    pub address: Option<StringType>,
+    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
+    pub _address: Option<Element>,
+    /// The type of network access point
+    #[serde(rename = "type")]
+    pub type_: Option<NetworkType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
+/// AuditEvent nested structure for the 'source' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventSource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Logical source location within the enterprise
+    pub site: Option<StringType>,
+    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
+    pub _site: Option<Element>,
+    /// The identity of source detecting the event
+    pub observer: Reference,
+    /// The type of source where event originated
+    ///
+    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<Coding>>,
+}
 
 impl Default for AuditEvent {
     fn default() -> Self {
@@ -313,30 +313,6 @@ impl Default for AuditEvent {
     }
 }
 
-impl Default for AuditEventEntityDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            value_string: Default::default(),
-            value_base64_binary: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventSource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            site: Default::default(),
-            _site: Default::default(),
-            observer: Reference::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
 impl Default for AuditEventEntity {
     fn default() -> Self {
         Self {
@@ -357,14 +333,14 @@ impl Default for AuditEventEntity {
     }
 }
 
-impl Default for AuditEventAgentNetwork {
+impl Default for AuditEventEntityDetail {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            address: Default::default(),
-            _address: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
+            value_string: Default::default(),
+            value_base64_binary: Default::default(),
         }
     }
 }
@@ -388,6 +364,30 @@ impl Default for AuditEventAgent {
             _policy: Default::default(),
             media: Default::default(),
             purpose_of_use: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventAgentNetwork {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            address: Default::default(),
+            _address: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventSource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            site: Default::default(),
+            _site: Default::default(),
+            observer: Reference::default(),
+            type_: Default::default(),
         }
     }
 }

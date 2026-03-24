@@ -77,25 +77,6 @@ pub struct MedicinalProductAuthorization {
     /// The regulatory procedure for granting or amending a marketing authorization
     pub procedure: Option<MedicinalProductAuthorizationProcedure>,
 }
-/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The assigned number for the marketing authorization
-    pub identifier: Option<Vec<Identifier>>,
-    /// Country of authorization
-    pub country: Option<CodeableConcept>,
-    /// Jurisdiction within a country
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
-    /// The legal status of supply in a jurisdiction or region
-    #[serde(rename = "legalStatusOfSupply")]
-    pub legal_status_of_supply: Option<CodeableConcept>,
-    /// The start and expected end date of the authorization
-    #[serde(rename = "validityPeriod")]
-    pub validity_period: Option<Period>,
-}
 /// MedicinalProductAuthorization nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductAuthorizationProcedure {
@@ -115,6 +96,25 @@ pub struct MedicinalProductAuthorizationProcedure {
     pub date_date_time: Option<DateTimeType>,
     /// Applcations submitted to obtain a marketing authorization
     pub application: Option<Vec<StringType>>,
+}
+/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The assigned number for the marketing authorization
+    pub identifier: Option<Vec<Identifier>>,
+    /// Country of authorization
+    pub country: Option<CodeableConcept>,
+    /// Jurisdiction within a country
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// The legal status of supply in a jurisdiction or region
+    #[serde(rename = "legalStatusOfSupply")]
+    pub legal_status_of_supply: Option<CodeableConcept>,
+    /// The start and expected end date of the authorization
+    #[serde(rename = "validityPeriod")]
+    pub validity_period: Option<Period>,
 }
 
 impl Default for MedicinalProductAuthorization {
@@ -145,19 +145,6 @@ impl Default for MedicinalProductAuthorization {
     }
 }
 
-impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            country: Default::default(),
-            jurisdiction: Default::default(),
-            legal_status_of_supply: Default::default(),
-            validity_period: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductAuthorizationProcedure {
     fn default() -> Self {
         Self {
@@ -167,6 +154,19 @@ impl Default for MedicinalProductAuthorizationProcedure {
             date_period: Default::default(),
             date_date_time: Default::default(),
             application: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            country: Default::default(),
+            jurisdiction: Default::default(),
+            legal_status_of_supply: Default::default(),
+            validity_period: Default::default(),
         }
     }
 }

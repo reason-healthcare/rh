@@ -44,8 +44,8 @@ pub trait BinaryMutators: ResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::binary::Binary;
-    /// use hl7_fhir_r4_core::traits::binary::BinaryMutators;
+    /// use rh_hl7_fhir_r4_core::resources::binary::Binary;
+    /// use rh_hl7_fhir_r4_core::traits::binary::BinaryMutators;
     ///
     /// let resource = Binary::new();
     /// // Can be used with method chaining:

@@ -1,12 +1,16 @@
 [package]
 name = "rh-foundation"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 description = "Foundation crate providing common utilities, error handling, and shared functionality"
+keywords = ["fhir", "healthcare", "utilities", "hl7"]
+categories = ["api-bindings", "data-structures"]
+readme = "README.md"
 
 [dependencies]
 serde = { workspace = true }

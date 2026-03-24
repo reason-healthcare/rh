@@ -53,8 +53,8 @@ pub trait EnrollmentRequestMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::enrollment_request::EnrollmentRequest;
-    /// use hl7_fhir_r4_core::traits::enrollment_request::EnrollmentRequestMutators;
+    /// use rh_hl7_fhir_r4_core::resources::enrollment_request::EnrollmentRequest;
+    /// use rh_hl7_fhir_r4_core::traits::enrollment_request::EnrollmentRequestMutators;
     ///
     /// let resource = EnrollmentRequest::new();
     /// // Can be used with method chaining:

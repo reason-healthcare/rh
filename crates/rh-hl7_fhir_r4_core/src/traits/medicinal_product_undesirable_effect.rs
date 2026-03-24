@@ -48,8 +48,8 @@ pub trait MedicinalProductUndesirableEffectMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::medicinal_product_undesirable_effect::MedicinalProductUndesirableEffect;
-    /// use hl7_fhir_r4_core::traits::medicinal_product_undesirable_effect::MedicinalProductUndesirableEffectMutators;
+    /// use rh_hl7_fhir_r4_core::resources::medicinal_product_undesirable_effect::MedicinalProductUndesirableEffect;
+    /// use rh_hl7_fhir_r4_core::traits::medicinal_product_undesirable_effect::MedicinalProductUndesirableEffectMutators;
     ///
     /// let resource = MedicinalProductUndesirableEffect::new();
     /// // Can be used with method chaining:

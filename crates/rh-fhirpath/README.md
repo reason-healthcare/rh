@@ -21,12 +21,12 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 You can use the `rh` cli. For help:
 ```
-cargo run -p rh -- fhirpath --help
+rh fhirpath --help
 ```
 
 There is also an interactive REPL:
 ```
-cargo run -p rh -- fhirpath repl
+rh fhirpath repl
 ```
 
 ### Rust

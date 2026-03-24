@@ -32,8 +32,8 @@ pub trait HdlcholesterolMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::hdlcholesterol::Hdlcholesterol;
-    /// use hl7_fhir_r4_core::traits::hdlcholesterol::HdlcholesterolMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::hdlcholesterol::Hdlcholesterol;
+    /// use rh_hl7_fhir_r4_core::traits::hdlcholesterol::HdlcholesterolMutators;
     ///
     /// let resource = Hdlcholesterol::new();
     /// // Can be used with method chaining:

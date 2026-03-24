@@ -100,8 +100,8 @@ pub trait DeviceMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::device::Device;
-    /// use hl7_fhir_r4_core::traits::device::DeviceMutators;
+    /// use rh_hl7_fhir_r4_core::resources::device::Device;
+    /// use rh_hl7_fhir_r4_core::traits::device::DeviceMutators;
     ///
     /// let resource = Device::new();
     /// // Can be used with method chaining:

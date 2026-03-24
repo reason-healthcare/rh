@@ -32,8 +32,8 @@ pub trait CqllibraryMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::cqllibrary::Cqllibrary;
-    /// use hl7_fhir_r4_core::traits::cqllibrary::CqllibraryMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::cqllibrary::Cqllibrary;
+    /// use rh_hl7_fhir_r4_core::traits::cqllibrary::CqllibraryMutators;
     ///
     /// let resource = Cqllibrary::new();
     /// // Can be used with method chaining:

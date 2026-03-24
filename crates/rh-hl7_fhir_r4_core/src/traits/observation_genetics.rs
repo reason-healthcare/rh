@@ -32,8 +32,8 @@ pub trait ObservationGeneticsMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::observation_genetics::ObservationGenetics;
-    /// use hl7_fhir_r4_core::traits::observation_genetics::ObservationGeneticsMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::observation_genetics::ObservationGenetics;
+    /// use rh_hl7_fhir_r4_core::traits::observation_genetics::ObservationGeneticsMutators;
     ///
     /// let resource = ObservationGenetics::new();
     /// // Can be used with method chaining:

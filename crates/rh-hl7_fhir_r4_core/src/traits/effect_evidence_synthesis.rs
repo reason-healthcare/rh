@@ -117,8 +117,8 @@ pub trait EffectEvidenceSynthesisMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::effect_evidence_synthesis::EffectEvidenceSynthesis;
-    /// use hl7_fhir_r4_core::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators;
+    /// use rh_hl7_fhir_r4_core::resources::effect_evidence_synthesis::EffectEvidenceSynthesis;
+    /// use rh_hl7_fhir_r4_core::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators;
     ///
     /// let resource = EffectEvidenceSynthesis::new();
     /// // Can be used with method chaining:

@@ -1,29 +1,29 @@
 # VCL WASM Build Tasks
 
-This Makefile provides convenient tasks for building WebAssembly packages from the rh-vcl crate.
+This justfile provides convenient tasks for building WebAssembly packages from the rh-vcl crate.
 
 ## Usage
 
 ```bash
 # Show available commands
-make help
+just --list
 
 # Build all WASM targets
-make wasm
+just wasm
 
 # Build specific targets
-make wasm-web       # ES6 modules for browsers
-make wasm-node      # CommonJS for Node.js
-make wasm-bundler   # For webpack/rollup/etc
+just wasm-web       # ES6 modules for browsers
+just wasm-node      # CommonJS for Node.js
+just wasm-bundler   # For webpack/rollup/etc
 
 # Test Node.js build
-make test-wasm
+just test-wasm
 
 # Clean build artifacts
-make clean-wasm
+just clean-wasm
 
 # Development: build and serve web target
-make dev-web
+just dev-web
 ```
 
 ## Requirements
@@ -41,7 +41,7 @@ make dev-web
 
 ## Compatibility
 
-This Makefile handles different Rust installations:
+The justfile handles different Rust installations:
 - Works with rustup-managed toolchains
 - Works with asdf-managed Rust
 - Automatically uses appropriate PATH for wasm-pack

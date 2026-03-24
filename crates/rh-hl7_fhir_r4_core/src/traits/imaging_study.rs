@@ -85,8 +85,8 @@ pub trait ImagingStudyMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::imaging_study::ImagingStudy;
-    /// use hl7_fhir_r4_core::traits::imaging_study::ImagingStudyMutators;
+    /// use rh_hl7_fhir_r4_core::resources::imaging_study::ImagingStudy;
+    /// use rh_hl7_fhir_r4_core::traits::imaging_study::ImagingStudyMutators;
     ///
     /// let resource = ImagingStudy::new();
     /// // Can be used with method chaining:

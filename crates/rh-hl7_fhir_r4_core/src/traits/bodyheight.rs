@@ -32,8 +32,8 @@ pub trait BodyheightMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::bodyheight::Bodyheight;
-    /// use hl7_fhir_r4_core::traits::bodyheight::BodyheightMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::bodyheight::Bodyheight;
+    /// use rh_hl7_fhir_r4_core::traits::bodyheight::BodyheightMutators;
     ///
     /// let resource = Bodyheight::new();
     /// // Can be used with method chaining:

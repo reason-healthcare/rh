@@ -32,8 +32,8 @@ pub trait ClinicaldocumentMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::clinicaldocument::Clinicaldocument;
-    /// use hl7_fhir_r4_core::traits::clinicaldocument::ClinicaldocumentMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::clinicaldocument::Clinicaldocument;
+    /// use rh_hl7_fhir_r4_core::traits::clinicaldocument::ClinicaldocumentMutators;
     ///
     /// let resource = Clinicaldocument::new();
     /// // Can be used with method chaining:

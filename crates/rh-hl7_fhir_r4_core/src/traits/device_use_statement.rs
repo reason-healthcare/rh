@@ -65,8 +65,8 @@ pub trait DeviceUseStatementMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::device_use_statement::DeviceUseStatement;
-    /// use hl7_fhir_r4_core::traits::device_use_statement::DeviceUseStatementMutators;
+    /// use rh_hl7_fhir_r4_core::resources::device_use_statement::DeviceUseStatement;
+    /// use rh_hl7_fhir_r4_core::traits::device_use_statement::DeviceUseStatementMutators;
     ///
     /// let resource = DeviceUseStatement::new();
     /// // Can be used with method chaining:

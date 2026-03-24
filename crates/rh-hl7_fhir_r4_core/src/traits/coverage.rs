@@ -79,8 +79,8 @@ pub trait CoverageMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::coverage::Coverage;
-    /// use hl7_fhir_r4_core::traits::coverage::CoverageMutators;
+    /// use rh_hl7_fhir_r4_core::resources::coverage::Coverage;
+    /// use rh_hl7_fhir_r4_core::traits::coverage::CoverageMutators;
     ///
     /// let resource = Coverage::new();
     /// // Can be used with method chaining:

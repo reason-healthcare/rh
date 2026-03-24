@@ -64,8 +64,8 @@ pub trait SlotMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::slot::Slot;
-    /// use hl7_fhir_r4_core::traits::slot::SlotMutators;
+    /// use rh_hl7_fhir_r4_core::resources::slot::Slot;
+    /// use rh_hl7_fhir_r4_core::traits::slot::SlotMutators;
     ///
     /// let resource = Slot::new();
     /// // Can be used with method chaining:

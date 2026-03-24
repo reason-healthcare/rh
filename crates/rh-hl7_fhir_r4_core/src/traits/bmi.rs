@@ -32,8 +32,8 @@ pub trait BmiMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::bmi::Bmi;
-    /// use hl7_fhir_r4_core::traits::bmi::BmiMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::bmi::Bmi;
+    /// use rh_hl7_fhir_r4_core::traits::bmi::BmiMutators;
     ///
     /// let resource = Bmi::new();
     /// // Can be used with method chaining:

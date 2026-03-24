@@ -1,10 +1,11 @@
 [package]
 name = "rh-validator"
-version = "0.2.0"
-edition = "2021"
+version = "0.2.0-beta.1"
+edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 description = "Hybrid FHIR R4 validator with snapshot-based profile validation"
 keywords = [
@@ -15,6 +16,7 @@ keywords = [
     "hl7",
 ]
 categories = ["parsing", "data-structures", "healthcare"]
+readme = "README.md"
 
 [lib]
 doctest = false
@@ -32,8 +34,8 @@ thiserror = { workspace = true }
 regex = { workspace = true }
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation", features = ["http"] }
-rh-fhirpath = { path = "../rh-fhirpath" }  # FHIRPath invariant validation
+rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1", features = ["http"] }
+rh-fhirpath = { path = "../rh-fhirpath", version = "0.1.0-beta.1" }  # FHIRPath invariant validation
 
 # Caching
 lru = "0.16"
@@ -55,7 +57,7 @@ zip = { version = "0.6", optional = true }
 
 [dev-dependencies]
 # Testing with generated FHIR types
-hl7_fhir_r4_core = { path = "../rh-hl7_fhir_r4_core" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.1.0-beta.1" }
 
 # Benchmarking (to be added in Phase 8)
 criterion = { version = "0.5", features = ["html_reports"] }

@@ -94,8 +94,8 @@ pub trait ResearchStudyMutators: DomainResourceMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::resources::research_study::ResearchStudy;
-    /// use hl7_fhir_r4_core::traits::research_study::ResearchStudyMutators;
+    /// use rh_hl7_fhir_r4_core::resources::research_study::ResearchStudy;
+    /// use rh_hl7_fhir_r4_core::traits::research_study::ResearchStudyMutators;
     ///
     /// let resource = ResearchStudy::new();
     /// // Can be used with method chaining:

@@ -32,8 +32,8 @@ pub trait ShareablecodesystemMutators {
     ///
     /// # Example
     /// ```rust
-    /// use hl7_fhir_r4_core::profiles::shareablecodesystem::Shareablecodesystem;
-    /// use hl7_fhir_r4_core::traits::shareablecodesystem::ShareablecodesystemMutators;
+    /// use rh_hl7_fhir_r4_core::profiles::shareablecodesystem::Shareablecodesystem;
+    /// use rh_hl7_fhir_r4_core::traits::shareablecodesystem::ShareablecodesystemMutators;
     ///
     /// let resource = Shareablecodesystem::new();
     /// // Can be used with method chaining:
