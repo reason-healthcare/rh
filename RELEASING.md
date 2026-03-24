@@ -46,33 +46,33 @@ Most crates inherit their version from `[workspace.package]` in the root `Cargo.
 
 Version format prior to a stable release: `0.x.0-beta.N`
 
-```
-# Current workspace version
-grep '^version' Cargo.toml
+Check current versions at any time:
+
+```bash
+just show-versions
 ```
 
 ### 2. Update version numbers
 
-**For all workspace crates** (except `rh-validator`): edit the `version` field in the root `Cargo.toml`:
-
-```toml
-# Cargo.toml
-[workspace.package]
-version = "0.x.0-beta.N"   # bump here
-```
-
-**For `rh-validator`**: edit its version directly in `crates/rh-validator/Cargo.toml`:
-
-```toml
-version = "0.y.0-beta.N"
-```
-
-**Update all internal path dependency version specifiers** to match. Every `{ path = "...", version = "..." }` entry that references a crate you just bumped must be updated to the new version. Search for stale references:
+Use the version management script — it updates the workspace version and all internal path dependency version specifiers in one pass:
 
 ```bash
-grep -rn 'version = "0\.' crates/*/Cargo.toml apps/rh-cli/Cargo.toml \
-  | grep "path ="
+# Bump all workspace crates (everything except rh-validator)
+just bump-version 0.2.0-beta.1
+
+# Bump rh-validator's standalone version
+just bump-validator-version 0.3.0-beta.1
+
+# Or bump both at once
+just bump-all-versions 0.2.0-beta.1 0.3.0-beta.1
 ```
+
+The script updates:
+- `version` in `[workspace.package]` in the root `Cargo.toml`
+- All `{ path = "...", version = "..." }` internal dependency specifiers across every crate
+- `rh-validator`'s own `version` field and its entry in `apps/rh-cli/Cargo.toml`
+
+See [`scripts/bump-version`](scripts/bump-version) for the full implementation.
 
 ### 3. Run the full quality gate
 
@@ -110,7 +110,7 @@ All invocations must exit 0 before proceeding.
 ### 5. Commit and tag the release
 
 ```bash
-git add Cargo.toml crates/rh-validator/Cargo.toml crates/*/Cargo.toml apps/*/Cargo.toml
+git add Cargo.toml crates/*/Cargo.toml apps/*/Cargo.toml
 git commit -m "chore: bump versions to 0.x.0-beta.N"
 git tag v0.x.0-beta.N
 git push origin main --tags
