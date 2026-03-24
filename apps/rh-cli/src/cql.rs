@@ -527,6 +527,29 @@ fn enrich_eval_error(
 ) -> anyhow::Error {
     let msg = err.to_string();
     if msg.contains("not found in library") {
+        // Check whether the top-level requested expression actually exists in
+        // the library.  When it does exist, the "not found in library" came
+        // from evaluating a sub-expression (e.g. a cross-library reference
+        // like `Global."Inpatient Encounter"`) — in that case we pass the
+        // original error through unchanged so the user sees the real cause.
+        let top_level_exists = library
+            .statements
+            .as_ref()
+            .map(|s| {
+                s.defs.iter().any(|d| match d {
+                    rh_cql::elm::StatementDef::Expression(e) => {
+                        e.name.as_deref() == Some(requested)
+                    }
+                    _ => false,
+                })
+            })
+            .unwrap_or(false);
+
+        if top_level_exists {
+            return anyhow::anyhow!("Failed to evaluate '{}': {}", requested, msg);
+        }
+
+        // The top-level expression itself was not found — list alternatives.
         let names: Vec<String> = library
             .statements
             .as_ref()
@@ -535,7 +558,7 @@ fn enrich_eval_error(
                     .iter()
                     .filter_map(|d| match d {
                         rh_cql::elm::StatementDef::Expression(e) => e.name.clone(),
-                        rh_cql::elm::StatementDef::Function(f) => f.name.clone(),
+                        rh_cql::elm::StatementDef::Function(_) => None,
                     })
                     .collect()
             })

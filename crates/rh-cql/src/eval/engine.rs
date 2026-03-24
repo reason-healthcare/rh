@@ -230,6 +230,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ----- References -----
             Expression::ExpressionRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
+
+                // Cross-library reference: `library_name` is set when the CQL
+                // source uses a qualified name like `Global."Inpatient Encounter"`.
+                // The evaluator only holds the compiled main library; included
+                // libraries are not loaded.
+                if let Some(lib) = r.library_name.as_deref() {
+                    return Err(EvalError::General(format!(
+                        "Cross-library reference '{lib}.\"{name}\"' is not supported: \
+                         included library '{lib}' is not loaded into the evaluator"
+                    )));
+                }
+
                 // Check scope stack first (for query aliases / let clauses).
                 if let Some(v) = self.lookup_binding(name) {
                     return Ok(v.clone());
@@ -1151,7 +1163,22 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 for operand in &func_ref.operand {
                     args.push(self.eval_expr(operand)?);
                 }
-                eval_builtin_function(name, args)
+                // Try builtin first regardless of library qualification.
+                // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
+                // CQL system builtins so this works transparently.
+                // If the function is not a builtin AND a library qualifier is
+                // set, report a clear cross-library error rather than the
+                // generic "unknown FunctionRef" message.
+                eval_builtin_function(name, args).or_else(|e| {
+                    if let Some(lib) = func_ref.library_name.as_deref() {
+                        Err(EvalError::General(format!(
+                            "Cross-library function '{lib}.\"{name}\"' is not supported: \
+                             included library '{lib}' is not loaded into the evaluator"
+                        )))
+                    } else {
+                        Err(e)
+                    }
+                })
             }
 
             other => Err(EvalError::General(format!(
@@ -2293,5 +2320,60 @@ mod tests {
         assert_eq!(literal_count, 2);
         // Children vec on Add event should reference both literals
         assert_eq!(add_event.children.len(), 2);
+    }
+
+    #[test]
+    fn eval_expression_ref_cross_library_error() {
+        // A cross-library ExpressionRef (library_name set) should return a
+        // descriptive error rather than "not found in library".
+        let lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("InpatientEncounter".to_string()),
+                        library_name: Some("Global".to_string()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Cross-library reference"),
+            "expected cross-library error, got: {msg}"
+        );
+        assert!(msg.contains("Global"), "expected library name in error: {msg}");
+    }
+
+    #[test]
+    fn eval_function_ref_cross_library_unknown_gives_clear_error() {
+        use crate::elm::FunctionRef;
+        // A cross-library FunctionRef to a function that's not a builtin should
+        // return a descriptive cross-library error.
+        let lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::FunctionRef(FunctionRef {
+                        name: Some("ToInterval".to_string()),
+                        library_name: Some("FHIRHelpers".to_string()),
+                        operand: vec![int_literal(1)],
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Cross-library function") || msg.contains("unknown FunctionRef"),
+            "expected clear error for unknown cross-library function, got: {msg}"
+        );
     }
 }
