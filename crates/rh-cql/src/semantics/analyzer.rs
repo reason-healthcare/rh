@@ -19,6 +19,7 @@ pub struct SemanticAnalyzer {
     diagnostics: Vec<CqlCompilerException>,
     next_node_id: u64,
     operator_resolver: OperatorResolver,
+    in_sort_context: bool,
 }
 
 impl SemanticAnalyzer {
@@ -32,6 +33,7 @@ impl SemanticAnalyzer {
             diagnostics: Vec::new(),
             next_node_id: 1,
             operator_resolver: OperatorResolver::new(),
+            in_sort_context: false,
         }
     }
 
@@ -87,13 +89,17 @@ impl SemanticAnalyzer {
                 Some(s.name.clone()),
             ),
             None => {
-                let exc =
-                    CqlCompilerException::new(format!("Could not resolve identifier: {}", e.name));
-                let exc = match e.location {
-                    Some(loc) => exc.with_locator(SourceLocator::from(loc)),
-                    None => exc,
-                };
-                self.diagnostics.push(exc);
+                if !self.in_sort_context {
+                    let exc = CqlCompilerException::new(format!(
+                        "Could not resolve identifier: {}",
+                        e.name
+                    ));
+                    let exc = match e.location {
+                        Some(loc) => exc.with_locator(SourceLocator::from(loc)),
+                        None => exc,
+                    };
+                    self.diagnostics.push(exc);
+                }
                 (DataType::Unknown, None)
             }
         };
@@ -466,6 +472,18 @@ impl SemanticAnalyzer {
             );
         }
 
+        for code in &library.codes {
+            self.scope_manager.register_symbol(
+                Symbol::new(code.name.clone(), SymbolKind::Code).with_type(DataType::any()),
+            );
+        }
+
+        for concept in &library.concepts {
+            self.scope_manager.register_symbol(
+                Symbol::new(concept.name.clone(), SymbolKind::Concept).with_type(DataType::any()),
+            );
+        }
+
         let mut parameters = Vec::new();
         for param in library.parameters {
             let default_typed = param.default.map(|expr| self.analyze_expression(&expr));
@@ -488,6 +506,26 @@ impl SemanticAnalyzer {
                 Symbol::new(ctx.name.clone(), SymbolKind::Context).with_type(DataType::any()),
             );
         }
+
+        // Pass 1: pre-register all define/function names so forward references resolve.
+        for stmt in &library.statements {
+            match stmt {
+                ast::Statement::ExpressionDef(ed) => {
+                    self.scope_manager.register_symbol(
+                        Symbol::new(ed.name.clone(), SymbolKind::Expression)
+                            .with_type(DataType::any()),
+                    );
+                }
+                ast::Statement::FunctionDef(fd) => {
+                    self.scope_manager.register_symbol(
+                        Symbol::new(fd.name.clone(), SymbolKind::Function)
+                            .with_type(DataType::any()),
+                    );
+                }
+            }
+        }
+
+        // Pass 2: analyze statement bodies (all names now in scope).
         for stmt in library.statements {
             let typed_stmt = match stmt {
                 ast::Statement::ExpressionDef(ed) => {
@@ -721,6 +759,7 @@ impl SemanticAnalyzer {
             }
         });
 
+        self.in_sort_context = true;
         let sort_clause =
             e.sort_clause
                 .as_ref()
@@ -734,6 +773,7 @@ impl SemanticAnalyzer {
                         })
                         .collect(),
                 });
+        self.in_sort_context = false;
 
         // Pop the query scope — aliases are no longer visible after the query.
         self.scope_manager.pop_scope();
