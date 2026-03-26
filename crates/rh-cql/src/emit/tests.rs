@@ -393,3 +393,33 @@ fn test_emit_identifier_ref() {
         panic!("Expected ExpressionRef");
     }
 }
+
+// -----------------------------------------------------------------------
+// includes field (task 2.2, 2.3)
+// -----------------------------------------------------------------------
+
+#[test]
+fn test_emit_includes_one_entry() {
+    use crate::compile;
+    let src = r#"
+        library Test version '1.0'
+        include SomeLib version '2.0' called SL
+        define X: 1
+    "#;
+    let result = compile(src, None).expect("pipeline error");
+    let includes = result.library.includes.expect("includes should be Some");
+    assert_eq!(includes.defs.len(), 1);
+    let inc = &includes.defs[0];
+    assert_eq!(inc.path.as_deref(), Some("SomeLib"));
+    assert_eq!(inc.local_identifier.as_deref(), Some("SL"));
+    assert_eq!(inc.version.as_deref(), Some("2.0"));
+}
+
+#[test]
+fn test_emit_includes_empty_when_no_includes() {
+    use crate::compile;
+    let src = "library Test version '1.0' define X: 1";
+    let result = compile(src, None).expect("pipeline error");
+    // includes should be None (no includes defined)
+    assert!(result.library.includes.is_none());
+}

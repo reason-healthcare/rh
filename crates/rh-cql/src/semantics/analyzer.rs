@@ -53,6 +53,46 @@ impl SemanticAnalyzer {
         SemanticAnalyzer::new(context.resolve_provider(), context.options.clone())
     }
 
+    /// Register all public expressions and functions from a compiled ELM
+    /// library into the scope manager under the given `alias`.
+    ///
+    /// This allows the semantic analyzer to resolve qualified references such
+    /// as `CaseLogic."My Expression"` when `CaseLogic` is an include alias
+    /// for a compiled dependency.
+    pub fn register_included_library(&mut self, alias: &str, lib: &crate::elm::Library) {
+        let alias_id = crate::library::LibraryIdentifier::unversioned(alias);
+
+        if let Some(stmts) = &lib.statements {
+            for def in &stmts.defs {
+                match def {
+                    crate::elm::StatementDef::Expression(e) => {
+                        if let Some(name) = &e.name {
+                            let mut sym =
+                                Symbol::new(name.clone(), SymbolKind::Expression)
+                                    .with_type(DataType::Unknown);
+                            sym.library = Some(alias_id.clone());
+                            self.scope_manager.register_symbol(sym);
+                        }
+                    }
+                    crate::elm::StatementDef::Function(f) => {
+                        if let Some(name) = &f.name {
+                            let sig = crate::semantics::scope::FunctionSignature {
+                                name: name.clone(),
+                                operand_types: vec![],
+                                result_type: DataType::Unknown,
+                                is_fluent: false,
+                                is_external: false,
+                                library: Some(alias_id.clone()),
+                            };
+                            self.scope_manager.register_function(sig);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
         let dt = match e {
             ast::Literal::Null => DataType::system(crate::datatype::SystemType::Any),
@@ -222,6 +262,23 @@ impl SemanticAnalyzer {
         e: &ast::MemberInvocation,
     ) -> TypedNode<TypedExpression> {
         let source = self.analyze_expression(&e.source);
+
+        // If the source is an unqualified IdentifierRef that resolves to a
+        // library include alias, reclassify as QualifiedIdentifierRef so the
+        // emitter produces a correct ExpressionRef with library_name set.
+        if let TypedExpression::IdentifierRef(id_ref) = &source.inner {
+            if let Some(sym) = self.scope_manager.resolve_symbol(None, &id_ref.name) {
+                if sym.kind == SymbolKind::Include {
+                    let qid = ast::QualifiedIdentifierRef {
+                        qualifier: id_ref.name.clone(),
+                        name: e.name.clone(),
+                        location: e.location,
+                    };
+                    return self.analyze_qualified_identifier_ref(&qid);
+                }
+            }
+        }
+
         let mut dt = DataType::Unknown;
 
         match &source.data_type {
@@ -1085,5 +1142,69 @@ impl SemanticAnalyzer {
             meta,
             span,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::compile;
+
+    /// A `MemberInvocation` where the source identifier resolves to a library
+    /// include alias must be reclassified as a `QualifiedIdentifierRef`, so the
+    /// emitter produces `ExpressionRef { library_name: Some("CaseLogic"), ... }`.
+    #[test]
+    fn test_include_alias_member_becomes_qualified_ref() {
+        let src = r#"
+            library Test version '1.0'
+            include SomeLib called CaseLogic
+            define Foo: CaseLogic."My Expr"
+        "#;
+        let result = compile(src, None).expect("pipeline error");
+        // The ELM must contain an ExpressionRef with library_name set.
+        let stmts = result.library.statements.as_ref().expect("no statements");
+        let foo_expr = stmts.defs.iter().find_map(|d| {
+            if let crate::elm::StatementDef::Expression(e) = d {
+                if e.name.as_deref() == Some("Foo") {
+                    return e.expression.as_deref();
+                }
+            }
+            None
+        });
+        let foo_expr = foo_expr.expect("Foo definition not found in ELM");
+        match foo_expr {
+            crate::elm::Expression::ExpressionRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("CaseLogic"));
+                assert_eq!(r.name.as_deref(), Some("My Expr"));
+            }
+            other => panic!("expected ExpressionRef, got {:?}", std::mem::discriminant(other)),
+        }
+    }
+
+    /// `Patient.name` where `Patient` is a model type (NOT a library alias) must
+    /// remain a `Property` node — regression guard for the include-alias fix.
+    #[test]
+    fn test_model_member_stays_property() {
+        let src = r#"
+            library Test version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define PatName: Patient.name
+        "#;
+        let result = compile(src, None).expect("pipeline error");
+        let stmts = result.library.statements.as_ref().expect("no statements");
+        let pat_name_expr = stmts.defs.iter().find_map(|d| {
+            if let crate::elm::StatementDef::Expression(e) = d {
+                if e.name.as_deref() == Some("PatName") {
+                    return e.expression.as_deref();
+                }
+            }
+            None
+        });
+        let pat_name_expr = pat_name_expr.expect("PatName definition not found in ELM");
+        assert!(
+            matches!(pat_name_expr, crate::elm::Expression::Property(_)),
+            "expected Property node for Patient.name, got {:?}",
+            std::mem::discriminant(pat_name_expr)
+        );
     }
 }

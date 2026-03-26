@@ -44,7 +44,19 @@ Changing the signatures of `compile()` or `evaluate_elm()` would break the CLI a
 
 ### D3: Library map keyed by alias string in the evaluator
 
-The ELM specification uses `LibraryRef` with a `localIdentifier` (the alias). At evaluation time, `ExpressionRef { library_name: Some("CaseLogic") }` needs to resolve `CaseLogic` to a compiled `elm::Library`. The engine receives a `HashMap<String, &elm::Library>` where the key is the alias as declared in the main library's `include X called Y` — matching the ELM `localId` stored on the `IncludeDef` node.
+The ELM specification uses `LibraryRef` with a `localIdentifier` (the alias). At evaluation time, `ExpressionRef { library_name: Some("CaseLogic") }` needs to resolve `CaseLogic` to a compiled `elm::Library`. The engine receives a `&HashMap<String, Library>` (reference to a map of owned `elm::Library` values) where the key is the alias as declared in the main library's `include X called Y` — matching the ELM `localId` stored on the `IncludeDef` node.
+
+The public `evaluate_elm_with_libraries` signature is:
+```rust
+pub fn evaluate_elm_with_libraries(
+    library: &Library,
+    included: &HashMap<String, Library>,
+    name: &str,
+    ctx: &EvalContext,
+) -> Result<Value, EvalError>
+```
+
+`CompileOutputWithLibs.included` is `HashMap<String, elm::Library>` (owned values) so callers can pass `&out.included` directly without managing borrows. Using owned values rather than `&elm::Library` avoids lifetime complexity at the cost of a trivial allocation — acceptable since the map is constructed once per compile call.
 
 Alternative considered: thread `LibraryIdentifier` → `CompiledLibrary` and look up by full identifier. Rejected — the alias string is what the ELM AST uses at runtime; the full identifier is only needed during loading.
 

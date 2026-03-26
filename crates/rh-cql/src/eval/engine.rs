@@ -59,6 +59,22 @@ pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<
     engine.eval_expr(expr)
 }
 
+/// Evaluate a named expression in `library`, with access to a map of
+/// pre-compiled included libraries keyed by their local alias.
+///
+/// Cross-library `ExpressionRef` nodes with `library_name` set to one of the
+/// alias keys are dispatched to the corresponding library.
+pub fn evaluate_elm_with_libraries(
+    library: &Library,
+    included: &HashMap<String, Library>,
+    name: &str,
+    ctx: &EvalContext,
+) -> Result<Value, EvalError> {
+    let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
+    let expr = engine.find_expression(name)?;
+    engine.eval_expr(expr)
+}
+
 /// Evaluate a named expression and return the result plus a flat trace of
 /// every sub-expression evaluated.
 ///
@@ -97,10 +113,22 @@ struct Engine<'lib, 'ctx> {
     /// [`lookup_binding`] walks the stack from top to bottom so inner scopes
     /// shadow outer ones correctly.
     scope_stack: Vec<BTreeMap<String, Value>>,
+    /// Included libraries keyed by alias, used to resolve cross-library
+    /// `ExpressionRef` and `FunctionRef` nodes.  Empty for the standard
+    /// single-library evaluation path.
+    included: Option<&'lib HashMap<String, Library>>,
 }
 
 impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     fn new(library: &'lib Library, ctx: &'ctx EvalContext) -> Self {
+        Self::new_with_libraries(library, None, ctx)
+    }
+
+    fn new_with_libraries(
+        library: &'lib Library,
+        included: Option<&'lib HashMap<String, Library>>,
+        ctx: &'ctx EvalContext,
+    ) -> Self {
         // Pre-build expression and parameter indexes for O(1) lookup.
         let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
         let mut param_names: HashSet<String> = HashSet::new();
@@ -137,6 +165,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             expr_index,
             param_names,
             scope_stack: vec![base_scope],
+            included,
         }
     }
 
@@ -233,13 +262,19 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
                 // Cross-library reference: `library_name` is set when the CQL
                 // source uses a qualified name like `Global."Inpatient Encounter"`.
-                // The evaluator only holds the compiled main library; included
-                // libraries are not loaded.
-                if let Some(lib) = r.library_name.as_deref() {
-                    return Err(EvalError::General(format!(
-                        "Cross-library reference '{lib}.\"{name}\"' is not supported: \
-                         included library '{lib}' is not loaded into the evaluator"
-                    )));
+                if let Some(alias) = r.library_name.as_deref() {
+                    let included = self.included.ok_or_else(|| {
+                        EvalError::LibraryNotFound { alias: alias.to_string() }
+                    })?;
+                    let inc_lib = included.get(alias).ok_or_else(|| {
+                        EvalError::LibraryNotFound { alias: alias.to_string() }
+                    })?;
+                    let mut sub_engine =
+                        Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                    let expr = sub_engine.find_expression(name).map_err(|_| {
+                        EvalError::ExpressionNotFound(format!("{alias}.{name}"))
+                    })?;
+                    return sub_engine.eval_expr(expr);
                 }
 
                 // Check scope stack first (for query aliases / let clauses).
@@ -1166,15 +1201,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // Try builtin first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
                 // CQL system builtins so this works transparently.
-                // If the function is not a builtin AND a library qualifier is
-                // set, report a clear cross-library error rather than the
-                // generic "unknown FunctionRef" message.
                 eval_builtin_function(name, args).or_else(|e| {
-                    if let Some(lib) = func_ref.library_name.as_deref() {
-                        Err(EvalError::General(format!(
-                            "Cross-library function '{lib}.\"{name}\"' is not supported: \
-                             included library '{lib}' is not loaded into the evaluator"
-                        )))
+                    if let Some(alias) = func_ref.library_name.as_deref() {
+                        let included = self.included.ok_or_else(|| {
+                            EvalError::LibraryNotFound { alias: alias.to_string() }
+                        })?;
+                        included.get(alias).ok_or_else(|| {
+                            EvalError::LibraryNotFound { alias: alias.to_string() }
+                        })?;
+                        // Library found but function is not a known builtin.
+                        // TODO: support evaluating user-defined functions from
+                        // included libraries once the engine supports user-defined
+                        // function bodies in general (same-library functions are
+                        // also not yet evaluated by body).
+                        Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")))
                     } else {
                         Err(e)
                     }
@@ -2324,8 +2364,8 @@ mod tests {
 
     #[test]
     fn eval_expression_ref_cross_library_error() {
-        // A cross-library ExpressionRef (library_name set) should return a
-        // descriptive error rather than "not found in library".
+        // Without an included map, a cross-library ExpressionRef should return
+        // LibraryNotFound rather than a generic error.
         let lib = Library {
             statements: Some(ExpressionDefs {
                 defs: vec![StatementDef::Expression(ExpressionDef {
@@ -2341,19 +2381,18 @@ mod tests {
             ..Default::default()
         };
         let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
-        let msg = err.to_string();
-        assert!(
-            msg.contains("Cross-library reference"),
-            "expected cross-library error, got: {msg}"
+        assert_eq!(
+            err,
+            EvalError::LibraryNotFound { alias: "Global".to_string() },
+            "expected LibraryNotFound, got: {err}"
         );
-        assert!(msg.contains("Global"), "expected library name in error: {msg}");
     }
 
     #[test]
     fn eval_function_ref_cross_library_unknown_gives_clear_error() {
         use crate::elm::FunctionRef;
-        // A cross-library FunctionRef to a function that's not a builtin should
-        // return a descriptive cross-library error.
+        // Without an included map, a cross-library FunctionRef that is not a
+        // builtin should return LibraryNotFound.
         let lib = Library {
             statements: Some(ExpressionDefs {
                 defs: vec![StatementDef::Expression(ExpressionDef {
@@ -2370,10 +2409,67 @@ mod tests {
             ..Default::default()
         };
         let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
-        let msg = err.to_string();
-        assert!(
-            msg.contains("Cross-library function") || msg.contains("unknown FunctionRef"),
-            "expected clear error for unknown cross-library function, got: {msg}"
+        assert_eq!(
+            err,
+            EvalError::LibraryNotFound { alias: "FHIRHelpers".to_string() },
+            "expected LibraryNotFound, got: {err}"
         );
+    }
+
+    #[test]
+    fn evaluate_elm_with_libraries_resolves_cross_library_expression_ref() {
+        // Included library "Helpers" defines expression "Answer" = 42.
+        let helpers_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Answer".to_string()),
+                    expression: Some(Box::new(int_literal(42))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        // Main library has expression "Main" = Helpers."Answer"
+        let main_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("Answer".to_string()),
+                        library_name: Some("Helpers".to_string()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let included: HashMap<String, Library> =
+            [("Helpers".to_string(), helpers_lib)].into_iter().collect();
+        let val =
+            evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap();
+        assert_eq!(val, Value::Integer(42));
+    }
+
+    #[test]
+    fn evaluate_elm_with_libraries_returns_library_not_found_for_unknown_alias() {
+        let main_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("Answer".to_string()),
+                        library_name: Some("Unknown".to_string()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let included: HashMap<String, Library> = HashMap::new();
+        let err =
+            evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap_err();
+        assert_eq!(err, EvalError::LibraryNotFound { alias: "Unknown".to_string() });
     }
 }

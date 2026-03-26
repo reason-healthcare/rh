@@ -27,6 +27,8 @@ pub enum EvalError {
     TerminologyError(String),
     /// An expression was not found in the library.
     ExpressionNotFound(String),
+    /// A cross-library reference used an alias that is not in the included map.
+    LibraryNotFound { alias: String },
     /// A general evaluation error.
     General(String),
 }
@@ -38,6 +40,12 @@ impl std::fmt::Display for EvalError {
             EvalError::TerminologyError(msg) => write!(f, "Terminology error: {msg}"),
             EvalError::ExpressionNotFound(name) => {
                 write!(f, "Expression not found: '{name}'")
+            }
+            EvalError::LibraryNotFound { alias } => {
+                write!(
+                    f,
+                    "Library alias '{alias}' not found in the included library map"
+                )
             }
             EvalError::General(msg) => write!(f, "Eval error: {msg}"),
         }

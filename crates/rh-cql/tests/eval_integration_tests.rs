@@ -984,3 +984,83 @@ fn eval_wave2_repeat() {
         "null source must produce empty list without error"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Cross-library compile + evaluate (cql-library-resolution)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn eval_cross_library_expression_ref_end_to_end() {
+    use rh_cql::{
+        compile_with_libraries, evaluate_elm_with_libraries, MemoryLibrarySourceProvider,
+    };
+
+    // Included library: Helpers defines Answer = 42
+    let helpers_cql = r#"
+library Helpers version '1.0.0'
+define Answer: 42
+"#;
+
+    // Main library: includes Helpers and re-exports via cross-library ref
+    let main_cql = r#"
+library Main version '1.0.0'
+include Helpers version '1.0.0' called Helpers
+define MyAnswer: Helpers.Answer
+"#;
+
+    let provider = MemoryLibrarySourceProvider::new();
+    provider.register_source(
+        rh_cql::LibraryIdentifier::new("Helpers", Some("1.0.0")),
+        helpers_cql.to_string(),
+    );
+
+    let out =
+        compile_with_libraries(main_cql, None, &provider).expect("compile_with_libraries failed");
+    assert!(out.result.is_success(), "compilation errors: {:?}", out.result.errors);
+    assert!(
+        out.included.contains_key("Helpers"),
+        "expected 'Helpers' in included map"
+    );
+
+    let ctx = default_ctx();
+    let val =
+        evaluate_elm_with_libraries(&out.result.library, &out.included, "MyAnswer", &ctx)
+            .expect("evaluation failed");
+    assert_eq!(val, Value::Integer(42));
+}
+
+#[test]
+fn eval_cross_library_chained_expression_ref() {
+    use rh_cql::{
+        compile_with_libraries, evaluate_elm_with_libraries, MemoryLibrarySourceProvider,
+    };
+
+    // Base library: defines a constant
+    let base_cql = r#"
+library Base version '1.0.0'
+define BaseValue: 100
+"#;
+
+    // Main library includes Base and wraps its value
+    let main_cql = r#"
+library Main version '1.0.0'
+include Base version '1.0.0' called B
+define Result: B.BaseValue + 1
+"#;
+
+    let provider = MemoryLibrarySourceProvider::new();
+    provider.register_source(
+        rh_cql::LibraryIdentifier::new("Base", Some("1.0.0")),
+        base_cql.to_string(),
+    );
+
+    let out =
+        compile_with_libraries(main_cql, None, &provider).expect("compile_with_libraries failed");
+    assert!(out.result.is_success(), "compilation errors: {:?}", out.result.errors);
+
+    let ctx = default_ctx();
+    let val =
+        evaluate_elm_with_libraries(&out.result.library, &out.included, "Result", &ctx)
+            .expect("evaluation failed");
+    assert_eq!(val, Value::Integer(101));
+}

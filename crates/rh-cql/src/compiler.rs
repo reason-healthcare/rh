@@ -40,6 +40,7 @@ use crate::output::{library_to_compact_json, library_to_json_with_options};
 use crate::parser::CqlParser;
 use crate::reporting::{Diagnostic, Severity};
 use crate::semantics::typed_ast::TypedLibrary;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 // ── CompilationContext ───────────────────────────────────────────────────────
@@ -136,6 +137,10 @@ struct PipelineConfig {
     /// Shared compilation environment (options + optional model provider).
     context: CompilationContext,
     emit_mode: PipelineEmitMode,
+    /// Pre-compiled included libraries keyed by alias.  Populated by
+    /// `compile_with_libraries` after resolving include declarations; empty
+    /// for the standard `compile()` / `validate()` paths.
+    pre_compiled_includes: HashMap<String, elm::Library>,
 }
 
 /// Output produced by [`run_compile_pipeline`].
@@ -151,6 +156,9 @@ struct PipelineOutput {
     /// All diagnostics emitted during parse + analysis, converted to the
     /// unified [`Diagnostic`] type.
     diagnostics: Vec<Diagnostic>,
+    /// Compiled included libraries keyed by their local alias, populated when
+    /// a `library_provider` was supplied in the [`PipelineConfig`].
+    included_libs: HashMap<String, elm::Library>,
 }
 
 /// Shared internal compilation pipeline.
@@ -170,14 +178,18 @@ fn run_compile_pipeline(
     // 2. Resolve model provider
     let provider = config.context.resolve_provider();
 
-    // 3. Semantic analysis
-    let analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
+    // 3. Semantic analysis — register pre-compiled included library symbols.
+    let mut analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
         Arc::clone(&provider),
         config.context.options.clone(),
     );
+    for (alias, dep_lib) in &config.pre_compiled_includes {
+        analyzer.register_included_library(alias, dep_lib);
+    }
     let (typed_library, raw_diagnostics) = analyzer.analyze(ast);
 
     let diagnostics: Vec<Diagnostic> = raw_diagnostics.into_iter().map(Diagnostic::from).collect();
+    let included_libs = config.pre_compiled_includes;
 
     // 4. Optionally emit ELM and/or source map
     match config.emit_mode {
@@ -186,6 +198,7 @@ fn run_compile_pipeline(
             library: None,
             source_map: None,
             diagnostics,
+            included_libs,
         }),
 
         PipelineEmitMode::Elm => {
@@ -196,6 +209,7 @@ fn run_compile_pipeline(
                 library: Some(library),
                 source_map: None,
                 diagnostics,
+                included_libs,
             })
         }
 
@@ -238,9 +252,78 @@ fn run_compile_pipeline(
                 library: Some(library),
                 source_map: Some(source_map),
                 diagnostics,
+                included_libs,
             })
         }
     }
+}
+
+/// Recursively compile all `include` declarations using a [`LibrarySourceProvider`],
+/// returning a map of `alias → compiled elm::Library`.
+///
+/// The `resolution_stack` tracks in-progress compilations for cycle detection.
+fn resolve_includes_to_elm(
+    includes: &[crate::parser::ast::IncludeDef],
+    provider: &dyn crate::library::LibrarySourceProvider,
+    options: &CompilerOptions,
+    model_provider: &Arc<dyn crate::provider::ModelInfoProvider>,
+    resolution_stack: &mut Vec<String>,
+) -> Result<HashMap<String, elm::Library>, CompilationError> {
+    let mut result = HashMap::new();
+
+    for inc in includes {
+        let alias = inc.alias.clone().unwrap_or_else(|| inc.path.clone());
+
+        if resolution_stack.iter().any(|p| p == &inc.path) {
+            return Err(CompilationError::LibraryNotFound {
+                name: inc.path.clone(),
+                searched_paths: vec![format!(
+                    "circular dependency — '{}' is already being compiled",
+                    inc.path
+                )],
+            });
+        }
+
+        let lib_id =
+            crate::library::LibraryIdentifier::new(&inc.path, inc.version.as_deref());
+
+        let source = provider.get_source(&lib_id).ok_or_else(|| {
+            CompilationError::LibraryNotFound {
+                name: inc.path.clone(),
+                searched_paths: vec![],
+            }
+        })?;
+
+        let parser = CqlParser::new();
+        let dep_ast = parser
+            .parse(&source.source)
+            .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+        resolution_stack.push(inc.path.clone());
+        let transitive = resolve_includes_to_elm(
+            &dep_ast.includes,
+            provider,
+            options,
+            model_provider,
+            resolution_stack,
+        )?;
+        resolution_stack.pop();
+
+        let mut analyzer = crate::semantics::analyzer::SemanticAnalyzer::new(
+            Arc::clone(model_provider),
+            options.clone(),
+        );
+        for (dep_alias, dep_lib) in &transitive {
+            analyzer.register_included_library(dep_alias, dep_lib);
+        }
+        let (typed_dep, _diags) = analyzer.analyze(dep_ast);
+        let mut emitter = crate::emit::ElmEmitter::new(options.clone());
+        let dep_elm = emitter.emit(typed_dep);
+
+        result.insert(alias, dep_elm);
+    }
+
+    Ok(result)
 }
 
 /// The result of compiling CQL source code.
@@ -310,6 +393,16 @@ pub enum CompilationError {
     /// Error generating output.
     #[error("Output error: {0}")]
     Output(String),
+
+    /// A required `include`d library could not be found by the provider.
+    #[error("Library '{name}' not found on the library path")]
+    LibraryNotFound {
+        /// The library name (path) that was not found.
+        name: String,
+        /// Paths that were searched (may be empty if the provider does not
+        /// report them).
+        searched_paths: Vec<String>,
+    },
 }
 
 /// Compile CQL source code to ELM.
@@ -378,6 +471,7 @@ pub fn compile_with_model(
         PipelineConfig {
             context: CompilationContext::new(options.clone(), model_provider),
             emit_mode: PipelineEmitMode::Elm,
+            pre_compiled_includes: HashMap::new(),
         },
     )?;
 
@@ -533,6 +627,7 @@ pub fn compile_to_elm_with_sourcemap(
             emit_mode: PipelineEmitMode::ElmWithSourceMap {
                 library_uri: library_uri.map(str::to_owned),
             },
+            pre_compiled_includes: HashMap::new(),
         },
     )?;
 
@@ -550,6 +645,113 @@ pub fn compile_to_elm_with_sourcemap(
         errors,
         warnings,
         messages,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// compile_with_libraries
+// ---------------------------------------------------------------------------
+
+/// The result of compiling a CQL library whose `include` declarations were
+/// resolved via a [`LibrarySourceProvider`].
+///
+/// Bundles the main [`CompilationResult`] with the dependency map so the
+/// caller can pass both to [`evaluate_elm_with_libraries`][crate::evaluate_elm_with_libraries].
+#[derive(Debug, Clone)]
+pub struct CompileOutputWithLibs {
+    /// The compiled main library and its diagnostics.
+    pub result: CompilationResult,
+    /// Compiled included libraries keyed by the local alias declared in the
+    /// main library's `include X called <alias>` statement.
+    pub included: HashMap<String, elm::Library>,
+}
+
+/// Compile a CQL library and recursively resolve all `include` declarations
+/// using the supplied [`LibrarySourceProvider`].
+///
+/// This is the additive entry point for library-aware compilation.  The
+/// existing [`compile`] / [`validate`] functions are unchanged; this function
+/// adds library resolution on top.
+///
+/// # Arguments
+///
+/// * `source`   — CQL source of the *main* library.
+/// * `options`  — Optional compiler options.
+/// * `provider` — Source provider used to locate included `.cql` files.
+///
+/// # Returns
+///
+/// Returns a [`CompileOutputWithLibs`] bundling the main [`CompilationResult`]
+/// with the `included` dependency map on success, or a [`CompilationError`]
+/// (including [`CompilationError::LibraryNotFound`]) on failure.
+///
+/// # Example
+///
+/// ```
+/// use rh_cql::{compile_with_libraries, CompilerOptions};
+/// use rh_cql::library::{MemoryLibrarySourceProvider, LibraryIdentifier};
+///
+/// let helper_src = "library Helper version '1.0' define Answer: 42";
+/// let main_src = r#"
+///     library Main version '1.0'
+///     include Helper version '1.0' called H
+///     define MyAnswer: H.Answer
+/// "#;
+///
+/// let provider = MemoryLibrarySourceProvider::new();
+/// provider.register_source(LibraryIdentifier::new("Helper", Some("1.0")), helper_src.to_string());
+///
+/// let out = compile_with_libraries(main_src, None, &provider).unwrap();
+/// assert!(out.result.is_success());
+/// assert!(out.included.contains_key("H"));
+/// ```
+pub fn compile_with_libraries(
+    source: &str,
+    options: Option<CompilerOptions>,
+    provider: &dyn crate::library::LibrarySourceProvider,
+) -> Result<CompileOutputWithLibs, CompilationError> {
+    let options = options.unwrap_or_default();
+
+    // Resolve all include declarations by compiling dependencies before the
+    // main pipeline runs.  A temporary parse is needed to extract the include
+    // declarations from the main library header.
+    let parser = CqlParser::new();
+    let ast_for_includes = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+    let model_provider = CompilationContext::new(options.clone(), None).resolve_provider();
+    let mut stack = Vec::new();
+    let pre_compiled_includes = resolve_includes_to_elm(
+        &ast_for_includes.includes,
+        provider,
+        &options,
+        &model_provider,
+        &mut stack,
+    )?;
+
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options.clone(), None),
+            emit_mode: PipelineEmitMode::Elm,
+            pre_compiled_includes,
+        },
+    )?;
+
+    let library = output
+        .library
+        .expect("pipeline with Elm mode must return a library");
+    let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
+
+    Ok(CompileOutputWithLibs {
+        result: CompilationResult {
+            library,
+            errors,
+            warnings,
+            messages,
+        },
+        included: output.included_libs,
     })
 }
 
@@ -586,6 +788,7 @@ pub fn validate(
         PipelineConfig {
             context: CompilationContext::new(options.clone(), None),
             emit_mode: PipelineEmitMode::None,
+            pre_compiled_includes: HashMap::new(),
         },
     )?;
 
@@ -700,6 +903,7 @@ pub fn explain_compile(
         PipelineConfig {
             context: CompilationContext::new(options, None),
             emit_mode: PipelineEmitMode::None,
+            pre_compiled_includes: HashMap::new(),
         },
     )?;
     let typed_library = output

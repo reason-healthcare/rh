@@ -96,9 +96,10 @@ pub mod types;
 
 // Primary public API - compile CQL to ELM
 pub use compiler::{
-    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_model, explain_compile,
-    explain_parse, validate, CompilationContext, CompilationError, CompilationResult,
-    SourceMapCompilationResult, ValidationResult,
+    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
+    compile_with_model, explain_compile, explain_parse, validate, CompilationContext,
+    CompilationError, CompilationResult, CompileOutputWithLibs, SourceMapCompilationResult,
+    ValidationResult,
 };
 pub use explain::explain_eval;
 
@@ -153,7 +154,7 @@ pub use eval::context::{
     Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError, FixedClock,
     InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
-pub use eval::engine::{evaluate_elm, evaluate_elm_with_trace, TraceEvent};
+pub use eval::engine::{evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace, TraceEvent};
 pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use eval::value::{
     cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime,

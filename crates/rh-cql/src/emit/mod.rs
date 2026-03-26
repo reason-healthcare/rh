@@ -383,6 +383,24 @@ impl ElmEmitter {
             Some(elm::ExpressionDefs { defs: statements })
         };
 
+        let includes = if typed_library.includes.is_empty() {
+            None
+        } else {
+            Some(elm::IncludeDefs {
+                defs: typed_library
+                    .includes
+                    .iter()
+                    .map(|inc| elm::IncludeDef {
+                        local_identifier: Some(
+                            inc.alias.clone().unwrap_or_else(|| inc.path.clone()),
+                        ),
+                        path: Some(inc.path.clone()),
+                        version: inc.version.clone(),
+                    })
+                    .collect(),
+            })
+        };
+
         elm::Library {
             local_id: None,
             annotation: vec![],
@@ -406,7 +424,7 @@ impl ElmEmitter {
                 version: Some("r1".to_string()),
             }),
             usings,
-            includes: None, // TODO mappings
+            includes,
             parameters,
             code_systems,
             value_sets,

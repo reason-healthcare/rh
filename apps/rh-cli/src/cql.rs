@@ -10,10 +10,11 @@ use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_to_json, elm::AccessModifier, evaluate_elm,
-    evaluate_elm_with_trace, explain_compile, explain_parse, validate, CompilerOptions,
-    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FixedClock, InMemoryDataProvider,
-    SignatureLevel, Value,
+    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
+    elm::AccessModifier, evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace,
+    explain_compile, explain_parse, validate, CompilationError, CompilerOptions, CqlDateTime,
+    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
+    InMemoryDataProvider, SignatureLevel, Value,
 };
 
 #[derive(Subcommand)]
@@ -75,6 +76,12 @@ pub enum CqlCommands {
         #[clap(value_name = "FILE", num_args = 0..)]
         inputs: Vec<String>,
 
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.  The input file's directory is
+        /// always searched automatically.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+
         /// Show detailed error information
         #[clap(long)]
         verbose: bool,
@@ -115,6 +122,12 @@ pub enum CqlCommands {
         #[clap(long, value_name = "FILE")]
         data: Option<String>,
 
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.  The input file's directory is
+        /// always searched automatically.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+
         /// Output a step-by-step evaluation trace
         #[clap(long)]
         trace: bool,
@@ -148,8 +161,8 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 source_map_output.as_deref(),
             )?;
         }
-        CqlCommands::Validate { inputs, verbose } => {
-            validate_cql_multi(&inputs, verbose)?;
+        CqlCommands::Validate { inputs, lib_path, verbose } => {
+            validate_cql_multi(&inputs, &lib_path, verbose)?;
         }
         CqlCommands::Info { input } => {
             show_info(&input)?;
@@ -164,9 +177,10 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
             file,
             expression,
             data,
+            lib_path,
             trace,
         } => {
-            eval_cql(&file, &expression, data.as_deref(), trace)?;
+            eval_cql(&file, &expression, data.as_deref(), &lib_path, trace)?;
         }
     }
 
@@ -262,10 +276,10 @@ fn resolve_cql_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
 ///
 /// When multiple files match, each file is validated independently and a
 /// summary failure is returned after all files have been processed.
-fn validate_cql_multi(inputs: &[String], verbose: bool) -> Result<()> {
+fn validate_cql_multi(inputs: &[String], lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     // No inputs, or the explicit stdin sentinel "-" → validate from stdin.
     if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
-        return validate_cql(inputs.first().map_or("-", |s| s.as_str()), verbose);
+        return validate_cql(inputs.first().map_or("-", |s| s.as_str()), lib_paths, verbose);
     }
 
     let paths = resolve_cql_paths(inputs)?;
@@ -277,7 +291,7 @@ fn validate_cql_multi(inputs: &[String], verbose: bool) -> Result<()> {
         if multiple {
             println!("[{display}]");
         }
-        if validate_cql(&display, verbose).is_err() {
+        if validate_cql(&display, lib_paths, verbose).is_err() {
             failure_count += 1;
         }
         if multiple {
@@ -443,21 +457,83 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// Eval service
+// Library-aware compile helper
 // ---------------------------------------------------------------------------
+
+/// Build the set of library search directories for an input file path plus
+/// any extra `--lib-path` values, then call `compile_with_libraries`.
+///
+/// Returns a clear, actionable error when a required include is not found,
+/// listing the searched directories so the user knows where to place the file.
+fn compile_with_search_dirs(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+) -> Result<rh_cql::CompileOutputWithLibs> {
+    let mut search_dirs: Vec<PathBuf> = Vec::new();
+    if input != "-" {
+        if let Some(parent) = Path::new(input).parent() {
+            if !parent.as_os_str().is_empty() {
+                search_dirs.push(parent.to_path_buf());
+            }
+        }
+    }
+    search_dirs.extend_from_slice(lib_paths);
+
+    if search_dirs.is_empty() {
+        // No search dirs — fall back to single-library compile.
+        let r = compile(source, None).context("Failed to compile CQL")?;
+        return Ok(rh_cql::CompileOutputWithLibs {
+            result: r,
+            included: std::collections::HashMap::new(),
+        });
+    }
+
+    use rh_cql::CompositeLibrarySourceProvider;
+    let mut composite = CompositeLibrarySourceProvider::new();
+    for dir in &search_dirs {
+        composite = composite.add_provider(FileLibrarySourceProvider::new().with_path(dir));
+    }
+
+    compile_with_libraries(source, None, &composite).map_err(|e| match e {
+        CompilationError::LibraryNotFound { name, searched_paths } => {
+            let path_list = if !searched_paths.is_empty() {
+                searched_paths.iter().map(|p| format!("  - {p}")).collect::<Vec<_>>().join("\n")
+            } else {
+                search_dirs
+                    .iter()
+                    .map(|d| format!("  - {}", d.display()))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            };
+            anyhow::anyhow!(
+                "Library '{}' not found.\nSearched paths:\n{}",
+                name,
+                path_list
+            )
+        }
+        other => anyhow::anyhow!("{other}"),
+    })
+}
 
 // ---------------------------------------------------------------------------
 // Eval service
 // ---------------------------------------------------------------------------
 
 /// Evaluate a named expression in a CQL library
-fn eval_cql(input: &str, expression: &str, data: Option<&str>, show_trace: bool) -> Result<()> {
+fn eval_cql(
+    input: &str,
+    expression: &str,
+    data: Option<&str>,
+    lib_paths: &[PathBuf],
+    show_trace: bool,
+) -> Result<()> {
     let source = read_source(input)?;
 
-    // Compile to ELM
-    let result = compile(&source, None).context("Failed to compile CQL")?;
-    if !result.is_success() {
-        return Err(report_compile_failure(&result.errors, &result.warnings));
+    // Compile to ELM, resolving any included libraries.
+    let output = compile_with_search_dirs(&source, input, lib_paths)?;
+    if !output.result.is_success() {
+        return Err(report_compile_failure(&output.result.errors, &output.result.warnings));
     }
 
     // Build a minimal EvalContext pinned to the current system time
@@ -487,9 +563,12 @@ fn eval_cql(input: &str, expression: &str, data: Option<&str>, show_trace: bool)
     }
 
     let ctx = builder.build();
-    let library = &result.library;
+    let library = &output.result.library;
+    let included = &output.included;
 
     if show_trace {
+        // Trace is only available for the main library; use evaluate_elm_with_trace
+        // for the trace view (cross-library refs will still be resolved for result).
         let (value, trace) = evaluate_elm_with_trace(library, expression, &ctx)
             .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("Result: {value}");
@@ -508,7 +587,7 @@ fn eval_cql(input: &str, expression: &str, data: Option<&str>, show_trace: bool)
             );
         }
     } else {
-        let value = evaluate_elm(library, expression, &ctx)
+        let value = evaluate_elm_with_libraries(library, included, expression, &ctx)
             .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("{value}");
     }
@@ -666,17 +745,28 @@ fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::
 }
 
 /// Validate CQL source
-fn validate_cql(input: &str, verbose: bool) -> Result<()> {
+fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     let source = read_source(input)?;
 
-    let result = validate(&source, None).context("Failed to validate CQL")?;
+    // Use compile_with_search_dirs when library paths are available so that
+    // include directives are resolved and validated.  Fall back to the lighter
+    // validate() path when no search dirs are configured (stdin, no --lib-path).
+    let (errors, warnings, valid) = if input == "-" && lib_paths.is_empty() {
+        let result = validate(&source, None).context("Failed to validate CQL")?;
+        let valid = result.is_valid();
+        (result.errors, result.warnings, valid)
+    } else {
+        let out = compile_with_search_dirs(&source, input, lib_paths)?;
+        let valid = out.result.is_success();
+        (out.result.errors, out.result.warnings, valid)
+    };
 
-    if result.is_valid() {
+    if valid {
         println!("✓ CQL is valid");
 
-        if !result.warnings.is_empty() {
-            println!("\nWarnings ({}):", result.warnings.len());
-            for warning in &result.warnings {
+        if !warnings.is_empty() {
+            println!("\nWarnings ({}):", warnings.len());
+            for warning in &warnings {
                 if verbose {
                     if let Some(span) = &warning.span {
                         println!(
@@ -692,8 +782,8 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
     } else {
         println!("✗ CQL has errors\n");
 
-        println!("Errors ({}):", result.errors.len());
-        for err in &result.errors {
+        println!("Errors ({}):", errors.len());
+        for err in &errors {
             if let Some(span) = &err.span {
                 println!(
                     "  ✗ {} (line {}, col {})",
@@ -704,9 +794,9 @@ fn validate_cql(input: &str, verbose: bool) -> Result<()> {
             }
         }
 
-        if !result.warnings.is_empty() {
-            println!("\nWarnings ({}):", result.warnings.len());
-            for warning in &result.warnings {
+        if !warnings.is_empty() {
+            println!("\nWarnings ({}):", warnings.len());
+            for warning in &warnings {
                 if verbose {
                     if let Some(span) = &warning.span {
                         println!(
