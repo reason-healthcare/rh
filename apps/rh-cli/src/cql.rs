@@ -585,25 +585,21 @@ fn warn_unresolved_includes(
         }
 
         let install_hint = if let Some(pkg) = inc.package_name() {
-            let ver_suffix = inc
-                .version
-                .as_deref()
-                .map(|v| format!("@{v}"))
-                .unwrap_or_default();
+            let ver = inc.version.as_deref().unwrap_or("latest");
             format!(
-                "\n  Try installing the FHIR package: {pkg}{ver_suffix}\n  \
-                 e.g. `fhir install {pkg}{ver_suffix}`"
+                "\n  Try installing the FHIR package:\n    \
+                 rh download package {pkg} {ver}"
             )
         } else if let Some(ver) = &inc.version {
             format!(
                 "\n  Could not find a FHIR package providing '{}' version '{}'.\n  \
-                 Check that the package is installed in your packages directory.",
-                inc.name, ver
+                 Try: rh download package <package-name> {}",
+                inc.name, ver, ver
             )
         } else {
             format!(
                 "\n  Could not find a FHIR package providing '{}'.\n  \
-                 Check that the package is installed in your packages directory.",
+                 Try: rh download package <package-name> <version>",
                 inc.name
             )
         };
