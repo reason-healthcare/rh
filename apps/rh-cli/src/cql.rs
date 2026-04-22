@@ -11,10 +11,10 @@ use tracing::{error, info};
 
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
-    elm::AccessModifier, evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace,
-    explain_compile, explain_parse, validate, CompilationError, CompilerOptions, CqlDateTime,
-    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, SignatureLevel, Value,
+    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
+    explain_parse, validate, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
+    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
+    SignatureLevel, Value,
 };
 
 #[derive(Subcommand)]
@@ -161,7 +161,11 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 source_map_output.as_deref(),
             )?;
         }
-        CqlCommands::Validate { inputs, lib_path, verbose } => {
+        CqlCommands::Validate {
+            inputs,
+            lib_path,
+            verbose,
+        } => {
             validate_cql_multi(&inputs, &lib_path, verbose)?;
         }
         CqlCommands::Info { input } => {
@@ -244,11 +248,9 @@ fn resolve_cql_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
         }
 
         let mut matched_any = false;
-        let entries =
-            glob(input).with_context(|| format!("Invalid glob pattern: '{input}'"))?;
+        let entries = glob(input).with_context(|| format!("Invalid glob pattern: '{input}'"))?;
         for entry in entries {
-            let entry =
-                entry.with_context(|| format!("Invalid path for pattern: '{input}'"))?;
+            let entry = entry.with_context(|| format!("Invalid path for pattern: '{input}'"))?;
             if entry.is_file() {
                 matched_any = true;
                 resolved.insert(entry);
@@ -279,7 +281,11 @@ fn resolve_cql_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
 fn validate_cql_multi(inputs: &[String], lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     // No inputs, or the explicit stdin sentinel "-" → validate from stdin.
     if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
-        return validate_cql(inputs.first().map_or("-", |s| s.as_str()), lib_paths, verbose);
+        return validate_cql(
+            inputs.first().map_or("-", |s| s.as_str()),
+            lib_paths,
+            verbose,
+        );
     }
 
     let paths = resolve_cql_paths(inputs)?;
@@ -457,6 +463,160 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
+// CQL include parsing helpers
+// ---------------------------------------------------------------------------
+
+/// A parsed `include` directive from CQL source.
+#[derive(Debug)]
+struct IncludeDirective {
+    /// The raw library name/path (e.g. `fhir.cqf.common.FHIRHelpers` or `FHIRHelpers`).
+    name: String,
+    /// The version string if present (e.g. `4.0.1`).
+    version: Option<String>,
+    /// The local alias (`called <alias>`).
+    alias: String,
+}
+
+impl IncludeDirective {
+    /// If the name is package-qualified (last segment starts with uppercase),
+    /// return the package portion (e.g. `"fhir.cqf.common"` for
+    /// `"fhir.cqf.common.FHIRHelpers"`).
+    fn package_name(&self) -> Option<&str> {
+        let pos = self.name.rfind('.')?;
+        if self.name[pos + 1..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_uppercase())
+        {
+            Some(&self.name[..pos])
+        } else {
+            None
+        }
+    }
+}
+
+/// Parse all `include` directives from CQL source.
+///
+/// Handles both forms:
+/// - `include <name> version '<ver>' called <alias>`
+/// - `include <name> called <alias>`
+fn parse_includes(source: &str) -> Vec<IncludeDirective> {
+    let mut directives = Vec::new();
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") || trimmed.starts_with("/*") {
+            continue;
+        }
+        let rest = match trimmed
+            .strip_prefix("include ")
+            .or_else(|| trimmed.strip_prefix("include\t"))
+        {
+            Some(r) => r.trim_start(),
+            None => continue,
+        };
+
+        let (name, rest) = split_cql_identifier(rest);
+        if name.is_empty() {
+            continue;
+        }
+        let rest = rest.trim_start();
+
+        let (version, rest) = if let Some(after_kw) = rest.strip_prefix("version") {
+            let after_kw = after_kw.trim_start();
+            if let Some(inner) = after_kw.strip_prefix('\'') {
+                if let Some(end) = inner.find('\'') {
+                    (Some(inner[..end].to_string()), &inner[end + 1..])
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } else {
+            (None, rest)
+        };
+
+        let rest = rest.trim_start();
+        let rest = match rest
+            .strip_prefix("called")
+            .map(str::trim_start)
+            .filter(|r| {
+                r.chars()
+                    .next()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_')
+            }) {
+            Some(r) => r,
+            None => continue,
+        };
+
+        let (alias, _) = split_cql_identifier(rest);
+        if alias.is_empty() {
+            continue;
+        }
+
+        directives.push(IncludeDirective {
+            name: name.to_string(),
+            version,
+            alias: alias.to_string(),
+        });
+    }
+    directives
+}
+
+/// Split a CQL identifier (alphanumeric, `.`, `_`) from the start of `s`.
+fn split_cql_identifier(s: &str) -> (&str, &str) {
+    let end = s
+        .find(|c: char| !c.is_alphanumeric() && c != '.' && c != '_')
+        .unwrap_or(s.len());
+    (&s[..end], &s[end..])
+}
+
+/// Emit a warning for every declared include that was not resolved during
+/// compilation.  Unresolved includes typically cause cascading false-positive
+/// member-access errors, so each warning notes that downstream errors may not
+/// reflect real problems in the CQL.
+fn warn_unresolved_includes(
+    source: &str,
+    included: &std::collections::HashMap<String, rh_cql::elm::Library>,
+) {
+    for inc in parse_includes(source) {
+        if included.contains_key(&inc.alias) {
+            continue;
+        }
+
+        let install_hint = if let Some(pkg) = inc.package_name() {
+            let ver_suffix = inc
+                .version
+                .as_deref()
+                .map(|v| format!("@{v}"))
+                .unwrap_or_default();
+            format!(
+                "\n  Try installing the FHIR package: {pkg}{ver_suffix}\n  \
+                 e.g. `fhir install {pkg}{ver_suffix}`"
+            )
+        } else if let Some(ver) = &inc.version {
+            format!(
+                "\n  Could not find a FHIR package providing '{}' version '{}'.\n  \
+                 Check that the package is installed in your packages directory.",
+                inc.name, ver
+            )
+        } else {
+            format!(
+                "\n  Could not find a FHIR package providing '{}'.\n  \
+                 Check that the package is installed in your packages directory.",
+                inc.name
+            )
+        };
+
+        eprintln!(
+            "⚠ Warning: Library '{}' (alias '{}') could not be resolved.{}\n  \
+             Member-access errors on expressions using '{}' may be false positives.",
+            inc.name, inc.alias, install_hint, inc.alias
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Library-aware compile helper
 // ---------------------------------------------------------------------------
 
@@ -496,9 +656,16 @@ fn compile_with_search_dirs(
     }
 
     compile_with_libraries(source, None, &composite).map_err(|e| match e {
-        CompilationError::LibraryNotFound { name, searched_paths } => {
+        CompilationError::LibraryNotFound {
+            name,
+            searched_paths,
+        } => {
             let path_list = if !searched_paths.is_empty() {
-                searched_paths.iter().map(|p| format!("  - {p}")).collect::<Vec<_>>().join("\n")
+                searched_paths
+                    .iter()
+                    .map(|p| format!("  - {p}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             } else {
                 search_dirs
                     .iter()
@@ -533,7 +700,10 @@ fn eval_cql(
     // Compile to ELM, resolving any included libraries.
     let output = compile_with_search_dirs(&source, input, lib_paths)?;
     if !output.result.is_success() {
-        return Err(report_compile_failure(&output.result.errors, &output.result.warnings));
+        return Err(report_compile_failure(
+            &output.result.errors,
+            &output.result.warnings,
+        ));
     }
 
     // Build a minimal EvalContext pinned to the current system time
@@ -644,7 +814,10 @@ fn enrich_eval_error(
             .unwrap_or_default();
 
         if names.is_empty() {
-            anyhow::anyhow!("Expression '{}' not found (library defines no expressions)", requested)
+            anyhow::anyhow!(
+                "Expression '{}' not found (library defines no expressions)",
+                requested
+            )
         } else {
             anyhow::anyhow!(
                 "Expression '{}' not found.\n\nAvailable expressions:\n{}",
@@ -748,15 +921,18 @@ fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::
 fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     let source = read_source(input)?;
 
-    // Use compile_with_search_dirs when library paths are available so that
-    // include directives are resolved and validated.  Fall back to the lighter
-    // validate() path when no search dirs are configured (stdin, no --lib-path).
-    let (errors, warnings, valid) = if input == "-" && lib_paths.is_empty() {
+    // Use the bundled validate() path (which includes FHIRHelpers and other
+    // standard FHIR support libraries) unless the caller explicitly provides
+    // --lib-path directories.  This matches the behavior of `rh cql compile`
+    // and avoids false "Could not resolve" errors for FHIR member access when
+    // FHIRHelpers.cql is not present on disk next to the input file.
+    let (errors, warnings, valid) = if lib_paths.is_empty() {
         let result = validate(&source, None).context("Failed to validate CQL")?;
         let valid = result.is_valid();
         (result.errors, result.warnings, valid)
     } else {
         let out = compile_with_search_dirs(&source, input, lib_paths)?;
+        warn_unresolved_includes(&source, &out.included);
         let valid = out.result.is_success();
         (out.result.errors, out.result.warnings, valid)
     };

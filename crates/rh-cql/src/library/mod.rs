@@ -39,7 +39,7 @@ pub use identifiers::LibraryIdentifier;
 pub use manager::{LibraryError, LibraryManager, LibraryResult};
 pub use providers::{
     CompositeLibrarySourceProvider, FileLibrarySourceProvider, LibrarySourceProvider,
-    MemoryLibrarySourceProvider,
+    MemoryLibrarySourceProvider, PackageLibrarySourceProvider,
 };
 pub use sources::LibrarySource;
 

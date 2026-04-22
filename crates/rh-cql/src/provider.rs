@@ -707,7 +707,7 @@ fn load_modelinfo_from_library_file(file_path: &Path) -> anyhow::Result<ModelInf
 }
 
 /// Simple base64 decoder (no external dependency).
-fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
     fn char_to_value(c: u8) -> Option<u8> {
         match c {
             b'A'..=b'Z' => Some(c - b'A'),

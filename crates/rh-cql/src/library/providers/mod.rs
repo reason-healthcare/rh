@@ -3,10 +3,12 @@
 pub mod composite;
 pub mod file;
 pub mod memory;
+pub mod package;
 
 pub use composite::CompositeLibrarySourceProvider;
 pub use file::FileLibrarySourceProvider;
 pub use memory::MemoryLibrarySourceProvider;
+pub use package::PackageLibrarySourceProvider;
 
 use super::identifiers::LibraryIdentifier;
 use super::sources::LibrarySource;

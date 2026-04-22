@@ -113,7 +113,7 @@ pub use error::{CqlError, Result};
 pub use library::{
     CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FileLibrarySourceProvider,
     FunctionRef, LibraryError, LibraryIdentifier, LibraryManager, LibraryResult, LibrarySource,
-    LibrarySourceProvider, MemoryLibrarySourceProvider,
+    LibrarySourceProvider, MemoryLibrarySourceProvider, PackageLibrarySourceProvider,
 };
 pub use operators::{
     OperatorError, OperatorKind, OperatorResolver, OperatorResult, OperatorSignature,
@@ -154,7 +154,9 @@ pub use eval::context::{
     Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError, FixedClock,
     InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
-pub use eval::engine::{evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace, TraceEvent};
+pub use eval::engine::{
+    evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace, TraceEvent,
+};
 pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use eval::value::{
     cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime,
