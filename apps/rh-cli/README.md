@@ -2,12 +2,49 @@
 
 The `rh` CLI is a unified command-line interface for working with FHIR data. It provides FHIR code generation, FHIRPath evaluation, CQL compilation, validation, and package management in a single tool.
 
+## Installation
+
+### Pre-built binaries (recommended)
+
+Download the latest release binary for your platform from the [GitHub Releases page](https://github.com/reason-healthcare/rh/releases).
+
+**macOS (Apple Silicon)**
+```bash
+curl -L https://github.com/reason-healthcare/rh/releases/latest/download/rh-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv rh /usr/local/bin/
+```
+
+**macOS (Intel)**
+```bash
+curl -L https://github.com/reason-healthcare/rh/releases/latest/download/rh-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv rh /usr/local/bin/
+```
+
+**Linux x86_64 (static binary)**
+```bash
+curl -L https://github.com/reason-healthcare/rh/releases/latest/download/rh-x86_64-unknown-linux-musl.tar.gz | tar xz
+sudo mv rh /usr/local/bin/
+```
+
+**Windows x86_64**
+
+Download [`rh-x86_64-pc-windows-msvc.zip`](https://github.com/reason-healthcare/rh/releases/latest/download/rh-x86_64-pc-windows-msvc.zip), extract it, and place `rh.exe` somewhere on your `PATH`.
+
+### Build from source
+
+```bash
+cargo install --path apps/rh-cli
+```
+
+### From crates.io
+
+```bash
+cargo install rh-cli
+```
+
 ## Quick Start
 
 ```bash
-# Install (build from source)
-cargo install --path apps/rh-cli
-
 # See all available commands
 rh --help
 
