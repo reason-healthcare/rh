@@ -12,9 +12,9 @@ use tracing::{error, info};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, validate, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
-    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
-    SignatureLevel, Value,
+    explain_parse, get_default_packages_dir, validate, CompilationError, CompilerOptions,
+    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
+    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
 };
 
 #[derive(Subcommand)]
@@ -636,19 +636,16 @@ fn compile_with_search_dirs(
     }
     search_dirs.extend_from_slice(lib_paths);
 
-    if search_dirs.is_empty() {
-        // No search dirs — fall back to single-library compile.
-        let r = compile(source, None).context("Failed to compile CQL")?;
-        return Ok(rh_cql::CompileOutputWithLibs {
-            result: r,
-            included: std::collections::HashMap::new(),
-        });
-    }
-
     use rh_cql::CompositeLibrarySourceProvider;
     let mut composite = CompositeLibrarySourceProvider::new();
     for dir in &search_dirs {
         composite = composite.add_provider(FileLibrarySourceProvider::new().with_path(dir));
+    }
+    // Always add the FHIR package cache so that includes like
+    // `include fhir.cqf.common.FHIRHelpers` resolve from
+    // ~/.fhir/packages without requiring --lib-path.
+    if let Ok(pkg_dir) = get_default_packages_dir() {
+        composite = composite.add_provider(PackageLibrarySourceProvider::new(pkg_dir));
     }
 
     compile_with_libraries(source, None, &composite).map_err(|e| match e {
