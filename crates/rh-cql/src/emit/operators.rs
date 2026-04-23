@@ -1,9 +1,22 @@
 use crate::elm;
 use crate::emit::ElmEmitter;
-use crate::parser::ast::{BinaryOperator, TernaryOperator, UnaryOperator};
+use crate::parser::ast::{BinaryOperator, DateTimePrecision, TernaryOperator, UnaryOperator};
 use crate::semantics::typed_ast::{
     TypedDateTimeComponentFrom, TypedExpression, TypedNode, TypedTimingExpression,
 };
+
+fn datetime_precision_str(prec: DateTimePrecision) -> &'static str {
+    match prec {
+        DateTimePrecision::Year => "year",
+        DateTimePrecision::Month => "month",
+        DateTimePrecision::Week => "week",
+        DateTimePrecision::Day => "day",
+        DateTimePrecision::Hour => "hour",
+        DateTimePrecision::Minute => "minute",
+        DateTimePrecision::Second => "second",
+        DateTimePrecision::Millisecond => "millisecond",
+    }
+}
 
 pub fn emit_unary_operator(
     operator: &UnaryOperator,
@@ -182,6 +195,23 @@ pub fn emit_binary_operator(
         BinaryOperator::Intersect => elm::Expression::Intersect(binary()),
         BinaryOperator::Except => elm::Expression::Except(binary()),
         BinaryOperator::IndexOf => elm::Expression::Indexer(binary()),
+
+        BinaryOperator::DurationBetween(prec) => {
+            elm::Expression::DurationBetween(elm::TimeBinaryExpression {
+                element,
+                operand: vec![left_expr, right_expr],
+                signature: Vec::new(),
+                precision: Some(datetime_precision_str(*prec).to_string()),
+            })
+        }
+        BinaryOperator::DifferenceBetween(prec) => {
+            elm::Expression::DifferenceBetween(elm::TimeBinaryExpression {
+                element,
+                operand: vec![left_expr, right_expr],
+                signature: Vec::new(),
+                precision: Some(datetime_precision_str(*prec).to_string()),
+            })
+        }
     }
 }
 

@@ -534,6 +534,10 @@ pub enum BinaryOperator {
     Intersect,
     Except,
     IndexOf,
+
+    // Duration / difference between (precision is encoded in the variant)
+    DurationBetween(DateTimePrecision),
+    DifferenceBetween(DateTimePrecision),
 }
 
 impl BinaryOperator {

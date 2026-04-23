@@ -1649,7 +1649,10 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             let b_m = b.month.ok_or_else(|| err("DurationBetween", "no month"))?;
             Ok((b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64))
         }
-        "week" => Ok(datetime_duration_diff(a, b, "day")? / 7),
+        // Weeks are derived from elapsed hours so that the time-of-day
+        // components are included (14 calendar days starting at 22:00 and
+        // ending at 07:00 is only ~1.9 weeks, not 2).
+        "week" => Ok(datetime_duration_diff(a, b, "hour")? / (24 * 7)),
         "day" => {
             let a_day = a.day.ok_or_else(|| err("DurationBetween", "no day"))?;
             let b_day = b.day.ok_or_else(|| err("DurationBetween", "no day"))?;
@@ -1660,7 +1663,12 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             let days = datetime_duration_diff(a, b, "day")?;
             let a_h = a.hour.ok_or_else(|| err("DurationBetween", "no hour"))? as i64;
             let b_h = b.hour.ok_or_else(|| err("DurationBetween", "no hour"))? as i64;
-            Ok(days * 24 + (b_h - a_h))
+            // Convert to a second-level delta so that UTC-offset differences
+            // (including DST transitions) are accounted for.
+            let raw_seconds = days * 86400 + (b_h - a_h) * 3600;
+            let offset_delta = a.offset_seconds.unwrap_or(0) as i64
+                - b.offset_seconds.unwrap_or(0) as i64;
+            Ok((raw_seconds + offset_delta) / 3600)
         }
         "minute" => {
             let hours = datetime_duration_diff(a, b, "hour")?;

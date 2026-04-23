@@ -1589,6 +1589,10 @@ pub fn binary_operator_name(op: BinaryOperator) -> String {
         BinaryOperator::Intersect => "Intersect",
         BinaryOperator::Except => "Except",
         BinaryOperator::IndexOf => "IndexOf",
+        // DurationBetween / DifferenceBetween are emitted directly via
+        // emit_binary_operator; they don't go through this name lookup.
+        BinaryOperator::DurationBetween(_) => "DurationBetween",
+        BinaryOperator::DifferenceBetween(_) => "DifferenceBetween",
     }
     .to_string()
 }

@@ -292,6 +292,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if self.is_library_parameter(name) {
                     return Ok(Value::Null);
                 }
+                // Check if this is a context variable reference (e.g. "Patient" when
+                // the library declares `context Patient`).  Return the context value
+                // directly rather than looking for an expression definition.
+                if let Some(contexts) = &self.library.contexts {
+                    if contexts.defs.iter().any(|c| c.name.as_deref() == Some(name)) {
+                        return Ok(self.ctx.context_value.clone().unwrap_or(Value::Null));
+                    }
+                }
                 // Otherwise evaluate from library.
                 let expr = self.find_expression(name)?;
                 let val = self.eval_expr(expr)?;
@@ -1201,6 +1209,10 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 for operand in &func_ref.operand {
                     args.push(self.eval_expr(operand)?);
                 }
+                // Age functions require Patient context; handle before builtin dispatch.
+                if let Some(result) = self.eval_age_function(name, &args) {
+                    return result;
+                }
                 // Try builtin first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
                 // CQL system builtins so this works transparently.
@@ -1234,6 +1246,61 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     }
 
     // --- Expression-family helpers -----------------------------------------
+
+    /// Evaluate CQL age functions (AgeInYears, AgeInYearsAt, etc.).
+    ///
+    /// These functions implicitly reference the Patient context to obtain a
+    /// birthDate and then compute a duration.  Returns `None` if `name` is not
+    /// a recognised age function.
+    fn eval_age_function(&self, name: &str, args: &[Value]) -> Option<Result<Value, EvalError>> {
+        let unit = match name {
+            "AgeInYears" | "AgeInYearsAt" => "year",
+            "AgeInMonths" | "AgeInMonthsAt" => "month",
+            "AgeInWeeks" | "AgeInWeeksAt" => "week",
+            "AgeInDays" | "AgeInDaysAt" => "day",
+            "AgeInHours" | "AgeInHoursAt" => "hour",
+            "AgeInMinutes" | "AgeInMinutesAt" => "minute",
+            "AgeInSeconds" | "AgeInSecondsAt" => "second",
+            _ => return None,
+        };
+
+        // Extract birthDate from the Patient context value.
+        let birth_raw = match &self.ctx.context_value {
+            Some(Value::Tuple(fields)) => {
+                match fields.get("birthDate").or_else(|| fields.get("birthdate")) {
+                    Some(v) => v.clone(),
+                    None => return Some(Ok(Value::Null)),
+                }
+            }
+            _ => return Some(Ok(Value::Null)),
+        };
+
+        // Convert a string birthDate (e.g. "1970-01-01") to Value::Date.
+        let birth_val = match birth_raw {
+            Value::Date(_) => birth_raw,
+            ref s @ Value::String(_) => match to_date(s) {
+                Ok(v) => v,
+                Err(e) => return Some(Err(e)),
+            },
+            _ => return Some(Ok(Value::Null)),
+        };
+
+        // AgeInXxxAt(date) uses the supplied date; AgeInXxx() uses today.
+        let ref_val = if name.ends_with("At") {
+            match args.first() {
+                Some(v) => v.clone(),
+                None => {
+                    return Some(Err(EvalError::General(format!(
+                        "{name}: expected 1 argument"
+                    ))))
+                }
+            }
+        } else {
+            Value::Date(self.ctx.today())
+        };
+
+        Some(duration_between(&birth_val, &ref_val, unit))
+    }
 
     /// Evaluate logical and null-propagation expressions:
     /// `And`, `Or`, `Not`, `Xor`, `Implies`, `IsNull`, `IsTrue`, `IsFalse`,

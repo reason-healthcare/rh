@@ -157,6 +157,12 @@ fn parse_comparison_expression(input: Span<'_>) -> IResult<Span<'_>, Expression>
 // ============================================================================
 
 fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    // Try "duration in <precision> between X and Y" / "difference in ..."
+    // before falling through to the regular "X between Y and Z" form.
+    if let Ok(result) = parse_duration_difference_between(input) {
+        return Ok(result);
+    }
+
     let (input, first) = parse_interval_operator_expression(input)?;
 
     // Try to parse "between X and Y"
@@ -186,7 +192,58 @@ fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // Interval Operators
 // ============================================================================
 
-/// Parse datetime precision specifier: year, month, week, day, hour, minute, second, millisecond
+/// Parse datetime precision specifier (singular or plural):
+/// year/years, month/months, week/weeks, day/days, hour/hours,
+/// minute/minutes, second/seconds, millisecond/milliseconds.
+fn parse_precision_plural(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecision> {
+    ws(alt((
+        value(DateTimePrecision::Year, alt((keyword("years"), keyword("year")))),
+        value(DateTimePrecision::Month, alt((keyword("months"), keyword("month")))),
+        value(DateTimePrecision::Week, alt((keyword("weeks"), keyword("week")))),
+        value(DateTimePrecision::Day, alt((keyword("days"), keyword("day")))),
+        value(DateTimePrecision::Hour, alt((keyword("hours"), keyword("hour")))),
+        value(DateTimePrecision::Minute, alt((keyword("minutes"), keyword("minute")))),
+        value(DateTimePrecision::Second, alt((keyword("seconds"), keyword("second")))),
+        value(
+            DateTimePrecision::Millisecond,
+            alt((keyword("milliseconds"), keyword("millisecond"))),
+        ),
+    )))(input)
+}
+
+/// Parse `duration in <precision> between X and Y`
+/// or     `difference in <precision> between X and Y`.
+fn parse_duration_difference_between(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, is_difference) = ws(alt((
+        value(false, keyword("duration")),
+        value(true, keyword("difference")),
+    )))(input)?;
+    let (input, _) = ws(keyword("in"))(input)?;
+    let (input, prec) = parse_precision_plural(input)?;
+    let (input, _) = ws(keyword("between"))(input)?;
+    let (input, left) = parse_interval_operator_expression(input)?;
+    let (input, _) = ws(keyword("and"))(input)?;
+    let (input, right) = parse_interval_operator_expression(input)?;
+
+    let operator = if is_difference {
+        BinaryOperator::DifferenceBetween(prec)
+    } else {
+        BinaryOperator::DurationBetween(prec)
+    };
+    Ok((
+        input,
+        Expression::BinaryExpression(BinaryExpression {
+            operator,
+            left: Box::new(left),
+            right: Box::new(right),
+            precision: None,
+            location: None,
+        }),
+    ))
+}
+
+/// Parse datetime precision specifier (singular only):
+/// year, month, week, day, hour, minute, second, millisecond.
 fn parse_precision(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecision> {
     ws(alt((
         value(DateTimePrecision::Year, keyword("year")),
