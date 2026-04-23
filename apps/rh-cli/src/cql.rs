@@ -718,7 +718,17 @@ fn eval_cql(
     let mut builder = EvalContextBuilder::new(FixedClock::new(now));
 
     if let Some(data_path) = data {
-        let (provider, context_value) = load_fhir_data(data_path)?;
+        // Determine the declared context type (e.g. "Patient") so that
+        // load_fhir_data can pick the matching resource from a Bundle and
+        // set it as the context value.
+        let context_type = output
+            .result
+            .library
+            .contexts
+            .as_ref()
+            .and_then(|c| c.defs.first())
+            .and_then(|d| d.name.as_deref());
+        let (provider, context_value) = load_fhir_data(data_path, context_type)?;
         builder = builder.data_provider(provider);
         if let Some(cv) = context_value {
             builder = builder.context_value(cv);
@@ -830,8 +840,13 @@ fn enrich_eval_error(
 /// Load FHIR resources from a file path (or "-" for stdin) into an
 /// `InMemoryDataProvider` keyed by `resourceType`.  When the input is a
 /// single non-Bundle resource it is also returned as a context value so that
-/// `context Patient`-style expressions work out of the box.
-fn load_fhir_data(path: &str) -> Result<(InMemoryDataProvider, Option<Value>)> {
+/// `context Patient`-style expressions work out of the box.  When the input
+/// is a Bundle and `context_type` is provided (e.g. `"Patient"`), the first
+/// matching resource is also returned as the context value.
+fn load_fhir_data(
+    path: &str,
+    context_type: Option<&str>,
+) -> Result<(InMemoryDataProvider, Option<Value>)> {
     let content = read_source(path)?;
     let mut provider = InMemoryDataProvider::new();
     let mut single_context: Option<Value> = None;
@@ -859,10 +874,19 @@ fn load_fhir_data(path: &str) -> Result<(InMemoryDataProvider, Option<Value>)> {
         serde_json::from_str(trimmed).context("Failed to parse --data file as JSON")?;
 
     if json.get("resourceType").and_then(|v| v.as_str()) == Some("Bundle") {
-        // FHIR Bundle — extract entries.
+        // FHIR Bundle — extract entries and optionally pick the context resource.
         if let Some(entries) = json.get("entry").and_then(|e| e.as_array()) {
             for entry in entries {
                 if let Some(resource) = entry.get("resource") {
+                    // Set context_value to the first resource whose resourceType
+                    // matches the library's declared context (e.g. "Patient").
+                    if single_context.is_none() {
+                        if let Some(ct) = context_type {
+                            if resource.get("resourceType").and_then(|v| v.as_str()) == Some(ct) {
+                                single_context = Some(json_to_cql_value(resource.clone()));
+                            }
+                        }
+                    }
                     add_fhir_resource(&mut provider, resource.clone());
                 }
             }

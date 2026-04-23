@@ -1591,8 +1591,19 @@ fn compare_datetimes_at_precision(
 // Duration / Difference helpers
 // ---------------------------------------------------------------------------
 
+fn coerce_to_temporal(v: &Value) -> Result<Value, EvalError> {
+    match v {
+        Value::Date(_) | Value::DateTime(_) => Ok(v.clone()),
+        Value::String(_) => super::conversion::to_date(v)
+            .or_else(|_| super::conversion::to_datetime(v)),
+        _ => Err(err("DurationBetween", "argument is not a temporal value")),
+    }
+}
+
 fn date_duration_between(a: &Value, b: &Value, unit: &str) -> Result<Value, EvalError> {
-    match (a, b) {
+    let a = coerce_to_temporal(a)?;
+    let b = coerce_to_temporal(b)?;
+    match (&a, &b) {
         (Value::Date(d1), Value::Date(d2)) => Ok(Value::Integer(date_duration_diff(d1, d2, unit)?)),
         (Value::DateTime(dt1), Value::DateTime(dt2)) => {
             Ok(Value::Integer(datetime_duration_diff(dt1, dt2, unit)?))
