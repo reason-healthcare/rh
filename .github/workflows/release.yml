@@ -1,0 +1,189 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: rh-aarch64-apple-darwin.tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive: rh-x86_64-apple-darwin.tar.gz
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive: rh-x86_64-unknown-linux-musl.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: rh-x86_64-pc-windows-msvc.zip
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl tools (Linux)
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get install -y musl-tools
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-release-cargo-
+
+      - name: Build CLI (Unix)
+        if: runner.os != 'Windows'
+        run: cargo build --release --target ${{ matrix.target }} -p rh
+
+      - name: Build CLI (Windows)
+        if: runner.os == 'Windows'
+        run: cargo build --release --target ${{ matrix.target }} -p rh
+
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp target/${{ matrix.target }}/release/rh rh
+          tar czf ${{ matrix.archive }} rh
+          rm rh
+
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "target/${{ matrix.target }}/release/rh.exe" "rh.exe"
+          Compress-Archive -Path "rh.exe" -DestinationPath "${{ matrix.archive }}"
+          Remove-Item "rh.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release (draft)
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: true
+          files: artifacts/*
+          body: |
+            ## CLI Binaries
+
+            Download the binary for your platform and extract it to a directory on your `$PATH`.
+
+            | Platform | File |
+            |---|---|
+            | macOS (Apple Silicon) | `rh-aarch64-apple-darwin.tar.gz` |
+            | macOS (Intel) | `rh-x86_64-apple-darwin.tar.gz` |
+            | Linux x86_64 (static) | `rh-x86_64-unknown-linux-musl.tar.gz` |
+            | Windows x86_64 | `rh-x86_64-pc-windows-msvc.zip` |
+
+            ```bash
+            # Example install on macOS / Linux
+            tar xzf rh-<platform>.tar.gz
+            mv rh /usr/local/bin/
+            ```
+
+            ---
+
+            ## Publish to crates.io
+
+            After verifying the binaries, publish each crate in dependency order.
+            Wait ~30 seconds between layers for the registry index to propagate.
+
+            ```bash
+            # Ensure you are authenticated
+            cargo login
+
+            # Layer 1
+            cargo publish -p rh-foundation
+            sleep 30
+
+            # Layer 2 (can run in separate terminals simultaneously)
+            cargo publish -p rh-hl7-fhir-r4-core
+            cargo publish -p rh-codegen
+            cargo publish -p rh-cql
+            sleep 30
+
+            # Layer 3
+            cargo publish -p rh-fhirpath
+            cargo publish -p rh-vcl
+            sleep 30
+
+            # Layer 4
+            cargo publish -p rh-validator
+            sleep 30
+
+            # Layer 5
+            cargo publish -p rh-cli
+            ```
+
+            Verify each crate at `https://crates.io/crates/<name>` after publishing.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write publish instructions to job summary
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "## ✅ Release draft created for \`${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Four binary assets attached:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`rh-aarch64-apple-darwin.tar.gz\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`rh-x86_64-apple-darwin.tar.gz\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`rh-x86_64-unknown-linux-musl.tar.gz\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`rh-x86_64-pc-windows-msvc.zip\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Next steps" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Review and publish the release draft on GitHub" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Publish crates to crates.io in dependency order:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```bash' >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-foundation && sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-hl7-fhir-r4-core" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-codegen" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-cql" >> "$GITHUB_STEP_SUMMARY"
+          echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-fhirpath" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-vcl" >> "$GITHUB_STEP_SUMMARY"
+          echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-validator && sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-cli" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
