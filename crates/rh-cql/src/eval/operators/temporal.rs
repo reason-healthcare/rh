@@ -1594,8 +1594,9 @@ fn compare_datetimes_at_precision(
 fn coerce_to_temporal(v: &Value) -> Result<Value, EvalError> {
     match v {
         Value::Date(_) | Value::DateTime(_) => Ok(v.clone()),
-        Value::String(_) => super::conversion::to_date(v)
-            .or_else(|_| super::conversion::to_datetime(v)),
+        Value::String(_) => {
+            super::conversion::to_date(v).or_else(|_| super::conversion::to_datetime(v))
+        }
         _ => Err(err("DurationBetween", "argument is not a temporal value")),
     }
 }
@@ -1677,8 +1678,8 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             // Convert to a second-level delta so that UTC-offset differences
             // (including DST transitions) are accounted for.
             let raw_seconds = days * 86400 + (b_h - a_h) * 3600;
-            let offset_delta = a.offset_seconds.unwrap_or(0) as i64
-                - b.offset_seconds.unwrap_or(0) as i64;
+            let offset_delta =
+                a.offset_seconds.unwrap_or(0) as i64 - b.offset_seconds.unwrap_or(0) as i64;
             Ok((raw_seconds + offset_delta) / 3600)
         }
         "minute" => {

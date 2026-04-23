@@ -197,13 +197,34 @@ fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 /// minute/minutes, second/seconds, millisecond/milliseconds.
 fn parse_precision_plural(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecision> {
     ws(alt((
-        value(DateTimePrecision::Year, alt((keyword("years"), keyword("year")))),
-        value(DateTimePrecision::Month, alt((keyword("months"), keyword("month")))),
-        value(DateTimePrecision::Week, alt((keyword("weeks"), keyword("week")))),
-        value(DateTimePrecision::Day, alt((keyword("days"), keyword("day")))),
-        value(DateTimePrecision::Hour, alt((keyword("hours"), keyword("hour")))),
-        value(DateTimePrecision::Minute, alt((keyword("minutes"), keyword("minute")))),
-        value(DateTimePrecision::Second, alt((keyword("seconds"), keyword("second")))),
+        value(
+            DateTimePrecision::Year,
+            alt((keyword("years"), keyword("year"))),
+        ),
+        value(
+            DateTimePrecision::Month,
+            alt((keyword("months"), keyword("month"))),
+        ),
+        value(
+            DateTimePrecision::Week,
+            alt((keyword("weeks"), keyword("week"))),
+        ),
+        value(
+            DateTimePrecision::Day,
+            alt((keyword("days"), keyword("day"))),
+        ),
+        value(
+            DateTimePrecision::Hour,
+            alt((keyword("hours"), keyword("hour"))),
+        ),
+        value(
+            DateTimePrecision::Minute,
+            alt((keyword("minutes"), keyword("minute"))),
+        ),
+        value(
+            DateTimePrecision::Second,
+            alt((keyword("seconds"), keyword("second"))),
+        ),
         value(
             DateTimePrecision::Millisecond,
             alt((keyword("milliseconds"), keyword("millisecond"))),
