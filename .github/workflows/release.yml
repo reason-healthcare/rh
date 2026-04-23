@@ -42,6 +42,10 @@ jobs:
         if: contains(matrix.target, 'musl')
         run: sudo apt-get install -y musl-tools
 
+      - name: Use vendored OpenSSL for musl (avoids pkg-config cross-compile issue)
+        if: contains(matrix.target, 'musl')
+        run: echo "OPENSSL_VENDORED=1" >> $GITHUB_ENV
+
       - name: Cache cargo registry
         uses: actions/cache@v3
         with:
