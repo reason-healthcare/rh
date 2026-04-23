@@ -1247,6 +1247,102 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
     // --- Expression-family helpers -----------------------------------------
 
+    /// Post-filter `resources` keeping only those whose `code_path` property
+    /// matches the `filter`.
+    ///
+    /// `filter` may be:
+    /// - `Value::String(url)` — produced by evaluating a `ValueSetRef`; each
+    ///   resource code is checked against the valueset via `in_valueset`.
+    /// - `Value::Code` or `Value::Concept` — direct code/concept equality.
+    /// - `Value::List` — any element in the list must match.
+    fn filter_resources_by_code(
+        &self,
+        resources: Vec<Value>,
+        code_path: &str,
+        filter: &Value,
+    ) -> Result<Vec<Value>, EvalError> {
+        use super::value::CqlCode;
+
+        // Navigate a simple (possibly dotted) property path on a resource tuple.
+        fn get_at_path(resource: &Value, path: &str) -> Value {
+            let mut cur = resource.clone();
+            for segment in path.split('.') {
+                cur = match cur {
+                    Value::Tuple(ref fields) => {
+                        fields.get(segment).cloned().unwrap_or(Value::Null)
+                    }
+                    _ => return Value::Null,
+                };
+            }
+            cur
+        }
+
+        // Check whether a single `Value::Code` is matched by `filter`.
+        fn code_in_filter(
+            ctx: &crate::eval::context::EvalContext,
+            c: &CqlCode,
+            filter: &Value,
+        ) -> Result<bool, EvalError> {
+            match filter {
+                // ValueSetRef resolved to a URL string
+                Value::String(url) => match ctx.in_valueset(c, url) {
+                    Ok(b) => Ok(b),
+                    // No terminology provider or valueset not found → skip filter
+                    Err(EvalError::TerminologyError(_)) => Ok(false),
+                    Err(e) => Err(e),
+                },
+                Value::Code(fc) => Ok(c.code == fc.code && c.system == fc.system),
+                Value::List(codes) => {
+                    for fc in codes {
+                        if code_in_filter(ctx, c, fc)? {
+                            return Ok(true);
+                        }
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+
+        // Check whether a resource property value is matched by `filter`.
+        fn val_matches(
+            ctx: &crate::eval::context::EvalContext,
+            val: &Value,
+            filter: &Value,
+        ) -> Result<bool, EvalError> {
+            match val {
+                Value::Null => Ok(false),
+                Value::Code(c) => code_in_filter(ctx, c, filter),
+                Value::Concept(concept) => {
+                    for c in &concept.codes {
+                        if code_in_filter(ctx, c, filter)? {
+                            return Ok(true);
+                        }
+                    }
+                    Ok(false)
+                }
+                Value::List(items) => {
+                    for item in items {
+                        if val_matches(ctx, item, filter)? {
+                            return Ok(true);
+                        }
+                    }
+                    Ok(false)
+                }
+                _ => Ok(false),
+            }
+        }
+
+        let mut out = Vec::with_capacity(resources.len());
+        for resource in resources {
+            let code_val = get_at_path(&resource, code_path);
+            if val_matches(&self.ctx, &code_val, filter)? {
+                out.push(resource);
+            }
+        }
+        Ok(out)
+    }
+
     /// Evaluate CQL age functions (AgeInYears, AgeInYearsAt, etc.).
     ///
     /// These functions implicitly reference the Patient context to obtain a
@@ -1901,15 +1997,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 };
                 let code_path = r.code_property.as_deref();
                 let date_path = r.date_property.as_deref();
-                let codes_val = match &r.codes {
-                    Some(expr) => Some(self.eval_expr(expr)?),
-                    None => None,
-                };
-                let date_range_val = match &r.date_range {
-                    Some(expr) => Some(self.eval_expr(expr)?),
-                    None => None,
-                };
-                let results = self.ctx.retrieve(
+
+                // Resolve the codes filter.  A `ValueSetRef` evaluates to a
+                // `Value::String` holding the valueset URL; we preserve that and
+                // use it below for post-filtering via `in_valueset`.
+                let codes_val = r
+                    .codes
+                    .as_ref()
+                    .map(|expr| self.eval_expr(expr))
+                    .transpose()?;
+                let date_range_val = r
+                    .date_range
+                    .as_ref()
+                    .map(|expr| self.eval_expr(expr))
+                    .transpose()?;
+
+                // Fetch candidate resources (provider may return unfiltered results).
+                let candidates = self.ctx.retrieve(
                     None,
                     data_type,
                     code_path,
@@ -1917,6 +2021,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     date_path,
                     date_range_val.as_ref(),
                 )?;
+
+                // Post-filter by code when both a code path and a filter are present.
+                let results = match (code_path, &codes_val) {
+                    (Some(path), Some(filter)) => {
+                        self.filter_resources_by_code(candidates, path, filter)?
+                    }
+                    _ => candidates,
+                };
                 Ok(Value::List(results))
             }
             _ => unreachable!("eval_query_expr: unexpected expression"),
