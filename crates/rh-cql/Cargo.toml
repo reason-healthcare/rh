@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-keywords = ["cql", "elm", "fhir", "clinical-quality-language", "healthcare"]
+keywords = ["cql", "elm", "fhir", "quality-measure", "healthcare"]
 categories = ["science", "parser-implementations"]
 readme = "README.md"
 
