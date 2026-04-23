@@ -44,3 +44,8 @@ rh-hl7-fhir-r4-core = { path = "../../crates/rh-hl7_fhir_r4_core", version = "0.
 assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.13"
+
+# Vendored OpenSSL is required for fully static musl builds; the system
+# pkg-config cannot locate a musl-compatible OpenSSL on the CI runner.
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
