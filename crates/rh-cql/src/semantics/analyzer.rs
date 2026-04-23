@@ -67,9 +67,8 @@ impl SemanticAnalyzer {
                 match def {
                     crate::elm::StatementDef::Expression(e) => {
                         if let Some(name) = &e.name {
-                            let mut sym =
-                                Symbol::new(name.clone(), SymbolKind::Expression)
-                                    .with_type(DataType::Unknown);
+                            let mut sym = Symbol::new(name.clone(), SymbolKind::Expression)
+                                .with_type(DataType::Unknown);
                             sym.library = Some(alias_id.clone());
                             self.scope_manager.register_symbol(sym);
                         }
@@ -91,7 +90,6 @@ impl SemanticAnalyzer {
             }
         }
     }
-
 
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
         let dt = match e {
@@ -1176,7 +1174,10 @@ mod tests {
                 assert_eq!(r.library_name.as_deref(), Some("CaseLogic"));
                 assert_eq!(r.name.as_deref(), Some("My Expr"));
             }
-            other => panic!("expected ExpressionRef, got {:?}", std::mem::discriminant(other)),
+            other => panic!(
+                "expected ExpressionRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
         }
     }
 

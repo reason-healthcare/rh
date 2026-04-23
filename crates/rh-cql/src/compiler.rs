@@ -284,15 +284,15 @@ fn resolve_includes_to_elm(
             });
         }
 
-        let lib_id =
-            crate::library::LibraryIdentifier::new(&inc.path, inc.version.as_deref());
+        let lib_id = crate::library::LibraryIdentifier::new(&inc.path, inc.version.as_deref());
 
-        let source = provider.get_source(&lib_id).ok_or_else(|| {
-            CompilationError::LibraryNotFound {
-                name: inc.path.clone(),
-                searched_paths: vec![],
-            }
-        })?;
+        let source =
+            provider
+                .get_source(&lib_id)
+                .ok_or_else(|| CompilationError::LibraryNotFound {
+                    name: inc.path.clone(),
+                    searched_paths: vec![],
+                })?;
 
         let parser = CqlParser::new();
         let dep_ast = parser

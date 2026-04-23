@@ -935,9 +935,10 @@ impl From<crate::eval::context::EvalError> for Diagnostic {
             crate::eval::context::EvalError::General(msg) => {
                 (DiagnosticCode::EvalGeneral, msg.clone())
             }
-            crate::eval::context::EvalError::LibraryNotFound { alias } => {
-                (DiagnosticCode::EvalGeneral, format!("Library alias '{alias}' not found"))
-            }
+            crate::eval::context::EvalError::LibraryNotFound { alias } => (
+                DiagnosticCode::EvalGeneral,
+                format!("Library alias '{alias}' not found"),
+            ),
         };
         Diagnostic {
             message,

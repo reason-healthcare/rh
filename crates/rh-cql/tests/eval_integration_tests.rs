@@ -1016,16 +1016,19 @@ define MyAnswer: Helpers.Answer
 
     let out =
         compile_with_libraries(main_cql, None, &provider).expect("compile_with_libraries failed");
-    assert!(out.result.is_success(), "compilation errors: {:?}", out.result.errors);
+    assert!(
+        out.result.is_success(),
+        "compilation errors: {:?}",
+        out.result.errors
+    );
     assert!(
         out.included.contains_key("Helpers"),
         "expected 'Helpers' in included map"
     );
 
     let ctx = default_ctx();
-    let val =
-        evaluate_elm_with_libraries(&out.result.library, &out.included, "MyAnswer", &ctx)
-            .expect("evaluation failed");
+    let val = evaluate_elm_with_libraries(&out.result.library, &out.included, "MyAnswer", &ctx)
+        .expect("evaluation failed");
     assert_eq!(val, Value::Integer(42));
 }
 
@@ -1056,11 +1059,14 @@ define Result: B.BaseValue + 1
 
     let out =
         compile_with_libraries(main_cql, None, &provider).expect("compile_with_libraries failed");
-    assert!(out.result.is_success(), "compilation errors: {:?}", out.result.errors);
+    assert!(
+        out.result.is_success(),
+        "compilation errors: {:?}",
+        out.result.errors
+    );
 
     let ctx = default_ctx();
-    let val =
-        evaluate_elm_with_libraries(&out.result.library, &out.included, "Result", &ctx)
-            .expect("evaluation failed");
+    let val = evaluate_elm_with_libraries(&out.result.library, &out.included, "Result", &ctx)
+        .expect("evaluation failed");
     assert_eq!(val, Value::Integer(101));
 }

@@ -263,17 +263,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // Cross-library reference: `library_name` is set when the CQL
                 // source uses a qualified name like `Global."Inpatient Encounter"`.
                 if let Some(alias) = r.library_name.as_deref() {
-                    let included = self.included.ok_or_else(|| {
-                        EvalError::LibraryNotFound { alias: alias.to_string() }
+                    let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
+                        alias: alias.to_string(),
                     })?;
-                    let inc_lib = included.get(alias).ok_or_else(|| {
-                        EvalError::LibraryNotFound { alias: alias.to_string() }
-                    })?;
+                    let inc_lib =
+                        included
+                            .get(alias)
+                            .ok_or_else(|| EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            })?;
                     let mut sub_engine =
                         Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
-                    let expr = sub_engine.find_expression(name).map_err(|_| {
-                        EvalError::ExpressionNotFound(format!("{alias}.{name}"))
-                    })?;
+                    let expr = sub_engine
+                        .find_expression(name)
+                        .map_err(|_| EvalError::ExpressionNotFound(format!("{alias}.{name}")))?;
                     return sub_engine.eval_expr(expr);
                 }
 
@@ -1203,12 +1206,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // CQL system builtins so this works transparently.
                 eval_builtin_function(name, args).or_else(|e| {
                     if let Some(alias) = func_ref.library_name.as_deref() {
-                        let included = self.included.ok_or_else(|| {
-                            EvalError::LibraryNotFound { alias: alias.to_string() }
+                        let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
+                            alias: alias.to_string(),
                         })?;
-                        included.get(alias).ok_or_else(|| {
-                            EvalError::LibraryNotFound { alias: alias.to_string() }
-                        })?;
+                        included
+                            .get(alias)
+                            .ok_or_else(|| EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            })?;
                         // Library found but function is not a known builtin.
                         // TODO: support evaluating user-defined functions from
                         // included libraries once the engine supports user-defined
@@ -2383,7 +2388,9 @@ mod tests {
         let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
         assert_eq!(
             err,
-            EvalError::LibraryNotFound { alias: "Global".to_string() },
+            EvalError::LibraryNotFound {
+                alias: "Global".to_string()
+            },
             "expected LibraryNotFound, got: {err}"
         );
     }
@@ -2411,7 +2418,9 @@ mod tests {
         let err = evaluate_elm(&lib, "Main", &fixed_ctx()).unwrap_err();
         assert_eq!(
             err,
-            EvalError::LibraryNotFound { alias: "FHIRHelpers".to_string() },
+            EvalError::LibraryNotFound {
+                alias: "FHIRHelpers".to_string()
+            },
             "expected LibraryNotFound, got: {err}"
         );
     }
@@ -2446,8 +2455,7 @@ mod tests {
         };
         let included: HashMap<String, Library> =
             [("Helpers".to_string(), helpers_lib)].into_iter().collect();
-        let val =
-            evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap();
+        let val = evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap();
         assert_eq!(val, Value::Integer(42));
     }
 
@@ -2470,6 +2478,11 @@ mod tests {
         let included: HashMap<String, Library> = HashMap::new();
         let err =
             evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap_err();
-        assert_eq!(err, EvalError::LibraryNotFound { alias: "Unknown".to_string() });
+        assert_eq!(
+            err,
+            EvalError::LibraryNotFound {
+                alias: "Unknown".to_string()
+            }
+        );
     }
 }
