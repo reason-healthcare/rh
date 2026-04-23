@@ -296,7 +296,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // the library declares `context Patient`).  Return the context value
                 // directly rather than looking for an expression definition.
                 if let Some(contexts) = &self.library.contexts {
-                    if contexts.defs.iter().any(|c| c.name.as_deref() == Some(name)) {
+                    if contexts
+                        .defs
+                        .iter()
+                        .any(|c| c.name.as_deref() == Some(name))
+                    {
                         return Ok(self.ctx.context_value.clone().unwrap_or(Value::Null));
                     }
                 }
@@ -1268,9 +1272,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             let mut cur = resource.clone();
             for segment in path.split('.') {
                 cur = match cur {
-                    Value::Tuple(ref fields) => {
-                        fields.get(segment).cloned().unwrap_or(Value::Null)
-                    }
+                    Value::Tuple(ref fields) => fields.get(segment).cloned().unwrap_or(Value::Null),
                     _ => return Value::Null,
                 };
             }
@@ -1336,7 +1338,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         let mut out = Vec::with_capacity(resources.len());
         for resource in resources {
             let code_val = get_at_path(&resource, code_path);
-            if val_matches(&self.ctx, &code_val, filter)? {
+            if val_matches(self.ctx, &code_val, filter)? {
                 out.push(resource);
             }
         }
