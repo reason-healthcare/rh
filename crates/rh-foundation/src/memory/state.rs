@@ -32,7 +32,11 @@ where
     }
 
     pub(super) fn insert(&mut self, key: K, value: V) -> InsertOutcome {
-        let evicted = self.evict_if_at_capacity();
+        let evicted = if self.data.contains_key(&key) {
+            false
+        } else {
+            self.evict_if_at_capacity()
+        };
         self.data.insert(key, value);
         InsertOutcome { evicted }
     }

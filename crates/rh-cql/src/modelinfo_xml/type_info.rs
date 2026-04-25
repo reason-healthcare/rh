@@ -279,12 +279,11 @@ fn parse_profile_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Res
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) => {
-                if e.name().as_ref() == b"element" {
+            Event::Empty(e)
+                if e.name().as_ref() == b"element" => {
                     let elem = parse_class_info_element_attrs(&e)?;
                     info.element.push(elem);
                 }
-            }
             Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
             Event::Eof => break,
             _ => {}
@@ -371,12 +370,11 @@ fn parse_tuple_type_info<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) => {
-                if e.name().as_ref() == b"element" {
+            Event::Empty(e)
+                if e.name().as_ref() == b"element" => {
                     let elem = parse_tuple_type_info_element_attrs(&e)?;
                     info.element.push(elem);
                 }
-            }
             Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
             Event::Eof => break,
             _ => {}
@@ -405,13 +403,12 @@ fn parse_tuple_type_info_element<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) => {
-                if e.name().as_ref() == b"elementTypeSpecifier" {
+            Event::Empty(e)
+                if e.name().as_ref() == b"elementTypeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_attrs(&e)? {
                         elem.element_type_specifier = Some(spec);
                     }
                 }
-            }
             Event::End(e) if e.name().as_ref() == b"element" => break,
             Event::Eof => break,
             _ => {}

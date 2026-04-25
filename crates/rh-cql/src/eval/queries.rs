@@ -96,16 +96,14 @@ where
             }
 
             match rel_type {
-                "with" => {
-                    if !any_match {
+                "with"
+                    if !any_match => {
                         continue 'row; // no match → skip this row
                     }
-                }
-                "without" => {
-                    if any_match {
+                "without"
+                    if any_match => {
                         continue 'row; // match found → skip this row
                     }
-                }
                 _ => {}
             }
         }

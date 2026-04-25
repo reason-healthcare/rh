@@ -304,18 +304,15 @@ pub fn meets_before(a: &Value, b: &Value) -> Result<Value, EvalError> {
                 .ok_or_else(|| EvalError::General("meets: incomparable bounds".to_string()))?;
             Ok(Value::Boolean(match ord {
                 Ordering::Equal => a_hc != b_lc, // one closed, one open → adjacent
-                Ordering::Less => {
+                Ordering::Less
                     // For discrete/minimum-precision types, check if successor(a_high) == b_low.
                     // This handles [1,10] meets [11,20] (successor(10)=11) and decimal/time.
-                    if a_hc && b_lc {
+                    if a_hc && b_lc => {
                         match super::operators::successor(ah) {
                             Ok(succ) => cql_compare(&succ, bl) == Some(Ordering::Equal),
                             Err(_) => false,
                         }
-                    } else {
-                        false
                     }
-                }
                 _ => false,
             }))
         }
@@ -374,12 +371,11 @@ pub fn union_interval(a: &Value, b: &Value) -> Result<Value, EvalError> {
     }
     // Must overlap or meet to form a single interval.
     match overlaps(a, b)? {
-        Value::Boolean(false) => {
+        Value::Boolean(false)
             // Check meets
-            if meets(a, b)? != Value::Boolean(true) {
+            if meets(a, b)? != Value::Boolean(true) => {
                 return Ok(Value::Null);
             }
-        }
         Value::Null => return Ok(Value::Null),
         _ => {}
     }
