@@ -1,8 +1,13 @@
-use crate::snapshot::error::{SnapshotError, SnapshotResult};
-use crate::snapshot::types::StructureDefinition;
-use std::fs;
 use std::path::{Path, PathBuf};
+
 use tracing::{debug, info, warn};
+
+use crate::snapshot::error::{SnapshotError, SnapshotResult};
+use crate::snapshot::sd_load_support::{
+    ensure_directory, json_files_in_directory, package_directory, read_file,
+    try_parse_structure_definition, validate_structure_definition,
+};
+use crate::snapshot::types::StructureDefinition;
 
 pub struct StructureDefinitionLoader;
 
@@ -10,18 +15,18 @@ impl StructureDefinitionLoader {
     pub fn load_from_file(path: &Path) -> SnapshotResult<StructureDefinition> {
         debug!("Loading StructureDefinition from file: {}", path.display());
 
-        let content = fs::read_to_string(path).map_err(|e| {
-            SnapshotError::Other(format!("Failed to read file {}: {}", path.display(), e))
-        })?;
-
-        let sd: StructureDefinition =
+        let content = read_file(path)?;
+        let structure_definition: StructureDefinition =
             serde_json::from_str(&content).map_err(SnapshotError::SerializationError)?;
 
-        Self::validate_structure_definition(&sd)?;
+        Self::validate_structure_definition(&structure_definition)?;
 
-        info!("Loaded StructureDefinition: {} ({})", sd.name, sd.url);
+        info!(
+            "Loaded StructureDefinition: {} ({})",
+            structure_definition.name, structure_definition.url
+        );
 
-        Ok(sd)
+        Ok(structure_definition)
     }
 
     pub fn load_from_directory(dir: &Path) -> SnapshotResult<Vec<StructureDefinition>> {
@@ -30,51 +35,21 @@ impl StructureDefinitionLoader {
             dir.display()
         );
 
-        if !dir.exists() {
-            return Err(SnapshotError::Other(format!(
-                "Directory does not exist: {}",
-                dir.display()
-            )));
-        }
-
-        if !dir.is_dir() {
-            return Err(SnapshotError::Other(format!(
-                "Path is not a directory: {}",
-                dir.display()
-            )));
-        }
+        ensure_directory(dir)?;
 
         let mut structure_definitions = Vec::new();
-        let entries = fs::read_dir(dir).map_err(|e| {
-            SnapshotError::Other(format!("Failed to read directory {}: {}", dir.display(), e))
-        })?;
-
-        for entry in entries {
-            let entry = entry.map_err(|e| {
-                SnapshotError::Other(format!("Failed to read directory entry: {e}"))
-            })?;
-
-            let path = entry.path();
-
-            if path.is_file() {
-                if let Some(ext) = path.extension() {
-                    if ext == "json" {
-                        match Self::try_load_structure_definition(&path) {
-                            Ok(Some(sd)) => {
-                                structure_definitions.push(sd);
-                            }
-                            Ok(None) => {
-                                debug!("Skipping non-StructureDefinition file: {}", path.display());
-                            }
-                            Err(e) => {
-                                warn!(
-                                    "Failed to load StructureDefinition from {}: {}",
-                                    path.display(),
-                                    e
-                                );
-                            }
-                        }
-                    }
+        for path in json_files_in_directory(dir)? {
+            match Self::try_load_structure_definition(&path) {
+                Ok(Some(structure_definition)) => structure_definitions.push(structure_definition),
+                Ok(None) => {
+                    debug!("Skipping non-StructureDefinition file: {}", path.display());
+                }
+                Err(error) => {
+                    warn!(
+                        "Failed to load StructureDefinition from {}: {}",
+                        path.display(),
+                        error
+                    );
                 }
             }
         }
@@ -120,58 +95,23 @@ impl StructureDefinitionLoader {
     }
 
     fn try_load_structure_definition(path: &Path) -> SnapshotResult<Option<StructureDefinition>> {
-        let content = fs::read_to_string(path).map_err(|e| {
-            SnapshotError::Other(format!("Failed to read file {}: {}", path.display(), e))
-        })?;
-
-        let json: serde_json::Value =
-            serde_json::from_str(&content).map_err(SnapshotError::SerializationError)?;
-
-        if json.get("resourceType")
-            == Some(&serde_json::Value::String(
-                "StructureDefinition".to_string(),
-            ))
-        {
-            let sd: StructureDefinition =
-                serde_json::from_value(json).map_err(SnapshotError::SerializationError)?;
-
-            Self::validate_structure_definition(&sd)?;
-            Ok(Some(sd))
-        } else {
-            Ok(None)
-        }
+        let content = read_file(path)?;
+        try_parse_structure_definition(&content)
     }
 
     fn validate_structure_definition(sd: &StructureDefinition) -> SnapshotResult<()> {
-        if sd.url.is_empty() {
-            return Err(SnapshotError::InvalidStructureDefinition(
-                "StructureDefinition.url is required".to_string(),
-            ));
-        }
-
-        if sd.name.is_empty() {
-            return Err(SnapshotError::InvalidStructureDefinition(
-                "StructureDefinition.name is required".to_string(),
-            ));
-        }
-
-        if sd.type_.is_empty() {
-            return Err(SnapshotError::InvalidStructureDefinition(
-                "StructureDefinition.type is required".to_string(),
-            ));
-        }
-
-        Ok(())
+        validate_structure_definition(sd)
     }
 
     fn get_package_directory(packages_dir: &Path, package_name: &str, version: &str) -> PathBuf {
-        packages_dir.join(format!("{package_name}#{version}"))
+        package_directory(packages_dir, package_name, version)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::io::Write;
     use tempfile::TempDir;
 

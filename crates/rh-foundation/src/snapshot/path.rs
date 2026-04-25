@@ -1,3 +1,9 @@
+use crate::snapshot::path_helpers::{
+    find_slice_name, has_reslice, matches_choice_type_parts, normalized_choice_segment,
+    parent_slice_parts, parts_are_parent_child, split_path, starts_with_lowercase,
+    strip_slice_segments,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ElementPath {
     parts: Vec<String>,
@@ -6,7 +12,7 @@ pub struct ElementPath {
 
 impl ElementPath {
     pub fn new(path: &str) -> Self {
-        let parts: Vec<String> = path.split('.').map(|s| s.to_string()).collect();
+        let parts = split_path(path);
         Self {
             parts,
             original: path.to_string(),
@@ -46,17 +52,7 @@ impl ElementPath {
     }
 
     pub fn is_parent_of(&self, other: &ElementPath) -> bool {
-        if self.depth() >= other.depth() {
-            return false;
-        }
-
-        for (i, part) in self.parts.iter().enumerate() {
-            if other.parts.get(i) != Some(part) {
-                return false;
-            }
-        }
-
-        true
+        parts_are_parent_child(&self.parts, &other.parts)
     }
 
     pub fn is_child_of(&self, other: &ElementPath) -> bool {
@@ -99,41 +95,19 @@ impl ElementPath {
     }
 
     pub fn matches_choice_type(&self, base_path: &ElementPath) -> bool {
-        if self.depth() != base_path.depth() {
-            return false;
-        }
-
-        for i in 0..self.parts.len() - 1 {
-            if self.parts[i] != base_path.parts[i] {
-                return false;
-            }
-        }
-
-        let base_last = base_path.parts.last().unwrap();
-        let self_last = self.parts.last().unwrap();
-
-        if base_last.ends_with("[x]") {
-            let base_prefix = &base_last[..base_last.len() - 3];
-            self_last.starts_with(base_prefix)
-        } else {
-            false
-        }
+        matches_choice_type_parts(&self.parts, &base_path.parts)
     }
 
     fn is_lowercase_start(s: &str) -> bool {
-        s.chars().next().is_some_and(|c| c.is_lowercase())
+        starts_with_lowercase(s)
     }
 
     pub fn normalize_choice_type(&self) -> ElementPath {
         let mut normalized_parts = self.parts.clone();
         if let Some(last) = normalized_parts.last_mut() {
-            if last.len() > 3 && Self::is_lowercase_start(last) {
-                for (i, c) in last.char_indices() {
-                    if c.is_uppercase() {
-                        let prefix = &last[..i];
-                        *last = format!("{prefix}[x]");
-                        break;
-                    }
+            if Self::is_lowercase_start(last) {
+                if let Some(normalized) = normalized_choice_segment(last) {
+                    *last = normalized;
                 }
             }
         }
@@ -145,12 +119,7 @@ impl ElementPath {
     }
 
     pub fn slice_name(&self) -> Option<&str> {
-        for part in &self.parts {
-            if let Some(colon_pos) = part.rfind(':') {
-                return Some(&part[colon_pos + 1..]);
-            }
-        }
-        None
+        find_slice_name(&self.parts)
     }
 
     pub fn base_path(&self) -> ElementPath {
@@ -158,43 +127,17 @@ impl ElementPath {
             return self.clone();
         }
 
-        let base_parts: Vec<String> = self
-            .parts
-            .iter()
-            .map(|part| {
-                if let Some(colon_pos) = part.rfind(':') {
-                    part[..colon_pos].to_string()
-                } else {
-                    part.clone()
-                }
-            })
-            .collect();
-
-        Self::from_parts(base_parts)
+        Self::from_parts(strip_slice_segments(&self.parts))
     }
 
     pub fn is_reslice(&self) -> bool {
-        if let Some(last_part) = self.parts.last() {
-            last_part.matches(':').count() > 1
-        } else {
-            false
-        }
+        self.parts
+            .last()
+            .is_some_and(|last_part| has_reslice(last_part))
     }
 
     pub fn parent_slice(&self) -> Option<ElementPath> {
-        if !self.is_reslice() {
-            return None;
-        }
-
-        if let Some(last_part) = self.parts.last() {
-            let colon_pos = last_part.rfind(':').unwrap();
-            let mut parent_parts = self.parts.clone();
-            parent_parts.pop();
-            parent_parts.push(last_part[..colon_pos].to_string());
-            return Some(Self::from_parts(parent_parts));
-        }
-
-        None
+        parent_slice_parts(&self.parts).map(Self::from_parts)
     }
 }
 

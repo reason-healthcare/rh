@@ -1,3 +1,7 @@
+mod merge_validation;
+mod path_helpers;
+mod sd_load_support;
+
 pub mod error;
 pub mod generator;
 pub mod merger;
