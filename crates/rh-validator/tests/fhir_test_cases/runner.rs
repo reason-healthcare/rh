@@ -211,7 +211,7 @@ impl TestRunner {
         // Also add the profile source itself if present
         let profile_source = test.get_profile_source_path(validator_dir);
 
-        for supporting_path in all_supporting.into_iter().chain(profile_source.into_iter()) {
+        for supporting_path in all_supporting.into_iter().chain(profile_source) {
             if supporting_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&supporting_path) {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
