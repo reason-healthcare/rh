@@ -154,7 +154,7 @@ jobs:
         run: cargo build --workspace --all-features
 
       - name: Build RH CLI
-        run: cargo build --release -p rh
+        run: cargo build --release -p rh-cli
 
   cli:
     name: Test CLI
@@ -186,22 +186,22 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Build RH CLI
-        run: cargo build -p rh
+        run: cargo build -p rh-cli
 
       - name: Test CLI help commands
         run: |
-          cargo run -p rh -- --help
-          cargo run -p rh -- codegen --help
-          cargo run -p rh -- fhirpath --help
-          cargo run -p rh -- download --help
+          cargo run -p rh-cli -- --help
+          cargo run -p rh-cli -- codegen --help
+          cargo run -p rh-cli -- fhirpath --help
+          cargo run -p rh-cli -- download --help
 
       - name: Test fhirpath CLI functionality
         run: |
           # Test FHIRPath parsing
-          cargo run -p rh -- fhirpath parse "Patient.name"
+          cargo run -p rh-cli -- fhirpath parse "Patient.name"
 
           # Test FHIRPath evaluation
-          cargo run -p rh -- fhirpath eval "5 + 3"
+          cargo run -p rh-cli -- fhirpath eval "5 + 3"
 
   conformance:
     name: Conformance Subset

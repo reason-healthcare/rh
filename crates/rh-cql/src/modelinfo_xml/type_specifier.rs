@@ -134,12 +134,11 @@ pub(super) fn parse_list_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e)
-                if e.name().as_ref() == b"elementTypeSpecifier" => {
-                    if let Some(inner) = parse_type_specifier_attrs(&e)? {
-                        spec.element_type_specifier = Some(Box::new(inner));
-                    }
+            Event::Empty(e) if e.name().as_ref() == b"elementTypeSpecifier" => {
+                if let Some(inner) = parse_type_specifier_attrs(&e)? {
+                    spec.element_type_specifier = Some(Box::new(inner));
                 }
+            }
             Event::End(e) => {
                 let name = e.name();
                 if name.as_ref() == b"elementTypeSpecifier"
@@ -187,12 +186,11 @@ pub(super) fn parse_interval_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e)
-                if e.name().as_ref() == b"pointTypeSpecifier" => {
-                    if let Some(inner) = parse_type_specifier_attrs(&e)? {
-                        spec.point_type_specifier = Some(Box::new(inner));
-                    }
+            Event::Empty(e) if e.name().as_ref() == b"pointTypeSpecifier" => {
+                if let Some(inner) = parse_type_specifier_attrs(&e)? {
+                    spec.point_type_specifier = Some(Box::new(inner));
                 }
+            }
             Event::End(e) => {
                 let name = e.name();
                 if name.as_ref() == b"elementTypeSpecifier"
@@ -232,12 +230,11 @@ pub(super) fn parse_choice_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e)
-                if e.name().as_ref() == b"choice" => {
-                    if let Some(inner) = parse_type_specifier_attrs(&e)? {
-                        spec.choice.push(inner);
-                    }
+            Event::Empty(e) if e.name().as_ref() == b"choice" => {
+                if let Some(inner) = parse_type_specifier_attrs(&e)? {
+                    spec.choice.push(inner);
                 }
+            }
             Event::End(e) => {
                 let name = e.name();
                 if name.as_ref() == b"elementTypeSpecifier"
@@ -274,11 +271,10 @@ pub(super) fn parse_tuple_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e)
-                if e.name().as_ref() == b"element" => {
-                    let elem = parse_tuple_element_attrs(&e)?;
-                    spec.element.push(elem.into());
-                }
+            Event::Empty(e) if e.name().as_ref() == b"element" => {
+                let elem = parse_tuple_element_attrs(&e)?;
+                spec.element.push(elem.into());
+            }
             Event::End(e) => {
                 let name = e.name();
                 if name.as_ref() == b"elementTypeSpecifier"
@@ -317,12 +313,11 @@ pub(super) fn parse_tuple_element_definition<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e)
-                if e.name().as_ref() == b"elementTypeSpecifier" => {
-                    if let Some(spec) = parse_type_specifier_attrs(&e)? {
-                        elem.element_type_specifier = Some(spec);
-                    }
+            Event::Empty(e) if e.name().as_ref() == b"elementTypeSpecifier" => {
+                if let Some(spec) = parse_type_specifier_attrs(&e)? {
+                    elem.element_type_specifier = Some(spec);
                 }
+            }
             Event::End(e) if e.name().as_ref() == b"element" => break,
             Event::Eof => break,
             _ => {}
