@@ -33,11 +33,11 @@ rh codegen [OPTIONS] <PACKAGE> [VERSION]
 
 ```bash
 # Generate a crate from HL7 FHIR R4 Core
-rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7-fhir-r4-core
+rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7_fhir_r4_core
 
 # Override the generated crate name
 rh codegen hl7.fhir.r4.core 4.0.1 \
-  --output crates/rh-hl7-fhir-r4-core \
+  --output crates/rh-hl7_fhir_r4_core \
   --crate-name rh-hl7-fhir-r4-core
 
 # Use latest version
@@ -74,7 +74,7 @@ By default, the crate name is auto-derived from the FHIR package name (e.g., `hl
 
 ```bash
 rh codegen hl7.fhir.r4.core 4.0.1 \
-  --output crates/rh-hl7-fhir-r4-core \
+  --output crates/rh-hl7_fhir_r4_core \
   --crate-name rh-hl7-fhir-r4-core
 ```
 

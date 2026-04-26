@@ -52,7 +52,7 @@ rh --help
 rh download package hl7.fhir.r4.core 4.0.1
 
 # Generate a Rust crate from a FHIR package
-rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7-fhir-r4-core
+rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7_fhir_r4_core
 
 # Evaluate a FHIRPath expression
 rh fhirpath eval "Patient.name.family" --data patient.json

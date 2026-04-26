@@ -18,7 +18,7 @@ The `rh-codegen` crate provides comprehensive functionality for:
 
 When generating a crate, the following idiomatic Rust layout will be created:
 ```
-hl7_fhir_r4_core/
+rh-hl7_fhir_r4_core/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs
@@ -114,7 +114,7 @@ The generated `metadata.rs` module contains:
 ### Example Metadata Usage
 
 ```rust
-use hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType};
+use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType};
 
 // Look up field metadata at runtime
 if let Some(field_info) = get_field_info("Patient", "birthDate") {
@@ -479,7 +479,7 @@ fn my_function() -> CodegenResult<()> {
 Run the test suite:
 
 ```bash
-cargo test -p codegen
+cargo test -p rh-codegen
 ```
 
 The tests cover:

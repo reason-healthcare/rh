@@ -111,10 +111,10 @@ The implementation includes comprehensive tests:
 
 ```bash
 # Run all tests
-cargo test --package fhirpath
+cargo test -p rh-fhirpath
 
 # Run with output
-cargo test --package fhirpath -- --nocapture
+cargo test -p rh-fhirpath -- --nocapture
 ```
 
 ## Contributing

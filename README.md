@@ -6,9 +6,9 @@
 [![Rust Version](https://img.shields.io/badge/rust-1.91%2B-orange.svg)](https://www.rust-lang.org)
 
 
-**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extendable. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: superior UX, small, composable, and ideal for scripting and automation.
+**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extensible. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: composable commands, strong UX, and automation-friendly output.
 
-Cross-platform and lightning-fast, and running nativelly cross platform, RH eliminates the overhead of heavy virtual machines like the JVM or .NET. RH can even be compiled to **WebAssembly** for seamless integration into web applications and embedded environments.
+Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Several crates also support **WebAssembly** targets for browser and embedded use cases.
 
 ## Components
 
@@ -23,7 +23,7 @@ Cross-platform and lightning-fast, and running nativelly cross platform, RH elim
 | 🔜 | rh-fsh  | FHIR Shorthand converter |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
-| � | [rh-cql](crates/rh-cql/README.md)  | CQL-to-ELM compiler, evaluator, and explain mode |
+| ✅ | [rh-cql](crates/rh-cql/README.md)  | CQL compiler, evaluator, explain mode, and source maps |
 | 🚀 | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
 | 🔜 | rh-hl7_fhir_r5_core  | **Generated** R5 FHIR for Rust |
 | 🔜 | rh-hl7_fhir_r6_core  | **Generated** R6 FHIR for Rust |
@@ -73,7 +73,7 @@ Run the setup script to configure your development environment:
 
 What the script does:
 
-- Verifies Rust toolchain (>= 1.70) and active `rustup` toolchain
+- Verifies Rust toolchain (>= 1.91) and active `rustup` toolchain
 - Ensures `clippy` and `rustfmt` components are installed
 - Optionally installs `cargo-audit`, `cargo-watch`, and `cargo-nextest`
 - Formats the workspace and runs unified checks via `just check` (or equivalent commands if `just` is not installed)
@@ -212,7 +212,7 @@ regex = "1.0"
 
 ## Release Management
 
-The workspace supports coordinated releases of all crates or individual crate releases as needed. Use semantic versioning and update `Cargo.toml` files accordingly.
+The workspace supports coordinated releases of the shared-version crates plus the independently versioned validator crate. See [RELEASING.md](RELEASING.md) for the current release workflow, version bump commands, and publish order.
 
 ## License
 
