@@ -1,643 +1,165 @@
-# FHIR Validator
+# rh-validator
 
-A high-performance FHIR (Fast Healthcare Interoperability Resources) validation library written in Rust. Validates FHIR R4 resources against StructureDefinition profiles with comprehensive support for cardinality, types, FHIRPath invariants, ValueSet bindings, and extensions.
+FHIR resource validation for Rust and the `rh` CLI.
 
-**Version:** 0.2.0  
-**Status:** Production Ready (Phases 0-10 Complete)
+## Overview
 
-## Features
+`rh-validator` validates JSON FHIR resources against base R4 rules and loaded StructureDefinition profiles. The crate combines structural checks with profile-driven rules, FHIRPath invariant evaluation, terminology hooks, and QuestionnaireResponse validation.
 
-### ✅ Implemented (v0.2.0)
+Current library exports include:
 
-#### Core Validation (Phases 0-8)
-- **Profile-based validation** - US Core, IPS, QI-Core, custom profiles
-- **Hybrid architecture** - Leverages proven `rh-foundation::snapshot` module (100% FHIR compliant)
-- **Cardinality checking** - Min/max occurrence validation with detailed paths
-- **Type validation** - FHIR primitives and complex types
-- **FHIRPath invariants** - Full FHIRPath 2.0 support with context tracking
-- **ValueSet binding** - Required, extensible, preferred strength support
-- **Extension validation** - Standard and complex extension structures
-- **Slicing validation** - Discriminator-based slice matching
-- **Auto-detection** - Profiles from `meta.profile` or resource type
+- `FhirValidator`, `ValidationOptions`, and `FhirVersion`
+- `ValidationResult`, `ValidationIssue`, `Severity`, and `IssueCode`
+- `ProfileRegistry`, `RuleCompiler`, and ValueSet helpers
+- Terminology service traits and configs such as `TerminologyConfig`
+- Questionnaire loading and `QuestionnaireResponseValidator`
 
-#### Terminology Service Integration (Phase 11)
-- **Display name validation** - Validates Coding.display against CodeSystems
-- **Multiple backends** - Mock service for testing, HTTP client for production
-- **Persistent caching** - Disk-based cache to minimize API calls
-- **Configurable servers** - Support for tx.fhir.org or custom terminology servers
-- **Designation support** - Handles alternate displays and language variants
+## What it validates
 
-#### CLI Integration (Phase 9)
-- **Command-line tool** - `rh validate resource` and `rh validate batch`
-- **Multiple formats** - text, json, operationoutcome
-- **Batch processing** - NDJSON support for large datasets
-- **14 integration tests** - Comprehensive CLI test coverage
+- Base JSON/FHIR structure such as `resourceType`, empty arrays, ids, attachments, and selected resource-specific rules
+- Profile cardinality, type, slicing, extension, and invariant rules via StructureDefinition snapshots
+- ValueSet bindings and terminology display checks when a terminology service is configured
+- UCUM unit validation for supported quantity paths
+- QuestionnaireResponse resources against a linked Questionnaire when that Questionnaire can be resolved
 
-#### OperationOutcome Output (Phase 10)
-- **FHIR R4 compliance** - Standard OperationOutcome resource format
-- **21 IssueType codes** - Full FHIR IssueType ValueSet mapping
-- **Severity levels** - Error, warning, information
-- **NDJSON batch output** - One OperationOutcome per resource
-- **17 tests** - Complete OperationOutcome test coverage
+## Quick start
 
-#### Performance
-- **LRU caching** - Profile snapshots and compiled rules
-- **100x faster** - Cached validations ~1-5ms vs ~50-100ms initial
-- **>99% cache hit rate** - Typical workload performance
-- **Batch optimization** - Efficient multi-resource validation
-
-### 📋 Test Coverage
-
-- **Total tests:** 1,287 passing
-- **Validator tests:** 132 (phases 0-10)
-- **CLI tests:** 21 (resource and batch validation)
-- **OperationOutcome tests:** 17 (unit and integration)
-- **Zero failures** - All tests passing
-
-## Quick Start
-
-Add to your `Cargo.toml`:
+Add the crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh-validator = "0.2"
+rh-validator = { path = "../rh-validator" }
+serde_json = "1"
 ```
 
-Basic usage:
+Validate a resource with base R4 rules:
 
 ```rust
-use rh_validator::FhirValidator;
+use rh_validator::{FhirValidator, FhirVersion};
 use serde_json::json;
 
-fn main() -> anyhow::Result<()> {
-    // Create validator
-    let validator = FhirValidator::new(None)?;
+# fn main() -> anyhow::Result<()> {
+let validator = FhirValidator::new(FhirVersion::R4, None)?;
 
-    // Validate a resource
-    let patient = json!({
-        "resourceType": "Patient",
-        "id": "example",
-        "name": [{"family": "Doe", "given": ["John"]}],
-        "gender": "male"
-    });
+let patient = json!({
+    "resourceType": "Patient",
+    "id": "example",
+    "name": [{"family": "Doe", "given": ["Jane"]}]
+});
 
-    let result = validator.validate(&patient)?;
-
-    if result.is_valid() {
-        println!("✓ Resource is valid");
-    } else {
-        for issue in result.issues() {
-            println!("✗ {}: {}", issue.severity, issue.message);
-        }
-    }
-
-    Ok(())
-}
+let result = validator.validate(&patient)?;
+assert!(result.valid);
+# Ok(())
+# }
 ```
 
-## Usage
-
-### Profile Validation
+Validate with loaded packages and explicit profile selection:
 
 ```rust
-use rh_validator::FhirValidator;
+use rh_validator::{FhirValidator, FhirVersion};
 use serde_json::json;
 
-// Load validator with US Core profiles
-let validator = FhirValidator::new(Some("~/.fhir/packages"))?;
+# fn main() -> anyhow::Result<()> {
+let validator = FhirValidator::new(FhirVersion::R4, Some("~/.fhir/packages"))?;
 
-// Validate against US Core Patient profile
 let patient = json!({
     "resourceType": "Patient",
     "meta": {
         "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
     },
-    "identifier": [{"system": "http://example.org", "value": "123"}],
-    "name": [{"family": "Doe", "given": ["John"]}],
-    "gender": "male"
+    "name": [{"family": "Doe", "given": ["Jane"]}]
 });
 
-let result = validator.validate(&patient)?;
-```
+let result = validator.validate_with_profile(
+    &patient,
+    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient",
+)?;
 
-### Explicit Profile URL
-
-```rust
-// Validate against specific profile
-let profile_url = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
-let result = validator.validate_with_profile(&patient, profile_url)?;
-```
-
-### Batch Validation
-
-```rust
-// Validate multiple resources efficiently
-let resources = vec![patient1, patient2, observation1];
-
-for resource in resources {
-    let result = validator.validate(&resource)?;
-    if !result.is_valid() {
-        for issue in result.issues() {
-            eprintln!("{}: {}", issue.severity, issue.message);
-        }
-    }
+for issue in &result.issues {
+    println!("{} {} {}", issue.severity, issue.code, issue.message);
 }
-
-// Check cache performance
-let (p_hits, p_misses, p_rate, r_hits, r_misses, r_rate) = validator.cache_metrics();
-println!("Cache hit rate: {:.1}%", p_rate * 100.0);
+# Ok(())
+# }
 ```
 
-### Terminology Service
-
-Configure a terminology server for display name and code validation:
+Enable security checks or terminology validation:
 
 ```rust
-use rh_validator::{FhirValidator, FhirVersion, TerminologyConfig};
+use rh_validator::{FhirValidator, FhirVersion, TerminologyConfig, ValidationOptions};
 
-// Without terminology service (default) - display names not validated
-let validator = FhirValidator::new(FhirVersion::R4, None)?;
-
-// With mock terminology service (for testing)
-let validator = FhirValidator::with_terminology(
+# fn main() -> anyhow::Result<()> {
+let validator = FhirValidator::with_options(
     FhirVersion::R4,
     None,
-    Some(TerminologyConfig::mock())
-)?;
-
-// With real terminology server and persistent cache
-let validator = FhirValidator::with_terminology(
-    FhirVersion::R4,
-    Some("~/.fhir/packages"),
-    Some(TerminologyConfig::fhir_tx().with_default_cache())
-)?;
-
-// With custom terminology server
-use std::path::PathBuf;
-let validator = FhirValidator::with_terminology(
-    FhirVersion::R4,
-    None,
-    Some(TerminologyConfig::with_server("https://my-tx.example.com/r4")
-        .with_cache_path(PathBuf::from("/tmp/terminology-cache")))
-)?;
-```
-
-**Cache location:** By default, `with_default_cache()` stores cache files in `~/.fhir/terminology-cache/`.
-
-**Note:** Without a terminology service configured, terminology-backed checks are skipped. This includes display-name validation and UCUM/unit quick-win validation, which emits informational skip notes when terminology is unavailable.
-
-#### Postponed Terminology Features
-
-The following terminology validation features are **not currently implemented** and are deferred to a future phase:
-
-| Feature | Description | Why Postponed |
-|---------|-------------|---------------|
-| **ValueSet code validation** | Validating that codes in `ValueSet.compose.include.concept` exist in the referenced CodeSystem | Requires full CodeSystem lookups (e.g., validating SNOMED codes exist) |
-| **Code existence validation** | Validating that Coding.code values exist in their declared CodeSystem | Requires terminology server integration for external CodeSystems |
-| **ECL expression parsing** | Validating SNOMED CT Expression Constraint Language in ValueSet filters | Requires implementing full ECL parser and SNOMED CT integration |
-| **Profile auto-selection** | Automatically selecting profiles based on code patterns (e.g., vital signs codes triggering bodytemp profile) | Requires complex code-to-profile mapping rules |
-
-**Example: Profile Auto-Selection**
-
-The FHIR specification requires that certain observations automatically validate against specific profiles based on their codes. For example, the `obs-temp-bad` test case illustrates this:
-
-```json
-{
-  "resourceType": "Observation",
-  "status": "final",
-  "category": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs"}]}],
-  "code": {
-    "coding": [{"system": "http://snomed.info/sct", "code": "276885007"}]  // Core body temperature SNOMED code
-  },
-  "valueQuantity": {"value": 36.0, "unit": "Cel", "system": "http://unitsofmeasure.org", "code": "Cel"}
-}
-```
-
-The Java validator recognizes SNOMED code `276885007` (Core body temperature) and automatically validates against the [Body Temperature profile](http://hl7.org/fhir/StructureDefinition/bodytemp). This profile **requires** LOINC code `8310-5` ("Body temperature") in addition to any SNOMED codes. The resource above is invalid because it lacks this "magic LOINC code".
-
-A valid body temperature observation must include both:
-```json
-"code": {
-  "coding": [
-    {"system": "http://loinc.org", "code": "8310-5"},           // Required magic code
-    {"system": "http://snomed.info/sct", "code": "276885007"}   // Additional code
-  ]
-}
-```
-
-Implementing this requires:
-1. A mapping from codes to auto-selected profiles
-2. Loading and parsing the target profiles (bodytemp, heartrate, etc.)
-3. Validating "magic code" requirements from those profiles
-
-These features will be addressed when full terminology server integration is implemented.
-
-### OperationOutcome Output
-
-```rust
-// Convert to FHIR OperationOutcome
-let result = validator.validate(&patient)?;
-let operation_outcome = result.to_operation_outcome();
-
-// Serialize to JSON
-let json = serde_json::to_string_pretty(&operation_outcome)?;
-println!("{}", json);
-
-// Output:
-// {
-//   "resourceType": "OperationOutcome",
-//   "issue": [
-//     {
-//       "severity": "error",
-//       "code": "required",
-//       "diagnostics": "Missing required field 'identifier'",
-//       "location": ["Patient.identifier"],
-//       "expression": ["Patient.identifier"]
-//     }
-//   ]
-// }
-```
-
-## Examples
-
-The crate includes 6 comprehensive examples in the [`examples/`](examples/) directory:
-
-- **`basic_validation.rs`** - Simple validation with minimal Patient resources
-- **`profile_validation.rs`** - US Core Patient profile validation
-- **`batch_validation.rs`** - Efficient multi-resource validation with caching
-- **`operation_outcome.rs`** - FHIR OperationOutcome output formats
-- **`custom_workflow.rs`** - Custom validation workflows with filtering and reporting
-- **`terminology_validation.rs`** - Terminology server integration and display validation
-
-Run examples:
-
-```bash
-cargo run --example basic_validation
-cargo run --example profile_validation
-cargo run --example batch_validation
-```
-- **`patient_validation.rs`** - Complete Patient resource validation examples
-
-Run any example with:
-```bash
-cargo run -p rh-validator --example basic_validation
-```
-
-Test all examples:
-```bash
-just test-examples
-```
-
-## FHIR Test Cases Integration
-
-The validator includes integration with the official FHIR R4 test suite (~570 test cases) to ensure spec compliance. Test cases are automatically downloaded and cached on first run.
-
-### Running FHIR Test Cases
-
-**Quick test (5 cases):**
-```bash
-# Using cargo
-cargo test --features fhir-test-cases -p rh-validator -- --nocapture
-
-# Using just (from workspace root)
-just test-fhir
-
-# Using just (from validator directory)
-cd crates/rh-validator
-just test-fhir
-```
-
-**Extended test suites:**
-```bash
-# 50 test cases
-just test-fhir-50
-
-# 100 test cases
-just test-fhir-100
-
-# ALL R4 test cases (~570 tests, takes several minutes)
-just test-fhir-all
-```
-
-**Filter by module:**
-```bash
-# Test specific modules
-just test-fhir-module profile
-just test-fhir-module general
-just test-fhir-module questionnaire
-```
-
-### Test Output
-
-Tests produce detailed results including:
-- Individual test pass/fail status
-- Error diagnostics for failed validations
-- Summary statistics (pass rate, error categories)
-- Comparison table vs other validators (Java RI, Hapi, .NET)
-
-Example output:
-```
-╔════════════════════════════════════════════════════════════════════╗
-║ FHIR Validation Test Suite - 5 Tests                              ║
-╚════════════════════════════════════════════════════════════════════╝
-
-✓ test-case-1: Patient resource validation passed
-✗ test-case-2: Missing required identifier field
-✓ test-case-3: Observation with valid coding
-...
-
-Summary: 4/5 passed (80.0%)
-```
-
-### Test Case Features
-
-- **Auto-download:** Test cases downloaded from hl7.org on first run
-- **Caching:** Downloaded files cached in `target/fhir-test-cases/`
-- **570 R4 tests:** Comprehensive coverage of FHIR validation scenarios
-- **Module filtering:** Run specific test modules (profile, general, etc.)
-- **Configurable:** Adjust test count via `TestRunConfig`
-
-### Implementation Status
-
-- ✅ Test case download and parsing
-- ✅ Test runner with batch execution
-- ✅ Module filtering and configuration
-- ✅ Detailed result reporting
-- 🚧 CI integration (planned)
-- 🚧 Performance benchmarking (planned)
-
-See [TODO.md](TODO.md) Phase 12 for detailed progress.
-
-## Command Line Interface
-
-The validator integrates with the `rh` CLI tool:
-
-```bash
-# Validate JSON syntax from file
-rh validate json --input patient.json
-
-# Validate from stdin with JSON output
-echo '{"resourceType": "Patient"}' | rh validate json --format json
-
-# Validate multiple resources (NDJSON)
-rh validate json --input bundle.ndjson --multiple
-
-# Strict mode (exit with error on validation failure)
-rh validate json --input data.json --strict
-
-# Custom validation parameters
-rh validate json --input deep.json --max-depth 20 --stats
-```
-
-### CLI Options
-
-- `--input, -i`: Input file path (reads from stdin if not provided)
-- `--format, -f`: Output format (`text` or `json`)
-- `--multiple`: Process as NDJSON (multiple JSON documents)
-- `--max-depth`: Maximum allowed nesting depth (default: 100)
-- `--stats`: Show detailed statistics for valid JSON
-- `--strict`: Exit with non-zero code on validation failure
-
-## Validation Layers
-
-### 1. Syntax Validation (✅ Implemented)
-
-The first layer ensures the input is valid JSON:
-
-- **JSON parsing** with detailed error messages
-- **Structural integrity** checks (balanced brackets, proper escaping)
-- **Schema validation** (empty keys, infinite numbers, excessive nesting)
-- **Performance safeguards** (string length limits, depth limits)
-
-Example errors:
-- `JSON syntax error: expected ',' or ']' at line 5, column 12`
-- `Schema validation error: Maximum nesting depth of 100 exceeded`
-
-### 2. FHIR Resource Validation (🚧 Planned)
-
-Validates that JSON represents a valid FHIR resource:
-
-- **Resource type recognition** (Patient, Observation, etc.)
-- **Required field validation** (resourceType, mandatory elements)
-- **Data type conformance** (strings, integers, dates, codes)
-- **FHIR version compatibility** (R4, R5 differences)
-- **Reference format validation** (Resource/id, #fragment)
-
-Expected validation capabilities:
-```rust
-// Future API
-let fhir_validator = FhirValidator::new("4.0.1")?;
-let result = fhir_validator.validate_resource(json_content)?;
-```
-
-### 3. Profile Validation (🚧 Planned)
-
-Advanced conformance validation against StructureDefinitions:
-
-- **Profile conformance** (US Core, IPA, custom profiles)
-- **Cardinality enforcement** (0..1, 1..*, specific ranges)
-- **Terminology binding** validation with terminology servers
-- **FHIRPath constraint** evaluation (invariants)
-- **Extension validation** (known extensions, custom extensions)
-- **Slice discrimination** and validation
-
-Expected validation workflow:
-```rust
-// Future API
-let profile_validator = ProfileValidator::new()
-    .with_structure_definition(us_core_patient_profile)?
-    .with_terminology_server("https://tx.fhir.org")?;
-
-let result = profile_validator.validate(patient_json)?;
-```
-
-## Error Types and Reporting
-
-### Current Error Types
-
-```rust
-pub enum ValidationError {
-    JsonSyntax { message: String, line: usize, column: usize },
-    Schema { message: String },
-}
-```
-
-### Planned Error Types
-
-```rust
-pub enum ValidationError {
-    // Syntax errors
-    JsonSyntax { message: String, line: usize, column: usize },
-    Schema { message: String },
-
-    // FHIR resource errors
-    MissingField { field: String, path: String },
-    InvalidResourceType { found: String, expected: Vec<String> },
-    InvalidFieldValue { field: String, value: String, reason: String },
-    VersionMismatch { expected: String, found: String },
-
-    // Profile validation errors
-    CardinalityViolation { path: String, expected: String, found: usize },
-    TerminologyBinding { path: String, code: String, system: String },
-    FhirPathConstraint { path: String, expression: String, message: String },
-    ProfileConformance { profile: String, element: String, issue: String },
-}
-```
-
-## Integration Examples
-
-### Healthcare System Integration
-
-```rust
-use rh_validator::{FhirValidator, ValidationConfig, ValidationSeverity};
-
-// Configure validator for production use
-let config = ValidationConfig {
-    fhir_version: "4.0.1".to_string(),
-    strict_mode: true,
-    validate_terminology: true,
-    terminology_server: Some("https://tx.fhir.org".to_string()),
-    profiles: vec![
-        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient".to_string(),
-    ],
-};
-
-let validator = FhirValidator::new(config)?;
-
-// Validate incoming FHIR data
-let validation_result = validator.validate_resource(&incoming_json)?;
-match validation_result.severity() {
-    ValidationSeverity::Valid => process_resource(&incoming_json),
-    ValidationSeverity::Warning => {
-        log_warnings(&validation_result.warnings());
-        process_resource(&incoming_json);
+    Some(TerminologyConfig::with_server("https://tx.fhir.org/r4")),
+    ValidationOptions {
+        security_checks: true,
     },
-    ValidationSeverity::Error => {
-        return Err(format!("Validation failed: {:?}", validation_result.errors()));
-    }
-}
+)?;
+# Ok(())
+# }
 ```
 
-### Batch Processing Pipeline
+## Validation APIs
+
+- `validate(&resource)` runs base validation only
+- `validate_auto(&resource)` runs base validation and then applies any profiles declared in `meta.profile`
+- `validate_with_profile(&resource, profile_url)` validates against one explicit profile
+- `validate_with_profiles(&resource, &[...])` validates against multiple explicit profiles
+
+`ValidationResult` contains `valid` plus a list of `ValidationIssue` values with severity, code, message, and optional path details.
+
+## Terminology
+
+Terminology validation is optional. Without a terminology service, the validator still performs structural and profile validation, but remote code/display checks are skipped.
+
+Available integration points include:
+
+- `TerminologyConfig::with_server(...)` for a remote FHIR terminology endpoint
+- `TerminologyConfig::mock()` for tests
+- `CachedTerminologyService` for cached lookups
+
+## Performance and caching
+
+The validator caches compiled profile rules and resolved snapshots. You can inspect cache behavior with:
 
 ```rust
-use rh_validator::JsonValidator;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+# use rh_validator::{FhirValidator, FhirVersion};
+# fn main() -> anyhow::Result<()> {
+let validator = FhirValidator::new(FhirVersion::R4, None)?;
+let (profile_hits, profile_misses, profile_rate, rule_hits, rule_misses, rule_rate) =
+    validator.cache_metrics();
 
-let validator = JsonValidator::new();
-let file = File::open("fhir_bundle.ndjson")?;
-let reader = BufReader::new(file);
-
-let mut valid_count = 0;
-let mut errors = Vec::new();
-
-for (line_num, line) in reader.lines().enumerate() {
-    let line = line?;
-    match validator.validate(&line)? {
-        ValidationResult::Valid => valid_count += 1,
-        ValidationResult::Invalid(line_errors) => {
-            errors.push((line_num + 1, line_errors));
-        }
-    }
-}
-
-println!("Processed {} valid resources", valid_count);
-if !errors.is_empty() {
-    println!("Found {} invalid resources:", errors.len());
-    for (line_num, line_errors) in errors {
-        println!("  Line {}: {} errors", line_num, line_errors.len());
-    }
-}
+println!(
+    "profiles: {} hits / {} misses ({:.1}%)",
+    profile_hits,
+    profile_misses,
+    profile_rate * 100.0
+);
+println!(
+    "rules: {} hits / {} misses ({:.1}%)",
+    rule_hits,
+    rule_misses,
+    rule_rate * 100.0
+);
+# Ok(())
+# }
 ```
 
-## Performance Considerations
+## CLI
 
-### Current Performance Features
+The workspace CLI exposes this crate through:
 
-- **Streaming JSON parsing** with minimal memory allocation
-- **Configurable depth limits** to prevent stack overflow
-- **Early termination** on first syntax error (when appropriate)
-- **Batch processing** support for large datasets
+- [`apps/rh-cli/docs/VALIDATOR.md`](../../apps/rh-cli/docs/VALIDATOR.md)
+- `rh validate resource`
+- `rh validate batch`
 
-### Planned Optimizations
+## Planning and analysis artifacts
 
-- **Profile caching** for repeated validation scenarios
-- **Parallel validation** for independent resources
-- **Incremental validation** for large bundles
-- **Memory-mapped file** support for extremely large datasets
-- **Validation result caching** for identical resources
+Longer-running planning notes and conformance analysis now live under `openspec/planning/rh-validator/`:
 
-## FHIR Version Support
-
-### Planned Support Matrix
-
-| FHIR Version | Status | Notes |
-|--------------|--------|-------|
-| DSTU2 | 🚧 Planned | Legacy support |
-| STU3 | 🚧 Planned | Limited support |
-| R4 (4.0.1) | 🚧 Planned | Primary target |
-| R4B (4.3.0) | 🚧 Planned | Full support |
-| R5 (5.0.0) | 🚧 Planned | Latest standard |
-
-### Version-Specific Features
-
-- **Automatic version detection** from resource metadata
-- **Cross-version compatibility** warnings
-- **Version-specific validation rules** and constraints
-- **Migration assistance** for version upgrades
-
-## Related Projects
-
-- **rh-codegen** - Generate Rust types from FHIR StructureDefinitions
-- **rh-fhirpath** - FHIRPath expression evaluation for constraints
-- **rh-cli** - Command-line interface for FHIR processing tools
-
-## License
-
-Licensed under either of Apache License, Version 2.0 or MIT license at your option.
-
-## Roadmap
-
-### Phase 1: Foundation (✅ Complete)
-- [x] JSON syntax validation
-- [x] CLI integration
-- [x] Error reporting system
-- [x] Basic testing framework
-
-### Phase 2: FHIR Basics (In Progress)
-- [ ] Resource type validation
-- [ ] Element validation
-- [ ] Reference format checking
-
-### Phase 3: Profile Validation (Planned)
-- [ ] StructureDefinition parsing
-- [ ] Cardinality validation
-- [ ] Data type validation
-- [ ] FHIRPath constraint evaluation
-
-### Phase 4: Advanced Features (Planned)
-- [ ] Terminology server integration
-- [ ] Bundle validation
-- [ ] Custom validation rules
-- [ ] Performance optimization
-
-### Phase 5: Production Features (Future)
-- [ ] Validation caching
-- [ ] Parallel processing
-- [ ] Integration APIs
-- [ ] Monitoring and metrics
-
-
----
-
-TODO: to close the gap with the java implementation we have the following areas to focus on:
-
-* Terminology (many tests) - vs-bad-code, supplement tests, display-check tests
-* Measure/MeasureReport (8 FN) - mr-covid-*, measure-report-ihe
-* Profile/Extensions (6 FN) - ext-derived, hakan-se-*, patient-ig-bad
-* Additional Bindings (4 FN) - ai3, ai4, ai5, ai6
-* Slicing (4 FN) - sdoh-type-slice, ab-list-slicing
-* Questionnaire (4 FN) - q-enablewhen tests, quantity-qr tests
-* Reference Policy (2 FP) - needs fullUrl validation
-* Security (1 FP) - needs security-checks config option
+- [`TODO.md`](../../openspec/planning/rh-validator/TODO.md)
+- [`PHASE_14_PLAN.md`](../../openspec/planning/rh-validator/PHASE_14_PLAN.md)
+- [`PHASE_15_ANALYSIS.md`](../../openspec/planning/rh-validator/PHASE_15_ANALYSIS.md)
+- [`PHASE_15_COMPLETE.md`](../../openspec/planning/rh-validator/PHASE_15_COMPLETE.md)
+- [`FALSE_NEGATIVES_ANALYSIS.md`](FALSE_NEGATIVES_ANALYSIS.md)

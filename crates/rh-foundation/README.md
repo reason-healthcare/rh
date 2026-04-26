@@ -10,8 +10,8 @@ Foundation crate providing common utilities, error handling, and shared function
 - **Configuration**: Traits and utilities for configuration management
 - **I/O Operations**: File reading/writing with JSON support
 - **HTTP Client**: Optional HTTP utilities with async support (feature: `http`)
-- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`, module: `loader`) - [📖 Documentation](LOADER.md)
-- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging (module: `snapshot`) - [📖 Documentation](SNAPSHOT.md)
+- **Package Loader**: FHIR package downloading from npm-style registries (feature: `http`, module: `loader`) - [Loader documentation](LOADER.md)
+- **Snapshot Generator**: StructureDefinition snapshot generation with differential merging (module: `snapshot`) - [Snapshot documentation](SNAPSHOT.md)
 - **JSON Utilities**: Convenient JSON parsing and serialization
 - **CLI Utilities**: Common CLI patterns for input/output and formatting
 - **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
@@ -128,7 +128,7 @@ let data: MyType = json::from_bytes(&bytes)?;
 let bytes = json::to_bytes(&data, false)?; // false = compact
 ```
 
-### CLI Utilities (NEW!)
+### CLI Utilities
 
 ```rust
 use rh_foundation::cli;
@@ -167,7 +167,7 @@ cli::exit_if(has_errors && strict, 1);
 
 Download and manage FHIR packages from npm-style registries.
 
-📖 **[Full Documentation: LOADER.md](LOADER.md)** - Complete guide including HL7 tooling compatibility, private registries, caching strategies, and performance optimization.
+See [LOADER.md](LOADER.md) for loader design details, registry behavior, and caching guidance.
 
 ```rust
 use rh_foundation::loader::{PackageLoader, LoaderConfig};
@@ -220,9 +220,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Generate complete snapshots from FHIR StructureDefinitions with differential elements.
 
-📖 **[Full Documentation: SNAPSHOT.md](SNAPSHOT.md)** - Complete guide including design philosophy, architecture, performance optimization, and advanced usage patterns.
+See [SNAPSHOT.md](SNAPSHOT.md) for the full snapshot generation design and usage guide.
 
 ```rust
+use rh_foundation::loader::PackageLoader;
 use rh_foundation::snapshot::{
     SnapshotGenerator, StructureDefinitionLoader, StructureDefinition
 };

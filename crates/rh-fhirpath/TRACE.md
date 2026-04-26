@@ -80,7 +80,7 @@ cargo run -p rh -- fhirpath eval -d patient.json "Patient.name.trace('names').fa
 
 Output includes a trace log section:
 ```
-📋 Trace logs:
+Trace logs:
   [TRACE:names] Collection([Object(Object {"family": String("Smith"), "given": Array [String("John")]})])
 
 ✅ Expression: Patient.name.trace('names').family
@@ -96,7 +96,7 @@ cargo run -p rh -- fhirpath repl -d patient.json
 ```
 fhirpath> Patient.name.trace('debug').family
 
-📋 Trace logs:
+Trace logs:
   [TRACE:debug] Collection([Object(Object {"family": String("Smith"), "given": Array [String("John")]})])
 
 => String("Smith")

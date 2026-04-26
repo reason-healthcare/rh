@@ -8,7 +8,7 @@ This directory contains comprehensive examples demonstrating the FHIR code gener
 - **Batch Processing**: Process entire directories of FHIR definitions
 - **Serde Integration**: Automatic JSON serialization/deserialization support
 
-## 🔧 Examples Overview
+## Examples Overview
 
 ### [`codegen_basic_usage.rs`](codegen_basic_usage.rs)
 **Basic code generation workflow**
@@ -19,7 +19,7 @@ This directory contains comprehensive examples demonstrating the FHIR code gener
 
 **Run with:**
 ```bash
-cargo run -p codegen --example codegen_basic_usage
+cargo run -p rh-codegen --example codegen_basic_usage
 ```
 
 ### [`codegen_package_management.rs`](codegen_package_management.rs)
@@ -31,7 +31,7 @@ cargo run -p codegen --example codegen_basic_usage
 
 **Run with:**
 ```bash
-cargo run -p codegen --example codegen_package_management
+cargo run -p rh-codegen --example codegen_package_management
 ```
 
 ### [`codegen_generated_types.rs`](codegen_generated_types.rs)
@@ -44,10 +44,10 @@ cargo run -p codegen --example codegen_package_management
 
 **Run with:**
 ```bash
-cargo run -p codegen --example codegen_generated_types
+cargo run -p rh-codegen --example codegen_generated_types
 ```
 
-## 🚀 Running Examples
+## Running Examples
 
 ### Prerequisites
 
@@ -62,20 +62,20 @@ From the workspace root, run any example using:
 
 ```bash
 # Basic usage demonstration
-cargo run -p codegen --example codegen_basic_usage
+cargo run -p rh-codegen --example codegen_basic_usage
 
 # Package management
-cargo run -p codegen --example codegen_package_management
+cargo run -p rh-codegen --example codegen_package_management
 
 # Working with generated types
-cargo run -p codegen --example codegen_generated_types
+cargo run -p rh-codegen --example codegen_generated_types
 ```
 
 ### Running with Verbose Output
 
 Enable detailed logging for any example:
 ```bash
-RUST_LOG=debug cargo run -p codegen --example codegen_basic_usage
+RUST_LOG=debug cargo run -p rh-codegen --example codegen_basic_usage
 ```
 
 ### Running All Codegen Examples
@@ -84,13 +84,13 @@ Run all codegen examples sequentially:
 ```bash
 for example in codegen_basic_usage codegen_package_management codegen_generated_types; do
     echo "Running $example..."
-    cargo run -p codegen --example $example
+    cargo run -p rh-codegen --example $example
     echo "Completed $example"
     echo "---"
 done
 ```
 
-## 🧪 Testing Examples
+## Testing Examples
 
 The examples serve as both documentation and informal tests. You can verify they work correctly by running them and checking their output.
 
@@ -111,8 +111,8 @@ examples=(
 )
 
 for example in "${examples[@]}"; do
-    echo "🧪 Testing: $example"
-    if cargo run -p codegen --example "$example" > /dev/null 2>&1; then
+    echo "Testing: $example"
+    if cargo run -p rh-codegen --example "$example" > /dev/null 2>&1; then
         echo "✅ $example - PASSED"
     else
         echo "❌ $example - FAILED"
@@ -120,10 +120,10 @@ for example in "${examples[@]}"; do
     fi
 done
 
-echo "🎉 All codegen examples passed!"
+echo "All codegen examples passed."
 ```
 
-## 💡 Learning Path
+## Learning Path
 
 ### For Beginners
 1. Start with **`codegen_basic_usage.rs`** - Get familiar with basic concepts
@@ -140,7 +140,7 @@ echo "🎉 All codegen examples passed!"
 - Combine concepts from different examples
 - Use examples as templates for your own FHIR applications
 
-## 📖 Key Concepts Demonstrated
+## Key Concepts Demonstrated
 
 ### Code Generation Workflow
 - **Configuration** - Setting up code generation parameters
@@ -166,14 +166,14 @@ echo "🎉 All codegen examples passed!"
 - **Processing Errors** - StructureDefinition parsing problems
 - **Generation Errors** - Code generation failures
 
-## 🔗 Related Documentation
+## Related Documentation
 
 - **[FHIR Code Generation Crate Documentation](../README.md)** - Complete library documentation
 - **[Main Workspace Examples](../../../examples/README.md)** - Other workspace examples
-- **[RH CLI Documentation](../../../apps/rh/README.md)** - Command-line interface
+- **[RH CLI Documentation](../../../apps/rh-cli/README.md)** - Command-line interface
 - **[FHIR Package Specification](https://confluence.hl7.org/display/FHIR/NPM+Package+Specification)** - Official FHIR package format
 
-## 🛠️ Development
+## Development
 
 ### Adding New Examples
 
@@ -194,23 +194,23 @@ To add a new codegen example:
 /// This example demonstrates [specific functionality]
 
 use anyhow::Result;
-use codegen::{CodeGenerator, CodegenConfig};
+use rh_codegen::{CodeGenerator, CodegenConfig};
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
-    println!("🔧 FHIR Code Generation - [Feature Name]");
+    println!("FHIR Code Generation - [Feature Name]");
     println!("========================================\n");
 
     // Example implementation with detailed comments
 
-    println!("\n✅ Example completed successfully!");
-    println!("💡 Key learning points or usage tips");
+    println!("\nExample completed successfully.");
+    println!("Key learning points or usage tips");
 
     Ok(())
 }
 ```
 
-## 🎯 Best Practices
+## Best Practices
 
 1. **Start Simple** - Begin with basic configuration before complex setups
 2. **Test Incrementally** - Verify each step works before building complexity

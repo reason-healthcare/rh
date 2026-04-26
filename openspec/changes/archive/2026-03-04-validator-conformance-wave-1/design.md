@@ -1,6 +1,6 @@
 ## Context
 
-`rh-validator` is at approximately 70% alignment on the official FHIR test subset, with known feature gaps documented in `crates/rh-validator/TODO.md` and `crates/rh-validator/PHASE_15_ANALYSIS.md`. This change targets a bounded conformance wave focused on known missing capabilities rather than broad refactors or bug-hunt work.
+`rh-validator` is at approximately 70% alignment on the official FHIR test subset, with known feature gaps documented in `openspec/planning/rh-validator/TODO.md` and `openspec/planning/rh-validator/PHASE_15_ANALYSIS.md`. This change targets a bounded conformance wave focused on known missing capabilities rather than broad refactors or bug-hunt work.
 
 The proposal defines four capability areas to progress in lockstep:
 - `security-checks-config`

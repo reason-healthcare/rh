@@ -14,7 +14,7 @@ Phase 8 focused on optimizing validation performance through caching improvement
 | Metric | Target | Achieved | Status |
 |--------|--------|----------|--------|
 | Single validation latency | < 5ms | ~3.9ms | ✅ **PASS** |
-| Batch throughput | > 500 resources/sec | ~252 resources/sec | ⚠️ Below target |
+| Batch throughput | > 500 resources/sec | ~252 resources/sec | Below target |
 | Cache hit rate | > 90% | 100% | ✅ **EXCEEDS** |
 
 ## Benchmark Results
@@ -129,7 +129,7 @@ Very tight distribution indicates consistent performance.
 | Validation Type | Time | Target | Result |
 |----------------|------|--------|--------|
 | Simple Patient | 3.97ms | <5ms | ✅ 21% faster |
-| Complex Patient | 9.35ms | N/A | ℹ️ Reference |
+| Complex Patient | 9.35ms | N/A | Reference |
 | Auto-detect | 3.90ms | <5ms | ✅ 22% faster |
 | Cached | 3.96ms | <5ms | ✅ 21% faster |
 
@@ -158,7 +158,7 @@ Phase 8 successfully optimized validation performance to meet latency and cache 
 
 - ✅ **Latency:** 3.9ms average (21% under 5ms target)
 - ✅ **Caching:** 100% hit rate (exceeds 90% target)
-- ⚠️ **Throughput:** 252/sec (below 500/sec target due to sequential processing)
+- Warning: **Throughput:** 252/sec (below 500/sec target due to sequential processing)
 
 The validator is production-ready for single resource and moderate batch workloads. Parallel validation remains deferred pending FhirPathEvaluator refactoring.
 

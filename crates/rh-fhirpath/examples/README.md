@@ -4,7 +4,7 @@ This directory contains comprehensive examples demonstrating the FHIRPath crate 
 
 The examples serve as both documentation and informal tests. You can verify they work correctly by running them and checking their output.
 
-## 🚀 Running Examples
+## Running Examples
 
 ### Prerequisites
 
@@ -19,57 +19,57 @@ From the workspace root, run any example using:
 
 ```bash
 # Basic demonstration
-cargo run -p fhirpath --example basic_demo
+cargo run -p rh-fhirpath --example basic_demo
 
 # Type operations (is/as operators)
-cargo run -p fhirpath --example type_operations
+cargo run -p rh-fhirpath --example type_operations
 
 # Logical implies operator
-cargo run -p fhirpath --example implies_operations
+cargo run -p rh-fhirpath --example implies_operations
 
 # Arithmetic operations
-cargo run -p fhirpath --example arithmetic_operations
+cargo run -p rh-fhirpath --example arithmetic_operations
 
 # String functions
-cargo run -p fhirpath --example string_functions
+cargo run -p rh-fhirpath --example string_functions
 
 # Replace matches with regex
-cargo run -p fhirpath --example replace_matches_function
+cargo run -p rh-fhirpath --example replace_matches_function
 
 # Collection operations
-cargo run -p fhirpath --example collection_operations
+cargo run -p rh-fhirpath --example collection_operations
 
 # Boolean collection functions
-cargo run -p fhirpath --example boolean_collection_operations
+cargo run -p rh-fhirpath --example boolean_collection_operations
 
 # FHIR Patient navigation
-cargo run -p fhirpath --example fhir_patient_navigation
+cargo run -p rh-fhirpath --example fhir_patient_navigation
 
 # FHIR Extension System Examples
-cargo run -p fhirpath --example fhir_extension_functions
-cargo run -p fhirpath --example fhir_extension_variables
+cargo run -p rh-fhirpath --example fhir_extension_functions
+cargo run -p rh-fhirpath --example fhir_extension_variables
 
 # SQL-on-FHIR Extension Examples
-cargo run -p fhirpath --example sql_on_fhir_examples
-cargo run -p fhirpath --example fhir_resource_navigation
-cargo run -p fhirpath --example fhir_validation_examples
-cargo run -p fhirpath --example extension_system_demo
+cargo run -p rh-fhirpath --example sql_on_fhir_examples
+cargo run -p rh-fhirpath --example fhir_resource_navigation
+cargo run -p rh-fhirpath --example fhir_validation_examples
+cargo run -p rh-fhirpath --example extension_system_demo
 
 # Math functions
-cargo run -p fhirpath --example math_functions
+cargo run -p rh-fhirpath --example math_functions
 
 # DateTime functions
-cargo run -p fhirpath --example datetime_functions_example
+cargo run -p rh-fhirpath --example datetime_functions_example
 
 # And many more - see the files in this directory
 ```
 
 Enable detailed logging for any example:
 ```bash
-RUST_LOG=debug cargo run -p fhirpath --example type_operations
+RUST_LOG=debug cargo run -p rh-fhirpath --example type_operations
 ```
 
-## 📚 Available Examples
+## Available Examples
 
 ### Core Language Features
 - **`basic_demo.rs`** - Basic FHIRPath parsing and evaluation
@@ -106,14 +106,14 @@ RUST_LOG=debug cargo run -p fhirpath --example type_operations
 - **`verify_union.rs`** - Testing union operations
 - **`simple_math.rs`** - Simple mathematical expressions
 
-## 🔗 Related Documentation
+## Related Documentation
 
 - **[FHIRPath Crate Documentation](../README.md)** - Complete library documentation
 - **[Main Workspace Examples](../../../examples/README.md)** - Other workspace examples
-- **[RH CLI Documentation](../../../apps/rh/README.md)** - Command-line interface
+- **[RH CLI Documentation](../../../apps/rh-cli/README.md)** - Command-line interface
 - **[FHIRPath Specification](https://hl7.org/fhirpath/)** - Official FHIRPath language specification
 
-## 🛠️ Development
+## Development
 
 ### Adding New Examples
 
@@ -148,7 +148,7 @@ use serde_json::json;
 use rh_fhirpath::{FhirPathParser, FhirPathEvaluator, EvaluationContext, FhirPathValue};
 
 fn main() -> Result<()> {
-    println!("🎯 FHIRPath [Feature Name] Operations Examples");
+    println!("FHIRPath [Feature Name] Operations Examples");
     println!("===============================================\n");
 
     let parser = FhirPathParser::new();

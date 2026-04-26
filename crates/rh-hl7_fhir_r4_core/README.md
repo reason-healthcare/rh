@@ -22,7 +22,7 @@ rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7_fhir_r4_core --force --
 * **Version** 4.0.1
 * **Canonical URL** `http://hl7.org/fhir`
 
-**Statistics: 0 structs, 0 enums, 0 total types**
+**Statistics: 1174 structs, 214 enums, 1388 total public types**
 
 ## Description
 
@@ -42,7 +42,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh_hl7_fhir_r4_core = "0.1.0"
+rh-hl7-fhir-r4-core = "0.1.0-beta.1"
 ```
 
 ### Deserializing FHIR Resources
