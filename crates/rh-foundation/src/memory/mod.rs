@@ -9,24 +9,25 @@
 //! ```
 //! use rh_foundation::memory::{MemoryStore, MemoryStoreConfig};
 //!
-//! // Create a store with default config
 //! let store: MemoryStore<String> = MemoryStore::new(MemoryStoreConfig::default());
 //!
-//! // Insert and retrieve values
 //! store.insert("key1".to_string(), "value1".to_string());
 //! assert_eq!(store.get(&"key1".to_string()), Some("value1".to_string()));
-//!
-//! // Check if key exists
 //! assert!(store.contains(&"key1".to_string()));
 //!
-//! // Remove a value
 //! store.remove(&"key1".to_string());
 //! assert!(!store.contains(&"key1".to_string()));
 //! ```
 
-use std::collections::HashMap;
+mod state;
+mod stats;
+
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
+
+use state::StoreState;
+pub use stats::MemoryStoreStats;
+use stats::StatsRecorder;
 
 /// Configuration for a memory store.
 #[derive(Debug, Clone, Default)]
@@ -53,33 +54,6 @@ impl MemoryStoreConfig {
     }
 }
 
-/// Statistics for a memory store.
-#[derive(Debug, Clone, Default)]
-pub struct MemoryStoreStats {
-    /// Number of cache hits.
-    pub hits: u64,
-    /// Number of cache misses.
-    pub misses: u64,
-    /// Number of insertions.
-    pub insertions: u64,
-    /// Number of removals.
-    pub removals: u64,
-    /// Number of evictions due to capacity limits.
-    pub evictions: u64,
-}
-
-impl MemoryStoreStats {
-    /// Calculate the hit rate (0.0 to 1.0).
-    pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
-        if total == 0 {
-            0.0
-        } else {
-            self.hits as f64 / total as f64
-        }
-    }
-}
-
 /// A thread-safe in-memory key-value store.
 ///
 /// This store is designed to be WASM-compatible and can be used to cache
@@ -96,9 +70,9 @@ where
     K: Eq + Hash + Clone,
     V: Clone,
 {
-    data: Arc<RwLock<HashMap<K, V>>>,
+    state: Arc<RwLock<StoreState<K, V>>>,
     config: MemoryStoreConfig,
-    stats: Arc<RwLock<MemoryStoreStats>>,
+    stats: StatsRecorder,
 }
 
 impl<V, K> Clone for MemoryStore<V, K>
@@ -108,9 +82,9 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            data: Arc::clone(&self.data),
+            state: Arc::clone(&self.state),
             config: self.config.clone(),
-            stats: Arc::clone(&self.stats),
+            stats: self.stats.clone(),
         }
     }
 }
@@ -132,9 +106,9 @@ where
     /// Create a new memory store with the given configuration.
     pub fn new(config: MemoryStoreConfig) -> Self {
         Self {
-            data: Arc::new(RwLock::new(HashMap::new())),
+            state: Arc::new(RwLock::new(StoreState::new(config.max_entries))),
+            stats: StatsRecorder::new(config.track_stats),
             config,
-            stats: Arc::new(RwLock::new(MemoryStoreStats::default())),
         }
     }
 
@@ -143,40 +117,23 @@ where
     /// If the store has a maximum entry limit and is at capacity,
     /// an arbitrary entry will be evicted to make room.
     pub fn insert(&self, key: K, value: V) {
-        let mut data = self.data.write().unwrap();
-
-        // Check capacity and evict if necessary
-        if self.config.max_entries > 0 && data.len() >= self.config.max_entries {
-            // Simple eviction: remove first entry (not LRU, but simple and fast)
-            if let Some(first_key) = data.keys().next().cloned() {
-                data.remove(&first_key);
-                if self.config.track_stats {
-                    self.stats.write().unwrap().evictions += 1;
-                }
-            }
+        let outcome = self.state.write().unwrap().insert(key, value);
+        if outcome.evicted {
+            self.stats.record_eviction();
         }
-
-        data.insert(key, value);
-
-        if self.config.track_stats {
-            self.stats.write().unwrap().insertions += 1;
-        }
+        self.stats.record_insertion();
     }
 
     /// Get a value from the store.
     ///
     /// Returns `Some(value)` if the key exists, `None` otherwise.
     pub fn get(&self, key: &K) -> Option<V> {
-        let data = self.data.read().unwrap();
-        let result = data.get(key).cloned();
+        let result = self.state.read().unwrap().get_cloned(key);
 
-        if self.config.track_stats {
-            let mut stats = self.stats.write().unwrap();
-            if result.is_some() {
-                stats.hits += 1;
-            } else {
-                stats.misses += 1;
-            }
+        if result.is_some() {
+            self.stats.record_hit();
+        } else {
+            self.stats.record_miss();
         }
 
         result
@@ -184,52 +141,50 @@ where
 
     /// Check if a key exists in the store.
     pub fn contains(&self, key: &K) -> bool {
-        self.data.read().unwrap().contains_key(key)
+        self.state.read().unwrap().contains(key)
     }
 
     /// Remove a value from the store.
     ///
     /// Returns the removed value if the key existed.
     pub fn remove(&self, key: &K) -> Option<V> {
-        let result = self.data.write().unwrap().remove(key);
-
-        if self.config.track_stats && result.is_some() {
-            self.stats.write().unwrap().removals += 1;
+        let result = self.state.write().unwrap().remove(key);
+        if result.is_some() {
+            self.stats.record_removal();
         }
-
         result
     }
 
     /// Clear all entries from the store.
     pub fn clear(&self) {
-        self.data.write().unwrap().clear();
+        self.state.write().unwrap().clear();
     }
 
     /// Get the number of entries in the store.
     pub fn len(&self) -> usize {
-        self.data.read().unwrap().len()
+        self.state.read().unwrap().len()
     }
 
     /// Check if the store is empty.
     pub fn is_empty(&self) -> bool {
-        self.data.read().unwrap().is_empty()
+        self.state.read().unwrap().is_empty()
     }
 
     /// Get all keys in the store.
     pub fn keys(&self) -> Vec<K> {
-        self.data.read().unwrap().keys().cloned().collect()
+        self.state.read().unwrap().keys()
     }
 
     /// Get statistics for the store.
     ///
     /// Only meaningful if `track_stats` was enabled in the config.
     pub fn stats(&self) -> MemoryStoreStats {
-        self.stats.read().unwrap().clone()
+        self.stats.snapshot()
     }
 
     /// Reset statistics.
     pub fn reset_stats(&self) {
-        *self.stats.write().unwrap() = MemoryStoreStats::default();
+        self.stats.reset();
     }
 
     /// Get or insert a value using a factory function.
@@ -241,44 +196,25 @@ where
     where
         F: FnOnce() -> V,
     {
-        // Try to get first (read lock only)
-        if let Some(value) = self.get(&key) {
+        if let Some(value) = self.state.read().unwrap().get_cloned(&key) {
+            self.stats.record_hit();
             return value;
         }
 
-        // Need to insert (write lock)
-        let mut data = self.data.write().unwrap();
+        let outcome = self.state.write().unwrap().get_or_insert_with(key, factory);
 
-        // Double-check after acquiring write lock
-        if let Some(value) = data.get(&key) {
-            if self.config.track_stats {
-                self.stats.write().unwrap().hits += 1;
+        if outcome.inserted {
+            self.stats.record_miss();
+            if outcome.evicted {
+                self.stats.record_eviction();
             }
-            return value.clone();
+            self.stats.record_insertion();
+        } else {
+            self.stats.record_miss();
+            self.stats.record_hit();
         }
 
-        // Create and insert
-        let value = factory();
-
-        // Check capacity and evict if necessary
-        if self.config.max_entries > 0 && data.len() >= self.config.max_entries {
-            if let Some(first_key) = data.keys().next().cloned() {
-                data.remove(&first_key);
-                if self.config.track_stats {
-                    self.stats.write().unwrap().evictions += 1;
-                }
-            }
-        }
-
-        data.insert(key, value.clone());
-
-        if self.config.track_stats {
-            let mut stats = self.stats.write().unwrap();
-            stats.misses += 1;
-            stats.insertions += 1;
-        }
-
-        value
+        outcome.value
     }
 }
 
@@ -309,7 +245,6 @@ mod tests {
         store.insert("b".to_string(), 2);
         assert_eq!(store.len(), 2);
 
-        // This should evict one entry
         store.insert("c".to_string(), 3);
         assert_eq!(store.len(), 2);
         assert_eq!(store.stats().evictions, 1);
@@ -340,7 +275,6 @@ mod tests {
         let value = store.get_or_insert_with("key1".to_string(), || 42);
         assert_eq!(value, 42);
 
-        // Should return cached value, not call factory
         let value = store.get_or_insert_with("key1".to_string(), || 100);
         assert_eq!(value, 42);
     }
@@ -377,7 +311,6 @@ mod tests {
         let store2 = store1.clone();
         assert_eq!(store2.get(&"key".to_string()), Some("value".to_string()));
 
-        // Changes in store2 should be visible in store1
         store2.insert("key2".to_string(), "value2".to_string());
         assert_eq!(store1.get(&"key2".to_string()), Some("value2".to_string()));
     }

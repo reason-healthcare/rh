@@ -125,7 +125,7 @@ fn report_worst_issues(results: &[(String, Value, rh_validator::ValidationResult
         .map(|(id, _, result)| (id.clone(), result.issues.len()))
         .collect();
 
-    resource_issues.sort_by(|a, b| b.1.cmp(&a.1));
+    resource_issues.sort_by_key(|b| std::cmp::Reverse(b.1));
 
     for (id, count) in resource_issues.iter().take(limit) {
         println!("{id}: {count} issues");

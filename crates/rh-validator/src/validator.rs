@@ -1373,9 +1373,9 @@ fn validate_string_security(
                 ));
             }
         }
-        Value::String(s) => {
+        Value::String(s)
             // Check for HTML-like content in strings
-            if contains_html_tags(s) {
+            if contains_html_tags(s) => {
                 let issue = if security_checks_enabled {
                     ValidationIssue::error(
                         IssueCode::Invalid,
@@ -1389,7 +1389,6 @@ fn validate_string_security(
                 };
                 issues.push(issue.with_path(current_path.to_string()));
             }
-        }
         _ => {}
     }
 
@@ -2095,17 +2094,16 @@ fn validate_no_embedded_html_recursive(
                 validate_no_embedded_html_recursive(item, &child_path, issues);
             }
         }
-        Value::String(s) => {
+        Value::String(s)
             // Check for embedded HTML tags (security risk)
             // Look for patterns like <tag> or </tag> or <tag />
             // This is reported as a warning (informational) to match Java validator behavior
-            if contains_html_tags(s) {
+            if contains_html_tags(s) => {
                 issues.push(ValidationIssue::warning(
                     IssueCode::Invalid,
                     "The string value contains text that looks like embedded HTML tags. If this content is rendered to HTML without appropriate post-processing, it may be a security risk".to_string(),
                 ).with_path(current_path));
             }
-        }
         _ => {}
     }
 }
@@ -2386,24 +2384,22 @@ fn validate_primitive_format(
                 }
             }
         }
-        "oid" => {
+        "oid"
             // FHIR oid: urn:oid:[0-2](\.(0|[1-9][0-9]*))+
-            if !s.starts_with("urn:oid:") {
+            if !s.starts_with("urn:oid:") => {
                 return Some(ValidationIssue::error(
                     IssueCode::Value,
                     format!("Invalid oid at '{path}': must start with 'urn:oid:'"),
                 ));
             }
-        }
-        "uuid" => {
+        "uuid"
             // FHIR uuid: urn:uuid:[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}
-            if !s.starts_with("urn:uuid:") {
+            if !s.starts_with("urn:uuid:") => {
                 return Some(ValidationIssue::error(
                     IssueCode::Value,
                     format!("Invalid uuid at '{path}': must start with 'urn:uuid:'"),
                 ));
             }
-        }
         "positiveInt" => {
             if let Some(n) = value.as_i64() {
                 if n < 1 {
@@ -2424,14 +2420,13 @@ fn validate_primitive_format(
                 }
             }
         }
-        "base64Binary" => {
-            if !is_valid_base64(s) {
+        "base64Binary"
+            if !is_valid_base64(s) => {
                 return Some(ValidationIssue::error(
                     IssueCode::Value,
                     format!("The value '{s}' is not a valid Base64 value"),
                 ));
             }
-        }
         _ => {}
     }
 
