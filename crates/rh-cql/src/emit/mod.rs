@@ -440,9 +440,7 @@ impl ElmEmitter {
 // Helper Functions
 // ============================================================================
 
-/// Convert a [`DataType`] to an ELM QName string.\n
-///
-/// Mirrors the logic in `translator::datatype_to_qname`.
+/// Convert a [`DataType`] to an ELM QName string.
 pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
     match dt {
         DataType::System(sys) => qname_system(system_type_name(sys)),
