@@ -498,9 +498,16 @@ impl TerminologyService for MockTerminologyService {
         code: &str,
         display: Option<&str>,
     ) -> Result<ValidateCodeResult, TerminologyError> {
-        let members = self.value_sets.get(valueset_url).ok_or_else(|| {
-            TerminologyError::NotFound(format!("ValueSet '{valueset_url}' not found"))
-        })?;
+        // Strip version suffix (e.g. "|4.0.1") for lookup so that callers using versioned
+        // canonical URLs can still match unversioned mock registrations.
+        let unversioned = valueset_url.split('|').next().unwrap_or(valueset_url);
+        let members = self
+            .value_sets
+            .get(valueset_url)
+            .or_else(|| self.value_sets.get(unversioned))
+            .ok_or_else(|| {
+                TerminologyError::NotFound(format!("ValueSet '{valueset_url}' not found"))
+            })?;
 
         // Check if the code is in the value set
         let in_valueset = members.iter().any(|(s, c)| s == system && c == code);
@@ -556,7 +563,12 @@ impl TerminologyService for MockTerminologyService {
     }
 
     fn supports_value_set(&self, valueset_url: &str) -> bool {
-        self.value_sets.contains_key(valueset_url)
+        if self.value_sets.contains_key(valueset_url) {
+            return true;
+        }
+        // Also match against unversioned URL
+        let unversioned = valueset_url.split('|').next().unwrap_or(valueset_url);
+        self.value_sets.contains_key(unversioned)
     }
 
     fn is_supplement(&self, system: &str) -> Option<String> {
