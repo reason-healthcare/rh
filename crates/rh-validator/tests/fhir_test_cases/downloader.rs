@@ -2,30 +2,46 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 const FHIR_TEST_CASES_URL: &str =
     "https://github.com/FHIR/fhir-test-cases/archive/refs/heads/master.zip";
 const VERSION_FILE: &str = "VERSION";
 const EXPECTED_VERSION: &str = "master-snapshot";
 
+// Serializes concurrent download attempts across test threads in the same process.
+static DOWNLOAD_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
 #[cfg(feature = "fhir-test-cases")]
 pub fn ensure_test_cases() -> Result<PathBuf> {
     let cache_dir = get_cache_dir()?;
 
-    if !is_cache_valid(&cache_dir)? {
-        println!("Downloading FHIR test cases from GitHub...");
-        println!("URL: {FHIR_TEST_CASES_URL}");
-        println!("Cache: {}", cache_dir.display());
-
-        download_and_extract(&cache_dir)
-            .context("Failed to download and extract FHIR test cases")?;
-
-        mark_cache_version(&cache_dir)?;
-
-        println!("✓ FHIR test cases downloaded and cached successfully");
-    } else {
+    // Fast path: cache is already valid, no locking needed.
+    if is_cache_valid(&cache_dir)? {
         println!("Using cached FHIR test cases from {}", cache_dir.display());
+        return Ok(cache_dir);
     }
+
+    // Serialize downloads so parallel test threads don't corrupt the cache.
+    let lock = DOWNLOAD_LOCK.get_or_init(|| Mutex::new(()));
+    let _guard = lock.lock().unwrap();
+
+    // Re-check after acquiring the lock: another thread may have downloaded already.
+    if is_cache_valid(&cache_dir)? {
+        println!("Using cached FHIR test cases from {}", cache_dir.display());
+        return Ok(cache_dir);
+    }
+
+    println!("Downloading FHIR test cases from GitHub...");
+    println!("URL: {FHIR_TEST_CASES_URL}");
+    println!("Cache: {}", cache_dir.display());
+
+    download_and_extract(&cache_dir)
+        .context("Failed to download and extract FHIR test cases")?;
+
+    mark_cache_version(&cache_dir)?;
+
+    println!("✓ FHIR test cases downloaded and cached successfully");
 
     Ok(cache_dir)
 }
