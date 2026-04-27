@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build:
@@ -191,3 +192,33 @@ jobs:
           echo "cargo publish -p rh-validator && sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-cli" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  docker:
+    name: Build and push Docker image
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/reason-healthcare/rh:${{ github.ref_name }}
+            ghcr.io/reason-healthcare/rh:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
