@@ -100,6 +100,21 @@ rh cql compile library.cql --output library.elm.json
 | `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
 | `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
 | `rh snapshot` | Generate and manage StructureDefinition snapshots | — |
+| `rh publish` | Build and publish FHIR Packages from a source directory | — |
+
+### `rh publish` subcommands
+
+```
+rh publish build <dir>   Build a FHIR Package from a source directory
+rh publish lock  <dir>   Resolve canonical references and write fhir-lock.json
+rh publish check <dir>   Validate source (no output written)
+rh publish pack  <dir>   Pack an already-built output directory into a .tgz
+
+Options:
+  -o, --out <path>   Output directory (build) or output file path (pack)
+```
+
+See [`crates/rh-publisher/README.md`](../../crates/rh-publisher/README.md) for full documentation including `publisher.toml` configuration reference.
 
 ## Global Options
 
