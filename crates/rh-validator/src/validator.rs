@@ -2988,8 +2988,12 @@ impl FhirValidator {
                 return Ok(issues);
             }
 
-            for element in elements {
-                let context = EvaluationContext::new(element.clone());
+            let element_name = rule.path.split('.').next_back().unwrap_or("element");
+
+            for (idx, element) in elements.iter().enumerate() {
+                // root = full resource so %resource/$this work; current = element being tested
+                let context =
+                    EvaluationContext::new(resource.clone()).with_current((*element).clone());
                 let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
                     Ok(value) => value,
                     Err(e) => {
@@ -3002,8 +3006,7 @@ impl FhirValidator {
 
                 let is_valid = self.evaluate_invariant_result(&result);
                 if !is_valid {
-                    issues.push(self.create_invariant_issue(rule));
-                    // Continue to check all elements, but we already have at least one failure
+                    issues.push(self.create_element_invariant_issue(rule, element_name, idx));
                 }
             }
         }
@@ -3036,6 +3039,23 @@ impl FhirValidator {
                 IssueCode::Invariant,
                 format!("{}: {} (at {})", rule.key, rule.human, rule.path),
             )
+        }
+    }
+
+    fn create_element_invariant_issue(
+        &self,
+        rule: &crate::rules::InvariantRule,
+        element_name: &str,
+        index: usize,
+    ) -> ValidationIssue {
+        let message = format!(
+            "{}: {} [at {}[{}]]",
+            rule.key, rule.human, element_name, index
+        );
+        if rule.severity == "error" {
+            ValidationIssue::error(IssueCode::Invariant, message)
+        } else {
+            ValidationIssue::warning(IssueCode::Invariant, message)
         }
     }
 }
