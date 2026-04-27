@@ -37,6 +37,9 @@ url = "2.0"
 nom = "7.1"
 regex = "1.0"
 
+# Parallel processing
+rayon = "1.10"
+
 # XML parsing
 quick-xml = { version = "0.37", features = ["serde", "serialize"] }
 

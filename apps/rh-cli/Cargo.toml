@@ -39,6 +39,7 @@ rh-fhirpath = { path = "../../crates/rh-fhirpath", version = "0.1.0-beta.1" }
 rh-validator = { path = "../../crates/rh-validator", version = "0.2.0-beta.1" }
 rh-vcl = { path = "../../crates/rh-vcl", version = "0.1.0-beta.1" }
 rh-hl7-fhir-r4-core = { path = "../../crates/rh-hl7_fhir_r4_core", version = "0.1.0-beta.1" }
+rh-fsh = { path = "../../crates/rh-fsh", version = "0.1.0-beta.1" }
 
 [dev-dependencies]
 assert_cmd = "2.0"

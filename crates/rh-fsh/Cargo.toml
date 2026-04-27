@@ -1,0 +1,29 @@
+[package]
+name = "rh-fsh"
+version.workspace = true
+edition.workspace = true
+description = "FHIR Shorthand (FSH) compiler — transforms FSH source into FHIR JSON packages"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords = ["fhir", "fsh", "healthcare", "hl7", "compiler"]
+categories = ["parser-implementations", "science"]
+readme = "README.md"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+nom = { workspace = true }
+indexmap = { workspace = true }
+rayon = { workspace = true }
+rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.1.0-beta.1" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "compile"
+harness = false
