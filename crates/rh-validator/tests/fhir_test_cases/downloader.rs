@@ -36,8 +36,7 @@ pub fn ensure_test_cases() -> Result<PathBuf> {
     println!("URL: {FHIR_TEST_CASES_URL}");
     println!("Cache: {}", cache_dir.display());
 
-    download_and_extract(&cache_dir)
-        .context("Failed to download and extract FHIR test cases")?;
+    download_and_extract(&cache_dir).context("Failed to download and extract FHIR test cases")?;
 
     mark_cache_version(&cache_dir)?;
 
