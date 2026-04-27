@@ -50,7 +50,18 @@ fn is_cache_valid(cache_dir: &Path) -> Result<bool> {
     }
 
     let cached_version = fs::read_to_string(&version_file)?;
-    Ok(cached_version.trim() == EXPECTED_VERSION)
+    if cached_version.trim() != EXPECTED_VERSION {
+        return Ok(false);
+    }
+
+    // Verify the manifest is present and valid JSON — a truncated download
+    // can produce a VERSION file but a corrupt manifest.json.
+    let manifest_path = cache_dir.join("validator").join("manifest.json");
+    if !manifest_path.exists() {
+        return Ok(false);
+    }
+    let content = fs::read_to_string(&manifest_path)?;
+    Ok(serde_json::from_str::<serde_json::Value>(&content).is_ok())
 }
 
 fn mark_cache_version(cache_dir: &Path) -> Result<()> {
