@@ -42,6 +42,31 @@ cargo install --path apps/rh-cli
 cargo install rh-cli
 ```
 
+### Docker
+
+A pre-built Docker image is available from the GitHub Container Registry:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/reason-healthcare/rh:latest
+
+# Show available commands
+docker run --rm ghcr.io/reason-healthcare/rh:latest --help
+
+# Run rh against files in the current directory
+docker run --rm \
+  -v "$(pwd)":/work \
+  -w /work \
+  ghcr.io/reason-healthcare/rh:latest \
+  validate resource --input patient.json
+```
+
+You can also pin to a specific version:
+
+```bash
+docker run --rm ghcr.io/reason-healthcare/rh:v0.1.0-beta.1 --version
+```
+
 ## Quick Start
 
 ```bash

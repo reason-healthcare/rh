@@ -1,0 +1,35 @@
+# Build artifacts
+target/
+
+# Version control
+.git/
+.gitignore
+
+# Documentation and assets
+docs/
+assets/
+*.md
+!apps/rh-cli/README.md
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# OpenSpec workflow artifacts
+openspec/
+
+# CI configuration (not needed in build context)
+.github/
+
+# Scripts
+scripts/
+
+# Logs
+*.log
+clippy.log
