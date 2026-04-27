@@ -1,10 +1,67 @@
 use anyhow::Result;
 use rh_validator::{FhirValidator, FhirVersion};
-use serde_json::json;
+use serde_json::{json, Value};
+
+/// Minimal Patient StructureDefinition with ext-1 constraints on extension elements.
+/// Used to make tests self-contained without requiring the FHIR R4 core package.
+fn patient_profile_with_ext1() -> Value {
+    json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/StructureDefinition/Patient",
+        "name": "Patient",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/DomainResource",
+        "derivation": "specialization",
+        "snapshot": {
+            "element": [
+                {
+                    "id": "Patient",
+                    "path": "Patient",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.extension",
+                    "path": "Patient.extension",
+                    "min": 0,
+                    "max": "*",
+                    "constraint": [{
+                        "key": "ext-1",
+                        "severity": "error",
+                        "human": "Must have either extensions or value[x], not both",
+                        "expression": "extension.exists() != value.exists()"
+                    }]
+                },
+                {
+                    "id": "Patient.contact",
+                    "path": "Patient.contact",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.contact.extension",
+                    "path": "Patient.contact.extension",
+                    "min": 0,
+                    "max": "*",
+                    "constraint": [{
+                        "key": "ext-1",
+                        "severity": "error",
+                        "human": "Must have either extensions or value[x], not both",
+                        "expression": "extension.exists() != value.exists()"
+                    }]
+                }
+            ]
+        }
+    })
+}
 
 #[test]
 fn test_ext1_only_applies_to_extensions() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
     let patient_without_extensions = json!({
         "resourceType": "Patient",
@@ -33,19 +90,20 @@ fn test_ext1_only_applies_to_extensions() -> Result<()> {
     Ok(())
 }
 
-// TODO: This test requires per-element invariant evaluation
-// Currently invariants are evaluated at resource level, not per-element
+// Tests that per-element invariant evaluation fires ext-1 correctly
 #[test]
-#[ignore]
 fn test_ext1_applies_to_extension_elements() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
+    // An extension with a url but neither a value[x] nor sub-extensions violates ext-1
+    // (extension.exists() != value.exists() → false != false → false → violation)
     let patient_with_invalid_extension = json!({
         "resourceType": "Patient",
         "id": "test-patient",
         "active": true,
         "extension": [{
-            "valueString": "test"
+            "url": "http://example.org/test"
         }]
     });
 
@@ -68,6 +126,7 @@ fn test_ext1_applies_to_extension_elements() -> Result<()> {
 #[test]
 fn test_ext1_applies_to_valid_extension() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
     let patient_with_valid_extension = json!({
         "resourceType": "Patient",
@@ -96,12 +155,13 @@ fn test_ext1_applies_to_valid_extension() -> Result<()> {
     Ok(())
 }
 
-// TODO: This test requires per-element invariant evaluation
+// Tests per-element scoping: only the invalid extension among valid ones triggers ext-1
 #[test]
-#[ignore]
 fn test_multiple_extension_instances() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
+    // extension[1] has a url but neither value[x] nor sub-extensions → violates ext-1
     let patient_with_multiple_extensions = json!({
         "resourceType": "Patient",
         "id": "test-patient",
@@ -112,7 +172,7 @@ fn test_multiple_extension_instances() -> Result<()> {
                 "valueString": "valid1"
             },
             {
-                "valueString": "invalid - no url"
+                "url": "http://example.org/test-invalid"
             },
             {
                 "url": "http://example.org/test2",
@@ -216,21 +276,21 @@ fn test_resource_level_invariant() -> Result<()> {
     Ok(())
 }
 
-// TODO: This test requires per-element invariant evaluation for nested paths
+// Tests per-element evaluation for a deeply-nested extension path (Patient.contact.extension)
 #[test]
-#[ignore]
 fn test_element_level_invariant_on_nested_element() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
+    // contact[0].extension[0] has a url but no value[x] and no sub-extensions → violates ext-1
     let patient_with_nested_extension = json!({
         "resourceType": "Patient",
         "id": "test-patient",
         "active": true,
-        "name": [{
-            "family": "Doe",
-            "given": ["John"],
+        "contact": [{
+            "name": {"family": "Smith"},
             "extension": [{
-                "valueString": "invalid nested extension"
+                "url": "http://example.org/contact-ext"
             }]
         }]
     });
@@ -299,6 +359,7 @@ fn test_contained_resource_validation() -> Result<()> {
 #[test]
 fn test_no_false_positives_on_simple_patient() -> Result<()> {
     let validator = FhirValidator::new(FhirVersion::R4, None)?;
+    validator.register_profile(&patient_profile_with_ext1());
 
     let simple_patient = json!({
         "resourceType": "Patient",
