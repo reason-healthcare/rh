@@ -6,6 +6,7 @@ mod codegen;
 mod cql;
 mod download;
 mod fhirpath;
+mod publish;
 mod snapshot;
 mod validator;
 mod vcl;
@@ -52,6 +53,10 @@ enum Commands {
     /// Generate and manage StructureDefinition snapshots
     #[clap(subcommand)]
     Snapshot(snapshot::SnapshotCommands),
+
+    /// Assemble a conformant FHIR Package from a source directory
+    #[clap(subcommand)]
+    Publish(publish::PublishCommands),
 
     /// Validate FHIR resources
     #[clap(subcommand)]
@@ -116,6 +121,12 @@ async fn main() -> Result<()> {
         Commands::Validate(cmd) => {
             if let Err(e) = validator::handle_command(cmd).await {
                 error!("Validator error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Publish(cmd) => {
+            if let Err(e) = publish::handle_command(cmd).await {
+                error!("Publish error: {}", e);
                 std::process::exit(1);
             }
         }

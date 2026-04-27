@@ -47,6 +47,15 @@ chrono = { version = "0.4", features = ["serde"] }
 tar = "0.4"
 flate2 = "1.0"
 
+# TOML parsing
+toml = "0.8"
+
+# Markdown to HTML/XHTML conversion
+pulldown-cmark = "0.12"
+
+# Base64 encoding for CQL/ELM content in Library resources
+base64 = "0.22"
+
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
