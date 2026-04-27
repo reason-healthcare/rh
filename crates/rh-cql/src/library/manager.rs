@@ -192,7 +192,6 @@ impl<P: LibrarySourceProvider> LibraryManager<P> {
     /// 4. Returns the resolved library
     ///
     /// Note: This is a placeholder that returns the cached library or an error.
-    /// Full compilation will be implemented in Phase 4 (LibraryBuilder).
     pub fn resolve(&self, id: &LibraryIdentifier) -> LibraryResult<CompiledLibrary> {
         self.resolve_with_stack(id, &mut Vec::new())
     }

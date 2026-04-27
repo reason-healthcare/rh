@@ -63,14 +63,7 @@
 //! - [`output`]: ELM output generation (JSON serialization)
 //! - [`reporting`]: Error reporting with source locations and severity levels
 //! - [`preprocessor`]: Preprocessor for extracting library info from AST
-//!
-//! ### Deprecated
-//! - [`builder`]: `LibraryBuilder` — superseded by the `compiler` API; retained as a
-//!   convenience shim. **Prefer `compile()` / `compile_with_model()` instead.**
-//! - [`translator`]: `ExpressionTranslator` — superseded by `SemanticAnalyzer` + `ElmEmitter`.
-//!   Marked `#[deprecated]`; will be removed in a future release.
 
-pub mod builder;
 pub mod compiler;
 pub mod conversion;
 pub mod datatype;
@@ -91,7 +84,6 @@ pub mod provider;
 pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;
-pub mod translator;
 pub mod types;
 
 // Primary public API - compile CQL to ELM
@@ -103,7 +95,6 @@ pub use compiler::{
 };
 pub use explain::explain_eval;
 
-pub use builder::LibraryBuilder;
 pub use conversion::{
     conversion_key_to_datatype, datatype_to_conversion_key, needs_conversion, wrap_in_conversion,
     ConversionContext, ConversionEntry, ConversionRegistry, ConversionResult,
@@ -138,17 +129,7 @@ pub use reporting::{
     CqlCompilerException, Diagnostic, DiagnosticCode, DiagnosticCollection, DiagnosticStage,
     ExceptionCollector, ExceptionType, Severity, SourceLocator,
 };
-#[deprecated(
-    since = "0.1.0",
-    note = "Use the new three-stage pipeline: SemanticAnalyzer + ElmEmitter. \
-            ExpressionTranslator will be removed in a future release."
-)]
-#[allow(deprecated)]
-pub use translator::ExpressionTranslator;
-#[allow(deprecated)]
-pub use translator::{StatementTranslation, TranslatorError, TranslatorResult};
-
-// New pipeline types — preferred public API
+// Pipeline types — public API
 pub use emit::ElmEmitter;
 pub use eval::context::{
     Clock, DataProvider, EvalContext, EvalContextBuilder, EvalError, FixedClock,

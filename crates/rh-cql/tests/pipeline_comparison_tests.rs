@@ -1,15 +1,11 @@
 //! Cross-pipeline comparison tests for the ELM compilation pipeline.
 //!
-//! Task 5.6: Run full conformance suite against the new pipeline, compare with
-//! old pipeline output.
-//!
 //! ## Context
 //!
-//! The old pipeline (`ExpressionTranslator` + `LibraryBuilder`) has been retired
-//! as part of the three-stage pipeline refactor. `ExpressionTranslator` is now a
-//! small deprecated stub with no translation logic. Accordingly these tests:
+//! The three-stage pipeline (`SemanticAnalyzer` + `ElmEmitter`) is the sole
+//! compilation path. These tests:
 //!
-//! 1. Verify the new `SemanticAnalyzer + ElmEmitter` pipeline compiles each of
+//! 1. Verify the `SemanticAnalyzer + ElmEmitter` pipeline compiles each of
 //!    the comparison CQL files without fatal errors.
 //! 2. Assert the output is **deterministic**: compiling the same source twice
 //!    produces identical JSON.
