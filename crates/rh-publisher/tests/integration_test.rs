@@ -163,6 +163,44 @@ fn check_passes_valid_source_directory() {
 }
 
 #[test]
+fn build_with_snapshot_and_validate_hooks() {
+    let tmp = TempDir::new().unwrap();
+    copy_fixture(&tmp);
+
+    // Override publisher.toml to configure snapshot + validate before_build hooks.
+    fs::write(
+        tmp.path().join("publisher.toml"),
+        "[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
+    )
+    .unwrap();
+
+    let output_dir = tmp.path().join("output");
+    // snapshot processor will skip non-StructureDefinition resources.
+    // validate processor runs with no declared dependencies, so it should succeed.
+    // In either case, the pipeline must not fail with UnknownProcessor.
+    let result = build(tmp.path(), &output_dir);
+    match &result {
+        Ok(tgz) => {
+            // Full success: output and tarball should exist.
+            assert!(tgz.exists(), "tarball not found at {}", tgz.display());
+            assert!(output_dir.join("package").is_dir());
+        }
+        Err(e) => {
+            // Acceptable failures: validation error if FHIR core packages not installed.
+            // Must NOT be an unknown processor error or sync error.
+            assert!(
+                !matches!(e, rh_publisher::PublisherError::UnknownProcessor(_)),
+                "Pipeline must not fail with UnknownProcessor: {e:?}"
+            );
+            assert!(
+                !matches!(e, rh_publisher::PublisherError::IgSync(_)),
+                "Pipeline must not fail with IgSync: {e:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn check_fails_on_ig_version_mismatch() {
     let tmp = TempDir::new().unwrap();
     copy_fixture(&tmp);

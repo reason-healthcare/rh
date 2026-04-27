@@ -15,7 +15,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 /// Run the full `rh publish build` pipeline.
 ///
@@ -26,7 +26,10 @@ use tracing::info;
 /// 4. Process narrative (embed markdown into resource `.text`)
 /// 5. Apply canonical pinning from `fhir-lock.json` (if present)
 /// 6. Run `after_build` hooks
-/// 7. Write output directory + tarball
+/// 7. Write output directory
+/// 8. Run `before_pack` hooks
+/// 9. Create tarball
+/// 10. Run `after_pack` hooks
 ///
 /// # Examples
 ///
@@ -48,21 +51,37 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
 
     process_narrative(&mut ctx)?;
 
-    if let Some(lock) = load_lock(&ctx)? {
-        let pin_map: HashMap<String, String> = lock
-            .canonicals
-            .iter()
-            .map(|c| (c.url.clone(), c.resolved_version.clone()))
-            .collect();
-        apply_pinning(&mut ctx, &pin_map);
+    match load_lock(&ctx)? {
+        Some(lock) => {
+            let pin_map: HashMap<String, String> = lock
+                .canonicals
+                .iter()
+                .map(|c| (c.url.clone(), c.resolved_version.clone()))
+                .collect();
+            apply_pinning(&mut ctx, &pin_map);
+        }
+        None => {
+            warn!(
+                "No fhir-lock.json found; canonical references will not be pinned. \
+                 Run `rh publish lock` to generate a lock file."
+            );
+        }
     }
 
     let after = ctx.config.hooks.after_build.clone();
     run_stage(&registry, &after, &mut ctx)?;
 
     let pkg_dir = write_output_dir(&ctx)?;
+
+    let before_pack = ctx.config.hooks.before_pack.clone();
+    run_stage(&registry, &before_pack, &mut ctx)?;
+
     let tgz = create_tarball(&ctx, &pkg_dir, None)?;
     info!("Package written to {}", tgz.display());
+
+    let after_pack = ctx.config.hooks.after_pack.clone();
+    run_stage(&registry, &after_pack, &mut ctx)?;
+
     Ok(tgz)
 }
 
@@ -121,6 +140,10 @@ pub fn check(source_dir: &Path) -> Result<()> {
 ///
 /// Reads `package.json` from the given output directory to determine the package name and
 /// version for the tarball filename.
+///
+/// **Note:** This function does not run `before_pack`/`after_pack` lifecycle hooks because
+/// it operates on a pre-built output directory without access to the source `publisher.toml`.
+/// Hook support for `before_pack`/`after_pack` is provided by the full [`build`] pipeline.
 ///
 /// # Examples
 ///

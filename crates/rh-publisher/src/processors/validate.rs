@@ -21,6 +21,26 @@ impl HookProcessor for ValidateProcessor {
             ctx.config.packages_dir.as_deref(),
         );
 
+        // Warn about config fields that are accepted but not yet supported by the rh-validator API.
+        if ctx.config.validate.terminology_server.is_some() {
+            warn!(
+                "validate.terminology_server is configured but rh-validator does not yet expose \
+                 a terminology server API; the setting will be ignored"
+            );
+        }
+        if ctx.config.validate.skip_invariants {
+            warn!(
+                "validate.skip_invariants = true is configured but is not yet supported by the \
+                 rh-validator API; invariant checks will still run"
+            );
+        }
+        if ctx.config.validate.skip_bindings {
+            warn!(
+                "validate.skip_bindings = true is configured but is not yet supported by the \
+                 rh-validator API; binding checks will still run"
+            );
+        }
+
         // Verify dependency packages exist before proceeding.
         for (pkg_name, pkg_version) in &ctx.package_json.dependencies {
             let pkg_dir = packages_dir.join(format!("{pkg_name}#{pkg_version}"));
