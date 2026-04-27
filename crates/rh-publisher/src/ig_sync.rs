@@ -69,7 +69,7 @@ fn find_ig(ctx: &PublishContext) -> Result<&serde_json::Value> {
         .find(|v| {
             v.get("resourceType")
                 .and_then(|rt| rt.as_str())
-                .map_or(false, |rt| rt == "ImplementationGuide")
+                .is_some_and(|rt| rt == "ImplementationGuide")
         })
         .ok_or_else(|| {
             PublisherError::MissingFile(
@@ -102,13 +102,17 @@ fn check_field(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
 
-    fn make_context(pkg_name: &str, pkg_version: &str, pkg_url: Option<&str>, pkg_fhir: &[&str], ig: serde_json::Value) -> PublishContext {
+    fn make_context(
+        pkg_name: &str,
+        pkg_version: &str,
+        pkg_url: Option<&str>,
+        pkg_fhir: &[&str],
+        ig: serde_json::Value,
+    ) -> PublishContext {
         let extra: HashMap<String, serde_json::Value> = HashMap::new();
         let pkg = PackageJson {
             name: pkg_name.to_string(),
@@ -154,7 +158,12 @@ mod tests {
             "1.0.0",
             Some("http://example.org/fhir"),
             &["4.0.1"],
-            valid_ig("example.fhir.pkg", "1.0.0", "http://example.org/fhir", "4.0.1"),
+            valid_ig(
+                "example.fhir.pkg",
+                "1.0.0",
+                "http://example.org/fhir",
+                "4.0.1",
+            ),
         );
         assert!(check_ig_sync(&ctx).is_ok());
     }
@@ -175,7 +184,10 @@ mod tests {
         );
         let err = check_ig_sync(&ctx).unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("packageId"), "expected packageId mismatch in: {msg}");
+        assert!(
+            msg.contains("packageId"),
+            "expected packageId mismatch in: {msg}"
+        );
     }
 
     #[test]

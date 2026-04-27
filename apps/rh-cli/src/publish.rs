@@ -52,9 +52,7 @@ pub struct PackArgs {
 pub async fn handle_command(cmd: PublishCommands) -> Result<()> {
     match cmd {
         PublishCommands::Build(args) => {
-            let output_dir = args
-                .out
-                .unwrap_or_else(|| args.dir.join("output"));
+            let output_dir = args.out.unwrap_or_else(|| args.dir.join("output"));
             rh_publisher::build(&args.dir, &output_dir)?;
             Ok(())
         }

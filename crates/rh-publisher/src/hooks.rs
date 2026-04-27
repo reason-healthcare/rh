@@ -21,7 +21,9 @@ pub trait HookProcessor: Send + Sync {
 
 /// Build the default registry with all built-in processors registered.
 pub fn build_registry() -> ProcessorRegistry {
-    use crate::processors::{cql::CqlProcessor, snapshot::SnapshotProcessor, validate::ValidateProcessor};
+    use crate::processors::{
+        cql::CqlProcessor, snapshot::SnapshotProcessor, validate::ValidateProcessor,
+    };
     let mut registry = ProcessorRegistry::new();
     registry.register(SnapshotProcessor);
     registry.register(ValidateProcessor);
@@ -44,7 +46,8 @@ impl ProcessorRegistry {
 
     /// Register a processor. Overwrites any existing registration with the same name.
     pub fn register(&mut self, processor: impl HookProcessor + 'static) {
-        self.processors.insert(processor.name(), Box::new(processor));
+        self.processors
+            .insert(processor.name(), Box::new(processor));
     }
 
     /// Resolve processor names to their implementations, returning an error if any
@@ -83,10 +86,12 @@ pub fn run_stage(
     let resolved = registry.resolve(stage_processors)?;
 
     for processor in resolved {
-        processor.run(ctx).map_err(|e| PublisherError::HookProcessor {
-            processor: processor.name().to_string(),
-            message: e.to_string(),
-        })?;
+        processor
+            .run(ctx)
+            .map_err(|e| PublisherError::HookProcessor {
+                processor: processor.name().to_string(),
+                message: e.to_string(),
+            })?;
     }
 
     Ok(())
@@ -95,34 +100,14 @@ pub fn run_stage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
-    use std::{
-        collections::HashMap,
-        sync::atomic::{AtomicUsize, Ordering},
-        sync::Arc,
+    use crate::context::PublishContext;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
     };
 
     fn empty_ctx() -> PublishContext {
-        PublishContext {
-            source_dir: std::path::PathBuf::from("/tmp/src"),
-            output_dir: std::path::PathBuf::from("/tmp/out"),
-            package_json: PackageJson {
-                name: "test".to_string(),
-                version: "1.0.0".to_string(),
-                fhir_versions: vec![],
-                dependencies: HashMap::new(),
-                url: None,
-                description: None,
-                author: None,
-                license: None,
-                extra: HashMap::new(),
-            },
-            resources: HashMap::new(),
-            config: PublisherConfig::default(),
-            standalone_markdown: Vec::new(),
-        }
+        PublishContext::for_testing("/tmp/src")
     }
 
     struct CountingProcessor {
@@ -146,7 +131,9 @@ mod tests {
             "fail"
         }
         fn run(&self, _ctx: &mut PublishContext) -> Result<()> {
-            Err(crate::PublisherError::ValidationFailed("intentional".to_string()))
+            Err(crate::PublisherError::ValidationFailed(
+                "intentional".to_string(),
+            ))
         }
     }
 
@@ -163,10 +150,16 @@ mod tests {
     fn processors_run_in_order() {
         let counter = Arc::new(AtomicUsize::new(0));
         let mut registry = ProcessorRegistry::new();
-        registry.register(CountingProcessor { counter: counter.clone() });
+        registry.register(CountingProcessor {
+            counter: counter.clone(),
+        });
 
         let mut ctx = empty_ctx();
-        let stages = vec!["counter".to_string(), "counter".to_string(), "counter".to_string()];
+        let stages = vec![
+            "counter".to_string(),
+            "counter".to_string(),
+            "counter".to_string(),
+        ];
         run_stage(&registry, &stages, &mut ctx).unwrap();
         assert_eq!(counter.load(Ordering::SeqCst), 3);
     }
@@ -175,7 +168,9 @@ mod tests {
     fn aborts_on_first_failure() {
         let counter = Arc::new(AtomicUsize::new(0));
         let mut registry = ProcessorRegistry::new();
-        registry.register(CountingProcessor { counter: counter.clone() });
+        registry.register(CountingProcessor {
+            counter: counter.clone(),
+        });
         registry.register(FailingProcessor);
 
         let mut ctx = empty_ctx();
@@ -205,6 +200,9 @@ mod tests {
         let mut ctx = empty_ctx();
         let err = run_stage(&registry, &["fail".to_string()], &mut ctx).unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("fail"), "Expected processor name 'fail' in error: {msg}");
+        assert!(
+            msg.contains("fail"),
+            "Expected processor name 'fail' in error: {msg}"
+        );
     }
 }

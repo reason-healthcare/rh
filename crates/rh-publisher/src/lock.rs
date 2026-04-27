@@ -80,7 +80,7 @@ pub fn generate_lock(ctx: &PublishContext, packages_dir: &Path) -> Result<FhirLo
     let raw_urls: HashSet<String> = ctx
         .resources
         .values()
-        .flat_map(|v| collect_canonicals(v))
+        .flat_map(collect_canonicals)
         .filter(|url| !is_excluded(url) && !is_own_canonical(url, ctx))
         .collect();
 
@@ -131,11 +131,9 @@ pub fn apply_pinning(ctx: &mut PublishContext, pin_map: &HashMap<String, String>
 
 fn pin_resource(value: &mut Value, pin_map: &HashMap<String, String>) {
     match value {
-        Value::String(s) => {
-            if !s.contains('|') {
-                if let Some(version) = pin_map.get(s.as_str()) {
-                    *s = format!("{s}|{version}");
-                }
+        Value::String(s) if !s.contains('|') => {
+            if let Some(version) = pin_map.get(s.as_str()) {
+                *s = format!("{s}|{version}");
             }
         }
         Value::Array(arr) => {
@@ -161,10 +159,8 @@ fn collect_canonicals(value: &Value) -> Vec<String> {
 
 fn collect_canonical_values(value: &Value, out: &mut Vec<String>) {
     match value {
-        Value::String(s) => {
-            if looks_like_canonical(s) && !s.contains('|') {
-                out.push(s.clone());
-            }
+        Value::String(s) if looks_like_canonical(s) && !s.contains('|') => {
+            out.push(s.clone());
         }
         Value::Array(arr) => {
             for item in arr {
@@ -181,13 +177,13 @@ fn collect_canonical_values(value: &Value, out: &mut Vec<String>) {
 }
 
 fn looks_like_canonical(s: &str) -> bool {
-    (s.starts_with("http://") || s.starts_with("https://"))
-        && s.contains('/')
-        && !s.ends_with('/')
+    (s.starts_with("http://") || s.starts_with("https://")) && s.contains('/') && !s.ends_with('/')
 }
 
 fn is_excluded(url: &str) -> bool {
-    EXCLUDED_PREFIXES.iter().any(|prefix| url.starts_with(prefix))
+    EXCLUDED_PREFIXES
+        .iter()
+        .any(|prefix| url.starts_with(prefix))
 }
 
 fn is_own_canonical(url: &str, ctx: &PublishContext) -> bool {
@@ -257,14 +253,17 @@ fn write_lock_file(ctx: &PublishContext, lock: &FhirLock) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
     use tempfile::TempDir;
 
-    fn make_ctx(tmp: &TempDir, resources: HashMap<String, Value>, pkg_url: Option<&str>, deps: HashMap<String, String>) -> PublishContext {
+    fn make_ctx(
+        tmp: &TempDir,
+        resources: HashMap<String, Value>,
+        pkg_url: Option<&str>,
+        deps: HashMap<String, String>,
+    ) -> PublishContext {
         PublishContext {
             source_dir: tmp.path().to_path_buf(),
             output_dir: tmp.path().join("output"),
@@ -317,8 +316,14 @@ mod tests {
             Some("http://mypackage.org/fhir"),
             HashMap::new(),
         );
-        assert!(is_own_canonical("http://mypackage.org/fhir/StructureDefinition/foo", &ctx));
-        assert!(!is_own_canonical("http://other.org/fhir/StructureDefinition/bar", &ctx));
+        assert!(is_own_canonical(
+            "http://mypackage.org/fhir/StructureDefinition/foo",
+            &ctx
+        ));
+        assert!(!is_own_canonical(
+            "http://other.org/fhir/StructureDefinition/bar",
+            &ctx
+        ));
     }
 
     #[test]
@@ -350,7 +355,10 @@ mod tests {
 
         let resource = ctx.resources.get("StructureDefinition-foo").unwrap();
         let base = resource["baseDefinition"].as_str().unwrap();
-        assert_eq!(base, "http://example.org/fhir/StructureDefinition/base|2.0.0");
+        assert_eq!(
+            base,
+            "http://example.org/fhir/StructureDefinition/base|2.0.0"
+        );
     }
 
     #[test]
@@ -375,7 +383,10 @@ mod tests {
         let resource = ctx.resources.get("StructureDefinition-foo").unwrap();
         let base = resource["baseDefinition"].as_str().unwrap();
         // Should remain at the author-specified version, not overridden.
-        assert_eq!(base, "http://example.org/fhir/StructureDefinition/base|1.5.0");
+        assert_eq!(
+            base,
+            "http://example.org/fhir/StructureDefinition/base|1.5.0"
+        );
     }
 
     #[test]

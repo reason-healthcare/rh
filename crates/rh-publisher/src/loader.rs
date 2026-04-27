@@ -1,10 +1,7 @@
 //! Source directory scanner — loads FHIR resources and discovers markdown files.
 
 use crate::{
-    config::PublisherConfig,
-    context::PublishContext,
-    manifest::PackageJson,
-    PublisherError, Result,
+    config::PublisherConfig, context::PublishContext, manifest::PackageJson, PublisherError, Result,
 };
 use serde_json::Value;
 use std::{
@@ -27,12 +24,7 @@ pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<Publish
     let package_json = load_package_json(source_dir)?;
     let config = load_publisher_config(source_dir)?;
 
-    let mut ctx = PublishContext::new(
-        source_dir.to_path_buf(),
-        output_dir,
-        package_json,
-        config,
-    );
+    let mut ctx = PublishContext::new(source_dir.to_path_buf(), output_dir, package_json, config);
 
     let (resources, standalone_md) = scan_resources(source_dir)?;
     ctx.resources = resources;
@@ -67,9 +59,7 @@ fn load_publisher_config(source_dir: &Path) -> Result<PublisherConfig> {
 ///
 /// Returns `(resource_map, standalone_markdown)` where the resource map is
 /// keyed by the file's stem (without extension), e.g. `"StructureDefinition-foo"`.
-fn scan_resources(
-    source_dir: &Path,
-) -> Result<(HashMap<String, Value>, Vec<PathBuf>)> {
+fn scan_resources(source_dir: &Path) -> Result<(HashMap<String, Value>, Vec<PathBuf>)> {
     let mut resources: HashMap<String, Value> = HashMap::new();
     let mut md_stems: HashMap<String, PathBuf> = HashMap::new();
 
@@ -88,16 +78,14 @@ fn scan_resources(
         };
 
         match ext {
-            "json" if stem != "package" && stem != "fhir-lock" => {
-                match load_json_resource(&path) {
-                    Ok(value) => {
-                        resources.insert(stem.to_string(), value);
-                    }
-                    Err(e) => {
-                        warn!("Skipping {}: {}", path.display(), e);
-                    }
+            "json" if stem != "package" && stem != "fhir-lock" => match load_json_resource(&path) {
+                Ok(value) => {
+                    resources.insert(stem.to_string(), value);
                 }
-            }
+                Err(e) => {
+                    warn!("Skipping {}: {}", path.display(), e);
+                }
+            },
             "md" => {
                 md_stems.insert(stem.to_string(), path.clone());
             }
@@ -126,7 +114,7 @@ fn ensure_implementation_guide(ctx: &PublishContext) -> Result<()> {
     let has_ig = ctx.resources.values().any(|v| {
         v.get("resourceType")
             .and_then(|rt| rt.as_str())
-            .map_or(false, |rt| rt == IG_RESOURCE_TYPE)
+            .is_some_and(|rt| rt == IG_RESOURCE_TYPE)
     });
 
     if !has_ig {
@@ -160,7 +148,9 @@ mod tests {
     fn fails_when_package_json_absent() {
         let dir = TempDir::new().unwrap();
         let result = load_source_dir(dir.path(), dir.path().join("output"));
-        assert!(matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("package.json")));
+        assert!(
+            matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("package.json"))
+        );
     }
 
     #[test]
@@ -173,7 +163,9 @@ mod tests {
             r#"{"resourceType":"ValueSet","id":"foo"}"#,
         );
         let result = load_source_dir(dir.path(), dir.path().join("output"));
-        assert!(matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("ImplementationGuide")));
+        assert!(
+            matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("ImplementationGuide"))
+        );
     }
 
     #[test]
@@ -196,8 +188,7 @@ mod tests {
         assert!(ctx.resources.contains_key("ImplementationGuide"));
         assert!(ctx.resources.contains_key("StructureDefinition-foo"));
         assert_eq!(ctx.standalone_markdown.len(), 1);
-        assert!(ctx
-            .standalone_markdown[0]
+        assert!(ctx.standalone_markdown[0]
             .file_name()
             .unwrap()
             .to_str()

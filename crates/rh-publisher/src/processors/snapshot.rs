@@ -4,21 +4,13 @@
 //! `snapshot.element`, loads dependency packages to resolve base definitions,
 //! and runs `rh-foundation`'s `SnapshotGenerator` to fill them in.
 
-use crate::{context::PublishContext, hooks::HookProcessor, PublisherError, Result};
-use rh_foundation::snapshot::{
-    SnapshotGenerator, StructureDefinitionLoader,
+use crate::{
+    context::PublishContext, hooks::HookProcessor, utils::resolve_packages_dir, PublisherError,
+    Result,
 };
+use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
 use serde_json::Value;
-use std::path::PathBuf;
 use tracing::info;
-
-/// Default path to local FHIR packages cache.
-fn default_packages_dir() -> PathBuf {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(home).join(".fhir").join("packages")
-}
 
 /// Hook processor that generates snapshot elements for StructureDefinitions.
 pub struct SnapshotProcessor;
@@ -29,13 +21,7 @@ impl HookProcessor for SnapshotProcessor {
     }
 
     fn run(&self, ctx: &mut PublishContext) -> Result<()> {
-        let packages_dir = ctx
-            .config
-            .cql
-            .packages_dir
-            .as_ref()
-            .map(PathBuf::from)
-            .unwrap_or_else(default_packages_dir);
+        let packages_dir = resolve_packages_dir(None, ctx.config.packages_dir.as_deref());
 
         let mut generator = SnapshotGenerator::new();
 
@@ -47,7 +33,8 @@ impl HookProcessor for SnapshotProcessor {
                     "{pkg_name}#{pkg_version}"
                 )));
             }
-            match StructureDefinitionLoader::load_from_package(pkg_name, pkg_version, &packages_dir) {
+            match StructureDefinitionLoader::load_from_package(pkg_name, pkg_version, &packages_dir)
+            {
                 Ok(sds) => generator.load_structure_definitions(sds),
                 Err(e) => {
                     tracing::warn!("Could not load SDs from {pkg_name}#{pkg_version}: {e}");
@@ -116,15 +103,13 @@ fn has_snapshot(resource: &Value) -> bool {
         .get("snapshot")
         .and_then(|s| s.get("element"))
         .and_then(|e| e.as_array())
-        .map_or(false, |arr| !arr.is_empty())
+        .is_some_and(|arr| !arr.is_empty())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
     use tempfile::TempDir;

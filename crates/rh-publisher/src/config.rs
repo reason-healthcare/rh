@@ -6,6 +6,9 @@ use serde::Deserialize;
 ///
 /// # Example
 /// ```toml
+/// # Shared packages cache for all processors (override per-processor as needed).
+/// packages_dir = "/custom/.fhir/packages"
+///
 /// [hooks]
 /// before_build = ["snapshot", "cql", "validate"]
 /// after_build  = []
@@ -14,13 +17,20 @@ use serde::Deserialize;
 ///
 /// [validate]
 /// terminology_server = "https://tx.fhir.org/r4"
-/// skip_invariants = false
+/// # packages_dir = "/override/for/validate"  # overrides top-level packages_dir
 ///
 /// [cql]
-/// packages_dir = "~/.fhir/packages"
+/// # packages_dir = "/override/for/cql"       # overrides top-level packages_dir
 /// ```
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct PublisherConfig {
+    /// Default path to the local FHIR packages cache, shared by all processors.
+    ///
+    /// Defaults to `$HOME/.fhir/packages`. Per-processor `packages_dir` settings
+    /// override this value when present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub packages_dir: Option<String>,
+
     /// Hook stage processor lists.
     #[serde(default)]
     pub hooks: HooksConfig,
@@ -65,14 +75,21 @@ pub struct HooksConfig {
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct ValidateConfig {
     /// Override path to the local FHIR packages cache.
+    /// Falls back to the top-level `packages_dir` or `$HOME/.fhir/packages`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub packages_dir: Option<String>,
 
     /// Skip FHIRPath invariant checks.
+    ///
+    /// **Reserved for future use** — accepted in config but not yet wired to the
+    /// underlying validator. Will take effect once `rh-validator` exposes the option.
     #[serde(default)]
     pub skip_invariants: bool,
 
     /// Skip terminology binding checks.
+    ///
+    /// **Reserved for future use** — accepted in config but not yet wired to the
+    /// underlying validator. Will take effect once `rh-validator` exposes the option.
     #[serde(default)]
     pub skip_bindings: bool,
 
@@ -85,6 +102,7 @@ pub struct ValidateConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct CqlConfig {
     /// Override path to the local FHIR packages cache used for CQL resolution.
+    /// Falls back to the top-level `packages_dir` or `$HOME/.fhir/packages`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub packages_dir: Option<String>,
 
@@ -111,8 +129,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parses_top_level_packages_dir() {
+        let toml = r#"packages_dir = "/shared/packages""#;
+        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.packages_dir.as_deref(), Some("/shared/packages"));
+    }
+
+    #[test]
     fn empty_toml_uses_all_defaults() {
         let cfg = PublisherConfig::from_toml_str("").unwrap();
+        assert!(cfg.packages_dir.is_none());
         assert!(cfg.hooks.before_build.is_empty());
         assert!(cfg.hooks.after_build.is_empty());
         assert!(cfg.hooks.before_pack.is_empty());

@@ -16,8 +16,7 @@ use std::{fs, path::PathBuf};
 use tracing::{info, warn};
 
 const LOGIC_LIBRARY_TYPE: &str = "logic-library";
-const LIBRARY_TYPE_SYSTEM: &str =
-    "http://terminology.hl7.org/CodeSystem/library-type";
+const LIBRARY_TYPE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/library-type";
 
 /// Hook processor that compiles CQL files and embeds them in Library resources.
 pub struct CqlProcessor;
@@ -61,19 +60,21 @@ impl HookProcessor for CqlProcessor {
             ]);
 
             let library_key = format!("Library-{stem}");
-            if ctx.resources.contains_key(&library_key) {
-                // Update existing Library.
-                let resource = ctx.resources.get_mut(&library_key).unwrap();
-                resource["content"] = content;
-                ensure_logic_library_type(resource);
-            } else {
-                // Auto-create a minimal Library resource.
-                warn!(
-                    "No Library resource found for '{stem}'; auto-creating Library-{stem}. \
-                     Consider adding Library-{stem}.json to your source directory."
-                );
-                let library = create_minimal_library(&stem, content);
-                ctx.resources.insert(library_key, library);
+            match ctx.resources.entry(library_key) {
+                std::collections::hash_map::Entry::Occupied(mut e) => {
+                    // Update existing Library.
+                    let resource = e.get_mut();
+                    resource["content"] = content;
+                    ensure_logic_library_type(resource);
+                }
+                std::collections::hash_map::Entry::Vacant(e) => {
+                    // Auto-create a minimal Library resource.
+                    warn!(
+                        "No Library resource found for '{stem}'; auto-creating Library-{stem}. \
+                         Consider adding Library-{stem}.json to your source directory."
+                    );
+                    e.insert(create_minimal_library(&stem, content));
+                }
             }
 
             info!("Embedded CQL + ELM for library '{stem}'");
@@ -88,10 +89,9 @@ fn ensure_logic_library_type(resource: &mut Value) {
         .get("type")
         .and_then(|t| t.get("coding"))
         .and_then(|c| c.as_array())
-        .map_or(false, |arr| {
-            arr.iter().any(|entry| {
-                entry.get("code").and_then(|c| c.as_str()) == Some(LOGIC_LIBRARY_TYPE)
-            })
+        .is_some_and(|arr| {
+            arr.iter()
+                .any(|entry| entry.get("code").and_then(|c| c.as_str()) == Some(LOGIC_LIBRARY_TYPE))
         });
 
     if !has_logic_library {
