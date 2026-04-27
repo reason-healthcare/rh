@@ -2892,7 +2892,39 @@ impl FhirValidator {
             .unwrap_or(false);
 
         if !is_extensional {
-            // Skip intensional ValueSets (deferred to Phase 3.5)
+            // For required bindings, fall back to the terminology service if one is configured
+            if rule.strength == "required" {
+                if let Some(ts) = self.terminology_service.as_ref() {
+                    for value in &values {
+                        let codes = extract_codes_from_value(value);
+                        for (system, code) in codes {
+                            match ts.validate_code_in_valueset(
+                                &rule.value_set_url,
+                                &system,
+                                &code,
+                                None,
+                            ) {
+                                Ok(result) => {
+                                    if !result.result {
+                                        issues.push(ValidationIssue::error(
+                                            IssueCode::CodeInvalid,
+                                            format!(
+                                                "Code '{}' from system '{}' is not in required ValueSet '{}'",
+                                                code,
+                                                if system.is_empty() { "(no system)" } else { &system },
+                                                rule.value_set_url
+                                            ),
+                                        ));
+                                    }
+                                }
+                                Err(_) => {
+                                    // ValueSet not supported by terminology service; skip gracefully
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             return Ok(issues);
         }
 

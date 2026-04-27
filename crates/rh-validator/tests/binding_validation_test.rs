@@ -1,4 +1,4 @@
-use rh_validator::FhirValidator;
+use rh_validator::{FhirValidator, TerminologyConfig};
 use serde_json::json;
 
 #[test]
@@ -238,22 +238,68 @@ fn test_intensional_valueset_skipped() {
         return;
     }
 
+    // Without a terminology service, intensional ValueSets (those defined only by compose
+    // rules without a pre-computed expansion) are skipped — no error even for invalid codes.
     let validator = FhirValidator::new(
         rh_validator::FhirVersion::R4,
         Some(packages_dir.to_str().unwrap()),
     )
     .expect("Should create validator");
 
-    // administrative-gender is intensional (no expansion)
     let resource = json!({
         "resourceType": "Patient",
         "gender": "invalid"
     });
 
-    let result = validator.validate(&resource).expect("Should validate");
-    // Should not fail because intensional ValueSets are skipped
-    println!("Validation result: {result:?}");
-    // We can't assert much here since we're skipping intensional ValueSets
+    // validate_auto() applies profile rules including binding validation
+    let result = validator.validate_auto(&resource).expect("Should validate");
+    let code_invalid_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|i| i.message.contains("not in required ValueSet"))
+        .collect();
+    assert!(
+        code_invalid_errors.is_empty(),
+        "Without a terminology service, intensional ValueSet errors should be suppressed; got: {code_invalid_errors:?}"
+    );
+}
+
+#[test]
+fn test_intensional_valueset_with_ts_reports_invalid_code() {
+    let packages_dir = dirs::home_dir()
+        .unwrap()
+        .join(".fhir/packages/hl7.fhir.r4.core#4.0.1/package");
+
+    if !packages_dir.exists() {
+        println!("Skipping test: Base R4 package not found");
+        return;
+    }
+
+    // With the mock terminology service, the administrative-gender ValueSet is registered
+    // and an invalid code should be reported as an error for required bindings.
+    let validator = FhirValidator::with_terminology(
+        rh_validator::FhirVersion::R4,
+        Some(packages_dir.to_str().unwrap()),
+        Some(TerminologyConfig::mock()),
+    )
+    .expect("Should create validator");
+
+    let resource = json!({
+        "resourceType": "Patient",
+        "gender": "invalid-not-a-real-gender"
+    });
+
+    // validate_auto() applies profile rules including binding validation
+    let result = validator.validate_auto(&resource).expect("Should validate");
+    let code_invalid_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|i| i.message.contains("not in required ValueSet"))
+        .collect();
+    assert!(
+        !code_invalid_errors.is_empty(),
+        "With a terminology service, an invalid required binding code should be reported"
+    );
 }
 
 #[test]
