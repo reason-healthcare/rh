@@ -45,7 +45,10 @@ pub fn build_index(ctx: &PublishContext) -> Result<PackageIndex> {
 fn entry_from_resource(stem: &str, value: &Value) -> Option<IndexEntry> {
     let resource_type = value.get("resourceType")?.as_str()?.to_string();
     let id = value.get("id")?.as_str()?.to_string();
-    let url = value.get("url").and_then(|v| v.as_str()).map(str::to_string);
+    let url = value
+        .get("url")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
     let version = value
         .get("version")
         .and_then(|v| v.as_str())
@@ -63,9 +66,7 @@ fn entry_from_resource(stem: &str, value: &Value) -> Option<IndexEntry> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
 

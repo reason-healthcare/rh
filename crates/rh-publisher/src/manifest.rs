@@ -97,7 +97,10 @@ mod tests {
         assert_eq!(pkg.name, pkg2.name);
         assert_eq!(pkg.version, pkg2.version);
         assert_eq!(pkg.url, pkg2.url);
-        assert_eq!(pkg.extra.get("someExtension"), pkg2.extra.get("someExtension"));
+        assert_eq!(
+            pkg.extra.get("someExtension"),
+            pkg2.extra.get("someExtension")
+        );
     }
 
     #[test]

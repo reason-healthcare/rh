@@ -65,7 +65,11 @@ pub fn write_output_dir(ctx: &PublishContext) -> Result<PathBuf> {
 /// FHIR Package Specification.
 ///
 /// Returns the path to the written `.tgz` file.
-pub fn create_tarball(ctx: &PublishContext, pkg_dir: &Path, out_path: Option<PathBuf>) -> Result<PathBuf> {
+pub fn create_tarball(
+    ctx: &PublishContext,
+    pkg_dir: &Path,
+    out_path: Option<PathBuf>,
+) -> Result<PathBuf> {
     let name = &ctx.package_json.name;
     let version = &ctx.package_json.version;
     let tgz_name = format!("{name}-{version}.tgz");
@@ -116,9 +120,7 @@ fn write_json(path: &Path, value: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
     use tempfile::TempDir;

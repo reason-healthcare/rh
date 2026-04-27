@@ -32,6 +32,7 @@ pub mod narrative;
 pub mod pack;
 pub mod pipeline;
 pub mod processors;
+pub mod utils;
 
 pub use config::PublisherConfig;
 pub use context::PublishContext;

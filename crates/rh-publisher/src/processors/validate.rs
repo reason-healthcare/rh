@@ -1,16 +1,11 @@
 //! `validate` hook processor — validates FHIR resources using `rh-validator`.
 
-use crate::{context::PublishContext, hooks::HookProcessor, PublisherError, Result};
+use crate::{
+    context::PublishContext, hooks::HookProcessor, utils::resolve_packages_dir, PublisherError,
+    Result,
+};
 use rh_validator::{FhirValidator, FhirVersion, Severity};
-use std::path::PathBuf;
 use tracing::{info, warn};
-
-fn default_packages_dir() -> PathBuf {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(home).join(".fhir").join("packages")
-}
 
 /// Hook processor that validates all FHIR resources using `rh-validator`.
 pub struct ValidateProcessor;
@@ -21,20 +16,14 @@ impl HookProcessor for ValidateProcessor {
     }
 
     fn run(&self, ctx: &mut PublishContext) -> Result<()> {
-        let packages_dir = ctx
-            .config
-            .validate
-            .packages_dir
-            .as_ref()
-            .map(|s| s.as_str().to_string())
-            .unwrap_or_else(|| {
-                default_packages_dir().to_string_lossy().to_string()
-            });
+        let packages_dir = resolve_packages_dir(
+            ctx.config.validate.packages_dir.as_deref(),
+            ctx.config.packages_dir.as_deref(),
+        );
 
         // Verify dependency packages exist before proceeding.
-        let base_dir = PathBuf::from(&packages_dir);
         for (pkg_name, pkg_version) in &ctx.package_json.dependencies {
-            let pkg_dir = base_dir.join(format!("{pkg_name}#{pkg_version}"));
+            let pkg_dir = packages_dir.join(format!("{pkg_name}#{pkg_version}"));
             if !pkg_dir.exists() {
                 return Err(PublisherError::MissingPackage(format!(
                     "{pkg_name}#{pkg_version}"
@@ -42,7 +31,8 @@ impl HookProcessor for ValidateProcessor {
             }
         }
 
-        let validator = FhirValidator::new(FhirVersion::R4, Some(&packages_dir))
+        let packages_dir_str = packages_dir.to_string_lossy();
+        let validator = FhirValidator::new(FhirVersion::R4, Some(packages_dir_str.as_ref()))
             .map_err(|e| PublisherError::ValidationFailed(e.to_string()))?;
 
         let mut failed = false;
@@ -79,13 +69,17 @@ impl HookProcessor for ValidateProcessor {
 mod tests {
     use super::*;
     use crate::{
-        config::PublisherConfig, context::PublishContext, hooks::HookProcessor, manifest::PackageJson,
+        config::PublisherConfig, context::PublishContext, hooks::HookProcessor,
+        manifest::PackageJson,
     };
     use serde_json::json;
     use std::collections::HashMap;
     use tempfile::TempDir;
 
-    fn make_ctx(resources: HashMap<String, serde_json::Value>, deps: HashMap<String, String>) -> (PublishContext, TempDir) {
+    fn make_ctx(
+        resources: HashMap<String, serde_json::Value>,
+        deps: HashMap<String, String>,
+    ) -> (PublishContext, TempDir) {
         let tmp = TempDir::new().unwrap();
         let ctx = PublishContext {
             source_dir: tmp.path().to_path_buf(),

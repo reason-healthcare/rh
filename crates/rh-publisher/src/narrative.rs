@@ -64,9 +64,7 @@ pub fn markdown_to_xhtml(markdown: &str) -> String {
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
 
-    format!(
-        r#"<div xmlns="http://www.w3.org/1999/xhtml">{html_output}</div>"#
-    )
+    format!(r#"<div xmlns="http://www.w3.org/1999/xhtml">{html_output}</div>"#)
 }
 
 /// Embed a FHIR `.text` narrative block into a resource value.
@@ -80,9 +78,7 @@ fn embed_narrative(resource: &mut Value, xhtml_div: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::PublisherConfig, context::PublishContext, manifest::PackageJson,
-    };
+    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::{collections::HashMap, fs};
     use tempfile::TempDir;

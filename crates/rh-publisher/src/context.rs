@@ -1,4 +1,3 @@
-// TODO: implement
 use crate::{manifest::PackageJson, PublisherConfig};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -46,5 +45,31 @@ impl PublishContext {
             config,
             standalone_markdown: Vec::new(),
         }
+    }
+
+    /// Create a minimal context for use in tests.
+    ///
+    /// Sets `source_dir` to `path` and `output_dir` to `path/output` with a
+    /// default package manifest (`test.fhir.pkg@1.0.0`) and empty config.
+    #[cfg(test)]
+    pub fn for_testing(source_dir: impl Into<PathBuf>) -> Self {
+        let source_dir = source_dir.into();
+        let output_dir = source_dir.join("output");
+        Self::new(
+            source_dir,
+            output_dir,
+            PackageJson {
+                name: "test.fhir.pkg".to_string(),
+                version: "1.0.0".to_string(),
+                fhir_versions: vec![],
+                dependencies: HashMap::new(),
+                url: None,
+                description: None,
+                author: None,
+                license: None,
+                extra: HashMap::new(),
+            },
+            PublisherConfig::default(),
+        )
     }
 }

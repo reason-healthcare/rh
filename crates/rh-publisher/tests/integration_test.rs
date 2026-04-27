@@ -53,13 +53,20 @@ fn build_embeds_narrative_into_resource() {
     let output_dir = tmp.path().join("output");
     build(tmp.path(), &output_dir).unwrap();
 
-    let valueset_path = output_dir.join("package").join("ValueSet-condition-codes.json");
+    let valueset_path = output_dir
+        .join("package")
+        .join("ValueSet-condition-codes.json");
     let content = fs::read_to_string(valueset_path).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
 
     // The markdown narrative should have been embedded as .text.div.
-    let div = json["text"]["div"].as_str().expect(".text.div should be a string");
-    assert!(div.contains("<h1>Condition Codes</h1>"), "Expected H1 heading in narrative div");
+    let div = json["text"]["div"]
+        .as_str()
+        .expect(".text.div should be a string");
+    assert!(
+        div.contains("<h1>Condition Codes</h1>"),
+        "Expected H1 heading in narrative div"
+    );
     assert_eq!(json["text"]["status"], "generated");
 }
 
@@ -72,18 +79,27 @@ fn build_with_cql_creates_library_resource() {
     build(tmp.path(), &output_dir).unwrap();
 
     let lib_path = output_dir.join("package").join("Library-SimpleLib.json");
-    assert!(lib_path.exists(), "Library-SimpleLib.json not found in output");
+    assert!(
+        lib_path.exists(),
+        "Library-SimpleLib.json not found in output"
+    );
 
     let content = fs::read_to_string(lib_path).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
     assert_eq!(json["resourceType"], "Library");
 
-    let content_arr = json["content"].as_array().expect("Library.content must be array");
-    let types: Vec<&str> = content_arr.iter()
+    let content_arr = json["content"]
+        .as_array()
+        .expect("Library.content must be array");
+    let types: Vec<&str> = content_arr
+        .iter()
         .filter_map(|c| c["contentType"].as_str())
         .collect();
     assert!(types.contains(&"text/cql"), "Missing text/cql content type");
-    assert!(types.contains(&"application/elm+json"), "Missing ELM content type");
+    assert!(
+        types.contains(&"application/elm+json"),
+        "Missing ELM content type"
+    );
 }
 
 #[test]
@@ -140,7 +156,10 @@ fn check_passes_valid_source_directory() {
     copy_fixture(&tmp);
     // check should succeed without writing any output.
     check(tmp.path()).unwrap();
-    assert!(!tmp.path().join("output").exists(), "check must not write output");
+    assert!(
+        !tmp.path().join("output").exists(),
+        "check must not write output"
+    );
 }
 
 #[test]
