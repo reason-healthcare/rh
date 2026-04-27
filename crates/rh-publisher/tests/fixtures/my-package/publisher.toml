@@ -1,0 +1,2 @@
+[hooks]
+before_build = ["cql"]

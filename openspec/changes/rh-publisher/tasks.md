@@ -98,7 +98,7 @@
 - [x] 13.3 Abort on first resource with ERROR-severity issues; collect and print WARNING issues non-fatally
 - [x] 13.4 Wire `[validate]` config block (`terminology_server`, `skip_invariants`, `skip_bindings`)
 - [x] 13.5 Register `ValidateProcessor` in processor registry under name `"validate"`
-- [ ] 13.6 Write unit tests for ERROR-abort, WARNING-pass-through, and missing-dependency error
+- [x] 13.6 Write unit tests for ERROR-abort, WARNING-pass-through, and missing-dependency error
 
 ## 14. `cql` Hook Processor
 
@@ -115,16 +115,16 @@
 
 ## 15. Integration Tests
 
-- [ ] 15.1 Create fixture source directory with `package.json`, `ImplementationGuide.json`, one StructureDefinition, one ValueSet, one `.cql` file, and `.md` narrative files
-- [ ] 15.2 Integration test: `rh publish build` on fixture — verify output structure, `.index.json`, narrative embed
-- [ ] 15.3 Integration test: `rh publish pack` on fixture — verify `.tgz` is produced with `package/` prefix
-- [ ] 15.4 Integration test: `rh publish lock` on fixture — verify `fhir-lock.json` structure
+- [x] 15.1 Create fixture source directory with `package.json`, `ImplementationGuide.json`, one StructureDefinition, one ValueSet, one `.cql` file, and `.md` narrative files
+- [x] 15.2 Integration test: `rh publish build` on fixture — verify output structure, `.index.json`, narrative embed
+- [x] 15.3 Integration test: `rh publish pack` on fixture — verify `.tgz` is produced with `package/` prefix
+- [x] 15.4 Integration test: `rh publish lock` on fixture — verify `fhir-lock.json` structure
 - [ ] 15.5 Integration test: `rh publish build` with `before_build = ["snapshot", "validate"]` in `publisher.toml`
-- [ ] 15.6 Integration test: `rh publish check` detects IG sync mismatch without writing output
+- [x] 15.6 Integration test: `rh publish check` detects IG sync mismatch without writing output
 
 ## 16. Documentation
 
-- [ ] 16.1 Write `crates/rh-publisher/README.md` with usage examples and source directory layout
-- [ ] 16.2 Add `publisher.toml` reference (all supported fields) to README
-- [ ] 16.3 Add `fhir-lock.json` format documentation to README
-- [ ] 16.4 Update `apps/rh-cli/README.md` with `rh publish` subcommand reference
+- [x] 16.1 Write `crates/rh-publisher/README.md` with usage examples and source directory layout
+- [x] 16.2 Add `publisher.toml` reference (all supported fields) to README
+- [x] 16.3 Add `fhir-lock.json` format documentation to README
+- [x] 16.4 Update `apps/rh-cli/README.md` with `rh publish` subcommand reference
