@@ -119,7 +119,7 @@
 - [x] 15.2 Integration test: `rh publish build` on fixture — verify output structure, `.index.json`, narrative embed
 - [x] 15.3 Integration test: `rh publish pack` on fixture — verify `.tgz` is produced with `package/` prefix
 - [x] 15.4 Integration test: `rh publish lock` on fixture — verify `fhir-lock.json` structure
-- [ ] 15.5 Integration test: `rh publish build` with `before_build = ["snapshot", "validate"]` in `publisher.toml`
+- [x] 15.5 Integration test: `rh publish build` with `before_build = ["snapshot", "validate"]` in `publisher.toml`
 - [x] 15.6 Integration test: `rh publish check` detects IG sync mismatch without writing output
 
 ## 16. Documentation
