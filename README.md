@@ -14,17 +14,17 @@ Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Se
 
 | Status | Component | Description |
 |--------|-----------|-------------|
-| 🚀 | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
-| 🚀 | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
-| 🚀 | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
-| 🚀 | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) to FHIR JSON compiler |
-| 🚀 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
-| 🚀 | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, package loader, snapshot generation) |
-| 🚀 | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
+| ✅ | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
+| ✅ | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
+| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
+| ✅ | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) to FHIR JSON compiler |
+| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
+| ✅ | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, package loader, snapshot generation) |
+| ✅ | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
 | 🔜 | rh-publisher  | FHIR Package publisher and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | ✅ | [rh-cql](crates/rh-cql/README.md)  | CQL compiler, evaluator, explain mode, and source maps |
-| 🚀 | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
+| ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
 | 🔜 | rh-hl7_fhir_r5_core  | **Generated** R5 FHIR for Rust |
 | 🔜 | rh-hl7_fhir_r6_core  | **Generated** R6 FHIR for Rust |
 
