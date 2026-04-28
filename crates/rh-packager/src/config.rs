@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-/// Top-level configuration loaded from `publisher.toml`.
+/// Top-level configuration loaded from `packager.toml`.
 ///
 /// All sections are optional; absent sections use their `Default` implementations.
 ///
@@ -45,7 +45,7 @@ pub struct PublisherConfig {
 }
 
 impl PublisherConfig {
-    /// Parse a `publisher.toml` file from its string contents.
+    /// Parse a `packager.toml` file from its string contents.
     pub fn from_toml_str(s: &str) -> crate::Result<Self> {
         Ok(toml::from_str(s)?)
     }

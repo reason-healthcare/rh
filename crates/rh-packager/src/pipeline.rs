@@ -142,7 +142,7 @@ pub fn check(source_dir: &Path) -> Result<()> {
 /// version for the tarball filename.
 ///
 /// **Note:** This function does not run `before_pack`/`after_pack` lifecycle hooks because
-/// it operates on a pre-built output directory without access to the source `publisher.toml`.
+/// it operates on a pre-built output directory without access to the source `packager.toml`.
 /// Hook support for `before_pack`/`after_pack` is provided by the full [`build`] pipeline.
 ///
 /// # Examples
@@ -287,7 +287,7 @@ mod tests {
         setup_minimal_package(tmp.path());
         write_file(
             tmp.path(),
-            "publisher.toml",
+            "packager.toml",
             r#"[hooks]
 before_build = ["nonexistent-processor"]"#,
         );

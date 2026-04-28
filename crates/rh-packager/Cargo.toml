@@ -27,7 +27,7 @@ chrono = { workspace = true }
 tar = { workspace = true }
 flate2 = { workspace = true }
 
-# TOML parsing for publisher.toml
+# TOML parsing for packager.toml
 toml = { workspace = true }
 
 # Markdown → XHTML conversion

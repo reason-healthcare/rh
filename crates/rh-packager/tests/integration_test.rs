@@ -167,9 +167,9 @@ fn build_with_snapshot_and_validate_hooks() {
     let tmp = TempDir::new().unwrap();
     copy_fixture(&tmp);
 
-    // Override publisher.toml to configure snapshot + validate before_build hooks.
+    // Override packager.toml to configure snapshot + validate before_build hooks.
     fs::write(
-        tmp.path().join("publisher.toml"),
+        tmp.path().join("packager.toml"),
         "[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
     )
     .unwrap();

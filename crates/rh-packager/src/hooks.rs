@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 /// A lifecycle hook processor that can be registered and run at a pipeline stage.
 pub trait HookProcessor: Send + Sync {
-    /// Unique name used to reference this processor in `publisher.toml`.
+    /// Unique name used to reference this processor in `packager.toml`.
     fn name(&self) -> &'static str;
 
     /// Execute the processor against the current publish context.

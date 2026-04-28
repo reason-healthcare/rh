@@ -118,7 +118,7 @@ Options:
   -o, --out <path>   Output directory (build) or output file path (pack)
 ```
 
-See [`crates/rh-packager/README.md`](../../crates/rh-packager/README.md) for full documentation including `publisher.toml` configuration reference.
+See [`crates/rh-packager/README.md`](../../crates/rh-packager/README.md) for full documentation including `packager.toml` configuration reference.
 
 ## Global Options
 

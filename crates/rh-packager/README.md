@@ -1,6 +1,7 @@
 # rh-packager
 
-FHIR Package assembler — builds conformant [FHIR Packages](https://hl7.org/fhir/packages.html) from a flat source directory of resources, markdown narrative, and CQL files.
+FHIR Package assembler — builds conformant [FHIR Packages](https://hl7.org/fhir/packages.html)
+from a flat source directory of resources, markdown narrative, and CQL files.
 
 Used by `rh publish` subcommands in the `rh` CLI.
 
@@ -9,7 +10,7 @@ Used by `rh publish` subcommands in the `rh` CLI.
 ```
 my-package/
   package.json              # Required: FHIR package manifest
-  publisher.toml            # Optional: hook configuration
+  packager.toml             # Optional: hook/processor configuration
   ImplementationGuide.json  # Required: IG resource (must sync with package.json)
   StructureDefinition-foo.json
   ValueSet-bar.json
@@ -29,35 +30,242 @@ rh publish check <dir>   # Validate source (no output written)
 rh publish pack  <dir>   # Pack expanded output/ → .tgz
 ```
 
-## publisher.toml Reference
+---
+
+## packager.toml Reference
+
+`packager.toml` lives at the root of your source directory alongside `package.json`. All
+sections are optional; absent sections use their defaults.
+
+### Top-level fields
+
+```toml
+# Shared FHIR packages cache used by all processors that need package resolution.
+# Overridden per-processor with a section-level packages_dir.
+# Default: ~/.fhir/packages
+packages_dir = "/path/to/.fhir/packages"
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `packages_dir` | string | `~/.fhir/packages` | Filesystem path to locally installed FHIR packages (e.g. from `rh download`). Applied to every processor unless overridden in its own section. |
+
+---
+
+### `[hooks]`
+
+Controls which processors run at each pipeline stage and in what order.
 
 ```toml
 [hooks]
-before_build = ["snapshot", "validate", "cql"]  # run before build stage
-after_build  = []                               # run after build stage
+before_build = ["snapshot", "cql", "validate"]
+after_build  = []
 before_pack  = []
 after_pack   = []
-
-[validate]
-# Path to locally installed FHIR packages (default: ~/.fhir/packages)
-packages_dir = "~/.fhir/packages"
-# Reserved for future use — accepted but currently ignored:
-# skip_invariants = false
-# skip_bindings   = false
-# terminology_server = "https://tx.fhir.org/r4"
-
-[cql]
-packages_dir = "~/.fhir/packages"   # for CQL package resolution
-model_info   = "fhir"               # default model info
 ```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `before_build` | list of strings | `[]` | Processors that run before the core build stage (narrative embedding, IG sync, index generation, lock application). |
+| `after_build` | list of strings | `[]` | Processors that run after the build stage, before output is written to disk. |
+| `before_pack` | list of strings | `[]` | Processors that run before the directory is packed into a `.tgz`. |
+| `after_pack` | list of strings | `[]` | Processors that run after the `.tgz` is written. |
+
+Each entry is a processor name. Unknown names cause an immediate error at startup, before any
+files are touched. Processors execute in list order; the first failure aborts the pipeline.
+
+#### Pipeline stage order
+
+```
+rh publish build
+  ├─ [before_build]   ← processors declared here
+  ├─ narrative        (embed .md into resource .text)
+  ├─ ig_sync          (validate IG ↔ package.json)
+  ├─ index            (generate .index.json)
+  ├─ lock             (apply canonical pins from fhir-lock.json)
+  ├─ [after_build]    ← processors declared here
+  └─ write output dir
+
+rh publish pack
+  ├─ [before_pack]    ← processors declared here
+  ├─ tarball          (.tgz written)
+  └─ [after_pack]     ← processors declared here
+```
+
+> **Note:** `before_pack`/`after_pack` are only invoked by `rh publish build` (which runs pack
+> as a final step). Running `rh publish pack` on an already-built directory skips hooks because
+> no source `packager.toml` is in scope.
+
+---
+
+### `[validate]`
+
+Configuration for the built-in `validate` processor, which runs `rh-validator` over every
+FHIR resource in the source directory.
+
+```toml
+[validate]
+# Override the shared packages_dir for validation only.
+# Default: inherits top-level packages_dir (or ~/.fhir/packages)
+packages_dir = "/path/to/.fhir/packages"
+
+# Reserved for future use — accepted but currently has no effect:
+# skip_invariants    = false
+# skip_bindings      = false
+# terminology_server = "https://tx.fhir.org/r4"
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `packages_dir` | string | (top-level or `~/.fhir/packages`) | Packages cache used when loading dependency packages for validation. |
+| `skip_invariants` | bool | `false` | **Reserved.** Will skip FHIRPath invariant evaluation when implemented. |
+| `skip_bindings` | bool | `false` | **Reserved.** Will skip terminology binding checks when implemented. |
+| `terminology_server` | string | — | **Reserved.** FHIR terminology server base URL for binding validation when implemented. |
+
+The processor fails the pipeline if any resource has ERROR-severity issues.
+
+---
+
+### `[cql]`
+
+Configuration for the built-in `cql` processor, which compiles `.cql` files to ELM JSON and
+embeds them in matching `Library` resources.
+
+```toml
+[cql]
+# Override the shared packages_dir for CQL package resolution only.
+# Default: inherits top-level packages_dir (or ~/.fhir/packages)
+packages_dir = "/path/to/.fhir/packages"
+
+# Model info to use when compiling CQL.
+# Default: "fhir"
+model_info = "fhir"
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `packages_dir` | string | (top-level or `~/.fhir/packages`) | Packages cache used to resolve CQL library dependencies from FHIR packages. |
+| `model_info` | string | `"fhir"` | CQL model info identifier passed to the compiler (e.g. `"fhir"`, `"qicore"`). |
+
+The processor fails the pipeline on any CQL syntax or compilation error.
+
+---
+
+### `packages_dir` resolution order
+
+For any processor that loads packages, the directory is chosen in this order:
+
+1. Processor-level `packages_dir` (e.g. `[validate] packages_dir`)
+2. Top-level `packages_dir` in `packager.toml`
+3. `~/.fhir/packages`
+
+---
 
 ### Built-in processors
 
-| Name | Description |
-|---|---|
-| `snapshot` | Generate missing StructureDefinition snapshots using `rh-foundation` |
-| `validate` | Validate all FHIR resources using `rh-validator` |
-| `cql` | Compile `.cql` files to ELM and embed in Library resources |
+| Name | When to use | Description |
+|---|---|---|
+| `snapshot` | `before_build` | Generates missing `snapshot.element` arrays for `StructureDefinition` resources. Loads base definitions from dependency packages. |
+| `validate` | `before_build` or `after_build` | Validates all FHIR resources using `rh-validator`. Fails on any ERROR-severity issue. |
+| `cql` | `before_build` | Compiles `.cql` files to ELM JSON, embeds source + ELM into `Library.content[]`. Auto-creates a minimal Library resource if none exists. |
+
+---
+
+## Building a Custom Processor
+
+Custom processors allow you to extend the build pipeline with your own logic — linting,
+code generation, custom validation, or anything else that reads or mutates the in-memory
+resource map.
+
+### 1. Implement the `HookProcessor` trait
+
+Add `rh-packager` as a dependency and implement [`hooks::HookProcessor`]:
+
+```rust
+use rh_packager::{
+    context::PublishContext,
+    hooks::HookProcessor,
+    Result,
+};
+
+pub struct TimestampProcessor;
+
+impl HookProcessor for TimestampProcessor {
+    fn name(&self) -> &'static str {
+        // This name is used in packager.toml hook lists.
+        "timestamp"
+    }
+
+    fn run(&self, ctx: &mut PublishContext) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // ctx.resources is a HashMap<String, serde_json::Value> keyed by filename stem.
+        // Processors may read, mutate, or insert entries.
+        for resource in ctx.resources.values_mut() {
+            if resource.get("resourceType").and_then(|v| v.as_str())
+                == Some("StructureDefinition")
+            {
+                resource["date"] = serde_json::Value::String(now.clone());
+            }
+        }
+
+        Ok(())
+    }
+}
+```
+
+Key points:
+- **Read** `ctx.source_dir` for any additional source files you need.
+- **Mutate** `ctx.resources` to add or modify FHIR resources; a single write pass materialises
+  everything to disk at the end.
+- **Read** `ctx.config` for global packager configuration (e.g. `packages_dir`).
+- **Read** `ctx.package_json` for the package name, version, and declared dependencies.
+- **Do not write to disk directly** — the pipeline owns all output.
+
+### 2. Register the processor and run the pipeline
+
+Build a `ProcessorRegistry`, register your processor alongside (or instead of) the built-ins,
+then call `build` with it:
+
+```rust
+use rh_packager::{
+    hooks::{build_registry, ProcessorRegistry},
+    pipeline::build,
+};
+use std::path::Path;
+
+fn main() -> anyhow::Result<()> {
+    // Start with all built-in processors registered.
+    let mut registry = build_registry();
+
+    // Register your custom processor under the name "timestamp".
+    registry.register(TimestampProcessor);
+
+    // Run the full build pipeline.
+    let output = build(Path::new("my-package"), None, registry)?;
+    println!("Package written to {}", output.display());
+    Ok(())
+}
+```
+
+To use only your processor (no built-ins):
+
+```rust
+let mut registry = ProcessorRegistry::new();
+registry.register(TimestampProcessor);
+```
+
+### 3. Reference the processor in `packager.toml`
+
+```toml
+[hooks]
+before_build = ["snapshot", "timestamp", "validate"]
+```
+
+The name in `packager.toml` must exactly match the string returned by `HookProcessor::name()`.
+An unregistered name causes an immediate startup error.
+
+---
 
 ## fhir-lock.json Format
 
@@ -97,4 +305,5 @@ These fields must match between `package.json` and the `ImplementationGuide` res
 |---|---|
 | `MyLibrary.cql` | `Library-MyLibrary.json` |
 
-If no matching Library exists, the `cql` processor auto-creates a minimal one (emit a warning).
+If no matching Library exists, the `cql` processor auto-creates a minimal one and emits a
+warning suggesting you check it in to source.

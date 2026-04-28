@@ -12,9 +12,9 @@ use tracing::warn;
 
 const PACKAGE_JSON: &str = "package.json";
 const IG_RESOURCE_TYPE: &str = "ImplementationGuide";
-const PUBLISHER_TOML: &str = "publisher.toml";
+const PUBLISHER_TOML: &str = "packager.toml";
 
-/// Scan `source_dir`, load `package.json` and `publisher.toml`, populate a
+/// Scan `source_dir`, load `package.json` and `packager.toml`, populate a
 /// `PublishContext` with the discovered FHIR resources and markdown files.
 ///
 /// # Errors
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn uses_default_config_when_publisher_toml_absent() {
+    fn uses_default_config_when_packager_toml_absent() {
         let dir = TempDir::new().unwrap();
         write_file(dir.path(), "package.json", minimal_package_json());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
