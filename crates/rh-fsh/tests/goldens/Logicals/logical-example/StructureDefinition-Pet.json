@@ -1,0 +1,37 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "Pet",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/Pet",
+  "version": "0.1.0",
+  "name": "Pet",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://rh-fsh-test.example.org/StructureDefinition/Pet",
+  "baseDefinition": "http://rh-fsh-test.example.org/StructureDefinition/Animal",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "Pet",
+        "path": "Pet",
+        "short": "Pet",
+        "definition": "Pet"
+      },
+      {
+        "id": "Pet.isVaccinated",
+        "path": "Pet.isVaccinated",
+        "short": "Is the pet vaccinated?",
+        "definition": "Is the pet vaccinated?",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

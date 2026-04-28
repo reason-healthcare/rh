@@ -1,0 +1,45 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PSATestVS",
+  "id": "psa-test-vs",
+  "title": "Tumor Marker Test Value Set",
+  "description": "Codes representing tests for prostate specific antigen.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/psa-test-vs",
+  "copyright": "This material contains content from LOINC (http://loinc.org). LOINC is copyright © 1995-2020, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at http://loinc.org/license. LOINC® is a registered United States trademark of Regenstrief Institute, Inc",
+  "compose": {
+    "include": [
+      {
+        "system": "http://loinc.org",
+        "filter": [
+          {
+            "property": "ancestor",
+            "op": "=",
+            "value": "LP186220-2"
+          }
+        ]
+      },
+      {
+        "system": "http://loinc.org",
+        "filter": [
+          {
+            "property": "ancestor",
+            "op": "=",
+            "value": "LP270129-2"
+          }
+        ]
+      },
+      {
+        "system": "http://loinc.org",
+        "filter": [
+          {
+            "property": "ancestor",
+            "op": "=",
+            "value": "LP420658-9"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -59,6 +59,7 @@ rustyline = "13.0"
 
 # Development dependencies
 criterion = "0.5"
+walkdir = "2"
 
 # Workspace-wide package metadata
 [workspace.package]

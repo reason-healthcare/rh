@@ -1,0 +1,141 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "radiation-dose-delivered",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/radiation-dose-delivered",
+  "version": "0.1.0",
+  "name": "RadiationDoseDelivered",
+  "title": "Radiotherapy Dose Delivered",
+  "status": "draft",
+  "description": "Dose delivered to a body structure divided into a number of fractional doses. This extension is used on Procedure resource.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Procedure"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Radiotherapy Dose Delivered",
+        "definition": "Dose delivered to a body structure divided into a number of fractional doses. This extension is used on Procedure resource."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "min": 1
+      },
+      {
+        "id": "Extension.extension:bodyStructure",
+        "path": "Extension.extension",
+        "sliceName": "bodyStructure",
+        "short": "Volume in the body where radiation was delivered",
+        "definition": "A BodyStructure resource representing the body structure treated, for example, Chest Wall Lymph Nodes.",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Extension.extension:bodyStructure.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:bodyStructure.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "bodyStructure"
+      },
+      {
+        "id": "Extension.extension:bodyStructure.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/BodyStructure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:totalDoseDelivered",
+        "path": "Extension.extension",
+        "sliceName": "totalDoseDelivered",
+        "short": "Total Radiation Dose Delivered",
+        "definition": "The total amount of radiation delivered to this volume within the scope of this dose delivery.",
+        "min": 0,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Extension.extension:totalDoseDelivered.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:totalDoseDelivered.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "totalDoseDelivered"
+      },
+      {
+        "id": "Extension.extension:totalDoseDelivered.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Quantity"
+          }
+        ],
+        "patternQuantity": {
+          "code": "cGy",
+          "system": "http://unitsofmeasure.org"
+        }
+      },
+      {
+        "id": "Extension.extension:fractionsDelivered",
+        "path": "Extension.extension",
+        "sliceName": "fractionsDelivered",
+        "short": "Number of Fractions Delivered",
+        "definition": "The number of fractions delivered to this volume.",
+        "min": 0,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Extension.extension:fractionsDelivered.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:fractionsDelivered.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "fractionsDelivered"
+      },
+      {
+        "id": "Extension.extension:fractionsDelivered.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "unsignedInt"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/radiation-dose-delivered"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "resourceType": "BodyStructure",
+  "id": "Lymph-nodes",
+  "patient": {
+    "reference": "Patient/adam-everyman"
+  },
+  "location": {
+    "coding": [
+      {
+        "code": "LN_Neck_IA",
+        "system": "http://terminology.hl7.org/CodeSystem/lymphnodes",
+        "display": "Level IA (Submental) neck node"
+      }
+    ]
+  },
+  "morphology": {
+    "coding": [
+      {
+        "code": "40225001",
+        "system": "http://snomed.info/sct",
+        "display": "Cystic lymphangioma (morphologic abnormality)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "NodesStage",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/NodesStage",
+  "version": "0.1.0",
+  "name": "NodesStage",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "21906-3",
+              "system": "http://loinc.org"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

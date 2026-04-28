@@ -1,0 +1,66 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "stage-group",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/stage-group",
+  "version": "0.1.0",
+  "name": "StageGroup",
+  "title": "Stage Group",
+  "status": "draft",
+  "description": "The cancer stage group with related separate Observations representing the T Stage, N Stage, and M Stage.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.hasMember",
+        "path": "Observation.hasMember",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "pattern",
+              "path": "$this.resolve().code"
+            }
+          ],
+          "rules": "open",
+          "description": "Slice based on referenced resource's code attribute."
+        },
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Observation"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Observation.hasMember:TumorStage",
+        "path": "Observation.hasMember",
+        "sliceName": "TumorStage",
+        "min": 0,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.hasMember:NodesStage",
+        "path": "Observation.hasMember",
+        "sliceName": "NodesStage",
+        "min": 0,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.hasMember:MetastasesStage",
+        "path": "Observation.hasMember",
+        "sliceName": "MetastasesStage",
+        "min": 0,
+        "max": "1",
+        "mustSupport": true
+      }
+    ]
+  }
+}

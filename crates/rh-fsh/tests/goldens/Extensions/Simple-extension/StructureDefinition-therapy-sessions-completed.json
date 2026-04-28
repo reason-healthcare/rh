@@ -1,0 +1,51 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "therapy-sessions-completed",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/therapy-sessions-completed",
+  "version": "0.1.0",
+  "name": "TherapySessionsCompleted",
+  "title": "Therapy Sessions Completed",
+  "status": "draft",
+  "description": "The number of sessions of some therapy.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Procedure"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Therapy Sessions Completed",
+        "definition": "The number of sessions of some therapy."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/therapy-sessions-completed"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "unsignedInt"
+          }
+        ]
+      }
+    ]
+  }
+}

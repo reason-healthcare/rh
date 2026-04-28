@@ -1,0 +1,14 @@
+{
+  "resourceType": "Patient",
+  "id": "adam-everyman",
+  "name": [
+    {
+      "family": "Everyman",
+      "given": [
+        "Adam"
+      ]
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1962-02-05"
+}

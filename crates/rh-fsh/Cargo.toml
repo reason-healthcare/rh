@@ -23,6 +23,7 @@ rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.1.0-beta.1
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+walkdir = { workspace = true }
 
 [[bench]]
 name = "compile"

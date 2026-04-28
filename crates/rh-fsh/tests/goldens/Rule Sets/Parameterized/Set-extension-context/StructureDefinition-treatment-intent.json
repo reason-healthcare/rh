@@ -1,0 +1,63 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "treatment-intent",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/treatment-intent",
+  "version": "0.1.0",
+  "name": "TreatmentIntent",
+  "title": "Treatment Intent",
+  "status": "draft",
+  "description": "The purpose of a medication or procedure.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "MedicationRequest"
+    },
+    {
+      "type": "element",
+      "expression": "MedicationAdministration"
+    },
+    {
+      "type": "element",
+      "expression": "Procedure"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Treatment Intent",
+        "definition": "The purpose of a medication or procedure."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/treatment-intent"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "CodeableConcept"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://rh-fsh-test.example.org/ValueSet/treatment-intent-vs"
+        }
+      }
+    ]
+  }
+}

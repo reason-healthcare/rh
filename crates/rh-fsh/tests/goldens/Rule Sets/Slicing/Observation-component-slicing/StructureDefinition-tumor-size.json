@@ -1,0 +1,79 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "tumor-size",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/tumor-size",
+  "version": "0.1.0",
+  "name": "TumorSize",
+  "title": "Tumor Size",
+  "status": "draft",
+  "description": "Records the dimensions of a tumor",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.component",
+        "path": "Observation.component",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "pattern",
+              "path": "code"
+            }
+          ],
+          "rules": "open",
+          "description": "Slice based on the component.code pattern"
+        },
+        "min": 1
+      },
+      {
+        "id": "Observation.component:maxDimension",
+        "path": "Observation.component",
+        "sliceName": "maxDimension",
+        "short": "Maximum dimension of tumor",
+        "definition": "The longest tumor dimension",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.component:maxDimension.code",
+        "path": "Observation.component.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "33728-7",
+              "system": "http://loinc.org"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Observation.component:otherDimension",
+        "path": "Observation.component",
+        "sliceName": "otherDimension",
+        "short": "Other tumor dimension",
+        "definition": "Additional tumor dimensions should be ordered from largest to smallest",
+        "min": 0,
+        "max": "2",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.component:otherDimension.code",
+        "path": "Observation.component.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "33729-5",
+              "system": "http://loinc.org"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

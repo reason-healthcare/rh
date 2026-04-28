@@ -1,0 +1,31 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "MustImplementThisProfile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/MustImplementThisProfile",
+  "version": "0.1.0",
+  "name": "MustImplementThisProfile",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Medication",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Medication",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Medication",
+        "path": "Medication",
+        "mustSupport": true
+      },
+      {
+        "id": "Medication.code",
+        "path": "Medication.code",
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://www.nlm.nih.gov/research/umls/rxnorm"
+        }
+      }
+    ]
+  }
+}

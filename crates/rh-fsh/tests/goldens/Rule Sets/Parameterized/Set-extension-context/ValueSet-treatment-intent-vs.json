@@ -1,0 +1,32 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TreatmentIntentVS",
+  "id": "treatment-intent-vs",
+  "title": "Treatment Intent Value Set",
+  "description": "The purpose of a treatment.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/treatment-intent-vs",
+  "copyright": "This value set includes content from SNOMED CT, which is copyright © 2002+ International Health Terminology Standards Development Organisation (IHTSDO), and distributed by agreement between IHTSDO and HL7. Implementer use of SNOMED CT is not covered by this agreement",
+  "compose": {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "concept": [
+          {
+            "code": "373808002",
+            "display": "Curative - procedure intent"
+          },
+          {
+            "code": "363676003",
+            "display": "Palliative - procedure intent"
+          },
+          {
+            "code": "399707004",
+            "display": "Supportive - procedure intent"
+          }
+        ]
+      }
+    ]
+  }
+}

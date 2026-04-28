@@ -1,0 +1,53 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "brachytherapy-procedure",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/brachytherapy-procedure",
+  "version": "0.1.0",
+  "name": "BrachytherapyProcedure",
+  "status": "draft",
+  "description": "Procedures involving implanted radiation sources or sources in body cavities",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Procedure",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Procedure",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Procedure.status",
+        "path": "Procedure.status",
+        "mustSupport": true
+      },
+      {
+        "id": "Procedure.category",
+        "path": "Procedure.category",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "108290001",
+              "system": "http://snomed.info/sct"
+            }
+          ]
+        },
+        "mustSupport": true
+      },
+      {
+        "id": "Procedure.subject",
+        "path": "Procedure.subject",
+        "mustSupport": true
+      },
+      {
+        "id": "Procedure.performed[x]",
+        "path": "Procedure.performed[x]",
+        "type": [
+          {
+            "code": "Period"
+          }
+        ],
+        "mustSupport": true
+      }
+    ]
+  }
+}

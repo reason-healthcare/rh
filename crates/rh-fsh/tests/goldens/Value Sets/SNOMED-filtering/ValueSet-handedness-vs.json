@@ -1,0 +1,36 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "HandednessVS",
+  "id": "handedness-vs",
+  "title": "Handedness Value Set",
+  "description": "Indicates the dominant hand.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/handedness-vs",
+  "copyright": "This value set includes content from SNOMED CT, which is copyright © 2002+ International Health Terminology Standards Development Organisation (IHTSDO), and distributed by agreement between IHTSDO and HL7. Implementer use of SNOMED CT is not covered by this agreement",
+  "compose": {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "concept",
+            "op": "is-a",
+            "value": "64940007"
+          }
+        ]
+      }
+    ],
+    "exclude": [
+      {
+        "system": "http://snomed.info/sct",
+        "concept": [
+          {
+            "code": "709880000",
+            "display": "Unknown handedness (finding)"
+          }
+        ]
+      }
+    ]
+  }
+}

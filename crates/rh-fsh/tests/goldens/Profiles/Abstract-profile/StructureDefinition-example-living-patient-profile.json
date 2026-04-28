@@ -1,0 +1,30 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-living-patient-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/example-living-patient-profile",
+  "version": "0.1.0",
+  "name": "ExampleLivingPatientProfile",
+  "title": "Example Living Patient Patient Profile",
+  "status": "draft",
+  "description": "Example of a profile for living patients inheriting from ExampleAbstractPatientProfile",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://rh-fsh-test.example.org/StructureDefinition/example-abstract-patient-profile",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.deceased[x]",
+        "path": "Patient.deceased[x]",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ],
+        "patternBoolean": false
+      }
+    ]
+  }
+}

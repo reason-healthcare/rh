@@ -1,0 +1,30 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "SurgicalProcedureVS",
+  "id": "surgical-procedure-vs",
+  "title": "Surgical Procedure Value Set",
+  "description": "Includes surgical procedure codes from SNOMED CT, ICD-10-PCS and CPT.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/surgical-procedure-vs",
+  "compose": {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "concept",
+            "op": "is-a",
+            "value": "387713003"
+          }
+        ]
+      },
+      {
+        "system": "http://www.ama-assn.org/go/cpt"
+      },
+      {
+        "system": "http://www.cms.gov/Medicare/Coding/ICD10"
+      }
+    ]
+  }
+}
