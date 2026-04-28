@@ -58,21 +58,33 @@ impl HookProcessor for FshProcessor {
         let mut tank = FshTank::new();
         for path in &fsh_files {
             let content = std::fs::read_to_string(path).map_err(|e| {
-                PublisherError::Other(anyhow::anyhow!("fsh: failed to read {}: {e}", path.display()))
+                PublisherError::Other(anyhow::anyhow!(
+                    "fsh: failed to read {}: {e}",
+                    path.display()
+                ))
             })?;
             let source_name = path.to_string_lossy().into_owned();
             let doc = FshParser::parse(&content, source_name).map_err(|e| {
-                PublisherError::Other(anyhow::anyhow!("fsh: parse error in {}: {e}", path.display()))
+                PublisherError::Other(anyhow::anyhow!(
+                    "fsh: parse error in {}: {e}",
+                    path.display()
+                ))
             })?;
             tank.add_document(doc).map_err(|errs| {
                 let msgs: Vec<_> = errs.iter().map(|e| e.to_string()).collect();
-                PublisherError::Other(anyhow::anyhow!("fsh: document error(s): {}", msgs.join("; ")))
+                PublisherError::Other(anyhow::anyhow!(
+                    "fsh: document error(s): {}",
+                    msgs.join("; ")
+                ))
             })?;
         }
 
         FshResolver::resolve(&mut tank).map_err(|errs| {
             let msgs: Vec<_> = errs.iter().map(|e| e.to_string()).collect();
-            PublisherError::Other(anyhow::anyhow!("fsh: resolve error(s): {}", msgs.join("; ")))
+            PublisherError::Other(anyhow::anyhow!(
+                "fsh: resolve error(s): {}",
+                msgs.join("; ")
+            ))
         })?;
 
         let defs = FhirDefs::r4();

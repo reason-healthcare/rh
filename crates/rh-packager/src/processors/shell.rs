@@ -164,7 +164,9 @@ fn build_command(cmd_str: &str) -> std::process::Command {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::PublisherConfig, manifest::PackageJson, processors::shell::ShellProcessor};
+    use crate::{
+        config::PublisherConfig, manifest::PackageJson, processors::shell::ShellProcessor,
+    };
     use serde_json::json;
     use std::collections::HashMap;
     use tempfile::TempDir;
@@ -281,12 +283,12 @@ json.dump(r, open(p, 'w'))
         let mut ctx = make_ctx(&tmp);
 
         let out_file = tmp.path().join("env_check.txt");
-        let cmd = format!(
-            r#"echo "$MY_CUSTOM_VAR" > "{}""#,
-            out_file.display()
-        );
+        let cmd = format!(r#"echo "$MY_CUSTOM_VAR" > "{}""#, out_file.display());
         let mut env = HashMap::new();
-        env.insert("MY_CUSTOM_VAR".to_string(), "hello-from-packager".to_string());
+        env.insert(
+            "MY_CUSTOM_VAR".to_string(),
+            "hello-from-packager".to_string(),
+        );
 
         let p = ShellProcessor::new(
             "env-test".to_string(),
