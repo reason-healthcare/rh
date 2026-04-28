@@ -36,6 +36,7 @@ rh-foundation = { path = "../../crates/rh-foundation", version = "0.1.0-beta.1",
 rh-codegen = { path = "../../crates/rh-codegen", version = "0.1.0-beta.1" }
 rh-cql = { path = "../../crates/rh-cql", version = "0.1.0-beta.1" }
 rh-fhirpath = { path = "../../crates/rh-fhirpath", version = "0.1.0-beta.1" }
+rh-publisher = { path = "../../crates/rh-publisher", version = "0.1.0-beta.1" }
 rh-validator = { path = "../../crates/rh-validator", version = "0.2.0-beta.1" }
 rh-vcl = { path = "../../crates/rh-vcl", version = "0.1.0-beta.1" }
 rh-hl7-fhir-r4-core = { path = "../../crates/rh-hl7_fhir_r4_core", version = "0.1.0-beta.1" }
