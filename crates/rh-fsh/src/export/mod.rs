@@ -10,6 +10,7 @@ use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::tank::FshTank;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// A compiled FHIR package — the output of FSH compilation
@@ -22,9 +23,28 @@ pub struct FhirPackage {
 pub struct FshExporter;
 
 impl FshExporter {
-    pub fn export(tank: &FshTank, defs: Arc<FhirDefs>) -> FhirPackage {
+    pub fn export(tank: &FshTank, defs: Arc<FhirDefs>, config: &crate::FshConfig) -> FhirPackage {
         let mut resources = Vec::new();
         let mut errors = Vec::new();
+
+        // Pre-compute parent name → parent name chain for FHIR type resolution
+        // (maps profile/extension name → its declared parent name)
+        let parent_types: HashMap<String, String> = tank
+            .profiles
+            .iter()
+            .filter_map(|(name, p)| {
+                p.metadata
+                    .parent
+                    .as_ref()
+                    .map(|parent| (name.clone(), parent.clone()))
+            })
+            .chain(tank.extensions.iter().filter_map(|(name, e)| {
+                e.metadata
+                    .parent
+                    .as_ref()
+                    .map(|parent| (name.clone(), parent.clone()))
+            }))
+            .collect();
 
         // Profiles (parallel)
         let profile_results: Vec<_> = tank
@@ -32,7 +52,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|p| structure_def::export_profile(p, defs.clone()))
+            .map(|p| structure_def::export_profile(p, defs.clone(), config, &parent_types))
             .collect();
         collect_results(profile_results, &mut resources, &mut errors);
 
@@ -42,7 +62,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|e| structure_def::export_extension(e, defs.clone()))
+            .map(|e| structure_def::export_extension(e, defs.clone(), config, &parent_types))
             .collect();
         collect_results(ext_results, &mut resources, &mut errors);
 
@@ -52,7 +72,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|l| structure_def::export_logical(l, defs.clone()))
+            .map(|l| structure_def::export_logical(l, defs.clone(), config, &parent_types))
             .collect();
         collect_results(logical_results, &mut resources, &mut errors);
 
@@ -62,7 +82,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|r| structure_def::export_resource_def(r, defs.clone()))
+            .map(|r| structure_def::export_resource_def(r, defs.clone(), config, &parent_types))
             .collect();
         collect_results(resource_results, &mut resources, &mut errors);
 
@@ -72,7 +92,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|i| instance::export_instance(i))
+            .map(|i| instance::export_instance(i, defs.as_ref(), config, tank))
             .collect();
         collect_results(instance_results, &mut resources, &mut errors);
 
@@ -82,7 +102,7 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|vs| value_set::export_value_set(vs))
+            .map(|vs| value_set::export_value_set(vs, config))
             .collect();
         collect_results(vs_results, &mut resources, &mut errors);
 
@@ -92,19 +112,11 @@ impl FshExporter {
             .values()
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|cs| code_system::export_code_system(cs))
+            .map(|cs| code_system::export_code_system(cs, config))
             .collect();
         collect_results(cs_results, &mut resources, &mut errors);
 
-        // Mappings (parallel)
-        let mapping_results: Vec<_> = tank
-            .mappings
-            .values()
-            .collect::<Vec<_>>()
-            .into_par_iter()
-            .map(|m| mapping::export_mapping(m))
-            .collect();
-        collect_results(mapping_results, &mut resources, &mut errors);
+        // Mappings do NOT produce standalone FHIR resources (H6)
 
         FhirPackage { resources, errors }
     }

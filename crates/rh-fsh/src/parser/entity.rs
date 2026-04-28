@@ -13,6 +13,11 @@ use nom::{
     IResult,
 };
 
+type VsComponentRulesResult<'a> =
+    IResult<Span<'a>, (Vec<Spanned<VsComponentRule>>, Vec<Spanned<CaretValueRule>>)>;
+type ConceptRulesResult<'a> =
+    IResult<Span<'a>, (Vec<Spanned<ConceptRule>>, Vec<Spanned<CaretValueRule>>)>;
+
 // ============================================================================
 // Public entry point
 // ============================================================================
@@ -22,12 +27,8 @@ pub fn parse_document(input: Span<'_>, source_name: String) -> Result<FshDocumen
     let mut entities = Vec::new();
     let mut remaining = input;
 
-    loop {
-        // Skip trivia
-        match trivia(remaining) {
-            Ok((inp, _)) => remaining = inp,
-            Err(_) => break,
-        }
+    while let Ok((inp, _)) = trivia(remaining) {
+        remaining = inp;
 
         if remaining.fragment().is_empty() {
             break;
@@ -60,9 +61,7 @@ pub fn parse_document(input: Span<'_>, source_name: String) -> Result<FshDocumen
 
 fn parse_entity(input: Span<'_>) -> IResult<Span<'_>, Spanned<FshEntity>> {
     alt((
-        map(parse_alias, |a| {
-            Spanned::new(FshEntity::Alias(a.0), a.1)
-        }),
+        map(parse_alias, |a| Spanned::new(FshEntity::Alias(a.0), a.1)),
         map(parse_profile, |p| {
             Spanned::new(FshEntity::Profile(p.0), p.1)
         }),
@@ -107,16 +106,15 @@ fn parse_alias(input: Span<'_>) -> IResult<Span<'_>, (Alias, SourceLocation)> {
     let loc = input.location();
     let (input, _) = tag(KW_ALIAS)(input)?;
     let (input, _) = take_while1(|c| c == ':' || c == ' ' || c == '\t')(input)?;
-    let (input, name) = identifier(input)?;
+    let (input, name) = alias_name(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('=')(input)?;
     let (input, _) = ws(input)?;
     let (input, value) = alt((
         quoted_string,
-        map(
-            take_while1(|c: char| !c.is_whitespace()),
-            |s: Span<'_>| s.fragment().to_string(),
-        ),
+        map(take_while1(|c: char| !c.is_whitespace()), |s: Span<'_>| {
+            s.fragment().to_string()
+        }),
     ))(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
@@ -157,7 +155,11 @@ fn parse_extension(input: Span<'_>) -> IResult<Span<'_>, (Extension, SourceLocat
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
 
-    let (input, metadata) = parse_sd_metadata(input, name)?;
+    let (input, mut metadata) = parse_sd_metadata(input, name)?;
+    // FSH spec: extensions without an explicit Parent default to Extension
+    if metadata.parent.is_none() {
+        metadata.parent = Some("Extension".to_string());
+    }
     let (input, rules) = parse_sd_rules(input)?;
 
     Ok((input, (Extension { metadata, rules }, loc)))
@@ -228,9 +230,53 @@ fn parse_instance(input: Span<'_>) -> IResult<Span<'_>, (Instance, SourceLocatio
     let (input, _) = opt(char('\n'))(input)?;
 
     let (input, instance_of) = parse_instance_of(input)?;
-    let (input, usage) = opt_meta_kv("Usage", input)?;
-    let (input, title) = opt_meta_kv("Title", input)?;
-    let (input, description) = opt_meta_kv("Description", input)?;
+
+    let mut remaining = input;
+    let mut usage: Option<String> = None;
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
+
+    loop {
+        let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
+        if peek.fragment().is_empty()
+            || starts_with_entity_kw(peek.fragment())
+            || peek.fragment().starts_with('*')
+        {
+            remaining = peek;
+            break;
+        }
+        let mut matched = false;
+        if usage.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Usage", peek) {
+                if val.is_some() {
+                    usage = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && title.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Title", peek) {
+                if val.is_some() {
+                    title = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && description.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Description", peek) {
+                if val.is_some() {
+                    description = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched {
+            break;
+        }
+    }
 
     let metadata = InstanceMetadata {
         name,
@@ -240,9 +286,9 @@ fn parse_instance(input: Span<'_>) -> IResult<Span<'_>, (Instance, SourceLocatio
         description,
     };
 
-    let (input, rules) = parse_instance_rules(input)?;
+    let (remaining, rules) = parse_instance_rules(remaining)?;
 
-    Ok((input, (Instance { metadata, rules }, loc)))
+    Ok((remaining, (Instance { metadata, rules }, loc)))
 }
 
 fn parse_instance_of(input: Span<'_>) -> IResult<Span<'_>, String> {
@@ -277,14 +323,72 @@ fn parse_value_set(input: Span<'_>) -> IResult<Span<'_>, (ValueSet, SourceLocati
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
 
-    let (input, id) = opt_meta_kv("Id", input)?;
-    let (input, title) = opt_meta_kv("Title", input)?;
-    let (input, description) = opt_meta_kv("Description", input)?;
+    let mut remaining = input;
+    let mut id: Option<String> = None;
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
 
-    let metadata = VsMetadata { name, id, title, description };
-    let (input, components) = parse_vs_component_rules(input)?;
+    loop {
+        let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
+        if peek.fragment().is_empty()
+            || starts_with_entity_kw(peek.fragment())
+            || peek.fragment().starts_with('*')
+        {
+            remaining = peek;
+            break;
+        }
+        let mut matched = false;
+        if id.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Id", peek) {
+                if val.is_some() {
+                    id = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && title.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Title", peek) {
+                if val.is_some() {
+                    title = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && description.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Description", peek) {
+                if val.is_some() {
+                    description = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched {
+            break;
+        }
+    }
 
-    Ok((input, (ValueSet { metadata, components }, loc)))
+    let metadata = VsMetadata {
+        name,
+        id,
+        title,
+        description,
+    };
+    let (remaining, (components, caret_rules)) = parse_vs_component_rules(remaining)?;
+
+    Ok((
+        remaining,
+        (
+            ValueSet {
+                metadata,
+                components,
+                caret_rules,
+            },
+            loc,
+        ),
+    ))
 }
 
 // ============================================================================
@@ -301,14 +405,72 @@ fn parse_code_system(input: Span<'_>) -> IResult<Span<'_>, (CodeSystem, SourceLo
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
 
-    let (input, id) = opt_meta_kv("Id", input)?;
-    let (input, title) = opt_meta_kv("Title", input)?;
-    let (input, description) = opt_meta_kv("Description", input)?;
+    let mut remaining = input;
+    let mut id: Option<String> = None;
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
 
-    let metadata = CsMetadata { name, id, title, description };
-    let (input, concepts) = parse_concept_rules(input)?;
+    loop {
+        let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
+        if peek.fragment().is_empty()
+            || starts_with_entity_kw(peek.fragment())
+            || peek.fragment().starts_with('*')
+        {
+            remaining = peek;
+            break;
+        }
+        let mut matched = false;
+        if id.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Id", peek) {
+                if val.is_some() {
+                    id = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && title.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Title", peek) {
+                if val.is_some() {
+                    title = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && description.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Description", peek) {
+                if val.is_some() {
+                    description = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched {
+            break;
+        }
+    }
 
-    Ok((input, (CodeSystem { metadata, concepts }, loc)))
+    let metadata = CsMetadata {
+        name,
+        id,
+        title,
+        description,
+    };
+    let (remaining, (concepts, caret_rules)) = parse_concept_rules(remaining)?;
+
+    Ok((
+        remaining,
+        (
+            CodeSystem {
+                metadata,
+                concepts,
+                caret_rules,
+            },
+            loc,
+        ),
+    ))
 }
 
 // ============================================================================
@@ -386,8 +548,43 @@ fn parse_param_rule_set(input: Span<'_>) -> IResult<Span<'_>, (ParamRuleSet, Sou
         .collect();
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
+
+    // Capture raw rule lines for parameter substitution later
+    let raw_rules = collect_raw_rule_lines(input.fragment());
+
     let (input, rules) = parse_sd_rules(input)?;
-    Ok((input, (ParamRuleSet { name, params, rules }, loc)))
+    Ok((
+        input,
+        (
+            ParamRuleSet {
+                name,
+                params,
+                rules,
+                raw_rules,
+            },
+            loc,
+        ),
+    ))
+}
+
+/// Collect raw text of `* ...` rule lines, stopping at entity keywords or blank entity boundary.
+/// Each returned string includes the leading `* ` and rest of the rule line.
+fn collect_raw_rule_lines(text: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+        // Stop at entity keyword boundaries
+        if starts_with_entity_kw(trimmed) {
+            break;
+        }
+        if trimmed.starts_with('*') {
+            result.push(trimmed.to_string());
+        }
+    }
+    result
 }
 
 // ============================================================================
@@ -429,18 +626,80 @@ fn parse_mapping(input: Span<'_>) -> IResult<Span<'_>, (Mapping, SourceLocation)
 // ============================================================================
 
 fn parse_sd_metadata(input: Span<'_>, name: String) -> IResult<Span<'_>, SdMetadata> {
-    let (input, parent) = opt_meta_kv("Parent", input)?;
-    let (input, id) = opt_meta_kv("Id", input)?;
-    let (input, title) = opt_meta_kv("Title", input)?;
-    let (input, description) = opt_meta_kv("Description", input)?;
+    let mut remaining = input;
+    let mut parent: Option<String> = None;
+    let mut id: Option<String> = None;
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
+    let mut characteristics: Vec<String> = Vec::new();
+
+    loop {
+        let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
+        if peek.fragment().is_empty()
+            || starts_with_entity_kw(peek.fragment())
+            || peek.fragment().starts_with('*')
+        {
+            remaining = peek;
+            break;
+        }
+        let mut matched = false;
+        if parent.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Parent", peek) {
+                if val.is_some() {
+                    parent = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && id.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Id", peek) {
+                if val.is_some() {
+                    id = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && title.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Title", peek) {
+                if val.is_some() {
+                    title = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && description.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Description", peek) {
+                if val.is_some() {
+                    description = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && characteristics.is_empty() {
+            if let Ok((inp, Some(v))) = opt_meta_kv("Characteristics", peek) {
+                characteristics = v.split(',').map(|s| s.trim().to_string()).collect();
+                remaining = inp;
+                matched = true;
+            }
+        }
+        if !matched {
+            break;
+        }
+    }
+
     Ok((
-        input,
+        remaining,
         SdMetadata {
             name,
             parent,
             id,
             title,
             description,
+            characteristics,
         },
     ))
 }
@@ -543,8 +802,9 @@ fn parse_instance_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Instan
     Ok((remaining, rules))
 }
 
-fn parse_vs_component_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<VsComponentRule>>> {
+fn parse_vs_component_rules(input: Span<'_>) -> VsComponentRulesResult<'_> {
     let mut components = Vec::new();
+    let mut caret_rules: Vec<Spanned<CaretValueRule>> = Vec::new();
     let mut remaining = input;
     loop {
         let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
@@ -562,9 +822,25 @@ fn parse_vs_component_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Vs
             remaining = inp;
             continue;
         }
+        // Check if this is a caret rule (* ^key = value) — parse and capture, don't treat as component
+        let after_star = peek.fragment().trim_start_matches('*').trim_start();
+        if after_star.starts_with('^') {
+            use crate::parser::rules::parse_caret_value_rule_pub;
+            if let Ok((inp, rule)) = parse_caret_value_rule_pub(peek) {
+                caret_rules.push(rule);
+                remaining = inp;
+                continue;
+            }
+        }
         match parse_vs_component_rule(peek) {
             Ok((inp, rule)) => {
-                components.push(rule);
+                let has_content = !rule.value.concepts.is_empty()
+                    || !rule.value.from_vs.is_empty()
+                    || !rule.value.filters.is_empty()
+                    || rule.value.system.is_some();
+                if has_content {
+                    components.push(rule);
+                }
                 remaining = inp;
             }
             Err(_) => {
@@ -574,11 +850,12 @@ fn parse_vs_component_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Vs
             }
         }
     }
-    Ok((remaining, components))
+    Ok((remaining, (components, caret_rules)))
 }
 
-fn parse_concept_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<ConceptRule>>> {
+fn parse_concept_rules(input: Span<'_>) -> ConceptRulesResult<'_> {
     let mut concepts = Vec::new();
+    let mut caret_rules: Vec<Spanned<CaretValueRule>> = Vec::new();
     let mut remaining = input;
     loop {
         let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
@@ -595,6 +872,16 @@ fn parse_concept_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Concept
             let (inp, _) = opt(char('\n'))(inp)?;
             remaining = inp;
             continue;
+        }
+        // Check if this is a caret rule (* ^key = value)
+        let after_star = peek.fragment().trim_start_matches('*').trim_start();
+        if after_star.starts_with('^') {
+            use crate::parser::rules::parse_caret_value_rule_pub;
+            if let Ok((inp, rule)) = parse_caret_value_rule_pub(peek) {
+                caret_rules.push(rule);
+                remaining = inp;
+                continue;
+            }
         }
         match parse_concept_rule(peek) {
             Ok((inp, rule)) => {
@@ -608,7 +895,7 @@ fn parse_concept_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Concept
             }
         }
     }
-    Ok((remaining, concepts))
+    Ok((remaining, (concepts, caret_rules)))
 }
 
 fn parse_mapping_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<MappingRule>>> {

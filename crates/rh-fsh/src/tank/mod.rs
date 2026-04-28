@@ -68,7 +68,10 @@ impl FshTank {
                 FshEntity::Profile(p) => {
                     let name = p.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.profiles.insert(name, p);
@@ -77,7 +80,10 @@ impl FshTank {
                 FshEntity::Extension(e) => {
                     let name = e.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.extensions.insert(name, e);
@@ -86,7 +92,10 @@ impl FshTank {
                 FshEntity::Logical(l) => {
                     let name = l.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.logicals.insert(name, l);
@@ -95,7 +104,10 @@ impl FshTank {
                 FshEntity::Resource(r) => {
                     let name = r.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.resources.insert(name, r);
@@ -104,7 +116,10 @@ impl FshTank {
                 FshEntity::Instance(i) => {
                     let name = i.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.instances.insert(name, i);
@@ -113,7 +128,10 @@ impl FshTank {
                 FshEntity::ValueSet(vs) => {
                     let name = vs.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.value_sets.insert(name, vs);
@@ -122,7 +140,10 @@ impl FshTank {
                 FshEntity::CodeSystem(cs) => {
                     let name = cs.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.code_systems.insert(name, cs);
@@ -131,7 +152,10 @@ impl FshTank {
                 FshEntity::Invariant(inv) => {
                     let name = inv.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.invariants.insert(name, inv);
@@ -140,7 +164,10 @@ impl FshTank {
                 FshEntity::Mapping(m) => {
                     let name = m.metadata.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.mappings.insert(name, m);
@@ -149,7 +176,10 @@ impl FshTank {
                 FshEntity::RuleSet(rs) => {
                     let name = rs.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.rule_sets.insert(name, rs);
@@ -158,7 +188,10 @@ impl FshTank {
                 FshEntity::ParamRuleSet(prs) => {
                     let name = prs.name.clone();
                     if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity { name, location: loc });
+                        errors.push(FshError::DuplicateEntity {
+                            name,
+                            location: loc,
+                        });
                     } else {
                         self.known_names.insert(name.clone());
                         self.param_rule_sets.insert(name, prs);

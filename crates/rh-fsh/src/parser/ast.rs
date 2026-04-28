@@ -51,6 +51,8 @@ pub struct SdMetadata {
     pub id: Option<String>,
     pub title: Option<String>,
     pub description: Option<String>,
+    /// FSH Characteristics (only used for Logical models, e.g. `#can-be-target`)
+    pub characteristics: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +114,7 @@ pub struct VsMetadata {
 pub struct ValueSet {
     pub metadata: VsMetadata,
     pub components: Vec<Spanned<VsComponentRule>>,
+    pub caret_rules: Vec<Spanned<CaretValueRule>>,
 }
 
 // ============================================================================
@@ -130,6 +133,7 @@ pub struct CsMetadata {
 pub struct CodeSystem {
     pub metadata: CsMetadata,
     pub concepts: Vec<Spanned<ConceptRule>>,
+    pub caret_rules: Vec<Spanned<CaretValueRule>>,
 }
 
 // ============================================================================
@@ -172,6 +176,8 @@ pub struct ParamRuleSet {
     pub name: String,
     pub params: Vec<String>,
     pub rules: Vec<Spanned<SdRule>>,
+    /// Raw text of each rule line (including leading `* `), used for parameter substitution
+    pub raw_rules: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -215,7 +221,7 @@ pub struct CardRule {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlagRule {
-    pub path: FshPath,
+    pub paths: Vec<FshPath>,
     pub flags: Vec<FshFlag>,
 }
 
@@ -354,6 +360,12 @@ pub enum FshValue {
     },
     Reference(String),
     Canonical(String),
+    /// A date value like 1960-04-25
+    Date(String),
+    /// A dateTime value like 1960-04-25T10:00:00Z
+    DateTime(String),
+    /// An inline instance reference: `contained[+] = myInstance`
+    InstanceRef(String),
 }
 
 // ============================================================================
@@ -366,13 +378,43 @@ pub struct FshPath {
 }
 
 impl FshPath {
-    /// Join path segments with '.'
+    /// Join path segments with '.', rendering slices as `element[slice]`.
     pub fn to_dot_string(&self) -> String {
         self.segments
             .iter()
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
             .join(".")
+    }
+
+    /// Build FHIR SD `path` value: `base.element.subelement` (slice names stripped).
+    pub fn to_fhir_path(&self, base: &str) -> String {
+        if self.segments.is_empty() {
+            return base.to_string();
+        }
+        let parts: Vec<String> = self.segments.iter().map(|s| s.to_path_part()).collect();
+        format!("{}.{}", base, parts.join("."))
+    }
+
+    /// Build FHIR SD `id` value: `base.element:slice.subelement` (colon-separated slices).
+    pub fn to_fhir_id(&self, base: &str) -> String {
+        if self.segments.is_empty() {
+            return base.to_string();
+        }
+        let mut parts: Vec<String> = Vec::new();
+        for seg in &self.segments {
+            match seg {
+                FshPathSegment::Slice { element, slice } => {
+                    parts.push(format!("{element}:{slice}"));
+                }
+                FshPathSegment::Name(n) => {
+                    // Normalize choice-type resolved names (e.g. valueString → value[x]) in ids too
+                    parts.push(normalize_choice_type_name(n).unwrap_or_else(|| n.clone()));
+                }
+                other => parts.push(other.to_string()),
+            }
+        }
+        format!("{}.{}", base, parts.join("."))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -390,9 +432,128 @@ impl std::fmt::Display for FshPath {
 pub enum FshPathSegment {
     Name(String),
     Index(u32),
-    Slice(String),
+    /// Sliced element: `identifier[AccessionIdentifier]`
+    Slice {
+        element: String,
+        slice: String,
+    },
     ChoiceType(String),
     Extension(String),
+}
+
+/// Known FHIR R4 choice element base names (the part before `[x]`).
+/// These are the element bases that can appear with type suffixes (e.g., `value` → `valueString`, `valueQuantity`).
+/// Only names in this list will be normalized back to the `[x]` form.
+static FHIR_CHOICE_BASES: &[&str] = &[
+    "value",         // Extension.value[x], Observation.value[x], many others
+    "deceased",      // Patient.deceased[x]
+    "effective",     // Observation.effective[x], DiagnosticReport.effective[x]
+    "onset",         // Condition.onset[x]
+    "abatement",     // Condition.abatement[x]
+    "multipleBirth", // Patient.multipleBirth[x]
+    "occurrence",    // Immunization.occurrence[x], MedicationAdministration.occurrence[x]
+    "performed",     // Procedure.performed[x]
+    "serviced",      // ExplanationOfBenefit.serviced[x]
+    "scheduled",     // CarePlan.activity.detail.scheduled[x]
+    "asNeeded",      // Dosage.asNeeded[x]
+    "dose",          // Dosage.doseAndRate.dose[x]
+    "rate",          // Dosage.doseAndRate.rate[x]
+    "age",           // FamilyMemberHistory.age[x]
+    "born",          // FamilyMemberHistory.born[x]
+    "due",           // Goal.due[x]
+    "answer",        // QuestionnaireResponse.item.answer.value[x]
+    "timing",        // PlanDefinition.action.timing[x]
+    "allowed",       // CoverageEligibilityResponse benefit.allowed[x]
+    "used",          // CoverageEligibilityResponse benefit.used[x]
+    "fastingStatus", // ServiceRequest.fastingStatus[x]
+    "diagnosis",     // Claim.diagnosis.diagnosis[x]
+    "collected",     // Specimen.collection.collected[x]
+    "quantity",      // Substance.ingredient.quantity[x]
+];
+
+/// FHIR type names that can appear as capitalized suffixes in choice-type path names.
+static FHIR_TYPE_SUFFIXES: &[&str] = &[
+    // Complex types (longer first to match greedily)
+    "CodeableConcept",
+    "SampledData",
+    "BackboneElement",
+    "RelatedArtifact",
+    "ParameterDefinition",
+    "TriggerDefinition",
+    "ContactDetail",
+    "DataRequirement",
+    "UsageContext",
+    "SimpleQuantity",
+    "Contributor",
+    "Attachment",
+    "Expression",
+    "HumanName",
+    "Identifier",
+    "Annotation",
+    "Signature",
+    "Canonical",
+    "Quantity",
+    "Distance",
+    "Duration",
+    "Timing",
+    "Period",
+    "Range",
+    "Ratio",
+    "Count",
+    "Money",
+    "Coding",
+    "Address",
+    "ContactPoint",
+    "Reference",
+    "Age",
+    // Primitive types
+    "Base64Binary",
+    "PositiveInt",
+    "UnsignedInt",
+    "DateTime",
+    "Instant",
+    "Boolean",
+    "Integer",
+    "Decimal",
+    "String",
+    "Xhtml",
+    "Date",
+    "Time",
+    "Code",
+    "Uuid",
+    "Oid",
+    "Uri",
+    "Url",
+    "Id",
+];
+
+/// Attempt to normalize a choice-type resolved name back to its `[x]` form.
+/// `valueString` → `value[x]`, `deceasedBoolean` → `deceased[x]`, `effectiveDateTime` → `effective[x]`
+/// Returns `None` if the name doesn't match a known FHIR choice element pattern.
+pub fn normalize_choice_type_name(name: &str) -> Option<String> {
+    for suffix in FHIR_TYPE_SUFFIXES {
+        if let Some(base) = name.strip_suffix(suffix) {
+            // Only normalize when the base is a known FHIR choice element name
+            if FHIR_CHOICE_BASES.contains(&base) {
+                return Some(format!("{base}[x]"));
+            }
+        }
+    }
+    None
+}
+
+impl FshPathSegment {
+    /// Render just the element name (no slice suffix) — used for FHIR SD `path`.
+    /// Choice-type resolved names (e.g., `valueString`, `deceasedBoolean`) are normalized to `[x]` form.
+    pub fn to_path_part(&self) -> String {
+        match self {
+            FshPathSegment::Name(n) => normalize_choice_type_name(n).unwrap_or_else(|| n.clone()),
+            FshPathSegment::Index(i) => format!("[{i}]"),
+            FshPathSegment::Slice { element, .. } => element.clone(),
+            FshPathSegment::ChoiceType(t) => format!("{t}[x]"),
+            FshPathSegment::Extension(e) => format!("extension({e})"),
+        }
+    }
 }
 
 impl std::fmt::Display for FshPathSegment {
@@ -400,8 +561,8 @@ impl std::fmt::Display for FshPathSegment {
         match self {
             FshPathSegment::Name(n) => write!(f, "{n}"),
             FshPathSegment::Index(i) => write!(f, "[{i}]"),
-            FshPathSegment::Slice(s) => write!(f, "[{s}]"),
-            FshPathSegment::ChoiceType(t) => write!(f, "({t})"),
+            FshPathSegment::Slice { element, slice } => write!(f, "{element}[{slice}]"),
+            FshPathSegment::ChoiceType(t) => write!(f, "{t}[x]"),
             FshPathSegment::Extension(e) => write!(f, "extension({e})"),
         }
     }

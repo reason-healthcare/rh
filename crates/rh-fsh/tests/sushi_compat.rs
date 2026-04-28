@@ -18,7 +18,7 @@
 //! cargo test -p rh-fsh --test sushi_compat test_value_sets -- --include-ignored
 //! ```
 
-use rh_fsh::compile_fsh;
+use rh_fsh::{CompilerOptions, FshCompiler, FshConfig};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -55,7 +55,7 @@ fn discover_test_cases() -> Vec<CompatTestCase> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .filter(|e| e.path().extension().map_or(false, |x| x == "fsh"))
+        .filter(|e| e.path().extension().is_some_and(|x| x == "fsh"))
     {
         let fixture_path = entry.path().to_path_buf();
         let rel = fixture_path.strip_prefix(&fixtures).unwrap();
@@ -63,7 +63,11 @@ fn discover_test_cases() -> Vec<CompatTestCase> {
         let stem = rel.with_extension("");
         let golden_dir = goldens.join(&stem);
         let name = stem.to_string_lossy().into_owned();
-        cases.push(CompatTestCase { fixture_path, golden_dir, name });
+        cases.push(CompatTestCase {
+            fixture_path,
+            golden_dir,
+            name,
+        });
     }
 
     cases
@@ -72,10 +76,21 @@ fn discover_test_cases() -> Vec<CompatTestCase> {
 // ── Compilation ──────────────────────────────────────────────────────────────
 
 fn compile_fixture(fsh_path: &Path) -> Result<Vec<Value>, String> {
-    let source = fs::read_to_string(fsh_path)
-        .map_err(|e| format!("Failed to read fixture: {e}"))?;
+    let source =
+        fs::read_to_string(fsh_path).map_err(|e| format!("Failed to read fixture: {e}"))?;
     let name = fsh_path.file_name().unwrap().to_string_lossy();
-    let pkg = compile_fsh(&source, &name)
+    let compiler = FshCompiler::new(CompilerOptions {
+        config: FshConfig {
+            canonical: Some("http://rh-fsh-test.example.org".to_string()),
+            status: Some("draft".to_string()),
+            version: Some("0.1.0".to_string()),
+            fhir_version: Some("4.0.1".to_string()),
+            ..Default::default()
+        },
+        pretty_print: true,
+    });
+    let pkg = compiler
+        .compile(&source, &name)
         .map_err(|e| format!("Compile error: {e}"))?;
     Ok(pkg.resources)
 }
@@ -92,7 +107,7 @@ fn load_goldens(golden_dir: &Path) -> Vec<Value> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .filter(|e| e.path().extension().map_or(false, |x| x == "json"))
+        .filter(|e| e.path().extension().is_some_and(|x| x == "json"))
     {
         if let Ok(text) = fs::read_to_string(entry.path()) {
             if let Ok(val) = serde_json::from_str::<Value>(&text) {
@@ -106,8 +121,16 @@ fn load_goldens(golden_dir: &Path) -> Vec<Value> {
 // ── Comparison helpers ───────────────────────────────────────────────────────
 
 fn resource_key(v: &Value) -> (String, String) {
-    let rt = v.get("resourceType").and_then(Value::as_str).unwrap_or("").to_string();
-    let id = v.get("id").and_then(Value::as_str).unwrap_or("").to_string();
+    let rt = v
+        .get("resourceType")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let id = v
+        .get("id")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
     (rt, id)
 }
 
@@ -116,7 +139,9 @@ fn compare_field(actual: &Value, golden: &Value, field: &str, path: &str, diffs:
         (None, None) => {}
         (Some(_), None) => {} // rh-fsh adds a field golden doesn't have — not a failure
         (None, Some(g)) => {
-            diffs.push(format!("{path}/{field}: missing in rh-fsh output, golden has {g}"));
+            diffs.push(format!(
+                "{path}/{field}: missing in rh-fsh output, golden has {g}"
+            ));
         }
         (Some(a), Some(g)) => {
             if a != g {
@@ -149,7 +174,11 @@ fn extract_concepts(cs: &Value) -> Vec<(String, String)> {
                 .iter()
                 .filter_map(|c| {
                     let code = c.get("code").and_then(Value::as_str)?.to_string();
-                    let display = c.get("display").and_then(Value::as_str).unwrap_or("").to_string();
+                    let display = c
+                        .get("display")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
                     Some((code, display))
                 })
                 .collect()
@@ -226,7 +255,16 @@ fn compare_structure_def(actual: &Value, golden: &Value, path: &str, diffs: &mut
 fn compare_instance(actual: &Value, golden: &Value, path: &str, diffs: &mut Vec<String>) {
     // For instances, compare all top-level scalar and object fields
     // except meta (which may differ) and text (narrative, not set by rh-fsh)
-    let skip_fields = ["meta", "text", "resourceType", "id", "url", "name", "title", "description"];
+    let skip_fields = [
+        "meta",
+        "text",
+        "resourceType",
+        "id",
+        "url",
+        "name",
+        "title",
+        "description",
+    ];
 
     if let Some(golden_obj) = golden.as_object() {
         if let Some(actual_obj) = actual.as_object() {
@@ -253,7 +291,10 @@ fn compare_instance(actual: &Value, golden: &Value, path: &str, diffs: &mut Vec<
 }
 
 fn compare_resource(actual: &Value, golden: &Value, fixture_name: &str) -> Vec<String> {
-    let rt = golden.get("resourceType").and_then(Value::as_str).unwrap_or("?");
+    let rt = golden
+        .get("resourceType")
+        .and_then(Value::as_str)
+        .unwrap_or("?");
     let id = golden.get("id").and_then(Value::as_str).unwrap_or("?");
     let path = format!("{fixture_name}/{rt}/{id}");
     let mut diffs = Vec::new();
@@ -319,7 +360,10 @@ fn run_category(category: &str) {
     for case in &category_cases {
         let golden = load_goldens(&case.golden_dir);
         if golden.is_empty() {
-            eprintln!("SKIP {} (no goldens — run scripts/generate-fsh-goldens.sh)", case.name);
+            eprintln!(
+                "SKIP {} (no goldens — run scripts/generate-fsh-goldens.sh)",
+                case.name
+            );
             skip_count += 1;
             continue;
         }
@@ -412,7 +456,10 @@ fn test_all_sushi_compat() {
     );
 
     if !failures.is_empty() {
-        panic!("{} sushi compatibility failure(s) (see above)", failures.len());
+        panic!(
+            "{} sushi compatibility failure(s) (see above)",
+            failures.len()
+        );
     }
 }
 

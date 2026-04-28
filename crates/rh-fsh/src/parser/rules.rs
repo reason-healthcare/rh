@@ -92,10 +92,7 @@ pub fn parse_vs_component_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<VsC
     Ok((input, Spanned::new(rule.1, loc)))
 }
 
-fn parse_vs_component_body(
-    input: Span<'_>,
-    inclusion: bool,
-) -> IResult<Span<'_>, VsComponentRule> {
+fn parse_vs_component_body(input: Span<'_>, inclusion: bool) -> IResult<Span<'_>, VsComponentRule> {
     // Try "codes from system" syntax
     if input.fragment().starts_with("codes") {
         let (input, _) = tag("codes")(input)?;
@@ -143,8 +140,19 @@ fn parse_vs_concept_list(input: Span<'_>) -> IResult<Span<'_>, Vec<VsConceptRef>
             break;
         }
         match coded_value(inp) {
-            Ok((inp2, FshValue::Code { system, code, display })) => {
-                concepts.push(VsConceptRef { code, system, display });
+            Ok((
+                inp2,
+                FshValue::Code {
+                    system,
+                    code,
+                    display,
+                },
+            )) => {
+                concepts.push(VsConceptRef {
+                    code,
+                    system,
+                    display,
+                });
                 remaining = inp2;
                 // skip comma separator if present
                 let (inp2, _) = ws(remaining)?;
@@ -178,7 +186,8 @@ fn parse_vs_from_clause(
         if inp.fragment().starts_with("system") {
             let (inp, _) = tag("system")(inp)?;
             let (inp, _) = ws(inp)?;
-            let (inp, sys) = identifier(inp)?;
+            let (inp, sys) = take_while1(|c: char| !c.is_whitespace())(inp)?;
+            let sys = sys.fragment().to_string();
             system = Some(sys);
             remaining = inp;
         } else if inp.fragment().starts_with("valueset") {
@@ -229,8 +238,27 @@ fn parse_vs_filter(input: Span<'_>) -> IResult<Span<'_>, VsFilter> {
         map(tag("exists"), |s: Span<'_>| s.fragment().to_string()),
     ))(input)?;
     let (input, _) = ws(input)?;
-    let (input, value) = alt((quoted_string, identifier))(input)?;
-    Ok((input, VsFilter { property, op, value }))
+    let (input, value) = alt((
+        quoted_string,
+        // Handle #code filter values (e.g., `concept is-a #64940007`)
+        parse_hash_code_value,
+        identifier,
+    ))(input)?;
+    Ok((
+        input,
+        VsFilter {
+            property,
+            op,
+            value,
+        },
+    ))
+}
+
+/// Parse a `#code` value used in VS filters (e.g., `concept is-a #64940007`)
+fn parse_hash_code_value(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, _) = char('#')(input)?;
+    let (input, code) = take_while1(|c: char| !c.is_whitespace())(input)?;
+    Ok((input, code.fragment().to_string()))
 }
 
 /// Parse a concept rule: `* #code "display" "definition"`
@@ -243,11 +271,14 @@ pub fn parse_concept_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<ConceptR
     // Parse hierarchy parents (prefixed with '#' indented)
     // For simplicity: just parse the main concept
     let (input, _) = char('#')(input)?;
-    let (input, code) =
-        take_while1(|c: char| !c.is_whitespace() && c != '"')(input)?;
-    let (input, _) = ws(input)?;
+    let (input, code) = take_while1(|c: char| !c.is_whitespace() && c != '"')(input)?;
+    // Allow trivia (including newlines) before display — FSH supports multi-line concepts:
+    //   * #code
+    //       "display"
+    //       "definition"
+    let (input, _) = trivia(input)?;
     let (input, display) = opt(quoted_string)(input)?;
-    let (input, _) = ws(input)?;
+    let (input, _) = trivia(input)?;
     let (input, definition) = opt(quoted_string)(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;
@@ -330,12 +361,42 @@ fn parse_card_rule_inner(input: Span<'_>) -> IResult<Span<'_>, CardRule> {
     let (input, (min, max)) = cardinal(input)?;
     let (input, _) = ws(input)?;
     let (input, flags) = flags_list(input)?;
-    Ok((input, CardRule { path, min, max, flags }))
+    Ok((
+        input,
+        CardRule {
+            path,
+            min,
+            max,
+            flags,
+        },
+    ))
 }
 
 fn parse_flag_rule_inner(input: Span<'_>) -> IResult<Span<'_>, FlagRule> {
-    let (input, path) = fsh_path(input)?;
-    let (input, _) = ws(input)?;
+    // Parse one or more paths separated by `and` keyword, then flags
+    let (input, first_path) = fsh_path(input)?;
+    let mut paths = vec![first_path];
+
+    let mut remaining = input;
+    loop {
+        let (after_ws, _) = ws(remaining)?;
+        if after_ws.fragment().starts_with("and ") || after_ws.fragment().starts_with("and\t") {
+            let (after_and, _) = tag("and")(after_ws)?;
+            let (after_ws2, _) = ws(after_and)?;
+            match fsh_path(after_ws2) {
+                Ok((after_path, path)) => {
+                    paths.push(path);
+                    remaining = after_path;
+                }
+                Err(_) => break,
+            }
+        } else {
+            remaining = after_ws;
+            break;
+        }
+    }
+
+    let (input, _) = ws(remaining)?;
     let (input, flags) = flags_list(input)?;
     if flags.is_empty() {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -343,7 +404,7 @@ fn parse_flag_rule_inner(input: Span<'_>) -> IResult<Span<'_>, FlagRule> {
             nom::error::ErrorKind::Many1,
         )));
     }
-    Ok((input, FlagRule { path, flags }))
+    Ok((input, FlagRule { paths, flags }))
 }
 
 fn parse_binding_rule_inner(input: Span<'_>) -> IResult<Span<'_>, BindingRule> {
@@ -375,40 +436,37 @@ fn parse_binding_strength(input: Span<'_>) -> IResult<Span<'_>, String> {
 fn parse_assignment_rule_inner(input: Span<'_>) -> IResult<Span<'_>, AssignmentRule> {
     let (input, path) = fsh_path(input)?;
     let (input, _) = ws(input)?;
-    // Optional '=' or '!='
-    let (input, exactly) = if input.fragment().starts_with("!=") {
-        let (inp, _) = tag("!=")(input)?;
-        (inp, false) // negated, but we treat as not-exactly for simplicity
-    } else if input.fragment().starts_with('=') {
-        let (inp, _) = char('=')(input)?;
-        if inp.fragment().starts_with('=') {
-            // '==' means exactly
-            let (inp, _) = char('=')(inp)?;
-            (inp, true)
-        } else {
-            (inp, false)
-        }
-    } else {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Char,
-        )));
-    };
+    let (input, _) = char('=')(input)?;
     let (input, _) = ws(input)?;
     let (input, value) = fsh_value(input)?;
-    Ok((input, AssignmentRule { path, value, exactly }))
+    // Check for optional (exactly) suffix
+    let (input, _) = ws(input)?;
+    let (input, exactly) = if input.fragment().starts_with("(exactly)") {
+        let (inp, _) = tag("(exactly)")(input)?;
+        (inp, true)
+    } else {
+        (input, false)
+    };
+    Ok((
+        input,
+        AssignmentRule {
+            path,
+            value,
+            exactly,
+        },
+    ))
 }
 
 fn parse_contains_rule_inner(input: Span<'_>) -> IResult<Span<'_>, ContainsRule> {
     let (input, path) = fsh_path(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = tag("contains")(input)?;
-    let (input, _) = ws(input)?;
+    let (input, _) = trivia(input)?;
     let (input, items) = separated_list1(
         |inp| {
-            let (inp, _) = ws(inp)?;
+            let (inp, _) = trivia(inp)?;
             let (inp, _) = tag("and")(inp)?;
-            let (inp, _) = ws(inp)?;
+            let (inp, _) = trivia(inp)?;
             Ok((inp, ()))
         },
         parse_contains_item,
@@ -434,6 +492,10 @@ fn parse_contains_item(input: Span<'_>) -> IResult<Span<'_>, ContainsItem> {
     let (input, cardinality) = opt(cardinal)(input)?;
     let (min, max) = cardinality.unwrap_or((None, None));
 
+    // Consume optional flag keywords (MS, SU, ?!, N, TU, D) that may follow the cardinality
+    let (input, _) = ws(input)?;
+    let (input, _) = opt(parse_flags_inline)(input)?;
+
     Ok((
         input,
         ContainsItem {
@@ -443,6 +505,46 @@ fn parse_contains_item(input: Span<'_>) -> IResult<Span<'_>, ContainsItem> {
             max,
         },
     ))
+}
+
+/// Consume any flag keywords appearing inline (MS, SU, ?!, N, TU, D) without capturing them.
+/// Used inside contains items to absorb flags that we don't store on the slice itself.
+fn parse_flags_inline(input: Span<'_>) -> IResult<Span<'_>, ()> {
+    let flag_kws = ["MS", "SU", "?!", "N", "TU", "D"];
+    let mut remaining = input;
+    let mut consumed = false;
+    loop {
+        let mut matched = false;
+        for kw in &flag_kws {
+            if remaining.fragment().starts_with(kw) {
+                let rest = &remaining.fragment()[kw.len()..];
+                if rest.is_empty()
+                    || rest.starts_with(' ')
+                    || rest.starts_with('\t')
+                    || rest.starts_with('\n')
+                    || rest.starts_with('\r')
+                {
+                    let (inp, _) = tag(*kw)(remaining)?;
+                    let (inp, _) = ws(inp)?;
+                    remaining = inp;
+                    matched = true;
+                    consumed = true;
+                    break;
+                }
+            }
+        }
+        if !matched {
+            break;
+        }
+    }
+    if consumed {
+        Ok((remaining, ()))
+    } else {
+        Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )))
+    }
 }
 
 fn parse_only_rule_inner(input: Span<'_>) -> IResult<Span<'_>, OnlyRule> {
@@ -457,10 +559,7 @@ fn parse_only_rule_inner(input: Span<'_>) -> IResult<Span<'_>, OnlyRule> {
             let (inp, _) = ws(inp)?;
             Ok((inp, ()))
         },
-        alt((
-            parse_reference_type,
-            map(identifier, |s| s),
-        )),
+        alt((parse_reference_type, map(identifier, |s| s))),
     )(input)?;
     Ok((input, OnlyRule { path, types }))
 }
@@ -598,4 +697,16 @@ fn parse_add_element_rule_inner(input: Span<'_>) -> IResult<Span<'_>, AddElement
 fn parse_path_rule_inner(input: Span<'_>) -> IResult<Span<'_>, PathRule> {
     let (input, path) = fsh_path(input)?;
     Ok((input, PathRule { path }))
+}
+
+/// Parse a standalone caret value rule line (starting with `*`) for use in VS/CS contexts.
+/// Returns a Spanned<CaretValueRule> including source location.
+pub fn parse_caret_value_rule_pub(input: Span<'_>) -> IResult<Span<'_>, Spanned<CaretValueRule>> {
+    let loc = input.location();
+    let (input, _) = char('*')(input)?;
+    let (input, _) = ws(input)?;
+    let (input, rule) = parse_caret_value_rule_inner(input)?;
+    let (input, _) = take_while(|c| c != '\n')(input)?;
+    let (input, _) = opt(char('\n'))(input)?;
+    Ok((input, Spanned::new(rule, loc)))
 }

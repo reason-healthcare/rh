@@ -30,7 +30,11 @@ pub enum FshCommands {
 
 pub async fn handle_command(cmd: FshCommands) -> Result<()> {
     match cmd {
-        FshCommands::Compile { inputs, output, compact } => {
+        FshCommands::Compile {
+            inputs,
+            output,
+            compact,
+        } => {
             let paths: Vec<PathBuf> = inputs.iter().map(PathBuf::from).collect();
             let package = compile_fsh_files(&paths)?;
             if !package.errors.is_empty() {
