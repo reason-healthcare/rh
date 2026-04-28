@@ -21,7 +21,7 @@ Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Se
 | ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
 | ✅ | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, package loader, snapshot generation) |
 | ✅ | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
-| 🔜 | rh-publisher  | FHIR Package publisher and related tools |
+| ✅ | [rh-packager](crates/rh-packager/README.md)  | FHIR Package assembler and related tools |
 | 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
 | ✅ | [rh-cql](crates/rh-cql/README.md)  | CQL compiler, evaluator, explain mode, and source maps |
 | ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
@@ -49,6 +49,7 @@ cargo build
 │   ├── rh-foundation/         # Foundation utilities (errors, HTTP, I/O, CLI, loader, snapshot)
 │   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
 │   ├── rh-fsh/                # FHIR Shorthand (FSH) to FHIR JSON compiler
+│   ├── rh-packager/           # FHIR Package assembler
 │   ├── rh-validator/          # FHIR resource validation library
 │   ├── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
 │   └── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
@@ -145,6 +146,9 @@ rh fsh compile myprofile.fsh --output output/
 
 # ValueSet Compose Language (VCL) operations
 rh vcl --help
+
+# Build a FHIR Package from a source directory
+rh publish build my-package/
 ```
 
 Check code formatting:

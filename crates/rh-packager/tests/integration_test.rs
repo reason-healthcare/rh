@@ -1,6 +1,6 @@
-//! Integration tests for the rh-publisher pipeline.
+//! Integration tests for the rh-packager pipeline.
 
-use rh_publisher::pipeline::{build, check, lock, pack_dir};
+use rh_packager::pipeline::{build, check, lock, pack_dir};
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
@@ -189,11 +189,11 @@ fn build_with_snapshot_and_validate_hooks() {
             // Acceptable failures: validation error if FHIR core packages not installed.
             // Must NOT be an unknown processor error or sync error.
             assert!(
-                !matches!(e, rh_publisher::PublisherError::UnknownProcessor(_)),
+                !matches!(e, rh_packager::PublisherError::UnknownProcessor(_)),
                 "Pipeline must not fail with UnknownProcessor: {e:?}"
             );
             assert!(
-                !matches!(e, rh_publisher::PublisherError::IgSync(_)),
+                !matches!(e, rh_packager::PublisherError::IgSync(_)),
                 "Pipeline must not fail with IgSync: {e:?}"
             );
         }

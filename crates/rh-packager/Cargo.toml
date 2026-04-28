@@ -1,5 +1,5 @@
 [package]
-name = "rh-publisher"
+name = "rh-packager"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -7,8 +7,8 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
-description = "FHIR Package publisher — assembles conformant FHIR Packages from a source directory"
-keywords = ["fhir", "healthcare", "publisher", "package", "hl7"]
+description = "FHIR Package assembler — builds conformant FHIR Packages from a source directory"
+keywords = ["fhir", "healthcare", "packager", "package", "hl7"]
 categories = ["command-line-utilities", "api-bindings"]
 readme = "README.md"
 
