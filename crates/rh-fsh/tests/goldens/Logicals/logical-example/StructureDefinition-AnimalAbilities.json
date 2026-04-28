@@ -1,0 +1,50 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "AnimalAbilities",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/AnimalAbilities",
+  "version": "0.1.0",
+  "name": "AnimalAbilities",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://rh-fsh-test.example.org/StructureDefinition/AnimalAbilities",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Base",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "AnimalAbilities",
+        "path": "AnimalAbilities",
+        "short": "AnimalAbilities",
+        "definition": "AnimalAbilities"
+      },
+      {
+        "id": "AnimalAbilities.hasLungs",
+        "path": "AnimalAbilities.hasLungs",
+        "short": "Does the animal have lungs?",
+        "definition": "Does the animal have lungs?",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "AnimalAbilities.canSwim",
+        "path": "AnimalAbilities.canSwim",
+        "short": "Can the animal swim?",
+        "definition": "Can the animal swim?",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

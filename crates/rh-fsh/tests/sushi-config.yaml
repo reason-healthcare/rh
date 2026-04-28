@@ -1,0 +1,6 @@
+id: rh-fsh-test
+name: RhFshTest
+canonical: http://rh-fsh-test.example.org
+version: 0.1.0
+fhirVersion: 4.0.1
+FSHOnly: true

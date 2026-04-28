@@ -1,0 +1,43 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "medication-administration-with-reason",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/medication-administration-with-reason",
+  "version": "0.1.0",
+  "name": "MedicationAdministrationWithReason",
+  "title": "Medication Administration With Reason Required",
+  "status": "draft",
+  "description": "The reason for this medication administration must be documented using a code or a reference, or both.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "MedicationAdministration",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/MedicationAdministration",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "MedicationAdministration",
+        "path": "MedicationAdministration",
+        "constraint": [
+          {
+            "key": "reason-required",
+            "severity": "error",
+            "human": "Either reasonCode or reasonReference MUST be populated",
+            "expression": "reasonCode.exists() or reasonReference.exists()",
+            "source": "http://rh-fsh-test.example.org/StructureDefinition/medication-administration-with-reason"
+          }
+        ]
+      },
+      {
+        "id": "MedicationAdministration.reasonCode",
+        "path": "MedicationAdministration.reasonCode",
+        "mustSupport": true
+      },
+      {
+        "id": "MedicationAdministration.reasonReference",
+        "path": "MedicationAdministration.reasonReference",
+        "mustSupport": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "resourceType": "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject",
+  "id": "ExamplePetPhil",
+  "name": "Phil",
+  "age": 2,
+  "traits": {
+    "canSwim": true
+  }
+}

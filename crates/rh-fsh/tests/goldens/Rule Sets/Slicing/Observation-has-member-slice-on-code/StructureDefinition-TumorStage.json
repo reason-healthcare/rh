@@ -1,0 +1,30 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TumorStage",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/TumorStage",
+  "version": "0.1.0",
+  "name": "TumorStage",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "21905-5",
+              "system": "http://loinc.org"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

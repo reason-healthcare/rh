@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "PetAsResourceLikeObject",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics",
+      "valueCode": "can-be-target"
+    }
+  ],
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject",
+  "version": "0.1.0",
+  "name": "PetAsResourceLikeObject",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject",
+  "baseDefinition": "http://rh-fsh-test.example.org/StructureDefinition/Animal",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "PetAsResourceLikeObject",
+        "path": "PetAsResourceLikeObject",
+        "short": "PetAsResourceLikeObject",
+        "definition": "PetAsResourceLikeObject"
+      },
+      {
+        "id": "PetAsResourceLikeObject.id",
+        "path": "PetAsResourceLikeObject.id",
+        "short": "The id",
+        "definition": "The id",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "PetAsResourceLikeObject.isVaccinated",
+        "path": "PetAsResourceLikeObject.isVaccinated",
+        "short": "Is the pet vaccinated?",
+        "definition": "Is the pet vaccinated?",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

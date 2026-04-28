@@ -6,6 +6,7 @@ mod codegen;
 mod cql;
 mod download;
 mod fhirpath;
+mod fsh;
 mod snapshot;
 mod validator;
 mod vcl;
@@ -48,6 +49,10 @@ enum Commands {
     /// Parse and translate VCL (ValueSet Compose Language) expressions
     #[clap(subcommand)]
     Vcl(vcl::VclCommands),
+
+    /// Compile and work with FHIR Shorthand (FSH) files
+    #[clap(subcommand)]
+    Fsh(fsh::FshCommands),
 
     /// Generate and manage StructureDefinition snapshots
     #[clap(subcommand)]
@@ -104,6 +109,12 @@ async fn main() -> Result<()> {
         Commands::Vcl(cmd) => {
             if let Err(e) = vcl::handle_command(cmd).await {
                 error!("VCL error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Fsh(cmd) => {
+            if let Err(e) = fsh::handle_command(cmd).await {
+                error!("FSH error: {}", e);
                 std::process::exit(1);
             }
         }

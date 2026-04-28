@@ -1,0 +1,23 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "MustImplementThisResource",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/MustImplementThisResource",
+  "version": "0.1.0",
+  "name": "MustImplementThisResource",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Person",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Person",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Person",
+        "path": "Person",
+        "mustSupport": true
+      }
+    ]
+  }
+}

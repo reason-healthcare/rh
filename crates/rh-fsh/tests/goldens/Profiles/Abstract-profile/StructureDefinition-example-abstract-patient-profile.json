@@ -1,0 +1,41 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-abstract-patient-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/example-abstract-patient-profile",
+  "version": "0.1.0",
+  "name": "ExampleAbstractPatientProfile",
+  "title": "Example Abstract Patient Profile",
+  "status": "draft",
+  "description": "Example of an abstract profile of Patient",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": true,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.name",
+        "path": "Patient.name",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.name.family",
+        "path": "Patient.name.family",
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.name.given",
+        "path": "Patient.name.given",
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.deceased[x]",
+        "path": "Patient.deceased[x]",
+        "min": 1
+      }
+    ]
+  }
+}

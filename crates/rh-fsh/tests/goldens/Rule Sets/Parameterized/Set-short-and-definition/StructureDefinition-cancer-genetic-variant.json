@@ -1,0 +1,44 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "cancer-genetic-variant",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/cancer-genetic-variant",
+  "version": "0.1.0",
+  "name": "CancerGeneticVariant",
+  "title": "Cancer Genetic Variant",
+  "status": "draft",
+  "description": "Records an alteration in the most common DNA nucleotide sequence.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.value[x]",
+        "path": "Observation.value[x]",
+        "short": "Whether the variant is present",
+        "definition": "The overall result of the genetic test; specifically, whether a variant is present, absent, no call, or indeterminant."
+      },
+      {
+        "id": "Observation.bodySite",
+        "path": "Observation.bodySite",
+        "short": "Not used in this profile",
+        "definition": "Not used in this profile"
+      },
+      {
+        "id": "Observation.referenceRange",
+        "path": "Observation.referenceRange",
+        "short": "Not used in this profile",
+        "definition": "Not used in this profile"
+      },
+      {
+        "id": "Observation.hasMember",
+        "path": "Observation.hasMember",
+        "short": "Not used in this profile",
+        "definition": "Not used in this profile"
+      }
+    ]
+  }
+}

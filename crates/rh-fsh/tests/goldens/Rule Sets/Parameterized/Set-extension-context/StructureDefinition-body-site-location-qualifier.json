@@ -1,0 +1,67 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "body-site-location-qualifier",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/body-site-location-qualifier",
+  "version": "0.1.0",
+  "name": "BodySiteLocationQualifier",
+  "title": "Body Site Location Qualifier",
+  "status": "draft",
+  "description": "Qualifier to refine an body location. These include qualifiers for laterality, relative location, directionality, number, and plane.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Specimen.collection.bodySite"
+    },
+    {
+      "type": "element",
+      "expression": "Procedure.bodySite"
+    },
+    {
+      "type": "element",
+      "expression": "Condition.bodySite"
+    },
+    {
+      "type": "element",
+      "expression": "Observation.bodySite"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Body Site Location Qualifier",
+        "definition": "Qualifier to refine an body location. These include qualifiers for laterality, relative location, directionality, number, and plane."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/body-site-location-qualifier"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "CodeableConcept"
+          }
+        ],
+        "binding": {
+          "strength": "preferred",
+          "valueSet": "http://hl7.org/fhir/ValueSet/bodystructure-relative-location"
+        }
+      }
+    ]
+  }
+}

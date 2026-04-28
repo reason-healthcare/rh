@@ -1,0 +1,40 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "Aquarium",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/Aquarium",
+  "version": "0.1.0",
+  "name": "Aquarium",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://rh-fsh-test.example.org/StructureDefinition/Aquarium",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Base",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "Aquarium",
+        "path": "Aquarium",
+        "short": "Aquarium",
+        "definition": "Aquarium"
+      },
+      {
+        "id": "Aquarium.members",
+        "path": "Aquarium.members",
+        "short": "The pets inside the aquarium",
+        "definition": "The pets inside the aquarium",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

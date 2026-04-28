@@ -1,0 +1,43 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "medication-administration-exactly-one-reason",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/medication-administration-exactly-one-reason",
+  "version": "0.1.0",
+  "name": "MedicationAdministrationExactlyOneReason",
+  "title": "Medication Administration With Required Reason",
+  "status": "draft",
+  "description": "The reason for this medication administration must be documented using a code or a reference, but not both.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "MedicationAdministration",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/MedicationAdministration",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "MedicationAdministration",
+        "path": "MedicationAdministration",
+        "constraint": [
+          {
+            "key": "exactly-one-reason-required",
+            "severity": "error",
+            "human": "Either reasonCode or reasonReference MUST be populated, but not both.",
+            "expression": "(reasonCode.exists() or reasonReference.exists()) and (reasonCode.exists() and reasonReference.exists()).not()",
+            "source": "http://rh-fsh-test.example.org/StructureDefinition/medication-administration-exactly-one-reason"
+          }
+        ]
+      },
+      {
+        "id": "MedicationAdministration.reasonCode",
+        "path": "MedicationAdministration.reasonCode",
+        "mustSupport": true
+      },
+      {
+        "id": "MedicationAdministration.reasonReference",
+        "path": "MedicationAdministration.reasonReference",
+        "mustSupport": true
+      }
+    ]
+  }
+}

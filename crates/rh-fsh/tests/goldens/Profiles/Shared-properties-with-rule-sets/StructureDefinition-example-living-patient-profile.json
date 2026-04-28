@@ -1,0 +1,47 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-living-patient-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/example-living-patient-profile",
+  "version": "0.1.0",
+  "name": "ExampleLivingPatientProfile",
+  "title": "Example Living Patient Patient Profile",
+  "status": "draft",
+  "description": "Example of a profile for living patients sharing common constraints using a FSH Rule Set",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.name",
+        "path": "Patient.name",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.name.family",
+        "path": "Patient.name.family",
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.name.given",
+        "path": "Patient.name.given",
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.deceased[x]",
+        "path": "Patient.deceased[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ],
+        "patternBoolean": false
+      }
+    ]
+  }
+}

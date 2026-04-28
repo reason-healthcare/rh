@@ -1,0 +1,35 @@
+{
+  "resourceType": "Condition",
+  "id": "my-condition",
+  "contained": [
+    {
+      "resourceType": "Provenance",
+      "id": "my-provenance",
+      "target": [
+        {
+          "reference": "#"
+        }
+      ],
+      "recorded": "2023-08-01T00:00:00.0Z",
+      "agent": [
+        {
+          "who": {
+            "reference": "Practitioner/bob"
+          }
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "code": "134006",
+        "system": "http://snomed.info/sct",
+        "display": "Decreased hair growth"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/sue"
+  }
+}

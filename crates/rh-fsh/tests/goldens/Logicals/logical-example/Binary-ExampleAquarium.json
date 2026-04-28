@@ -1,0 +1,11 @@
+{
+  "resourceType": "http://rh-fsh-test.example.org/StructureDefinition/Aquarium",
+  "members": [
+    {
+      "reference": "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject/ExamplePetPhil"
+    },
+    {
+      "reference": "http://rh-fsh-test.example.org/StructureDefinition/PetAsResourceLikeObject/ExamplePetClaire"
+    }
+  ]
+}

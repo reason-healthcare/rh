@@ -1,0 +1,39 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "LymphNodeCS",
+  "id": "lymph-node-cs",
+  "title": "Lymph node code system",
+  "description": "Lymph node terms that could not be found in standard sources such as SNOMED CT.",
+  "version": "0.1.0",
+  "url": "http://terminology.hl7.org/CodeSystem/lymphnodes",
+  "concept": [
+    {
+      "code": "LN_AX_L1",
+      "display": "Level 1 Axillary Lymph Nodes",
+      "definition": "Level 1 is the bottom level, below the lower edge of the pectoralis minor muscle."
+    },
+    {
+      "code": "LN_Ax_L2",
+      "display": "Level 2 Axillary Lymph Nodes",
+      "definition": "Level II is lying underneath the pectoralis minor muscle."
+    },
+    {
+      "code": "LN_Ax_L3",
+      "display": "Level 3 Axillary Lymph Nodes",
+      "definition": "Level III is above the pectoralis minor muscle."
+    },
+    {
+      "code": "LN_Neck_IA",
+      "display": "Level IA (Submental) neck node",
+      "definition": "Lymph nodes within the triangular boundary of the anterior belly of the digastric muscles and the hyoid bone"
+    },
+    {
+      "code": "LN_Neck_IB",
+      "display": "Level IB (Submandibular) neck node",
+      "definition": "Lymph nodes within the boundaries of the anterior and posterior bellies of the digastric muscles, the stylohyoid muscle, and the body of the mandible"
+    }
+  ],
+  "count": 5
+}

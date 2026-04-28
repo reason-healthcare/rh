@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "related-condition",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/related-condition",
+  "version": "0.1.0",
+  "name": "RelatedCondition",
+  "title": "Condition related to the current resource",
+  "status": "draft",
+  "description": "The resource has an unspecified relationship with a Condition.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Condition related to the current resource",
+        "definition": "The resource has an unspecified relationship with a Condition."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/related-condition"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Condition"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
