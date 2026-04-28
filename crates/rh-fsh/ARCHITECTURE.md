@@ -18,8 +18,8 @@ are delegated to `rh-validator`.
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                 Stage 1 — Parser  (nom combinators)                          │
-│         parser/span.rs · parser/lexer.rs · parser/entity.rs                 │
-│                         parser/rules.rs · parser/ast.rs                     │
+│         parser/span.rs · parser/lexer.rs · parser/entity.rs                  │
+│                         parser/rules.rs · parser/ast.rs                      │
 └──────────────────────────────────────────────────────────────────────────────┘
                                     │  FshDocument  (parser/ast.rs)
                                     ▼
@@ -38,13 +38,13 @@ are delegated to `rh-validator`.
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │             Stage 4 — Export  (FshExporter, rayon parallel)                  │
-│   export/structure_def.rs · export/value_set.rs · export/code_system.rs     │
-│            export/instance.rs · export/mapping.rs · export/mod.rs           │
+│   export/structure_def.rs · export/value_set.rs · export/code_system.rs      │
+│            export/instance.rs · export/mapping.rs · export/mod.rs            │
 └──────────────────────────────────────────────────────────────────────────────┘
                                     │
                          ┌──────────┴───────────┐
-                         │  FhirDefs (Arc<>)     │
-                         │  fhirdefs/mod.rs      │
+                         │  FhirDefs (Arc<>)    │
+                         │  fhirdefs/mod.rs     │
                          └──────────────────────┘
                                     │
                                     ▼

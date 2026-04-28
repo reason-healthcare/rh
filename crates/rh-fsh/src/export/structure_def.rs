@@ -340,80 +340,9 @@ fn export_sd(
             .iter()
             .any(|r| matches!(&r.value, SdRule::Contains(_)));
         if !has_contains {
-            // Simple extension: Extension.extension (max:0), Extension.url (fixedUri), Extension.value[x]
-            let ext_ext = serde_json::json!({
-                "id": "Extension.extension",
-                "path": "Extension.extension",
-                "max": "0"
-            });
-            let ext_url = serde_json::json!({
-                "id": "Extension.url",
-                "path": "Extension.url",
-                "fixedUri": url
-            });
-            // Merge any existing Extension.value[x] element from rules with the standard one.
-            // Find and remove any existing value[x] element from elements vec.
-            let user_value_x: Option<serde_json::Value> = {
-                let pos = elements.iter().position(|e| {
-                    e.get("path").and_then(|v| v.as_str()) == Some("Extension.value[x]")
-                });
-                pos.map(|i| elements.remove(i))
-            };
-            // Insert standard elements right after root element
-            let insert_pos = if elements.is_empty() { 0 } else { 1 };
-            elements.insert(insert_pos, ext_url);
-            elements.insert(insert_pos, ext_ext);
-            // Append value[x] element — use user-provided one or a minimal default
-            let val_elem = user_value_x.unwrap_or_else(|| {
-                serde_json::json!({
-                    "id": "Extension.value[x]",
-                    "path": "Extension.value[x]"
-                })
-            });
-            elements.push(val_elem);
+            inject_simple_extension_elements(&mut elements, &url);
         } else {
-            // Complex extension: For each named slice, inject Extension.extension.extension and
-            // Extension.extension.url sub-elements that sushi auto-generates.
-            let slice_names: Vec<String> = rules
-                .iter()
-                .filter_map(|r| {
-                    if let SdRule::Contains(c) = &r.value {
-                        Some(
-                            c.items
-                                .iter()
-                                .map(|item| item.name.clone())
-                                .collect::<Vec<_>>(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .flatten()
-                .collect();
-
-            for slice_name in &slice_names {
-                elements.push(serde_json::json!({
-                    "id": format!("Extension.extension:{slice_name}.extension"),
-                    "path": "Extension.extension.extension",
-                    "max": "0"
-                }));
-                elements.push(serde_json::json!({
-                    "id": format!("Extension.extension:{slice_name}.url"),
-                    "path": "Extension.extension.url",
-                    "fixedUri": slice_name
-                }));
-            }
-            // Complex extension also needs top-level url and value[x] (no direct values allowed)
-            elements.push(serde_json::json!({
-                "id": "Extension.url",
-                "path": "Extension.url",
-                "fixedUri": url
-            }));
-            elements.push(serde_json::json!({
-                "id": "Extension.value[x]",
-                "path": "Extension.value[x]",
-                "max": "0"
-            }));
+            inject_complex_extension_elements(&mut elements, &url, rules);
         }
     }
 
@@ -523,4 +452,91 @@ fn set_nested_value(obj: &mut serde_json::Value, path: &str, val: serde_json::Va
             .or_insert_with(|| serde_json::json!({}));
         set_nested_value(child, parts[1], val);
     }
+}
+
+/// Inject auto-generated elements for a **simple** extension (no sub-extensions).
+///
+/// Adds `Extension.extension` (max:0), `Extension.url` (fixedUri), and
+/// `Extension.value[x]`. Any user-declared value[x] element is merged.
+fn inject_simple_extension_elements(elements: &mut Vec<serde_json::Value>, url: &str) {
+    let ext_ext = serde_json::json!({
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+    });
+    let ext_url = serde_json::json!({
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": url
+    });
+    // Merge any existing Extension.value[x] element from rules with the standard one.
+    let user_value_x: Option<serde_json::Value> = {
+        let pos = elements
+            .iter()
+            .position(|e| e.get("path").and_then(|v| v.as_str()) == Some("Extension.value[x]"));
+        pos.map(|i| elements.remove(i))
+    };
+    // Insert standard elements right after root element
+    let insert_pos = if elements.is_empty() { 0 } else { 1 };
+    elements.insert(insert_pos, ext_url);
+    elements.insert(insert_pos, ext_ext);
+    // Append value[x] element — use user-provided one or a minimal default
+    let val_elem = user_value_x.unwrap_or_else(|| {
+        serde_json::json!({
+            "id": "Extension.value[x]",
+            "path": "Extension.value[x]"
+        })
+    });
+    elements.push(val_elem);
+}
+
+/// Inject auto-generated elements for a **complex** extension (has sub-extensions).
+///
+/// For each named slice, injects `Extension.extension:<slice>.extension` (max:0)
+/// and `Extension.extension:<slice>.url` (fixedUri). Also injects top-level
+/// `Extension.url` and `Extension.value[x]` (max:0, no direct values allowed).
+fn inject_complex_extension_elements(
+    elements: &mut Vec<serde_json::Value>,
+    url: &str,
+    rules: &[Spanned<SdRule>],
+) {
+    let slice_names: Vec<String> = rules
+        .iter()
+        .filter_map(|r| {
+            if let SdRule::Contains(c) = &r.value {
+                Some(
+                    c.items
+                        .iter()
+                        .map(|item| item.name.clone())
+                        .collect::<Vec<_>>(),
+                )
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect();
+
+    for slice_name in &slice_names {
+        elements.push(serde_json::json!({
+            "id": format!("Extension.extension:{slice_name}.extension"),
+            "path": "Extension.extension.extension",
+            "max": "0"
+        }));
+        elements.push(serde_json::json!({
+            "id": format!("Extension.extension:{slice_name}.url"),
+            "path": "Extension.extension.url",
+            "fixedUri": slice_name
+        }));
+    }
+    elements.push(serde_json::json!({
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": url
+    }));
+    elements.push(serde_json::json!({
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+    }));
 }
