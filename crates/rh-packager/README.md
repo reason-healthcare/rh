@@ -1,6 +1,6 @@
-# rh-publisher
+# rh-packager
 
-FHIR Package publisher — assembles conformant [FHIR Packages](https://hl7.org/fhir/packages.html) from a flat source directory of resources, markdown narrative, and CQL files.
+FHIR Package assembler — builds conformant [FHIR Packages](https://hl7.org/fhir/packages.html) from a flat source directory of resources, markdown narrative, and CQL files.
 
 Used by `rh publish` subcommands in the `rh` CLI.
 
@@ -41,9 +41,9 @@ after_pack   = []
 [validate]
 # Path to locally installed FHIR packages (default: ~/.fhir/packages)
 packages_dir = "~/.fhir/packages"
-skip_invariants = false
-skip_bindings   = false
-# Optional FHIR terminology server for ValueSet validation
+# Reserved for future use — accepted but currently ignored:
+# skip_invariants = false
+# skip_bindings   = false
 # terminology_server = "https://tx.fhir.org/r4"
 
 [cql]

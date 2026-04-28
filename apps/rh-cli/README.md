@@ -104,7 +104,7 @@ rh fsh compile profiles/*.fsh --output output/
 | `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
 | `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
 | `rh snapshot` | Generate and manage StructureDefinition snapshots | — |
-| `rh publish` | Build and publish FHIR Packages from a source directory | — |
+| `rh publish` | Build and publish FHIR Packages from a source directory | [PUBLISH](../../crates/rh-packager/README.md) |
 
 ### `rh publish` subcommands
 
@@ -118,7 +118,7 @@ Options:
   -o, --out <path>   Output directory (build) or output file path (pack)
 ```
 
-See [`crates/rh-publisher/README.md`](../../crates/rh-publisher/README.md) for full documentation including `publisher.toml` configuration reference.
+See [`crates/rh-packager/README.md`](../../crates/rh-packager/README.md) for full documentation including `publisher.toml` configuration reference.
 
 ## Global Options
 
@@ -136,6 +136,7 @@ See [`crates/rh-publisher/README.md`](../../crates/rh-publisher/README.md) for f
 - [FHIRPath Library](../../crates/rh-fhirpath/README.md)
 - [FSH Library](../../crates/rh-fsh/README.md)
 - [CQL Library](../../crates/rh-cql/README.md)
+- [Publisher Library](../../crates/rh-packager/README.md)
 - [Validator Library](../../crates/rh-validator/README.md)
 - [VCL Library](../../crates/rh-vcl/README.md)
 - [Foundation Library](../../crates/rh-foundation/README.md)

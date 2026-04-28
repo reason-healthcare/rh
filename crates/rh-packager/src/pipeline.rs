@@ -34,7 +34,7 @@ use tracing::{info, warn};
 /// # Examples
 ///
 /// ```no_run
-/// use rh_publisher::build;
+/// use rh_packager::build;
 /// use std::path::Path;
 ///
 /// let tgz = build(Path::new("my-package"), Path::new("output")).unwrap();
@@ -93,7 +93,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
 /// # Examples
 ///
 /// ```no_run
-/// use rh_publisher::lock_package;
+/// use rh_packager::lock_package;
 /// use std::path::Path;
 ///
 /// lock_package(Path::new("my-package"), Path::new("output")).unwrap();
@@ -118,7 +118,7 @@ pub fn lock(source_dir: &Path, output_dir: &Path) -> Result<()> {
 /// # Examples
 ///
 /// ```no_run
-/// use rh_publisher::check;
+/// use rh_packager::check;
 /// use std::path::Path;
 ///
 /// check(Path::new("my-package")).unwrap();
@@ -148,7 +148,7 @@ pub fn check(source_dir: &Path) -> Result<()> {
 /// # Examples
 ///
 /// ```no_run
-/// use rh_publisher::pack_dir;
+/// use rh_packager::pack_dir;
 /// use std::path::Path;
 ///
 /// let tgz = pack_dir(Path::new("output")).unwrap();

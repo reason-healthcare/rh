@@ -53,20 +53,20 @@ pub async fn handle_command(cmd: PublishCommands) -> Result<()> {
     match cmd {
         PublishCommands::Build(args) => {
             let output_dir = args.out.unwrap_or_else(|| args.dir.join("output"));
-            rh_publisher::build(&args.dir, &output_dir)?;
+            rh_packager::build(&args.dir, &output_dir)?;
             Ok(())
         }
         PublishCommands::Lock(args) => {
             let output_dir = args.dir.join("output");
-            rh_publisher::lock_package(&args.dir, &output_dir)?;
+            rh_packager::lock_package(&args.dir, &output_dir)?;
             Ok(())
         }
         PublishCommands::Check(args) => {
-            rh_publisher::check(&args.dir)?;
+            rh_packager::check(&args.dir)?;
             Ok(())
         }
         PublishCommands::Pack(args) => {
-            let tgz = rh_publisher::pack_dir(&args.dir)?;
+            let tgz = rh_packager::pack_dir(&args.dir)?;
             println!("Packed: {}", tgz.display());
             Ok(())
         }

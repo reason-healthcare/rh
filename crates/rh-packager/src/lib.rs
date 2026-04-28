@@ -1,4 +1,4 @@
-//! FHIR Package publisher — assembles conformant FHIR Packages from a source directory.
+//! FHIR Package assembler — builds conformant FHIR Packages from a source directory.
 //!
 //! This crate provides the core logic for `rh publish`, turning a flat source directory of
 //! FHIR resources, markdown narrative, and CQL files into a FHIR Package Spec-conformant
