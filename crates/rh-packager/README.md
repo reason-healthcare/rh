@@ -171,99 +171,18 @@ For any processor that loads packages, the directory is chosen in this order:
 
 ---
 
-## Building a Custom Processor
+## Processors
 
-Custom processors allow you to extend the build pipeline with your own logic — linting,
-code generation, custom validation, or anything else that reads or mutates the in-memory
-resource map.
+The build pipeline supports **shell processors** (bash, Python, Node.js, any CLI) and
+**native Rust processors**. See **[PROCESSORS.md](PROCESSORS.md)** for the complete guide,
+including:
 
-### 1. Implement the `HookProcessor` trait
-
-Add `rh-packager` as a dependency and implement [`hooks::HookProcessor`]:
-
-```rust
-use rh_packager::{
-    context::PublishContext,
-    hooks::HookProcessor,
-    Result,
-};
-
-pub struct TimestampProcessor;
-
-impl HookProcessor for TimestampProcessor {
-    fn name(&self) -> &'static str {
-        // This name is used in packager.toml hook lists.
-        "timestamp"
-    }
-
-    fn run(&self, ctx: &mut PublishContext) -> Result<()> {
-        let now = chrono::Utc::now().to_rfc3339();
-
-        // ctx.resources is a HashMap<String, serde_json::Value> keyed by filename stem.
-        // Processors may read, mutate, or insert entries.
-        for resource in ctx.resources.values_mut() {
-            if resource.get("resourceType").and_then(|v| v.as_str())
-                == Some("StructureDefinition")
-            {
-                resource["date"] = serde_json::Value::String(now.clone());
-            }
-        }
-
-        Ok(())
-    }
-}
-```
-
-Key points:
-- **Read** `ctx.source_dir` for any additional source files you need.
-- **Mutate** `ctx.resources` to add or modify FHIR resources; a single write pass materialises
-  everything to disk at the end.
-- **Read** `ctx.config` for global packager configuration (e.g. `packages_dir`).
-- **Read** `ctx.package_json` for the package name, version, and declared dependencies.
-- **Do not write to disk directly** — the pipeline owns all output.
-
-### 2. Register the processor and run the pipeline
-
-Build a `ProcessorRegistry`, register your processor alongside (or instead of) the built-ins,
-then call `build` with it:
-
-```rust
-use rh_packager::{
-    hooks::{build_registry, ProcessorRegistry},
-    pipeline::build,
-};
-use std::path::Path;
-
-fn main() -> anyhow::Result<()> {
-    // Start with all built-in processors registered.
-    let mut registry = build_registry();
-
-    // Register your custom processor under the name "timestamp".
-    registry.register(TimestampProcessor);
-
-    // Run the full build pipeline.
-    let output = build(Path::new("my-package"), None, registry)?;
-    println!("Package written to {}", output.display());
-    Ok(())
-}
-```
-
-To use only your processor (no built-ins):
-
-```rust
-let mut registry = ProcessorRegistry::new();
-registry.register(TimestampProcessor);
-```
-
-### 3. Reference the processor in `packager.toml`
-
-```toml
-[hooks]
-before_build = ["snapshot", "timestamp", "validate"]
-```
-
-The name in `packager.toml` must exactly match the string returned by `HookProcessor::name()`.
-An unregistered name causes an immediate startup error.
+- Shell processor configuration and full execution contract
+- Environment variables reference (`PACKAGER_SOURCE_DIR`, `PACKAGER_WORKDIR`, etc.)
+- Resource exchange protocol (reading, modifying, and adding FHIR resources)
+- Worked examples in bash, Python, and Node.js
+- Native Rust `HookProcessor` trait implementation and registry API
+- Built-in processor details (`snapshot`, `validate`, `cql`)
 
 ---
 

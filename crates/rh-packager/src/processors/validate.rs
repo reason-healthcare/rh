@@ -11,7 +11,7 @@ use tracing::{info, warn};
 pub struct ValidateProcessor;
 
 impl HookProcessor for ValidateProcessor {
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "validate"
     }
 

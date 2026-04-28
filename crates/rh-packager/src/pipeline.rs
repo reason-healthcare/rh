@@ -2,7 +2,7 @@
 
 use crate::{
     context::PublishContext,
-    hooks::{build_registry, run_stage},
+    hooks::{build_registry_with_config, run_stage},
     ig_sync::check_ig_sync,
     loader::load_source_dir,
     lock::{apply_pinning, generate_lock, load_lock},
@@ -44,7 +44,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     let mut ctx = load_source_dir(source_dir, output_dir.to_path_buf())?;
     check_ig_sync(&ctx)?;
 
-    let registry = build_registry();
+    let registry = build_registry_with_config(&ctx.config);
 
     let before = ctx.config.hooks.before_build.clone();
     run_stage(&registry, &before, &mut ctx)?;
@@ -128,7 +128,7 @@ pub fn check(source_dir: &Path) -> Result<()> {
     let mut ctx = load_source_dir(source_dir, output_dir)?;
     check_ig_sync(&ctx)?;
 
-    let registry = build_registry();
+    let registry = build_registry_with_config(&ctx.config);
     let before = ctx.config.hooks.before_build.clone();
     run_stage(&registry, &before, &mut ctx)?;
 

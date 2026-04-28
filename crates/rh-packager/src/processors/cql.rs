@@ -22,7 +22,7 @@ const LIBRARY_TYPE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/library
 pub struct CqlProcessor;
 
 impl HookProcessor for CqlProcessor {
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "cql"
     }
 

@@ -4,13 +4,13 @@
 //! executes the processors declared for a given stage in order, aborting on
 //! the first failure.
 
-use crate::{context::PublishContext, PublisherError, Result};
+use crate::{config::PublisherConfig, context::PublishContext, PublisherError, Result};
 use std::collections::HashMap;
 
 /// A lifecycle hook processor that can be registered and run at a pipeline stage.
 pub trait HookProcessor: Send + Sync {
     /// Unique name used to reference this processor in `packager.toml`.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
 
     /// Execute the processor against the current publish context.
     ///
@@ -31,9 +31,20 @@ pub fn build_registry() -> ProcessorRegistry {
     registry
 }
 
+/// Build the default registry with built-in processors plus any shell processors
+/// declared under `[processors.*]` in `packager.toml`.
+pub fn build_registry_with_config(config: &PublisherConfig) -> ProcessorRegistry {
+    use crate::processors::shell::ShellProcessor;
+    let mut registry = build_registry();
+    for (name, cfg) in &config.processors {
+        registry.register(ShellProcessor::new(name.clone(), cfg.clone()));
+    }
+    registry
+}
+
 /// Registry mapping processor names to their implementations.
 pub struct ProcessorRegistry {
-    processors: HashMap<&'static str, Box<dyn HookProcessor>>,
+    processors: HashMap<String, Box<dyn HookProcessor>>,
 }
 
 impl ProcessorRegistry {
@@ -47,7 +58,7 @@ impl ProcessorRegistry {
     /// Register a processor. Overwrites any existing registration with the same name.
     pub fn register(&mut self, processor: impl HookProcessor + 'static) {
         self.processors
-            .insert(processor.name(), Box::new(processor));
+            .insert(processor.name().to_string(), Box::new(processor));
     }
 
     /// Resolve processor names to their implementations, returning an error if any

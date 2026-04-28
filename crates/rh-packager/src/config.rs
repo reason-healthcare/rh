@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 
 /// Top-level configuration loaded from `packager.toml`.
 ///
@@ -42,6 +43,25 @@ pub struct PublisherConfig {
     /// Configuration for the built-in `cql` hook processor.
     #[serde(default)]
     pub cql: CqlConfig,
+
+    /// Named shell processors available to all hook stages.
+    ///
+    /// Each key is a processor name referenced in `[hooks]` stage lists.
+    ///
+    /// ```toml
+    /// [processors.enrich]
+    /// command = "python scripts/enrich.py"
+    ///
+    /// [processors.lint]
+    /// command = "./scripts/lint.sh"
+    /// working_dir = "."
+    /// timeout_secs = 30
+    ///
+    /// [processors.lint.env]
+    /// STRICT = "1"
+    /// ```
+    #[serde(default)]
+    pub processors: HashMap<String, ShellProcessorConfig>,
 }
 
 impl PublisherConfig {
@@ -122,6 +142,34 @@ impl Default for CqlConfig {
             model_info: default_model_info(),
         }
     }
+}
+
+/// Configuration for a named shell processor declared under `[processors.<name>]`.
+///
+/// Shell processors run an external command (bash, Python, Node.js, etc.) as a
+/// pipeline stage. Resources are exchanged via a temporary working directory.
+///
+/// See `PROCESSORS.md` for the full execution contract and examples.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ShellProcessorConfig {
+    /// Shell command to execute. Passed to `sh -c` on Unix or `cmd /C` on Windows.
+    pub command: String,
+
+    /// Working directory for the command, relative to the source directory.
+    /// Defaults to the source directory when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_dir: Option<String>,
+
+    /// Maximum time in seconds the command may run before being killed.
+    /// **Reserved for future use** — accepted in config but not yet enforced.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<u64>,
+
+    /// Additional environment variables set for the command.
+    /// These are merged on top of the inherited process environment, overriding
+    /// any variables with the same name.
+    #[serde(default)]
+    pub env: HashMap<String, String>,
 }
 
 #[cfg(test)]
