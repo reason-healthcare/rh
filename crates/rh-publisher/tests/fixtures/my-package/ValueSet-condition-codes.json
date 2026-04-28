@@ -1,0 +1,11 @@
+{
+  "resourceType": "ValueSet",
+  "id": "condition-codes",
+  "url": "http://example.org/fhir/ValueSet/condition-codes",
+  "version": "1.0.0",
+  "name": "ConditionCodes",
+  "status": "draft",
+  "compose": {
+    "include": [{"system": "http://snomed.info/sct"}]
+  }
+}

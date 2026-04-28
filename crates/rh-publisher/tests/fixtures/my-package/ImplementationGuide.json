@@ -1,0 +1,10 @@
+{
+  "resourceType": "ImplementationGuide",
+  "id": "example.fhir.test",
+  "url": "http://example.org/fhir/ImplementationGuide/example.fhir.test",
+  "version": "1.0.0",
+  "name": "ExampleFhirTest",
+  "status": "draft",
+  "packageId": "example.fhir.test",
+  "fhirVersion": ["4.0.1"]
+}

@@ -1,0 +1,45 @@
+[package]
+name = "rh-publisher"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "FHIR Package publisher — assembles conformant FHIR Packages from a source directory"
+keywords = ["fhir", "healthcare", "publisher", "package", "hl7"]
+categories = ["command-line-utilities", "api-bindings"]
+readme = "README.md"
+
+[lib]
+doctest = false
+
+[dependencies]
+# Workspace dependencies
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+
+# TOML parsing for publisher.toml
+toml = { workspace = true }
+
+# Markdown → XHTML conversion
+pulldown-cmark = { workspace = true }
+
+# Base64 encoding for CQL/ELM content
+base64 = { workspace = true }
+
+# Local workspace crates
+rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1", features = ["http"] }
+rh-validator = { path = "../rh-validator", version = "0.2.0-beta.1" }
+rh-cql = { path = "../rh-cql", version = "0.1.0-beta.1" }
+
+[dev-dependencies]
+tempfile = "3"
