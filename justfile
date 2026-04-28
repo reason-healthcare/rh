@@ -127,6 +127,10 @@ new-bin name:
     cd apps && cargo new {{name}} --bin
     @echo "Don't forget to update the Cargo.toml to use workspace dependencies!"
 
+# Install rh CLI to ~/.cargo/bin
+install:
+    cargo install --path apps/rh-cli
+
 # Build release versions
 build-release:
     cargo build --release --all-targets --all-features
