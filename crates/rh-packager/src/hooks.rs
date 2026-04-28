@@ -22,20 +22,27 @@ pub trait HookProcessor: Send + Sync {
 /// Build the default registry with all built-in processors registered.
 pub fn build_registry() -> ProcessorRegistry {
     use crate::processors::{
-        cql::CqlProcessor, snapshot::SnapshotProcessor, validate::ValidateProcessor,
+        cql::CqlProcessor, fsh::FshProcessor, snapshot::SnapshotProcessor,
+        validate::ValidateProcessor,
     };
     let mut registry = ProcessorRegistry::new();
     registry.register(SnapshotProcessor);
     registry.register(ValidateProcessor);
     registry.register(CqlProcessor);
+    registry.register(FshProcessor::new(Default::default()));
     registry
 }
 
 /// Build the default registry with built-in processors plus any shell processors
 /// declared under `[processors.*]` in `packager.toml`.
+///
+/// The `[fsh]` section of the config is forwarded to the built-in `FshProcessor`,
+/// overriding the default registration created by [`build_registry`].
 pub fn build_registry_with_config(config: &PublisherConfig) -> ProcessorRegistry {
-    use crate::processors::shell::ShellProcessor;
+    use crate::processors::{fsh::FshProcessor, shell::ShellProcessor};
     let mut registry = build_registry();
+    // Re-register FshProcessor with config-supplied [fsh] overrides.
+    registry.register(FshProcessor::new(config.fsh.clone()));
     for (name, cfg) in &config.processors {
         registry.register(ShellProcessor::new(name.clone(), cfg.clone()));
     }

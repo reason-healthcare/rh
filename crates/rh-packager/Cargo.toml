@@ -39,10 +39,14 @@ base64 = { workspace = true }
 # Temporary directory management for shell processors
 tempfile = "3"
 
+# Recursive directory walking for FSH file discovery
+walkdir = { workspace = true }
+
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1", features = ["http"] }
 rh-validator = { path = "../rh-validator", version = "0.2.0-beta.1" }
 rh-cql = { path = "../rh-cql", version = "0.1.0-beta.1" }
+rh-fsh = { path = "../rh-fsh", version = "0.1.0-beta.1" }
 
 [dev-dependencies]
 tempfile = "3"

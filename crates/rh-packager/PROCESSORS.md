@@ -382,10 +382,63 @@ files are touched.
 | `snapshot` | `before_build` | Generates missing `snapshot.element` arrays for `StructureDefinition` resources by loading base definitions from dependency packages. |
 | `validate` | `before_build` or `after_build` | Validates all FHIR resources using `rh-validator`. Fails the pipeline on any ERROR-severity issue. |
 | `cql` | `before_build` | Compiles `.cql` source files to ELM JSON and embeds source + ELM into `Library.content[]`. Auto-creates a minimal `Library` resource if none exists (with a warning). |
+| `fsh` | `before_build` | Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build context. FSH-compiled resources overwrite any pre-existing resource with the same stem. |
 
 Built-in processors are configured via their own sections in `packager.toml`
-(`[validate]`, `[cql]`). See [packager.toml Reference](README.md#packagertoml-reference) for
+(`[validate]`, `[cql]`, `[fsh]`). See [packager.toml Reference](README.md#packagertoml-reference) for
 the full field list.
+
+### FSH Processor Details
+
+The `fsh` processor compiles all `*.fsh` files found recursively under the source directory using
+the built-in `rh-fsh` compiler, then injects the compiled FHIR resources into the build context.
+
+**Configuration** (`[fsh]` in `packager.toml` — all fields optional):
+
+```toml
+[fsh]
+# Canonical base URL. Inferred from package.json `url` when absent.
+canonical = "https://example.org/fhir"
+
+# FHIR version string, e.g. "4.0.1". Inferred from package.json `fhirVersions[0]` when absent.
+fhir_version = "4.0.1"
+
+# Package id. Inferred from package.json `name` when absent.
+id = "my.package"
+
+# Human-readable name. Inferred from package.json `name` when absent.
+name = "MyPackage"
+
+# Resource status: active, draft, retired, unknown. Defaults to "draft".
+status = "active"
+
+# Publisher name (organization or individual).
+publisher = "My Organization"
+
+# Package version. Inferred from package.json `version` when absent.
+version = "1.0.0"
+```
+
+**Hook wiring** (`packager.toml`):
+
+```toml
+[hooks]
+before_build = ["fsh", "snapshot", "validate"]
+```
+
+**Behavior**:
+
+- Scans the source directory **recursively** for files with a `.fsh` extension.
+- Compiles all FSH files together in a single pass (FSH definitions in one file can reference
+  definitions in another file in the same directory tree).
+- Non-fatal compilation warnings are logged at `WARN` level; the pipeline continues.
+- Fatal parse or resolve errors abort the pipeline with a `HookProcessor` error.
+- Each compiled resource is inserted into the build context using the key
+  `<ResourceType>-<id>` (or `<ResourceType>-<name>` if `id` is absent), matching the
+  naming convention used by the file loader.
+- If a resource with the same key already exists (e.g. a pre-compiled JSON file), the FSH
+  version overwrites it with a warning. To avoid conflicts, use either FSH source _or_
+  pre-compiled JSON for a given resource — not both.
 
 ---
 

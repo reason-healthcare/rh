@@ -44,6 +44,10 @@ pub struct PublisherConfig {
     #[serde(default)]
     pub cql: CqlConfig,
 
+    /// Configuration for the built-in `fsh` hook processor.
+    #[serde(default)]
+    pub fsh: FshConfig,
+
     /// Named shell processors available to all hook stages.
     ///
     /// Each key is a processor name referenced in `[hooks]` stage lists.
@@ -142,6 +146,52 @@ impl Default for CqlConfig {
             model_info: default_model_info(),
         }
     }
+}
+
+/// Configuration for the `fsh` built-in hook processor.
+///
+/// All fields are optional. When absent, values are derived from `package.json`
+/// and the `ImplementationGuide` resource already present in the source directory.
+///
+/// ```toml
+/// [fsh]
+/// canonical  = "https://example.org/fhir"
+/// status     = "active"
+/// publisher  = "My Organization"
+/// # fhir_version, id, name, and version are inferred from package.json when absent
+/// ```
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct FshConfig {
+    /// Canonical base URL for all generated resources.
+    /// Inferred from `package.json` `url` field when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical: Option<String>,
+
+    /// FHIR version string (e.g. `"4.0.1"`).
+    /// Inferred from the first entry of `package.json` `fhirVersions` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fhir_version: Option<String>,
+
+    /// Package id. Inferred from `package.json` `name` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// Human-readable package name. Inferred from `package.json` `name` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+
+    /// Resource status: `active`, `draft`, `retired`, or `unknown`.
+    /// Defaults to `"draft"` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+
+    /// Publisher name (organization or individual).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+
+    /// Package version string. Inferred from `package.json` `version` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
 }
 
 /// Configuration for a named shell processor declared under `[processors.<name>]`.
