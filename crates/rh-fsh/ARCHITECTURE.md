@@ -125,18 +125,29 @@ Passes are strictly sequential because each depends on the result of the previou
 ### 4. Parallel Export with rayon
 
 `FshExporter::export` collects all entities from the resolved tank and dispatches
-to per-type exporter functions in parallel using `rayon::par_iter()`. Each
-exporter receives a shared `Arc<FhirDefs>` for read-only element lookups.
+to per-type exporter functions in parallel using a shared `export_par` helper.
+Each exporter receives a shared `Arc<FhirDefs>` for read-only element lookups.
 
 ```rust
-// Profiles exported in parallel
-let profile_results: Vec<_> = tank
-    .profiles
-    .values()
-    .collect::<Vec<_>>()
-    .into_par_iter()
-    .map(|p| structure_def::export_profile(p, &defs))
-    .collect();
+// Generic parallel export helper — avoids duplicating the collect/par_iter/collect pattern
+fn export_par<'a, T, F, I>(iter: I, f: F, resources: &mut Vec<Value>, errors: &mut Vec<FshError>)
+where
+    T: Sync + 'a,
+    F: Fn(&T) -> Result<Value, FshError> + Send + Sync,
+    I: Iterator<Item = &'a T>,
+{
+    let items: Vec<&T> = iter.collect();
+    let results: Vec<_> = items.into_par_iter().map(f).collect();
+    for result in results {
+        match result { Ok(v) => resources.push(v), Err(e) => errors.push(e) }
+    }
+}
+
+// FshExporter::export invokes export_par for each entity type
+export_par(tank.profiles.values(),  |p| export_profile(p, defs.clone(), config, &parent_types), ...);
+export_par(tank.extensions.values(), |e| export_extension(e, defs.clone(), config, &parent_types), ...);
+export_par(tank.instances.values(), |i| export_instance(i, &defs, config, tank), ...);
+// ... value sets, code systems, etc.
 ```
 
 Non-fatal export errors (e.g. unresolvable parent SD) are collected into
