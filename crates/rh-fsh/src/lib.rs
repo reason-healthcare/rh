@@ -66,8 +66,11 @@ impl FshCompiler {
     pub fn compile(&self, input: &str, source_name: &str) -> Result<FhirPackage, FshError> {
         let doc = FshParser::parse(input, source_name)?;
         let mut tank = FshTank::new();
-        tank.add_document(doc).map_err(first_error)?;
-        run_pipeline(tank, &self.options.config)
+        tank.add_document(doc)
+            .map_err(|errs| errs.into_iter().next().unwrap())?;
+        FshResolver::resolve(&mut tank).map_err(|errs| errs.into_iter().next().unwrap())?;
+        let defs = FhirDefs::r4();
+        Ok(FshExporter::export(&tank, defs, &self.options.config))
     }
 }
 
@@ -80,6 +83,8 @@ pub fn compile_fsh(input: &str, source_name: &str) -> Result<FhirPackage, FshErr
 pub fn compile_fsh_files(paths: &[PathBuf]) -> Result<FhirPackage, FshError> {
     use std::fs;
     let mut tank = FshTank::new();
+    let defs = FhirDefs::r4();
+    let config = FshConfig::default();
 
     for path in paths {
         let content = fs::read_to_string(path).map_err(|e| FshError::Export {
@@ -87,21 +92,11 @@ pub fn compile_fsh_files(paths: &[PathBuf]) -> Result<FhirPackage, FshError> {
         })?;
         let source_name = path.to_string_lossy().into_owned();
         let doc = FshParser::parse(&content, source_name)?;
-        tank.add_document(doc).map_err(first_error)?;
+        tank.add_document(doc)
+            .map_err(|errs| errs.into_iter().next().unwrap())?;
     }
-    run_pipeline(tank, &FshConfig::default())
-}
-
-/// Parse → resolve → export, returning the FHIR package.
-fn run_pipeline(mut tank: FshTank, config: &FshConfig) -> Result<FhirPackage, FshError> {
-    FshResolver::resolve(&mut tank).map_err(first_error)?;
-    let defs = FhirDefs::r4();
-    Ok(FshExporter::export(&tank, defs, config))
-}
-
-/// Return the first error from a non-empty error list.
-fn first_error(errs: Vec<FshError>) -> FshError {
-    errs.into_iter().next().unwrap()
+    FshResolver::resolve(&mut tank).map_err(|errs| errs.into_iter().next().unwrap())?;
+    Ok(FshExporter::export(&tank, defs, &config))
 }
 
 #[cfg(test)]

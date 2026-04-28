@@ -29,50 +29,92 @@ impl FshExporter {
 
         // Pre-compute parent name → parent name chain for FHIR type resolution
         // (maps profile/extension name → its declared parent name)
-        let parent_types: HashMap<String, String> = build_parent_type_map(tank);
+        let parent_types: HashMap<String, String> = tank
+            .profiles
+            .iter()
+            .filter_map(|(name, p)| {
+                p.metadata
+                    .parent
+                    .as_ref()
+                    .map(|parent| (name.clone(), parent.clone()))
+            })
+            .chain(tank.extensions.iter().filter_map(|(name, e)| {
+                e.metadata
+                    .parent
+                    .as_ref()
+                    .map(|parent| (name.clone(), parent.clone()))
+            }))
+            .collect();
 
-        export_par(
-            tank.profiles.values(),
-            |p| structure_def::export_profile(p, defs.clone(), config, &parent_types),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.extensions.values(),
-            |e| structure_def::export_extension(e, defs.clone(), config, &parent_types),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.logicals.values(),
-            |l| structure_def::export_logical(l, defs.clone(), config, &parent_types),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.resources.values(),
-            |r| structure_def::export_resource_def(r, defs.clone(), config, &parent_types),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.instances.values(),
-            |i| instance::export_instance(i, defs.as_ref(), config, tank),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.value_sets.values(),
-            |vs| value_set::export_value_set(vs, config),
-            &mut resources,
-            &mut errors,
-        );
-        export_par(
-            tank.code_systems.values(),
-            |cs| code_system::export_code_system(cs, config),
-            &mut resources,
-            &mut errors,
-        );
+        // Profiles (parallel)
+        let profile_results: Vec<_> = tank
+            .profiles
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|p| structure_def::export_profile(p, defs.clone(), config, &parent_types))
+            .collect();
+        collect_results(profile_results, &mut resources, &mut errors);
+
+        // Extensions (parallel)
+        let ext_results: Vec<_> = tank
+            .extensions
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|e| structure_def::export_extension(e, defs.clone(), config, &parent_types))
+            .collect();
+        collect_results(ext_results, &mut resources, &mut errors);
+
+        // Logicals (parallel)
+        let logical_results: Vec<_> = tank
+            .logicals
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|l| structure_def::export_logical(l, defs.clone(), config, &parent_types))
+            .collect();
+        collect_results(logical_results, &mut resources, &mut errors);
+
+        // Resources (parallel)
+        let resource_results: Vec<_> = tank
+            .resources
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|r| structure_def::export_resource_def(r, defs.clone(), config, &parent_types))
+            .collect();
+        collect_results(resource_results, &mut resources, &mut errors);
+
+        // Instances (parallel)
+        let instance_results: Vec<_> = tank
+            .instances
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|i| instance::export_instance(i, defs.as_ref(), config, tank))
+            .collect();
+        collect_results(instance_results, &mut resources, &mut errors);
+
+        // ValueSets (parallel)
+        let vs_results: Vec<_> = tank
+            .value_sets
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|vs| value_set::export_value_set(vs, config))
+            .collect();
+        collect_results(vs_results, &mut resources, &mut errors);
+
+        // CodeSystems (parallel)
+        let cs_results: Vec<_> = tank
+            .code_systems
+            .values()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|cs| code_system::export_code_system(cs, config))
+            .collect();
+        collect_results(cs_results, &mut resources, &mut errors);
 
         // Mappings do NOT produce standalone FHIR resources (H6)
 
@@ -80,26 +122,6 @@ impl FshExporter {
     }
 }
 
-/// Build a map of entity name → parent name for FHIR type resolution.
-fn build_parent_type_map(tank: &FshTank) -> HashMap<String, String> {
-    tank.profiles
-        .iter()
-        .filter_map(|(name, p)| {
-            p.metadata
-                .parent
-                .as_ref()
-                .map(|parent| (name.clone(), parent.clone()))
-        })
-        .chain(tank.extensions.iter().filter_map(|(name, e)| {
-            e.metadata
-                .parent
-                .as_ref()
-                .map(|parent| (name.clone(), parent.clone()))
-        }))
-        .collect()
-}
-
-/// Collect results, separating values from errors.
 fn collect_results(
     results: Vec<Result<serde_json::Value, FshError>>,
     resources: &mut Vec<serde_json::Value>,
@@ -111,20 +133,4 @@ fn collect_results(
             Err(e) => errors.push(e),
         }
     }
-}
-
-/// Export a collection of entities in parallel, accumulating results and errors.
-fn export_par<'a, T, F, I>(
-    iter: I,
-    f: F,
-    resources: &mut Vec<serde_json::Value>,
-    errors: &mut Vec<FshError>,
-) where
-    T: Sync + 'a,
-    F: Fn(&T) -> Result<serde_json::Value, FshError> + Send + Sync,
-    I: Iterator<Item = &'a T>,
-{
-    let items: Vec<&T> = iter.collect();
-    let results: Vec<_> = items.into_par_iter().map(f).collect();
-    collect_results(results, resources, errors);
 }
