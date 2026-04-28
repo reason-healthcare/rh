@@ -333,118 +333,8 @@ fn set_at_path(
             }
         }
         FshPathSegment::Slice { element, slice } => {
-            // Soft-indexing operators: [+] appends, [=] reuses last
-            if slice == "+" || slice == "=" {
-                let fi = get_field_info(current_type, element);
-                let next_type = fi
-                    .and_then(|f| field_next_type(&f.field_type))
-                    .unwrap_or(current_type);
-
-                if let serde_json::Value::Object(map) = node {
-                    let element_key = element.clone();
-
-                    // Ensure main array exists and append if [+]
-                    let arr_len = {
-                        let arr = map
-                            .entry(element_key.clone())
-                            .or_insert_with(|| serde_json::json!([]));
-                        if slice == "+" {
-                            if let serde_json::Value::Array(a) = arr {
-                                a.push(serde_json::json!({}));
-                            }
-                        }
-                        if let serde_json::Value::Array(a) = arr {
-                            a.len()
-                        } else {
-                            0
-                        }
-                    };
-
-                    if arr_len == 0 {
-                        return;
-                    }
-                    let idx = arr_len - 1;
-
-                    // Check for FHIR "extension on primitive" pattern: the target element is
-                    // a primitive value (not an object) and we have further path segments.
-                    // In FHIR JSON this uses the shadow _element array at the same index.
-                    let is_primitive = map
-                        .get(&element_key)
-                        .and_then(|v| {
-                            if let serde_json::Value::Array(a) = v {
-                                a.get(idx)
-                            } else {
-                                None
-                            }
-                        })
-                        .is_some_and(|v| !v.is_object() && !v.is_null());
-
-                    if is_primitive && segments.len() > 1 {
-                        let shadow_key = format!("_{element_key}");
-                        let shadow_arr = map
-                            .entry(shadow_key)
-                            .or_insert_with(|| serde_json::json!([]));
-                        if let serde_json::Value::Array(shadow) = shadow_arr {
-                            while shadow.len() <= idx {
-                                shadow.push(serde_json::Value::Null);
-                            }
-                            if shadow[idx].is_null() {
-                                shadow[idx] = serde_json::json!({});
-                            }
-                            set_at_path(&mut shadow[idx], &segments[1..], value, _defs, "Element");
-                        }
-                    } else {
-                        let arr = map.get_mut(&element_key).unwrap();
-                        if let serde_json::Value::Array(arr) = arr {
-                            if segments.len() == 1 {
-                                arr[idx] = value;
-                            } else {
-                                set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
-                            }
-                        }
-                    }
-                }
-                return;
-            }
-
-            // Numeric index (e.g., extension[0]) — navigate to element array at explicit index
-            if let Ok(idx) = slice.parse::<usize>() {
-                let fi = get_field_info(current_type, element);
-                let next_type = fi
-                    .and_then(|f| field_next_type(&f.field_type))
-                    .unwrap_or(current_type);
-
-                if let serde_json::Value::Object(map) = node {
-                    let arr = map
-                        .entry(element.clone())
-                        .or_insert_with(|| serde_json::json!([]));
-                    if let serde_json::Value::Array(arr) = arr {
-                        while arr.len() <= idx {
-                            arr.push(serde_json::json!({}));
-                        }
-                        if segments.len() == 1 {
-                            arr[idx] = value;
-                        } else {
-                            set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
-                        }
-                    }
-                }
-                return;
-            }
-
-            // Regular named slice: navigate to the element field
             if let serde_json::Value::Object(map) = node {
-                let fi = get_field_info(current_type, element);
-                let next_type = fi
-                    .and_then(|f| field_next_type(&f.field_type))
-                    .unwrap_or(current_type);
-                let key = element.clone();
-                if segments.len() == 1 {
-                    map.insert(key, value);
-                } else {
-                    let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
-                    set_at_path(child, &segments[1..], value, _defs, next_type);
-                }
+                handle_slice_segment(map, element, slice, segments, value, _defs, current_type);
             }
         }
         FshPathSegment::ChoiceType(element) => {
@@ -474,5 +364,122 @@ fn set_at_path(
                 }
             }
         }
+    }
+}
+
+/// Handle a `Slice { element, slice }` segment — the three sub-cases:
+/// 1. Soft-indexing (`[+]` appends, `[=]` reuses last element)
+/// 2. Numeric index (`[0]`, `[1]`, …)
+/// 3. Named slice (navigates to the element field by name)
+fn handle_slice_segment(
+    map: &mut serde_json::Map<String, serde_json::Value>,
+    element: &str,
+    slice: &str,
+    segments: &[FshPathSegment],
+    value: serde_json::Value,
+    _defs: &FhirDefs,
+    current_type: &str,
+) {
+    // Soft-indexing operators: [+] appends, [=] reuses last
+    if slice == "+" || slice == "=" {
+        let fi = get_field_info(current_type, element);
+        let next_type = fi
+            .and_then(|f| field_next_type(&f.field_type))
+            .unwrap_or(current_type);
+        let element_key = element.to_string();
+
+        let arr_len = {
+            let arr = map
+                .entry(element_key.clone())
+                .or_insert_with(|| serde_json::json!([]));
+            if slice == "+" {
+                if let serde_json::Value::Array(a) = arr {
+                    a.push(serde_json::json!({}));
+                }
+            }
+            if let serde_json::Value::Array(a) = arr {
+                a.len()
+            } else {
+                0
+            }
+        };
+
+        if arr_len == 0 {
+            return;
+        }
+        let idx = arr_len - 1;
+
+        // Check for FHIR "extension on primitive" pattern.
+        let is_primitive = map
+            .get(&element_key)
+            .and_then(|v| {
+                if let serde_json::Value::Array(a) = v {
+                    a.get(idx)
+                } else {
+                    None
+                }
+            })
+            .is_some_and(|v| !v.is_object() && !v.is_null());
+
+        if is_primitive && segments.len() > 1 {
+            let shadow_key = format!("_{element_key}");
+            let shadow_arr = map
+                .entry(shadow_key)
+                .or_insert_with(|| serde_json::json!([]));
+            if let serde_json::Value::Array(shadow) = shadow_arr {
+                while shadow.len() <= idx {
+                    shadow.push(serde_json::Value::Null);
+                }
+                if shadow[idx].is_null() {
+                    shadow[idx] = serde_json::json!({});
+                }
+                set_at_path(&mut shadow[idx], &segments[1..], value, _defs, "Element");
+            }
+        } else {
+            let arr = map.get_mut(&element_key).unwrap();
+            if let serde_json::Value::Array(arr) = arr {
+                if segments.len() == 1 {
+                    arr[idx] = value;
+                } else {
+                    set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
+                }
+            }
+        }
+        return;
+    }
+
+    // Numeric index (e.g., extension[0])
+    if let Ok(idx) = slice.parse::<usize>() {
+        let fi = get_field_info(current_type, element);
+        let next_type = fi
+            .and_then(|f| field_next_type(&f.field_type))
+            .unwrap_or(current_type);
+        let arr = map
+            .entry(element.to_string())
+            .or_insert_with(|| serde_json::json!([]));
+        if let serde_json::Value::Array(arr) = arr {
+            while arr.len() <= idx {
+                arr.push(serde_json::json!({}));
+            }
+            if segments.len() == 1 {
+                arr[idx] = value;
+            } else {
+                set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
+            }
+        }
+        return;
+    }
+
+    // Regular named slice: navigate to the element field
+    let fi = get_field_info(current_type, element);
+    let next_type = fi
+        .and_then(|f| field_next_type(&f.field_type))
+        .unwrap_or(current_type);
+    let key = element.to_string();
+    if segments.len() == 1 {
+        map.insert(key, value);
+    } else {
+        let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
+        set_at_path(child, &segments[1..], value, _defs, next_type);
     }
 }

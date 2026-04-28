@@ -12,6 +12,12 @@ use nom::{
     IResult,
 };
 
+/// Flag keywords that may appear after cardinality in contains items or flag rules.
+const FLAG_KEYWORDS: &[&str] = &["MS", "SU", "?!", "TU", "N", "D"];
+
+/// Suffix that marks an assignment as "exactly" (fixed value, no child override).
+const EXACTLY_SUFFIX: &str = "(exactly)";
+
 // ============================================================================
 // SD Rule dispatcher
 // ============================================================================
@@ -441,8 +447,8 @@ fn parse_assignment_rule_inner(input: Span<'_>) -> IResult<Span<'_>, AssignmentR
     let (input, value) = fsh_value(input)?;
     // Check for optional (exactly) suffix
     let (input, _) = ws(input)?;
-    let (input, exactly) = if input.fragment().starts_with("(exactly)") {
-        let (inp, _) = tag("(exactly)")(input)?;
+    let (input, exactly) = if input.fragment().starts_with(EXACTLY_SUFFIX) {
+        let (inp, _) = tag(EXACTLY_SUFFIX)(input)?;
         (inp, true)
     } else {
         (input, false)
@@ -510,12 +516,11 @@ fn parse_contains_item(input: Span<'_>) -> IResult<Span<'_>, ContainsItem> {
 /// Consume any flag keywords appearing inline (MS, SU, ?!, N, TU, D) without capturing them.
 /// Used inside contains items to absorb flags that we don't store on the slice itself.
 fn parse_flags_inline(input: Span<'_>) -> IResult<Span<'_>, ()> {
-    let flag_kws = ["MS", "SU", "?!", "N", "TU", "D"];
     let mut remaining = input;
     let mut consumed = false;
     loop {
         let mut matched = false;
-        for kw in &flag_kws {
+        for kw in FLAG_KEYWORDS {
             if remaining.fragment().starts_with(kw) {
                 let rest = &remaining.fragment()[kw.len()..];
                 if rest.is_empty()

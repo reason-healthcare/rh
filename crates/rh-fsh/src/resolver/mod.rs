@@ -39,31 +39,12 @@ impl FshResolver {
     fn expand_aliases(tank: &mut FshTank) {
         let aliases = tank.aliases.clone();
 
-        // Expand aliases in profiles
-        for profile in tank.profiles.values_mut() {
-            for rule in &mut profile.rules {
-                expand_sd_rule(&mut rule.value, &aliases);
-            }
-        }
-        // Extensions
-        for ext in tank.extensions.values_mut() {
-            for rule in &mut ext.rules {
-                expand_sd_rule(&mut rule.value, &aliases);
-            }
-        }
-        // Logicals
-        for logical in tank.logicals.values_mut() {
-            for rule in &mut logical.rules {
-                expand_sd_rule(&mut rule.value, &aliases);
-            }
-        }
-        // Resources
-        for res in tank.resources.values_mut() {
-            for rule in &mut res.rules {
-                expand_sd_rule(&mut rule.value, &aliases);
-            }
-        }
-        // Instances
+        expand_sd_rules_collection(&mut tank.profiles, &aliases, |e| &mut e.rules);
+        expand_sd_rules_collection(&mut tank.extensions, &aliases, |e| &mut e.rules);
+        expand_sd_rules_collection(&mut tank.logicals, &aliases, |e| &mut e.rules);
+        expand_sd_rules_collection(&mut tank.resources, &aliases, |e| &mut e.rules);
+
+        // Instances use instance rules (different rule type)
         for inst in tank.instances.values_mut() {
             for rule in &mut inst.rules {
                 expand_instance_rule(&mut rule.value, &aliases);
@@ -74,13 +55,11 @@ impl FshResolver {
         for vs in tank.value_sets.values_mut() {
             for comp in &mut vs.components {
                 let c = &mut comp.value;
-                // Expand system
                 if let Some(sys) = &c.system {
                     if let Some(resolved) = aliases.get(sys.as_str()) {
                         c.system = Some(resolved.clone());
                     }
                 }
-                // Expand concept systems
                 for concept in &mut c.concepts {
                     if let Some(sys) = &concept.system {
                         if let Some(resolved) = aliases.get(sys.as_str()) {
@@ -88,7 +67,6 @@ impl FshResolver {
                         }
                     }
                 }
-                // Expand from_vs
                 for vs_url in &mut c.from_vs {
                     if let Some(resolved) = aliases.get(vs_url.as_str()) {
                         *vs_url = resolved.clone();
@@ -105,7 +83,6 @@ impl FshResolver {
     fn inline_rule_sets(tank: &mut FshTank) -> Result<(), Vec<FshError>> {
         let mut errors = Vec::new();
 
-        // Build a snapshot of rule sets for lookup (before mutation)
         let rule_sets: HashMap<String, Vec<Spanned<SdRule>>> = tank
             .rule_sets
             .iter()
@@ -118,47 +95,32 @@ impl FshResolver {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
 
-        // Inline in profiles
-        let profile_names: Vec<String> = tank.profiles.keys().cloned().collect();
-        for name in profile_names {
-            let rules = tank.profiles[&name].rules.clone();
-            match inline_sd_rules(rules, &rule_sets, &param_rule_sets, &mut HashSet::new()) {
-                Ok(inlined) => tank.profiles.get_mut(&name).unwrap().rules = inlined,
-                Err(e) => errors.push(e),
-            }
-        }
+        inline_sd_entity_rules(
+            &mut tank.profiles,
+            &rule_sets,
+            &param_rule_sets,
+            &mut errors,
+        );
+        inline_sd_entity_rules(
+            &mut tank.extensions,
+            &rule_sets,
+            &param_rule_sets,
+            &mut errors,
+        );
+        inline_sd_entity_rules(
+            &mut tank.logicals,
+            &rule_sets,
+            &param_rule_sets,
+            &mut errors,
+        );
+        inline_sd_entity_rules(
+            &mut tank.resources,
+            &rule_sets,
+            &param_rule_sets,
+            &mut errors,
+        );
 
-        // Inline in extensions
-        let ext_names: Vec<String> = tank.extensions.keys().cloned().collect();
-        for name in ext_names {
-            let rules = tank.extensions[&name].rules.clone();
-            match inline_sd_rules(rules, &rule_sets, &param_rule_sets, &mut HashSet::new()) {
-                Ok(inlined) => tank.extensions.get_mut(&name).unwrap().rules = inlined,
-                Err(e) => errors.push(e),
-            }
-        }
-
-        // Inline in logicals
-        let logical_names: Vec<String> = tank.logicals.keys().cloned().collect();
-        for name in logical_names {
-            let rules = tank.logicals[&name].rules.clone();
-            match inline_sd_rules(rules, &rule_sets, &param_rule_sets, &mut HashSet::new()) {
-                Ok(inlined) => tank.logicals.get_mut(&name).unwrap().rules = inlined,
-                Err(e) => errors.push(e),
-            }
-        }
-
-        // Inline in resources
-        let resource_names: Vec<String> = tank.resources.keys().cloned().collect();
-        for name in resource_names {
-            let rules = tank.resources[&name].rules.clone();
-            match inline_sd_rules(rules, &rule_sets, &param_rule_sets, &mut HashSet::new()) {
-                Ok(inlined) => tank.resources.get_mut(&name).unwrap().rules = inlined,
-                Err(e) => errors.push(e),
-            }
-        }
-
-        // Inline in instances (parameterized RuleSets may appear in instance context too)
+        // Instances use instance rules
         let inst_names: Vec<String> = tank.instances.keys().cloned().collect();
         for name in inst_names {
             let rules = tank.instances[&name].rules.clone();
@@ -179,6 +141,64 @@ impl FshResolver {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/// Expand SD-rule aliases across every entity in an IndexMap.
+fn expand_sd_rules_collection<T, F>(
+    collection: &mut indexmap::IndexMap<String, T>,
+    aliases: &HashMap<String, String>,
+    get_rules_mut: F,
+) where
+    F: Fn(&mut T) -> &mut Vec<Spanned<SdRule>>,
+{
+    for entity in collection.values_mut() {
+        for rule in get_rules_mut(entity) {
+            expand_sd_rule(&mut rule.value, aliases);
+        }
+    }
+}
+
+/// Inline SD ruleset rules across every entity in an IndexMap.
+fn inline_sd_entity_rules<T>(
+    collection: &mut indexmap::IndexMap<String, T>,
+    rule_sets: &HashMap<String, Vec<Spanned<SdRule>>>,
+    param_rule_sets: &HashMap<String, ParamRuleSet>,
+    errors: &mut Vec<FshError>,
+) where
+    T: HasSdRules,
+{
+    let names: Vec<String> = collection.keys().cloned().collect();
+    for name in names {
+        let rules = collection[&name].sd_rules().to_vec();
+        match inline_sd_rules(rules, rule_sets, param_rule_sets, &mut HashSet::new()) {
+            Ok(inlined) => *collection.get_mut(&name).unwrap().sd_rules_mut() = inlined,
+            Err(e) => errors.push(e),
+        }
+    }
+}
+
+/// Trait to abstract mutable access to `rules: Vec<Spanned<SdRule>>` across entity types.
+trait HasSdRules {
+    fn sd_rules(&self) -> &[Spanned<SdRule>];
+    fn sd_rules_mut(&mut self) -> &mut Vec<Spanned<SdRule>>;
+}
+
+macro_rules! impl_has_sd_rules {
+    ($t:ty) => {
+        impl HasSdRules for $t {
+            fn sd_rules(&self) -> &[Spanned<SdRule>] {
+                &self.rules
+            }
+            fn sd_rules_mut(&mut self) -> &mut Vec<Spanned<SdRule>> {
+                &mut self.rules
+            }
+        }
+    };
+}
+
+impl_has_sd_rules!(Profile);
+impl_has_sd_rules!(Extension);
+impl_has_sd_rules!(Logical);
+impl_has_sd_rules!(ResourceDef);
 
 fn expand_value(value: &mut FshValue, aliases: &HashMap<String, String>) {
     match value {
