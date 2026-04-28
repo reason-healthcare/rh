@@ -1,6 +1,6 @@
 # rh — Unified CLI for FHIR Tools
 
-The `rh` CLI is a unified command-line interface for working with FHIR data. It provides FHIR code generation, FHIRPath evaluation, CQL compilation, validation, and package management in a single tool.
+The `rh` CLI is a unified command-line interface for working with FHIR data. It provides FHIR code generation, FHIRPath evaluation, CQL compilation, FSH compilation, validation, and package management in a single tool.
 
 ## Installation
 
@@ -87,6 +87,9 @@ rh validate resource --input patient.json
 
 # Compile CQL to ELM
 rh cql compile library.cql --output library.elm.json
+
+# Compile FSH to FHIR JSON
+rh fsh compile profiles/*.fsh --output output/
 ```
 
 ## Command Reference
@@ -96,6 +99,7 @@ rh cql compile library.cql --output library.elm.json
 | `rh codegen` | Generate Rust types from FHIR packages | [CODEGEN.md](docs/CODEGEN.md) |
 | `rh download` | Download FHIR packages from registries | [DOWNLOAD.md](docs/DOWNLOAD.md) |
 | `rh fhirpath` | Parse and evaluate FHIRPath expressions | [FHIRPATH.md](docs/FHIRPATH.md) |
+| `rh fsh` | Compile FSH to FHIR JSON | [FSH.md](docs/FSH.md) |
 | `rh vcl` | Parse and translate VCL expressions | [VCL.md](docs/VCL.md) |
 | `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
 | `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
@@ -115,6 +119,7 @@ rh cql compile library.cql --output library.elm.json
 
 - [Code Generation Library](../../crates/rh-codegen/README.md)
 - [FHIRPath Library](../../crates/rh-fhirpath/README.md)
+- [FSH Library](../../crates/rh-fsh/README.md)
 - [CQL Library](../../crates/rh-cql/README.md)
 - [Validator Library](../../crates/rh-validator/README.md)
 - [VCL Library](../../crates/rh-vcl/README.md)
