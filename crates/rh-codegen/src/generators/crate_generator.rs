@@ -9,8 +9,6 @@ use std::path::Path;
 use anyhow::Result;
 use chrono::Local;
 
-// use crate::quality::{run_quality_checks, QualityConfig};
-
 /// Parameters for crate generation
 #[derive(Debug, Clone)]
 pub struct CrateGenerationParams<'a> {
@@ -88,7 +86,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     fs::write(&cargo_toml_path, cargo_toml_content)?;
 
     // Generate lib.rs with new structure
-    let lib_rs_content = generate_lib_rs_idiomatic()?;
+    let lib_rs_content = generate_lib_rs_idiomatic();
     let lib_rs_path = src_dir.join("lib.rs");
     fs::write(&lib_rs_path, lib_rs_content)?;
 
@@ -198,7 +196,7 @@ path = "src/lib.rs"
 }
 
 /// Generate lib.rs content with idiomatic module structure
-fn generate_lib_rs_idiomatic() -> Result<String> {
+fn generate_lib_rs_idiomatic() -> String {
     let lib_content = r#"//! Generated FHIR Rust bindings
 //!
 //! This crate contains Rust types and traits for FHIR resources and data types.
@@ -248,7 +246,7 @@ pub mod prelude;
 pub use serde::{Deserialize, Serialize};
 "#;
 
-    Ok(lib_content.to_string())
+    lib_content.to_string()
 }
 /// Generate mod.rs files for each module directory
 pub fn generate_module_files(
@@ -378,7 +376,6 @@ fn generate_crate_statistics_from_organized_dirs(
     primitives_dir: &Path,
 ) -> Result<CrateStatistics> {
     let mut num_structs = 0;
-    let num_enums = 0; // Enums would be handled separately
 
     // Count files in each directory
     for dir in [resource_dir, datatypes_dir, extensions_dir, primitives_dir] {
@@ -403,12 +400,10 @@ fn generate_crate_statistics_from_organized_dirs(
         }
     }
 
-    let total_types = num_structs + num_enums;
-
     Ok(CrateStatistics {
         num_structs,
-        num_enums,
-        total_types,
+        num_enums: 0,
+        total_types: num_structs,
         canonical_url: "Unknown".to_string(),
     })
 }

@@ -20,7 +20,6 @@ impl TraitImplGenerator {
 
     /// Extract the base resource type from a FHIR baseDefinition URL
     /// For example: "http://hl7.org/fhir/StructureDefinition/Group" -> "Group"
-    #[allow(dead_code)]
     fn extract_base_resource_type(base_definition: &str) -> Option<String> {
         // FHIR baseDefinition URLs follow the pattern:
         // http://hl7.org/fhir/StructureDefinition/{ResourceType}
@@ -34,7 +33,6 @@ impl TraitImplGenerator {
 
     /// Check if a baseDefinition indicates this is a core FHIR resource
     /// Core resources inherit directly from Resource or DomainResource
-    #[allow(dead_code)]
     fn is_core_resource(base_definition: &str) -> bool {
         matches!(
             base_definition,

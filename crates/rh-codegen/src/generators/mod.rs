@@ -25,8 +25,6 @@ pub mod file_generator;
 pub mod file_io_manager;
 pub mod import_manager;
 pub mod invariant_generator;
-// #[cfg(test)]
-// pub mod import_manager_integration_test;
 pub mod metadata_generator;
 pub mod mutator_trait_generator;
 pub mod naming_manager;

@@ -38,7 +38,6 @@ pub struct CodeGenerator {
 }
 
 impl CodeGenerator {
-    #[allow(dead_code)] // Methods below are preserved during refactoring transition
     /// Create a new code generator with the given configuration
     pub fn new(config: CodegenConfig) -> Self {
         let value_set_manager = ValueSetManager::new();
@@ -392,11 +391,6 @@ impl CodeGenerator {
         crate::naming::Naming::filename(structure_def)
     }
 
-    /// Generate a comprehensive Resource trait with common FHIR resource methods
-    // pub fn generate_resource_trait(&mut self) -> CodegenResult<String> {
-    //     let mut trait_generator = TraitGenerator::new();
-    //     trait_generator.generate_resource_trait()
-    // }
     /// Generate a trait file directly from a RustTrait object
     pub fn generate_trait_file_from_trait<P: AsRef<Path>>(
         &self,
@@ -407,12 +401,6 @@ impl CodeGenerator {
         let file_generator = FileGenerator::new(&self.config, &self.token_generator);
         file_generator.generate_trait_file_from_trait(rust_trait, output_path)
     }
-
-    // Generate an impl block for the Resource trait
-    // pub fn generate_resource_impl(&self) -> String {
-    //     let trait_generator = TraitGenerator::new();
-    //     trait_generator.generate_resource_impl()
-    // }
 }
 
 #[cfg(test)]
