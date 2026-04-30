@@ -65,6 +65,9 @@ fn load_publisher_config(source_dir: &Path) -> Result<PublisherConfig> {
 /// examples map and will be written to `package/examples/` in the output. All other
 /// resources are definitional and go into `package/` flat.
 ///
+/// JSON files inside a `docs/` subdirectory are ignored — `docs/` is reserved for
+/// standalone narrative markdown (e.g. overview pages) that are copied to `package/other/`.
+///
 /// Returns `(resources, examples, standalone_markdown)`.
 fn scan_resources(source_dir: &Path) -> Result<ScannedResources> {
     let mut resources: HashMap<String, Value> = HashMap::new();
@@ -73,6 +76,7 @@ fn scan_resources(source_dir: &Path) -> Result<ScannedResources> {
 
     scan_dir(
         source_dir,
+        false,
         false,
         &mut resources,
         &mut examples,
@@ -100,9 +104,13 @@ fn is_skip_dir(name: &str) -> bool {
 ///
 /// `in_examples` is true when scanning a path that descends from an `examples/` directory,
 /// which routes resources to the `examples` map instead of `resources`.
+///
+/// `in_docs` is true when scanning a path that descends from a `docs/` directory.
+/// JSON files in `docs/` are ignored (the directory is for standalone narrative markdown).
 fn scan_dir(
     dir: &Path,
     in_examples: bool,
+    in_docs: bool,
     resources: &mut HashMap<String, Value>,
     examples: &mut HashMap<String, Value>,
     md_stems: &mut HashMap<String, PathBuf>,
@@ -117,7 +125,8 @@ fn scan_dir(
                 continue;
             }
             let next_in_examples = in_examples || name == "examples";
-            scan_dir(&path, next_in_examples, resources, examples, md_stems)?;
+            let next_in_docs = in_docs || name == "docs";
+            scan_dir(&path, next_in_examples, next_in_docs, resources, examples, md_stems)?;
             continue;
         }
 
@@ -133,7 +142,7 @@ fn scan_dir(
         };
 
         match ext {
-            "json" if stem != "package" && stem != "fhir-lock" && !stem.starts_with('.') => {
+            "json" if !in_docs && stem != "package" && stem != "fhir-lock" && !stem.starts_with('.') => {
                 match load_json_resource(&path) {
                     Ok(value) => {
                         if in_examples {
@@ -231,8 +240,10 @@ mod tests {
         );
         // Matched markdown (has a JSON counterpart)
         write_file(dir.path(), "StructureDefinition-foo.md", "# Foo narrative");
-        // Standalone markdown (no JSON counterpart)
-        write_file(dir.path(), "overview.md", "# Overview");
+        // Standalone markdown in docs/
+        let docs_dir = dir.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        write_file(&docs_dir, "overview.md", "# Overview");
 
         let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
 
@@ -245,6 +256,40 @@ mod tests {
             .to_str()
             .unwrap()
             .contains("overview"));
+    }
+
+    #[test]
+    fn docs_dir_markdown_becomes_standalone() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        let docs_dir = dir.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        write_file(&docs_dir, "introduction.md", "# Introduction");
+        write_file(&docs_dir, "overview.md", "# Overview");
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert_eq!(ctx.standalone_markdown.len(), 2);
+    }
+
+    #[test]
+    fn docs_dir_json_is_not_loaded_as_resource() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        let docs_dir = dir.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        // A JSON file in docs/ should be ignored — it's not a FHIR resource.
+        write_file(
+            &docs_dir,
+            "ValueSet-stray.json",
+            r#"{"resourceType":"ValueSet","id":"stray"}"#,
+        );
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert!(!ctx.resources.contains_key("ValueSet-stray"));
     }
 
     #[test]

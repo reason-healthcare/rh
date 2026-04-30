@@ -6,6 +6,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 /// A single resource entry in the package index.
+///
+/// All optional fields are populated directly from the matching string property of the
+/// resource, irrespective of resource type, as specified in the FHIR Package spec §2.1.10.5.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IndexEntry {
     pub filename: String,
@@ -16,6 +19,14 @@ pub struct IndexEntry {
     pub url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub resource_kind_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub supplements: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 /// The full `.index.json` document.
@@ -48,21 +59,21 @@ pub fn build_index(resources: &HashMap<String, Value>) -> Result<PackageIndex> {
 fn entry_from_resource(stem: &str, value: &Value) -> Option<IndexEntry> {
     let resource_type = value.get("resourceType")?.as_str()?.to_string();
     let id = value.get("id")?.as_str()?.to_string();
-    let url = value
-        .get("url")
-        .and_then(|v| v.as_str())
-        .map(str::to_string);
-    let version = value
-        .get("version")
-        .and_then(|v| v.as_str())
-        .map(str::to_string);
+
+    let opt_str = |key: &str| -> Option<String> {
+        value.get(key).and_then(|v| v.as_str()).map(str::to_string)
+    };
 
     Some(IndexEntry {
         filename: format!("{stem}.json"),
         resource_type,
         id,
-        url,
-        version,
+        url: opt_str("url"),
+        version: opt_str("version"),
+        kind: opt_str("kind"),
+        resource_kind_type: opt_str("type"),
+        supplements: opt_str("supplements"),
+        content: opt_str("content"),
     })
 }
 
@@ -114,6 +125,56 @@ mod tests {
         let idx = build_index(&resources).unwrap();
         assert!(idx.files[0].url.is_none());
         assert!(idx.files[0].version.is_none());
+    }
+
+    #[test]
+    fn captures_kind_type_supplements_content() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "CodeSystem-cs".to_string(),
+            json!({
+                "resourceType": "CodeSystem",
+                "id": "cs",
+                "kind": "code-system",
+                "type": "example",
+                "supplements": "http://example.org/base",
+                "content": "complete"
+            }),
+        );
+        let idx = build_index(&resources).unwrap();
+        let entry = &idx.files[0];
+        assert_eq!(entry.kind.as_deref(), Some("code-system"));
+        assert_eq!(entry.resource_kind_type.as_deref(), Some("example"));
+        assert_eq!(entry.supplements.as_deref(), Some("http://example.org/base"));
+        assert_eq!(entry.content.as_deref(), Some("complete"));
+    }
+
+    #[test]
+    fn kind_type_supplements_content_absent_when_not_in_resource() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "ValueSet-vs".to_string(),
+            json!({"resourceType":"ValueSet","id":"vs","url":"http://example.org/vs"}),
+        );
+        let idx = build_index(&resources).unwrap();
+        let entry = &idx.files[0];
+        assert!(entry.kind.is_none());
+        assert!(entry.resource_kind_type.is_none());
+        assert!(entry.supplements.is_none());
+        assert!(entry.content.is_none());
+    }
+
+    #[test]
+    fn type_field_serializes_as_type_not_resource_kind_type() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "CodeSystem-cs".to_string(),
+            json!({"resourceType":"CodeSystem","id":"cs","type":"complete"}),
+        );
+        let idx = build_index(&resources).unwrap();
+        let json_str = serde_json::to_string(&idx).unwrap();
+        assert!(json_str.contains("\"type\""));
+        assert!(!json_str.contains("resource_kind_type"));
     }
 
     #[test]

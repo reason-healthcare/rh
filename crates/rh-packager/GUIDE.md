@@ -25,10 +25,13 @@ bp-profiles/
   package.json                          # FHIR package manifest
   packager.toml                         # Processor pipeline configuration
   ImplementationGuide.json              # IG resource (must stay in sync with package.json)
+  StructureDefinition-bp-observation.md # Resource narrative (embedded into matching resource)
   fsh/
     BpObservation.fsh                   # FSH source — compiled by the fsh processor
   cql/
     BpCheck.cql                         # CQL library — compiled by the cql processor
+  docs/
+    overview.md                         # Standalone narrative — copied to package/other/
   scripts/
     stamp_date.py                       # Shell hook — stamps build date onto resources
     check_date.py                       # Shell hook — validates build date is present
@@ -486,8 +489,9 @@ package registry or distribute directly.
   URLs to specific package versions in `fhir-lock.json`
 - **Validate without building** — use `rh publish check bp-profiles/` to run validation without
   writing any output
-- **Add narrative** — place a `.md` file next to any resource (e.g.,
+- **Add narrative** — place a `.md` file matching a resource's filename stem (e.g.,
   `StructureDefinition-bp-observation.md`) and it will be embedded as `resource.text` during
-  the build
+  the build; place standalone docs (overview pages, etc.) in `docs/` and they are copied to
+  `package/other/`
 - **Build custom processors** — see [`PROCESSORS.md`](PROCESSORS.md) for the native Rust
   processor API and the full shell processor protocol reference

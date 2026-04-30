@@ -2,7 +2,8 @@
 //!
 //! Files named `<stem>.md` that match a `<stem>.json` FHIR resource in the resource map
 //! have their content converted to XHTML and embedded as `resource.text`. Unmatched
-//! markdown files are routed to `package/other/` via `ctx.standalone_markdown`.
+//! markdown files (e.g. those in `docs/`) are routed to `package/other/` via
+//! `ctx.standalone_markdown`.
 
 use crate::{context::PublishContext, Result};
 use pulldown_cmark::{html, Options, Parser};
