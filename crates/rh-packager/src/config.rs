@@ -38,22 +38,19 @@ pub struct PublisherConfig {
     pub packages_dir: Option<String>,
 
     /// Canonical base URL for all generated resources.
-    /// Inferred from `package.json` `url` field when absent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub canonical: Option<String>,
 
     /// FHIR version string (e.g. `"4.0.1"`).
-    /// Inferred from the first entry of `package.json` `fhirVersions` when absent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fhir_version: Option<String>,
 
-    /// Package id embedded in generated resources.
-    /// Inferred from `package.json` `name` when absent.
+    /// Package identifier in `<scope>.<name>` NPM-style format (e.g. `hl7.fhir.us.core`).
+    /// Maps to `name` in the generated `package.json`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 
-    /// Human-readable package name.
-    /// Inferred from `package.json` `name` when absent.
+    /// Human-readable package name (optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
@@ -66,9 +63,32 @@ pub struct PublisherConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub publisher: Option<String>,
 
-    /// Package version string. Inferred from `package.json` `version` when absent.
+    /// Package version string.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+
+    /// Package dependencies: `{ "<package-id>": "<version>" }`.
+    ///
+    /// Use quoted keys in TOML because FHIR package IDs contain dots:
+    /// ```toml
+    /// [dependencies]
+    /// "hl7.fhir.r4.core" = "4.0.1"
+    /// "hl7.fhir.us.core" = "6.1.0"
+    /// ```
+    #[serde(default)]
+    pub dependencies: HashMap<String, String>,
+
+    /// Human-readable package description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Author or publisher name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+
+    /// SPDX license identifier (e.g. `"CC0-1.0"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
 
     /// Hook stage processor lists.
     #[serde(default)]
@@ -250,6 +270,10 @@ mod tests {
         assert!(cfg.status.is_none());
         assert!(cfg.publisher.is_none());
         assert!(cfg.version.is_none());
+        assert!(cfg.dependencies.is_empty());
+        assert!(cfg.description.is_none());
+        assert!(cfg.author.is_none());
+        assert!(cfg.license.is_none());
         assert!(cfg.hooks.before_build.is_empty());
         assert!(cfg.hooks.after_build.is_empty());
         assert!(cfg.hooks.before_pack.is_empty());
@@ -339,5 +363,36 @@ model_info = "fhir"
         let cfg = PublisherConfig::from_toml_str(toml).unwrap();
         assert!(cfg.hooks.before_build.is_empty());
         assert!(cfg.validate.skip_bindings);
+    }
+
+    #[test]
+    fn parses_dependencies_with_dotted_keys() {
+        let toml = r#"
+[dependencies]
+"hl7.fhir.r4.core" = "4.0.1"
+"hl7.fhir.us.core" = "6.1.0"
+"#;
+        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+        assert_eq!(
+            cfg.dependencies.get("hl7.fhir.r4.core").map(|s| s.as_str()),
+            Some("4.0.1")
+        );
+        assert_eq!(
+            cfg.dependencies.get("hl7.fhir.us.core").map(|s| s.as_str()),
+            Some("6.1.0")
+        );
+    }
+
+    #[test]
+    fn parses_optional_metadata_fields() {
+        let toml = r#"
+description = "A test package"
+author      = "Test Org"
+license     = "Apache-2.0"
+"#;
+        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.description.as_deref(), Some("A test package"));
+        assert_eq!(cfg.author.as_deref(), Some("Test Org"));
+        assert_eq!(cfg.license.as_deref(), Some("Apache-2.0"));
     }
 }
