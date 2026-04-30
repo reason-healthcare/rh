@@ -148,7 +148,7 @@ rh fsh compile myprofile.fsh --output output/
 rh vcl --help
 
 # Build a FHIR Package from a source directory
-rh publish build my-package/
+rh package build my-package/
 ```
 
 Check code formatting:

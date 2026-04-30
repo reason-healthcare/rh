@@ -78,7 +78,7 @@ The command runs with its current directory set to:
 - `<source_dir>/<working_dir>` — if `working_dir` is set in config
 - `<source_dir>` — otherwise
 
-`<source_dir>` is the directory passed to `rh publish build` (the one containing
+`<source_dir>` is the directory passed to `rh package build` (the one containing
 `package.json`).
 
 #### Command execution
@@ -142,7 +142,7 @@ $PACKAGER_WORKDIR/                    $PACKAGER_WORKDIR/
 - **stdout** lines are emitted as `INFO`-level log entries labelled with the processor name.
 - **stderr** lines are emitted as `WARN`-level log entries labelled with the processor name.
 
-Run `rh publish build` with `RUST_LOG=rh_packager=debug` to see per-processor resource sync
+Run `rh package build` with `RUST_LOG=rh_packager=debug` to see per-processor resource sync
 counts and timing.
 
 ### Examples

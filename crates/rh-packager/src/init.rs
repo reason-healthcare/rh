@@ -1,4 +1,4 @@
-//! Scaffolds a new FHIR Package source directory (`rh publish init`).
+//! Scaffolds a new FHIR Package source directory (`rh package init`).
 
 use crate::{manifest::PackageJson, Result};
 use serde_json::json;
@@ -205,7 +205,7 @@ fn build_implementation_guide(
 }
 
 fn packager_toml_template() -> &'static str {
-    r#"# packager.toml — rh publish hook configuration
+    r#"# packager.toml — rh package hook configuration
 # See docs/PACKAGER.md for full documentation.
 
 [hooks]

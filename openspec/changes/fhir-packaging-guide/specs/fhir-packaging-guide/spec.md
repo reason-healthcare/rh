@@ -139,7 +139,7 @@ validates the date is present.
 
 ### Requirement: Guide shows the final package output
 The guide SHALL show the resulting FHIR Package directory layout and `.tgz` artifact after
-running `rh publish build`.
+running `rh package build`.
 
 #### Scenario: Output directory layout shown
 - **WHEN** a user reads the final output section
@@ -148,5 +148,5 @@ running `rh publish build`.
 
 #### Scenario: Build command shown
 - **WHEN** a user reads the final output section
-- **THEN** the exact `rh publish build <dir>` command is shown and the resulting `.tgz`
+- **THEN** the exact `rh package build <dir>` command is shown and the resulting `.tgz`
   filename is described

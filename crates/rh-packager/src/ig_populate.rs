@@ -1,9 +1,10 @@
-//! Populates the `ImplementationGuide` resource with `dependsOn` and `definition.resource`
-//! derived from the package context.
+//! Populates the `ImplementationGuide` resource with `dependsOn`, `definition.resource`,
+//! and `definition.page` derived from the package context.
 //!
-//! Runs during the build pipeline after narrative is processed. Both arrays are **replaced**
-//! on each build so the published IG accurately reflects the package's actual dependencies
-//! and resources. The rest of the IG (metadata, extensions, etc.) is left untouched.
+//! Runs during the build pipeline after narrative is processed. The three sections are
+//! **replaced** on each build so the published IG accurately reflects the package's actual
+//! dependencies, resources, and pages. The rest of the IG (metadata, extensions, etc.) is
+//! left untouched.
 //!
 //! ## `dependsOn`
 //! Derived from `package.json` dependencies. Core FHIR packages (`hl7.fhir.r*.core`) are
@@ -14,10 +15,18 @@
 //! ## `definition.resource`
 //! One entry per resource in `ctx.resources` (excluding the IG itself) and `ctx.examples`.
 //! `exampleBoolean` is `false` for definitional resources and `true` for examples.
+//!
+//! ## `definition.page`
+//! Populated when standalone markdown files exist in `docs/`. A root page (`index.md`) wraps
+//! child entries — one per file — with `nameUrl` set to `other/<filename>.md` (matching the
+//! output path in `package/other/`). The page `title` is parsed from the first `# Heading`
+//! in the file, falling back to a humanised version of the filename stem.
+//! If no standalone markdown files exist, `definition.page` is left as-is.
 
 use crate::{context::PublishContext, PublisherError, Result};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 /// Core FHIR package IDs expressed via `fhirVersion`, not `dependsOn`.
 const CORE_FHIR_PACKAGES: &[&str] = &[
@@ -45,11 +54,22 @@ pub fn populate_ig(ctx: &mut PublishContext) -> Result<()> {
         ig["dependsOn"] = json!(depends_on);
     }
 
-    // Preserve any existing definition extensions/pages/etc; only replace `resource`.
+    // Preserve any existing definition extensions/pages/etc; only replace managed fields.
     if ig.get("definition").map_or(true, |d| d.is_null()) {
         ig["definition"] = json!({ "resource": [] });
     }
     ig["definition"]["resource"] = json!(def_resources);
+
+    // Populate definition.page from standalone markdown files (docs/).
+    if !ctx.standalone_markdown.is_empty() {
+        let pkg_title = ctx
+            .package_json
+            .extra
+            .get("title")
+            .and_then(|v| v.as_str());
+        let page_tree = build_page_tree(&ctx.standalone_markdown, &ctx.package_json.name, pkg_title);
+        ig["definition"]["page"] = page_tree;
+    }
 
     Ok(())
 }
@@ -155,6 +175,79 @@ fn is_resource_type(v: &Value, rt: &str) -> bool {
 /// e.g. `hl7.fhir.uv.smart-app-launch` → `hl7_fhir_uv_smart_app_launch`
 fn package_id_to_slug(pkg_id: &str) -> String {
     pkg_id.replace(['.', '-'], "_")
+}
+
+/// Build a `definition.page` tree from standalone markdown files.
+///
+/// Structure:
+/// ```json
+/// { "nameUrl": "index.md", "title": "<pkg title>", "generation": "markdown",
+///   "page": [ { "nameUrl": "other/overview.md", "title": "Overview", "generation": "markdown" }, ... ] }
+/// ```
+fn build_page_tree(markdown_files: &[PathBuf], pkg_name: &str, pkg_title: Option<&str>) -> Value {
+    let root_title = pkg_title.unwrap_or(pkg_name);
+
+    let mut pages: Vec<_> = markdown_files.iter().collect();
+    pages.sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).unwrap_or(""));
+
+    let children: Vec<Value> = pages.iter().map(|p| make_page_entry(p)).collect();
+
+    let mut root = json!({
+        "nameUrl": "index.md",
+        "title": root_title,
+        "generation": "markdown",
+    });
+
+    if !children.is_empty() {
+        root["page"] = json!(children);
+    }
+
+    root
+}
+
+fn make_page_entry(path: &Path) -> Value {
+    let filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("page.md");
+
+    let title = parse_markdown_title(path).unwrap_or_else(|| stem_to_title(path));
+
+    json!({
+        "nameUrl": format!("other/{filename}"),
+        "title": title,
+        "generation": "markdown",
+    })
+}
+
+/// Parse the first ATX `# Heading` from a markdown file.
+fn parse_markdown_title(path: &Path) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    content.lines().find_map(|line| {
+        line.trim()
+            .strip_prefix("# ")
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+    })
+}
+
+/// Convert a filename stem to a human-readable title.
+/// e.g. `blood-pressure_guide` → `"Blood Pressure Guide"`
+fn stem_to_title(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Page")
+        .split(['-', '_'])
+        .filter(|s| !s.is_empty())
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -380,5 +473,122 @@ mod tests {
         };
         let err = populate_ig(&mut ctx).unwrap_err();
         assert!(matches!(err, PublisherError::MissingFile(_)));
+    }
+
+    // ── page tests ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn page_not_set_when_no_standalone_markdown() {
+        let mut ctx = make_ctx(&[], &[], &[]);
+        populate_ig(&mut ctx).unwrap();
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        assert!(ig["definition"].get("page").is_none());
+    }
+
+    #[test]
+    fn page_set_when_standalone_markdown_present() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("overview.md");
+        std::fs::write(&md, "# Overview\nSome content.").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        assert!(ig["definition"]["page"].is_object());
+        assert_eq!(ig["definition"]["page"]["nameUrl"], "index.md");
+        assert_eq!(ig["definition"]["page"]["generation"], "markdown");
+    }
+
+    #[test]
+    fn page_child_uses_other_prefix_in_name_url() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("overview.md");
+        std::fs::write(&md, "# Overview").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        let child = &ig["definition"]["page"]["page"][0];
+        assert_eq!(child["nameUrl"], "other/overview.md");
+    }
+
+    #[test]
+    fn page_title_parsed_from_h1() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("intro.md");
+        std::fs::write(&md, "# Introduction Guide\nContent here.").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        let child = &ig["definition"]["page"]["page"][0];
+        assert_eq!(child["title"], "Introduction Guide");
+    }
+
+    #[test]
+    fn page_title_falls_back_to_humanised_stem() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("blood-pressure_guide.md");
+        // No H1 heading
+        std::fs::write(&md, "Some content without a heading.").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        let child = &ig["definition"]["page"]["page"][0];
+        assert_eq!(child["title"], "Blood Pressure Guide");
+    }
+
+    #[test]
+    fn page_root_uses_package_title_from_extra() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("overview.md");
+        std::fs::write(&md, "# Overview").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.package_json
+            .extra
+            .insert("title".to_string(), json!("My Custom IG"));
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        assert_eq!(ig["definition"]["page"]["title"], "My Custom IG");
+    }
+
+    #[test]
+    fn page_root_falls_back_to_package_name() {
+        use tempfile::TempDir;
+        let tmp = TempDir::new().unwrap();
+        let md = tmp.path().join("overview.md");
+        std::fs::write(&md, "# Overview").unwrap();
+
+        let mut ctx = make_ctx(&[], &[], &[]);
+        ctx.standalone_markdown.push(md);
+        populate_ig(&mut ctx).unwrap();
+
+        let ig = ctx.resources.get("ImplementationGuide").unwrap();
+        assert_eq!(ig["definition"]["page"]["title"], "test.fhir.pkg");
+    }
+
+    #[test]
+    fn stem_to_title_humanises_correctly() {
+        use std::path::PathBuf;
+        assert_eq!(stem_to_title(&PathBuf::from("blood-pressure.md")), "Blood Pressure");
+        assert_eq!(stem_to_title(&PathBuf::from("my_overview.md")), "My Overview");
+        assert_eq!(stem_to_title(&PathBuf::from("intro.md")), "Intro");
     }
 }

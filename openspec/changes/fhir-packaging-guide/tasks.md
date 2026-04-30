@@ -49,7 +49,7 @@
 
 ## 8. Final Package Output
 
-- [x] 8.1 Show the `rh publish build <dir>` command and expected terminal output
+- [x] 8.1 Show the `rh package build <dir>` command and expected terminal output
 - [x] 8.2 Show the resulting `output/package/` directory tree with all compiled resources, narrative, and metadata
 - [x] 8.3 Describe the generated `.tgz` filename convention (`<name>-<version>.tgz`)
 

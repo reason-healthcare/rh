@@ -13,10 +13,10 @@ layers — infrastructure first, pipeline second, processors third, polish last.
 
 **Tasks**: 1.1–1.5  
 **Depends on**: nothing  
-**Goal**: Establish the new `rh-publisher` crate and wire a stub `rh publish` subcommand into the CLI.
+**Goal**: Establish the new `rh-publisher` crate and wire a stub `rh package` subcommand into the CLI.
 
 Creates the crate skeleton, adds `pulldown-cmark` and `toml` to workspace deps, adds the
-`rh-publisher` crate dependency to `rh-cli`, and registers a `rh publish` subcommand that
+`rh-publisher` crate dependency to `rh-cli`, and registers a `rh package` subcommand that
 exits with "not yet implemented". CI must pass (build + lint).
 
 ---
@@ -36,7 +36,7 @@ correctness and missing-field defaults. This is the shared foundation all subseq
 
 **Tasks**: 3.1–3.5, 4.1–4.3, 5.1–5.3, 6.1–6.4  
 **Depends on**: PR 2  
-**Goal**: A working `rh publish build` that loads a source directory, validates IG sync, generates `.index.json`, and writes the expanded output directory. No hooks, no narrative, no locking yet.
+**Goal**: A working `rh package build` that loads a source directory, validates IG sync, generates `.index.json`, and writes the expanded output directory. No hooks, no narrative, no locking yet.
 
 This is the minimum viable build command. Provides a testable end-to-end path early, before
 any processors are added. Integration test fixture created here.
@@ -47,7 +47,7 @@ any processors are added. Integration test fixture created here.
 
 **Tasks**: 7.1–7.2, 8.2, 8.5  
 **Depends on**: PR 3  
-**Goal**: `rh publish pack` produces a `.tgz` with correct `package/` prefix from the built output directory.
+**Goal**: `rh package pack` produces a `.tgz` with correct `package/` prefix from the built output directory.
 
 Small, self-contained. Reuses `tar` + `flate2` already in the workspace (used by
 `rh-foundation` for reading; this adds writing). Verifiable by inspecting tarball entries.
@@ -61,7 +61,7 @@ Small, self-contained. Reuses `tar` + `flate2` already in the workspace (used by
 **Goal**: `HookProcessor` trait, processor registry, sequential runner with abort-on-first-failure, `publisher.toml` hook config parsing, and unknown-name startup validation.
 
 No concrete processors yet — the registry is empty except for a test-only no-op processor.
-`rh publish build` is updated to call the hook runner at each stage. `rh publish check` is
+`rh package build` is updated to call the hook runner at each stage. `rh package check` is
 implemented.
 
 ---
@@ -81,7 +81,7 @@ Self-contained. Registered as a named processor `"narrative"` (always-on, not ho
 
 **Tasks**: 11.1–11.9, 8.4  
 **Depends on**: PR 3  
-**Goal**: `rh publish lock` scans source resources, resolves canonical URLs against dependency packages, writes `fhir-lock.json`; build applies pinning from lock file.
+**Goal**: `rh package lock` scans source resources, resolves canonical URLs against dependency packages, writes `fhir-lock.json`; build applies pinning from lock file.
 
 Can be developed in parallel with PRs 5 and 6 since it depends only on PR 3. The lock command
 and build-time pinning are useful independently of any hook processor.

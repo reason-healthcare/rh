@@ -7,7 +7,7 @@ mod cql;
 mod download;
 mod fhirpath;
 mod fsh;
-mod publish;
+mod package;
 mod snapshot;
 mod validator;
 mod vcl;
@@ -61,7 +61,7 @@ enum Commands {
 
     /// Assemble a conformant FHIR Package from a source directory
     #[clap(subcommand)]
-    Publish(publish::PublishCommands),
+    Package(package::PackageCommands),
 
     /// Validate FHIR resources
     #[clap(subcommand)]
@@ -135,9 +135,9 @@ async fn main() -> Result<()> {
                 std::process::exit(1);
             }
         }
-        Commands::Publish(cmd) => {
-            if let Err(e) = publish::handle_command(cmd).await {
-                error!("Publish error: {}", e);
+        Commands::Package(cmd) => {
+            if let Err(e) = package::handle_command(cmd).await {
+                error!("Package error: {}", e);
                 std::process::exit(1);
             }
         }

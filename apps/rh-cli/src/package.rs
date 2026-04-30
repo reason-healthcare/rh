@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
-pub enum PublishCommands {
+pub enum PackageCommands {
     /// Scaffold a new FHIR Package source directory
     Init(InitArgs),
 
@@ -94,9 +94,9 @@ pub struct PackArgs {
     pub out: Option<PathBuf>,
 }
 
-pub async fn handle_command(cmd: PublishCommands) -> Result<()> {
+pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
     match cmd {
-        PublishCommands::Init(args) => {
+        PackageCommands::Init(args) => {
             let dir = args
                 .dir
                 .unwrap_or_else(|| std::env::current_dir().expect("cannot determine current dir"));
@@ -116,24 +116,24 @@ pub async fn handle_command(cmd: PublishCommands) -> Result<()> {
                 println!("  Created: {}", path.display());
             }
             println!("\nPackage initialised at {}", dir.display());
-            println!("Next: edit package.json, then run `rh publish build {}`", dir.display());
+            println!("Next: edit package.json, then run `rh package build {}`", dir.display());
             Ok(())
         }
-        PublishCommands::Build(args) => {
+        PackageCommands::Build(args) => {
             let output_dir = args.out.unwrap_or_else(|| args.dir.join("output"));
             rh_packager::build(&args.dir, &output_dir)?;
             Ok(())
         }
-        PublishCommands::Lock(args) => {
+        PackageCommands::Lock(args) => {
             let output_dir = args.dir.join("output");
             rh_packager::lock_package(&args.dir, &output_dir)?;
             Ok(())
         }
-        PublishCommands::Check(args) => {
+        PackageCommands::Check(args) => {
             rh_packager::check(&args.dir)?;
             Ok(())
         }
-        PublishCommands::Pack(args) => {
+        PackageCommands::Pack(args) => {
             let tgz = rh_packager::pack_dir(&args.dir)?;
             println!("Packed: {}", tgz.display());
             Ok(())

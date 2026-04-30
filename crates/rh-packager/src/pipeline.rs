@@ -1,4 +1,4 @@
-//! High-level pipeline orchestration for `rh publish` subcommands.
+//! High-level pipeline orchestration for `rh package` subcommands.
 
 use crate::{
     context::PublishContext,
@@ -18,7 +18,7 @@ use std::{
 };
 use tracing::{info, warn};
 
-/// Run the full `rh publish build` pipeline.
+/// Run the full `rh package build` pipeline.
 ///
 /// Steps:
 /// 1. Load source directory
@@ -65,7 +65,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
         None => {
             warn!(
                 "No fhir-lock.json found; canonical references will not be pinned. \
-                 Run `rh publish lock` to generate a lock file."
+                 Run `rh package lock` to generate a lock file."
             );
         }
     }
@@ -87,7 +87,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     Ok(tgz)
 }
 
-/// Run `rh publish lock` — scan source resources and write/update `fhir-lock.json`.
+/// Run `rh package lock` — scan source resources and write/update `fhir-lock.json`.
 ///
 /// Reads dependency packages from the configured packages cache and resolves all
 /// canonical URLs found in source resources against those packages.
@@ -112,7 +112,7 @@ pub fn lock(source_dir: &Path, output_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Run `rh publish check` — validate source without writing any output.
+/// Run `rh package check` — validate source without writing any output.
 ///
 /// Runs IG sync validation and all `before_build` hook processors. Succeeds only if
 /// all checks pass. No files are written.
@@ -138,7 +138,7 @@ pub fn check(source_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Run `rh publish pack` — pack an already-built expanded output directory into a tarball.
+/// Run `rh package pack` — pack an already-built expanded output directory into a tarball.
 ///
 /// Reads `package.json` from the given output directory to determine the package name and
 /// version for the tarball filename.

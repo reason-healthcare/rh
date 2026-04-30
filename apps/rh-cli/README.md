@@ -104,16 +104,16 @@ rh fsh compile profiles/*.fsh --output output/
 | `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
 | `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
 | `rh snapshot` | Generate and manage StructureDefinition snapshots | — |
-| `rh publish` | Build and publish FHIR Packages from a source directory | [PACKAGER.md](docs/PACKAGER.md) |
+| `rh package` | Build and publish FHIR Packages from a source directory | [PACKAGER.md](docs/PACKAGER.md) |
 
-### `rh publish` subcommands
+### `rh package` subcommands
 
 ```
-rh publish init  [DIR]   Scaffold a new FHIR Package source directory
-rh publish build <dir>   Build a FHIR Package from a source directory
-rh publish lock  <dir>   Resolve canonical references and write fhir-lock.json
-rh publish check <dir>   Validate source (no output written)
-rh publish pack  <dir>   Pack an already-built output directory into a .tgz
+rh package init  [DIR]   Scaffold a new FHIR Package source directory
+rh package build <dir>   Build a FHIR Package from a source directory
+rh package lock  <dir>   Resolve canonical references and write fhir-lock.json
+rh package check <dir>   Validate source (no output written)
+rh package pack  <dir>   Pack an already-built output directory into a .tgz
 
 Options (init):
   -n, --name <NAME>         Package name (e.g. com.example.fhir)   [required]

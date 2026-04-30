@@ -2,23 +2,23 @@
 
 ## Purpose
 
-Defines the lifecycle hook system for `rh publish build` and `rh publish pack`, including configuration via `publisher.toml`, supported pipeline stages, processor registration, execution ordering, and the shared in-memory resource map.
+Defines the lifecycle hook system for `rh package build` and `rh package pack`, including configuration via `publisher.toml`, supported pipeline stages, processor registration, execution ordering, and the shared in-memory resource map.
 
 ## Requirements
 
 ### Requirement: publisher.toml declares hook processors per pipeline stage
 
-A `publisher.toml` file in the source directory SHALL be read by `rh publish build` and `rh
+A `publisher.toml` file in the source directory SHALL be read by `rh package build` and `rh
 publish pack` to determine which named processors run at each lifecycle stage. If
 `publisher.toml` is absent, no processors are run.
 
 #### Scenario: publisher.toml with before_build processors
 - **WHEN** `publisher.toml` contains `[hooks]\nbefore_build = ["snapshot", "validate"]`
-- **THEN** `rh publish build` runs the `snapshot` processor then the `validate` processor before assembling output
+- **THEN** `rh package build` runs the `snapshot` processor then the `validate` processor before assembling output
 
 #### Scenario: Missing publisher.toml skips all hooks
 - **WHEN** no `publisher.toml` exists in the source directory
-- **THEN** `rh publish build` runs with no hook processors and emits an informational message
+- **THEN** `rh package build` runs with no hook processors and emits an informational message
 
 ### Requirement: Pipeline stages are before_build, after_build, before_pack, after_pack
 
