@@ -7,7 +7,6 @@ directory to a publishable `.tgz` FHIR Package in nine steps.
 **Prerequisites:**
 - `rh` installed (see [just install](../../justfile) or `cargo install --path apps/rh-cli`)
 - FHIR R4 core package cached locally — run `rh download hl7.fhir.r4.core#4.0.1` once
-- Python 3 available for the extended shell hook examples
 
 > **Reference docs:** This guide focuses on the *how*. For authoritative field-by-field
 > reference see [`README.md`](README.md) and [`PROCESSORS.md`](PROCESSORS.md).
@@ -321,11 +320,15 @@ A non-zero exit code from any shell processor aborts the pipeline immediately.
 
 ---
 
-## 7. Extending the Pipeline — Python Hooks
+## 7. Extending the Pipeline — Custom Hook Scripts
 
-For more complex post-processing, Python scripts are a natural fit. This section adds two Python
-hooks that work together: `stamp_date.py` injects a build timestamp into every resource's
-metadata, and `check_date.py` validates the stamp is present — acting as a quality gate.
+Shell hooks can be written in any language — bash, Python, Ruby, Node.js, or anything else on
+`PATH`. This section adds two scripts that work together: `stamp_date` injects a build timestamp
+into every resource's metadata, and `check_date` validates the stamp is present, acting as a
+quality gate.
+
+The examples below are written in Python, but the same logic translates directly to any scripting
+language; only the `command` in `packager.toml` would change.
 
 ### `scripts/stamp_date.py`
 
@@ -408,9 +411,11 @@ print(f"check_date: all {len(list(resources_dir.glob('*.json')))} resource(s) ha
 
 ### Wire the hooks in `packager.toml`
 
-Replace the `[hooks]` section from Step 1 with the following to add both Python processors.
+Replace the `[hooks]` section from Step 1 with the following to add both processors.
 `stamp-date` runs in `before_build` so the tag is present before `validate` runs; `check-date`
-runs in `after_build` as a final quality gate:
+runs in `after_build` as a final quality gate. The `command` can be any executable — swap
+`python3 scripts/stamp_date.py` for `bash scripts/stamp_date.sh` or `node scripts/stamp_date.js`
+as needed:
 
 ```toml
 [hooks]
@@ -426,7 +431,7 @@ command = "python3 scripts/check_date.py"
 
 ### What failure looks like
 
-If `check_date.py` finds a resource without the tag (e.g., because `stamp-date` was accidentally
+If `check_date` finds a resource without the tag (e.g., because `stamp-date` was accidentally
 removed from `before_build`), the pipeline aborts:
 
 ```
