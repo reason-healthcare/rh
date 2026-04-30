@@ -22,7 +22,7 @@ pub struct PublishContext {
     /// Mutable map of FHIR resources: filename stem → JSON value.
     pub resources: HashMap<String, Value>,
 
-    /// Publisher configuration loaded from `publisher.toml` (defaults if absent).
+    /// Packager configuration loaded from `packager.toml` (defaults if absent).
     pub config: PublisherConfig,
 
     /// Markdown files that have no matching FHIR resource; written to `package/other/`.

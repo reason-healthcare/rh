@@ -9,7 +9,7 @@
 //! ```text
 //! my-package/
 //!   package.json              # FHIR package manifest (required)
-//!   publisher.toml            # Hook configuration (optional)
+//!   packager.toml            # Hook configuration (optional)
 //!   ImplementationGuide.json  # ImplementationGuide resource (required)
 //!   StructureDefinition-foo.json
 //!   ValueSet-bar.json

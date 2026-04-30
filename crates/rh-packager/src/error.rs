@@ -18,7 +18,7 @@ pub enum PublisherError {
     #[error("Hook processor '{processor}' failed: {message}")]
     HookProcessor { processor: String, message: String },
 
-    /// A processor name declared in `publisher.toml` is not registered.
+    /// A processor name declared in `packager.toml` is not registered.
     #[error("Unknown hook processor: '{0}'")]
     UnknownProcessor(String),
 

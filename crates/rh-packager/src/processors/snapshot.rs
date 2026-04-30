@@ -16,7 +16,7 @@ use tracing::info;
 pub struct SnapshotProcessor;
 
 impl HookProcessor for SnapshotProcessor {
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "snapshot"
     }
 

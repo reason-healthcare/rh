@@ -17,7 +17,7 @@ pub fn default_packages_dir() -> PathBuf {
 ///
 /// Resolution order (first non-`None` wins):
 /// 1. `processor_override` — per-processor `packages_dir` config
-/// 2. `global_override` — top-level `packages_dir` in `publisher.toml`
+/// 2. `global_override` — top-level `packages_dir` in `packager.toml`
 /// 3. [`default_packages_dir()`]
 pub fn resolve_packages_dir(
     processor_override: Option<&str>,
