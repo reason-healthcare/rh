@@ -184,6 +184,7 @@ pub fn pack_dir(output_dir: &Path) -> Result<PathBuf> {
 
     let ctx = PublishContext {
         source_dir: output_dir.to_path_buf(),
+        input_dir: output_dir.to_path_buf(),
         output_dir: output_dir.to_path_buf(),
         package_json,
         resources: Default::default(),
@@ -211,8 +212,11 @@ mod tests {
     fn setup_minimal_package(dir: &Path) {
         write_file(
             dir,
-            "package.json",
-            r#"{"name":"test.fhir.pkg","version":"1.0.0","fhirVersions":["4.0.1"]}"#,
+            "packager.toml",
+            r#"id = "test.fhir.pkg"
+version = "1.0.0"
+fhir_version = "4.0.1"
+"#,
         );
         write_file(
             dir,
@@ -249,8 +253,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         write_file(
             tmp.path(),
-            "package.json",
-            r#"{"name":"test.fhir.pkg","version":"2.0.0","fhirVersions":["4.0.1"]}"#,
+            "packager.toml",
+            r#"id = "test.fhir.pkg"
+version = "2.0.0"
+fhir_version = "4.0.1"
+"#,
         );
         write_file(
             tmp.path(),
@@ -311,7 +318,11 @@ mod tests {
         write_file(
             tmp.path(),
             "packager.toml",
-            r#"[hooks]
+            r#"id = "test.fhir.pkg"
+version = "1.0.0"
+fhir_version = "4.0.1"
+
+[hooks]
 before_build = ["nonexistent-processor"]"#,
         );
 

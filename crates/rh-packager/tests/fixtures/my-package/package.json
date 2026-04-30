@@ -1,8 +1,0 @@
-{
-  "name": "example.fhir.test",
-  "version": "1.0.0",
-  "fhirVersions": ["4.0.1"],
-  "url": "http://example.org/fhir/ImplementationGuide/example.fhir.test",
-  "description": "Example FHIR test package",
-  "dependencies": {}
-}

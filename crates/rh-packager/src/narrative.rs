@@ -10,23 +10,32 @@ use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
 use std::path::Path;
 
-/// Process all matched markdown narrative files in the source directory:
-/// - Scans recursively through subdirectories (skipping hidden dirs, `output/`, etc.)
+/// Process all matched markdown narrative files in the narrative directory:
 /// - Converts markdown → XHTML wrapped in a FHIR-compliant div
 /// - Embeds the result as `resource.text = {status: "generated", div: "..."}`
 ///   for resources matched by filename stem in either `ctx.resources` or `ctx.examples`
 ///
+/// In structured layout the narrative directory is `input/narrative/`. In legacy layout
+/// it is the source root. The directory is resolved via [`PublishContext::narrative_dir`].
+///
+/// If the narrative directory does not exist, this function returns successfully without
+/// processing anything.
+///
 /// Unmatched `.md` files have already been recorded in `ctx.standalone_markdown`
 /// by the loader and are handled during output assembly.
 pub fn process_narrative(ctx: &mut PublishContext) -> Result<()> {
-    let source_dir = ctx.source_dir.clone();
+    let narrative_dir = ctx.narrative_dir();
+
+    if !narrative_dir.is_dir() {
+        return Ok(());
+    }
 
     // Collect (stem, content) pairs without holding borrows on ctx.
     let mut resource_matched: Vec<(String, String)> = Vec::new();
     let mut example_matched: Vec<(String, String)> = Vec::new();
 
     collect_narrative_matches(
-        &source_dir,
+        &narrative_dir,
         &ctx.resources,
         &ctx.examples,
         &mut resource_matched,
@@ -137,6 +146,7 @@ mod tests {
     fn make_ctx(tmp: &TempDir, resources: HashMap<String, Value>) -> PublishContext {
         PublishContext {
             source_dir: tmp.path().to_path_buf(),
+            input_dir: tmp.path().to_path_buf(),
             output_dir: tmp.path().join("output"),
             package_json: PackageJson {
                 name: "test".to_string(),

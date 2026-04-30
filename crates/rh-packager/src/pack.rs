@@ -171,6 +171,7 @@ mod tests {
 
         PublishContext {
             source_dir: tmp.path().to_path_buf(),
+            input_dir: tmp.path().to_path_buf(),
             output_dir: tmp.path().join("output"),
             package_json: pkg,
             resources,

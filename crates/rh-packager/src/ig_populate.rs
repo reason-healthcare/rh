@@ -304,6 +304,7 @@ mod tests {
 
         PublishContext {
             source_dir: std::path::PathBuf::from("/tmp/src"),
+            input_dir: std::path::PathBuf::from("/tmp/src"),
             output_dir: std::path::PathBuf::from("/tmp/out"),
             package_json: pkg,
             resources: res_map,
@@ -462,6 +463,7 @@ mod tests {
         };
         let mut ctx = PublishContext {
             source_dir: std::path::PathBuf::from("/tmp/src"),
+            input_dir: std::path::PathBuf::from("/tmp/src"),
             output_dir: std::path::PathBuf::from("/tmp/out"),
             package_json: pkg,
             resources: HashMap::new(),

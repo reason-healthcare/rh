@@ -1,21 +1,22 @@
-//! Validator that checks `ImplementationGuide.json` fields are consistent with `package.json`.
+//! Validator that checks `ImplementationGuide.json` fields are consistent with `packager.toml`.
 //!
-//! These two files must stay in sync per the FHIR Package Specification. This module
-//! compares the key fields and returns descriptive errors for each mismatch found.
+//! The `ImplementationGuide` resource and `packager.toml` must stay in sync per the
+//! FHIR Package Specification. This module compares the key fields and returns
+//! descriptive errors for each mismatch found.
 
 use crate::{context::PublishContext, PublisherError, Result};
 
 /// Validate that the `ImplementationGuide` resource in `ctx.resources` is consistent
-/// with the `package.json` manifest. All mismatches are collected and returned as a
-/// single error with a newline-separated list.
+/// with the package manifest (derived from `packager.toml`). All mismatches are
+/// collected and returned as a single error with a newline-separated list.
 ///
 /// # Checked Fields
-/// | `package.json` | IG field |
+/// | `packager.toml` field | IG field |
 /// |---|---|
-/// | `name` | `packageId` |
+/// | `id` | `packageId` |
 /// | `version` | `version` |
-/// | `url` | `url` |
-/// | `fhirVersions[0]` | `fhirVersion[0]` |
+/// | `canonical` | `url` |
+/// | `fhir_version` | `fhirVersion[0]` |
 pub fn check_ig_sync(ctx: &PublishContext) -> Result<()> {
     let ig = find_ig(ctx)?;
     let pkg = &ctx.package_json;
@@ -87,12 +88,12 @@ fn check_field(
     match (expected, actual) {
         (Some(exp), Some(act)) if exp != act => {
             mismatches.push(format!(
-                "  {field}: package.json has \"{exp}\" but ImplementationGuide has \"{act}\""
+                "  {field}: packager.toml has \"{exp}\" but ImplementationGuide has \"{act}\""
             ));
         }
         (Some(exp), None) => {
             mismatches.push(format!(
-                "  {field}: package.json has \"{exp}\" but ImplementationGuide is missing this field"
+                "  {field}: packager.toml has \"{exp}\" but ImplementationGuide is missing this field"
             ));
         }
         _ => {}
@@ -131,6 +132,7 @@ mod tests {
 
         PublishContext {
             source_dir: std::path::PathBuf::from("/tmp/src"),
+            input_dir: std::path::PathBuf::from("/tmp/src"),
             output_dir: std::path::PathBuf::from("/tmp/out"),
             package_json: pkg,
             resources,
