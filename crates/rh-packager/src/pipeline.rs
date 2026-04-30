@@ -165,6 +165,7 @@ pub fn pack_dir(output_dir: &Path) -> Result<PathBuf> {
         output_dir: output_dir.to_path_buf(),
         package_json,
         resources: Default::default(),
+        examples: Default::default(),
         config: Default::default(),
         standalone_markdown: Vec::new(),
     };

@@ -20,6 +20,9 @@ use tracing::info;
 ///   ImplementationGuide.json
 ///   StructureDefinition-foo.json   (with .text populated by narrative module)
 ///   ...
+///   examples/
+///     Patient-example.json         (resources from source examples/ subdir)
+///     .index.json
 ///   other/
 ///     overview.md                  (standalone markdown files)
 ///   .index.json
@@ -28,7 +31,7 @@ pub fn write_output_dir(ctx: &PublishContext) -> Result<PathBuf> {
     let pkg_dir = ctx.output_dir.join("package");
     fs::create_dir_all(&pkg_dir)?;
 
-    // Write FHIR resources.
+    // Write definitional FHIR resources flat.
     for (stem, value) in &ctx.resources {
         let out_path = pkg_dir.join(format!("{stem}.json"));
         write_json(&out_path, value)?;
@@ -37,6 +40,19 @@ pub fn write_output_dir(ctx: &PublishContext) -> Result<PathBuf> {
     // Write package.json manifest.
     let pkg_json_value = serde_json::to_value(&ctx.package_json)?;
     write_json(&pkg_dir.join("package.json"), &pkg_json_value)?;
+
+    // Write example resources to package/examples/ with their own .index.json.
+    if !ctx.examples.is_empty() {
+        let examples_dir = pkg_dir.join("examples");
+        fs::create_dir_all(&examples_dir)?;
+        for (stem, value) in &ctx.examples {
+            let out_path = examples_dir.join(format!("{stem}.json"));
+            write_json(&out_path, value)?;
+        }
+        let examples_index = build_index(&ctx.examples)?;
+        let examples_index_value = serde_json::to_value(&examples_index)?;
+        write_json(&examples_dir.join(".index.json"), &examples_index_value)?;
+    }
 
     // Copy standalone markdown to package/other/.
     if !ctx.standalone_markdown.is_empty() {
@@ -50,8 +66,8 @@ pub fn write_output_dir(ctx: &PublishContext) -> Result<PathBuf> {
         }
     }
 
-    // Write .index.json.
-    let index = build_index(ctx)?;
+    // Write .index.json for definitional resources.
+    let index = build_index(&ctx.resources)?;
     let index_value = serde_json::to_value(&index)?;
     write_json(&pkg_dir.join(".index.json"), &index_value)?;
 
@@ -158,6 +174,7 @@ mod tests {
             output_dir: tmp.path().join("output"),
             package_json: pkg,
             resources,
+            examples: HashMap::new(),
             config: PublisherConfig::default(),
             standalone_markdown: standalone_md,
         }
@@ -174,6 +191,39 @@ mod tests {
         assert!(pkg_dir.join("StructureDefinition-foo.json").exists());
         assert!(pkg_dir.join(".index.json").exists());
         assert!(pkg_dir.join("other").join("overview.md").exists());
+    }
+
+    #[test]
+    fn examples_written_to_examples_subdir_with_index() {
+        let tmp = TempDir::new().unwrap();
+        let mut ctx = make_ctx(&tmp);
+        ctx.examples.insert(
+            "Patient-example".to_string(),
+            json!({"resourceType":"Patient","id":"example"}),
+        );
+
+        let pkg_dir = write_output_dir(&ctx).unwrap();
+
+        // Example resource under examples/
+        assert!(pkg_dir
+            .join("examples")
+            .join("Patient-example.json")
+            .exists());
+        // Examples has its own .index.json
+        assert!(pkg_dir.join("examples").join(".index.json").exists());
+        // Example is NOT in the top-level flat directory
+        assert!(!pkg_dir.join("Patient-example.json").exists());
+        // Examples are excluded from the top-level .index.json
+        let index_text = fs::read_to_string(pkg_dir.join(".index.json")).unwrap();
+        assert!(!index_text.contains("Patient-example"));
+    }
+
+    #[test]
+    fn no_examples_dir_created_when_empty() {
+        let tmp = TempDir::new().unwrap();
+        let ctx = make_ctx(&tmp);
+        let pkg_dir = write_output_dir(&ctx).unwrap();
+        assert!(!pkg_dir.join("examples").exists());
     }
 
     #[test]

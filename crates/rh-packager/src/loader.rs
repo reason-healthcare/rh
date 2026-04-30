@@ -14,6 +14,9 @@ const PACKAGE_JSON: &str = "package.json";
 const IG_RESOURCE_TYPE: &str = "ImplementationGuide";
 const PUBLISHER_TOML: &str = "packager.toml";
 
+/// Scanned source resources: (definitional_resources, example_resources, standalone_markdown).
+type ScannedResources = (HashMap<String, Value>, HashMap<String, Value>, Vec<PathBuf>);
+
 /// Scan `source_dir`, load `package.json` and `packager.toml`, populate a
 /// `PublishContext` with the discovered FHIR resources and markdown files.
 ///
@@ -26,8 +29,9 @@ pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<Publish
 
     let mut ctx = PublishContext::new(source_dir.to_path_buf(), output_dir, package_json, config);
 
-    let (resources, standalone_md) = scan_resources(source_dir)?;
+    let (resources, examples, standalone_md) = scan_resources(source_dir)?;
     ctx.resources = resources;
+    ctx.examples = examples;
     ctx.standalone_markdown = standalone_md;
 
     ensure_implementation_guide(&ctx)?;
@@ -54,18 +58,69 @@ fn load_publisher_config(source_dir: &Path) -> Result<PublisherConfig> {
     }
 }
 
-/// Walk `source_dir`, loading `*.json` FHIR resources into a map and
-/// partitioning `*.md` files into resource-matched and standalone lists.
+/// Walk `source_dir` recursively, loading `*.json` FHIR resources into definitional
+/// and example maps, and partitioning `*.md` files into resource-matched and standalone lists.
 ///
-/// Returns `(resource_map, standalone_markdown)` where the resource map is
-/// keyed by the file's stem (without extension), e.g. `"StructureDefinition-foo"`.
-fn scan_resources(source_dir: &Path) -> Result<(HashMap<String, Value>, Vec<PathBuf>)> {
+/// Resources found under an `examples/` subdirectory (at any depth) are placed in the
+/// examples map and will be written to `package/examples/` in the output. All other
+/// resources are definitional and go into `package/` flat.
+///
+/// Returns `(resources, examples, standalone_markdown)`.
+fn scan_resources(source_dir: &Path) -> Result<ScannedResources> {
     let mut resources: HashMap<String, Value> = HashMap::new();
+    let mut examples: HashMap<String, Value> = HashMap::new();
     let mut md_stems: HashMap<String, PathBuf> = HashMap::new();
 
-    for entry in std::fs::read_dir(source_dir)? {
+    scan_dir(
+        source_dir,
+        false,
+        &mut resources,
+        &mut examples,
+        &mut md_stems,
+    )?;
+
+    // Partition markdown files: matched (have a corresponding JSON resource) vs standalone.
+    let mut standalone_markdown: Vec<PathBuf> = Vec::new();
+    for (stem, md_path) in md_stems {
+        if !resources.contains_key(&stem) && !examples.contains_key(&stem) {
+            standalone_markdown.push(md_path);
+        }
+        // Matched markdown files are handled by the narrative module later.
+    }
+
+    Ok((resources, examples, standalone_markdown))
+}
+
+/// Returns true if a directory entry should be skipped during source scanning.
+fn is_skip_dir(name: &str) -> bool {
+    name.starts_with('.') || matches!(name, "output" | "target" | "node_modules")
+}
+
+/// Recursively walk `dir`, collecting FHIR JSON resources and markdown files.
+///
+/// `in_examples` is true when scanning a path that descends from an `examples/` directory,
+/// which routes resources to the `examples` map instead of `resources`.
+fn scan_dir(
+    dir: &Path,
+    in_examples: bool,
+    resources: &mut HashMap<String, Value>,
+    examples: &mut HashMap<String, Value>,
+    md_stems: &mut HashMap<String, PathBuf>,
+) -> Result<()> {
+    for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+        if path.is_dir() {
+            if is_skip_dir(name) {
+                continue;
+            }
+            let next_in_examples = in_examples || name == "examples";
+            scan_dir(&path, next_in_examples, resources, examples, md_stems)?;
+            continue;
+        }
+
         if !path.is_file() {
             continue;
         }
@@ -78,31 +133,27 @@ fn scan_resources(source_dir: &Path) -> Result<(HashMap<String, Value>, Vec<Path
         };
 
         match ext {
-            "json" if stem != "package" && stem != "fhir-lock" => match load_json_resource(&path) {
-                Ok(value) => {
-                    resources.insert(stem.to_string(), value);
+            "json" if stem != "package" && stem != "fhir-lock" && !stem.starts_with('.') => {
+                match load_json_resource(&path) {
+                    Ok(value) => {
+                        if in_examples {
+                            examples.insert(stem.to_string(), value);
+                        } else {
+                            resources.insert(stem.to_string(), value);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Skipping {}: {}", path.display(), e);
+                    }
                 }
-                Err(e) => {
-                    warn!("Skipping {}: {}", path.display(), e);
-                }
-            },
+            }
             "md" => {
                 md_stems.insert(stem.to_string(), path.clone());
             }
             _ => {}
         }
     }
-
-    // Partition markdown files: matched (have a corresponding JSON resource) vs standalone.
-    let mut standalone_markdown: Vec<PathBuf> = Vec::new();
-    for (stem, md_path) in md_stems {
-        if !resources.contains_key(&stem) {
-            standalone_markdown.push(md_path);
-        }
-        // Matched markdown files are handled by the narrative module later.
-    }
-
-    Ok((resources, standalone_markdown))
+    Ok(())
 }
 
 fn load_json_resource(path: &Path) -> Result<Value> {
@@ -204,6 +255,63 @@ mod tests {
 
         let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
         assert!(!ctx.resources.contains_key("package"));
+    }
+
+    #[test]
+    fn loads_resources_from_subdirectory() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        let profiles_dir = dir.path().join("profiles");
+        fs::create_dir_all(&profiles_dir).unwrap();
+        write_file(
+            &profiles_dir,
+            "StructureDefinition-foo.json",
+            r#"{"resourceType":"StructureDefinition","id":"foo"}"#,
+        );
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert!(ctx.resources.contains_key("StructureDefinition-foo"));
+        assert!(ctx.examples.is_empty());
+    }
+
+    #[test]
+    fn routes_examples_subdir_to_examples_map() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        let examples_dir = dir.path().join("examples");
+        fs::create_dir_all(&examples_dir).unwrap();
+        write_file(
+            &examples_dir,
+            "Patient-example.json",
+            r#"{"resourceType":"Patient","id":"example"}"#,
+        );
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert!(!ctx.resources.contains_key("Patient-example"));
+        assert!(ctx.examples.contains_key("Patient-example"));
+    }
+
+    #[test]
+    fn skips_output_and_hidden_directories() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        // Place a JSON file in output/ — should be ignored.
+        let output_dir = dir.path().join("output");
+        fs::create_dir_all(&output_dir).unwrap();
+        write_file(
+            &output_dir,
+            "ValueSet-stray.json",
+            r#"{"resourceType":"ValueSet","id":"stray"}"#,
+        );
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert!(!ctx.resources.contains_key("ValueSet-stray"));
     }
 
     #[test]

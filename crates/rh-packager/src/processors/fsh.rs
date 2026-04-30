@@ -196,6 +196,7 @@ mod tests {
                 extra: HM::new(),
             },
             resources: HashMap::new(),
+            examples: HashMap::new(),
             standalone_markdown: Vec::new(),
             config: PublisherConfig::default(),
         }

@@ -134,6 +134,7 @@ mod tests {
             output_dir: std::path::PathBuf::from("/tmp/out"),
             package_json: pkg,
             resources,
+            examples: HashMap::new(),
             config: PublisherConfig::default(),
             standalone_markdown: Vec::new(),
         }

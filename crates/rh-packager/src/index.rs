@@ -1,8 +1,9 @@
 //! Generates `.index.json` per the FHIR Package Specification (index-version 2).
 
-use crate::{context::PublishContext, Result};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// A single resource entry in the package index.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -25,10 +26,12 @@ pub struct PackageIndex {
     pub files: Vec<IndexEntry>,
 }
 
-/// Build a `PackageIndex` from the resource map in `ctx`.
-pub fn build_index(ctx: &PublishContext) -> Result<PackageIndex> {
-    let mut files: Vec<IndexEntry> = ctx
-        .resources
+/// Build a `PackageIndex` from the provided resource map.
+///
+/// Call once for definitional resources (`package/*.json`) and optionally again
+/// for example resources (`package/examples/*.json`) to get separate index documents.
+pub fn build_index(resources: &HashMap<String, Value>) -> Result<PackageIndex> {
+    let mut files: Vec<IndexEntry> = resources
         .iter()
         .filter_map(|(stem, value)| entry_from_resource(stem, value))
         .collect();
@@ -66,36 +69,12 @@ fn entry_from_resource(stem: &str, value: &Value) -> Option<IndexEntry> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::PublisherConfig, context::PublishContext, manifest::PackageJson};
     use serde_json::json;
     use std::collections::HashMap;
 
-    fn make_ctx(resources: HashMap<String, Value>) -> PublishContext {
-        let pkg = PackageJson {
-            name: "test.pkg".to_string(),
-            version: "1.0.0".to_string(),
-            fhir_versions: vec!["4.0.1".to_string()],
-            dependencies: HashMap::new(),
-            url: None,
-            description: None,
-            author: None,
-            license: None,
-            extra: HashMap::new(),
-        };
-        PublishContext {
-            source_dir: std::path::PathBuf::from("/tmp/src"),
-            output_dir: std::path::PathBuf::from("/tmp/out"),
-            package_json: pkg,
-            resources,
-            config: PublisherConfig::default(),
-            standalone_markdown: Vec::new(),
-        }
-    }
-
     #[test]
     fn index_version_is_2() {
-        let ctx = make_ctx(HashMap::new());
-        let idx = build_index(&ctx).unwrap();
+        let idx = build_index(&HashMap::new()).unwrap();
         assert_eq!(idx.index_version, 2);
     }
 
@@ -110,8 +89,7 @@ mod tests {
             "ValueSet-bar".to_string(),
             json!({"resourceType":"ValueSet","id":"bar"}),
         );
-        let ctx = make_ctx(resources);
-        let idx = build_index(&ctx).unwrap();
+        let idx = build_index(&resources).unwrap();
         assert_eq!(idx.files.len(), 2);
     }
 
@@ -122,8 +100,7 @@ mod tests {
             "StructureDefinition-foo".to_string(),
             json!({"resourceType":"StructureDefinition","id":"foo"}),
         );
-        let ctx = make_ctx(resources);
-        let idx = build_index(&ctx).unwrap();
+        let idx = build_index(&resources).unwrap();
         assert_eq!(idx.files[0].filename, "StructureDefinition-foo.json");
     }
 
@@ -134,16 +111,14 @@ mod tests {
             "ValueSet-bar".to_string(),
             json!({"resourceType":"ValueSet","id":"bar"}),
         );
-        let ctx = make_ctx(resources);
-        let idx = build_index(&ctx).unwrap();
+        let idx = build_index(&resources).unwrap();
         assert!(idx.files[0].url.is_none());
         assert!(idx.files[0].version.is_none());
     }
 
     #[test]
     fn serializes_with_index_version_field() {
-        let ctx = make_ctx(HashMap::new());
-        let idx = build_index(&ctx).unwrap();
+        let idx = build_index(&HashMap::new()).unwrap();
         let json_str = serde_json::to_string(&idx).unwrap();
         assert!(json_str.contains("index-version"));
         assert!(json_str.contains("\"2\"") || json_str.contains(":2"));

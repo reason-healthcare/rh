@@ -192,6 +192,7 @@ mod tests {
                 extra: HashMap::new(),
             },
             resources,
+            examples: HashMap::new(),
             config: PublisherConfig::default(),
             standalone_markdown: Vec::new(),
         }

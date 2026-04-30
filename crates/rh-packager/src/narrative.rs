@@ -7,47 +7,97 @@
 use crate::{context::PublishContext, Result};
 use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
+use std::path::Path;
 
 /// Process all matched markdown narrative files in the source directory:
+/// - Scans recursively through subdirectories (skipping hidden dirs, `output/`, etc.)
 /// - Converts markdown → XHTML wrapped in a FHIR-compliant div
 /// - Embeds the result as `resource.text = {status: "generated", div: "..."}`
+///   for resources matched by filename stem in either `ctx.resources` or `ctx.examples`
 ///
 /// Unmatched `.md` files have already been recorded in `ctx.standalone_markdown`
 /// by the loader and are handled during output assembly.
 pub fn process_narrative(ctx: &mut PublishContext) -> Result<()> {
     let source_dir = ctx.source_dir.clone();
 
-    // Collect matched (stem, content) pairs to avoid borrow issues.
-    let mut matched: Vec<(String, String)> = Vec::new();
+    // Collect (stem, content) pairs without holding borrows on ctx.
+    let mut resource_matched: Vec<(String, String)> = Vec::new();
+    let mut example_matched: Vec<(String, String)> = Vec::new();
 
-    for entry in std::fs::read_dir(&source_dir)? {
+    collect_narrative_matches(
+        &source_dir,
+        &ctx.resources,
+        &ctx.examples,
+        &mut resource_matched,
+        &mut example_matched,
+    )?;
+
+    for (stem, md_content) in resource_matched {
+        let xhtml = markdown_to_xhtml(&md_content);
+        if let Some(resource) = ctx.resources.get_mut(&stem) {
+            embed_narrative(resource, xhtml);
+        }
+    }
+    for (stem, md_content) in example_matched {
+        let xhtml = markdown_to_xhtml(&md_content);
+        if let Some(resource) = ctx.examples.get_mut(&stem) {
+            embed_narrative(resource, xhtml);
+        }
+    }
+
+    Ok(())
+}
+
+/// Recursively walk `dir` for `*.md` files and match stems against `resources` and `examples`.
+fn collect_narrative_matches(
+    dir: &Path,
+    resources: &std::collections::HashMap<String, Value>,
+    examples: &std::collections::HashMap<String, Value>,
+    resource_matched: &mut Vec<(String, String)>,
+    example_matched: &mut Vec<(String, String)>,
+) -> Result<()> {
+    for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+        if path.is_dir() {
+            if name.starts_with('.') || matches!(name, "output" | "target" | "node_modules") {
+                continue;
+            }
+            collect_narrative_matches(
+                &path,
+                resources,
+                examples,
+                resource_matched,
+                example_matched,
+            )?;
+            continue;
+        }
+
         if !path.is_file() {
             continue;
         }
+
         let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
         let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
             continue;
         };
+
         if ext != "md" {
             continue;
         }
-        if ctx.resources.contains_key(stem) {
+
+        if resources.contains_key(stem) {
             let content = std::fs::read_to_string(&path)?;
-            matched.push((stem.to_string(), content));
+            resource_matched.push((stem.to_string(), content));
+        } else if examples.contains_key(stem) {
+            let content = std::fs::read_to_string(&path)?;
+            example_matched.push((stem.to_string(), content));
         }
     }
-
-    for (stem, md_content) in matched {
-        let xhtml = markdown_to_xhtml(&md_content);
-        if let Some(resource) = ctx.resources.get_mut(&stem) {
-            embed_narrative(resource, xhtml);
-        }
-    }
-
     Ok(())
 }
 
@@ -99,6 +149,7 @@ mod tests {
                 extra: HashMap::new(),
             },
             resources,
+            examples: HashMap::new(),
             config: PublisherConfig::default(),
             standalone_markdown: Vec::new(),
         }

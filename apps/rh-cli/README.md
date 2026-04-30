@@ -104,21 +104,33 @@ rh fsh compile profiles/*.fsh --output output/
 | `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
 | `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
 | `rh snapshot` | Generate and manage StructureDefinition snapshots | — |
-| `rh publish` | Build and publish FHIR Packages from a source directory | [PUBLISH](../../crates/rh-packager/README.md) |
+| `rh publish` | Build and publish FHIR Packages from a source directory | [PACKAGER.md](docs/PACKAGER.md) |
 
 ### `rh publish` subcommands
 
 ```
+rh publish init  [DIR]   Scaffold a new FHIR Package source directory
 rh publish build <dir>   Build a FHIR Package from a source directory
 rh publish lock  <dir>   Resolve canonical references and write fhir-lock.json
 rh publish check <dir>   Validate source (no output written)
 rh publish pack  <dir>   Pack an already-built output directory into a .tgz
 
-Options:
+Options (init):
+  -n, --name <NAME>         Package name (e.g. com.example.fhir)   [required]
+  -c, --canonical <URL>     Canonical URL base                      [required]
+      --version <VERSION>   Package version    [default: 0.1.0]
+      --fhir-version <VER>  FHIR version       [default: 4.0.1]
+      --title <TITLE>       Human-readable title
+      --description <TEXT>  Package description
+      --author <NAME>       Author / publisher name
+      --license <SPDX>      License identifier [default: CC0-1.0]
+      --status <STATUS>     IG status          [default: draft]
+
+Options (build/pack):
   -o, --out <path>   Output directory (build) or output file path (pack)
 ```
 
-See [`crates/rh-packager/README.md`](../../crates/rh-packager/README.md) for full documentation including `packager.toml` configuration reference.
+See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including the step-by-step guide and `packager.toml` configuration reference.
 
 ## Global Options
 

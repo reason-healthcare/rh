@@ -5,6 +5,12 @@ from a flat source directory of resources, markdown narrative, and CQL files.
 
 Used by `rh publish` subcommands in the `rh` CLI.
 
+## Getting Started
+
+New to `rh-packager`? The **[step-by-step FHIR Packaging Guide](GUIDE.md)** walks through a
+complete example using all built-in processors — from an empty directory to a publishable
+`.tgz` FHIR Package.
+
 ## Source Directory Layout
 
 ```

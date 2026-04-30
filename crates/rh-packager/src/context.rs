@@ -22,6 +22,13 @@ pub struct PublishContext {
     /// Mutable map of FHIR resources: filename stem → JSON value.
     pub resources: HashMap<String, Value>,
 
+    /// Mutable map of example FHIR resources: filename stem → JSON value.
+    ///
+    /// These are written to `package/examples/` in the output with their own `.index.json`,
+    /// separate from definitional resources in `package/`. Sources placed under an `examples/`
+    /// subdirectory in the source tree are automatically routed here.
+    pub examples: HashMap<String, Value>,
+
     /// Packager configuration loaded from `packager.toml` (defaults if absent).
     pub config: PublisherConfig,
 
@@ -42,6 +49,7 @@ impl PublishContext {
             output_dir,
             package_json,
             resources: HashMap::new(),
+            examples: HashMap::new(),
             config,
             standalone_markdown: Vec::new(),
         }
