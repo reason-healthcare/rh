@@ -1,16 +1,17 @@
 ## ADDED Requirements
 
 ### Requirement: Guide document exists
-The `crates/rh-packager/` directory SHALL contain a `GUIDE.md` file providing a step-by-step
-walkthrough for assembling a FHIR Package using `rh-packager`.
+The `apps/rh-cli/docs/PACKAGER.md` file SHALL contain a step-by-step walkthrough for
+assembling a FHIR Package using the `rh package` commands. The `crates/rh-packager/` crate
+documentation SHALL focus on library internals only (no CLI-specific content).
 
-#### Scenario: File is present
-- **WHEN** a user navigates to `crates/rh-packager/`
-- **THEN** a `GUIDE.md` file is present alongside `README.md`
+#### Scenario: Guide is in CLI docs
+- **WHEN** a user navigates to `apps/rh-cli/docs/`
+- **THEN** `PACKAGER.md` contains a step-by-step guide section
 
-#### Scenario: README links to guide
+#### Scenario: Crate README links to CLI docs
 - **WHEN** a user reads `crates/rh-packager/README.md`
-- **THEN** there is a link to `GUIDE.md` in the Getting Started or introductory section
+- **THEN** there is a link to `apps/rh-cli/docs/PACKAGER.md` for the user guide
 
 ---
 
@@ -106,20 +107,20 @@ and show it executing a custom command as part of the pipeline.
 
 ---
 
-### Requirement: Guide includes an extended example with Python shell hooks
+### Requirement: Guide includes an extended example with custom shell hooks
 The guide SHALL include an "Extending the Pipeline" section after the basic flow that demonstrates
-two Python-based shell processors: one that stamps a build date onto resources, and one that
-validates the date is present.
+two shell processors: one that stamps a build date onto resources, and one that validates the
+date is present. The example scripts may be in any language.
 
-#### Scenario: Python stamp hook shown
+#### Scenario: Stamp hook shown
 - **WHEN** a user reads the extended example section
-- **THEN** a complete Python script (`stamp_date.py`) is shown that reads resources from
+- **THEN** a complete script is shown that reads resources from
   `$PACKAGER_WORKDIR/resources/`, adds a `meta.tag` build-date entry to each, and writes
   them back
 
-#### Scenario: Python validation hook shown
+#### Scenario: Validation hook shown
 - **WHEN** a user reads the extended example section
-- **THEN** a complete Python script (`check_date.py`) is shown that reads resources from
+- **THEN** a complete script is shown that reads resources from
   `$PACKAGER_WORKDIR/resources/` and exits non-zero if any resource is missing the
   build-date tag written by the stamp hook
 

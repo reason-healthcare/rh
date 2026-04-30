@@ -289,6 +289,167 @@ by the packager after the script exits successfully.
 
 ---
 
+## Built-in Processors
+
+The packager ships four built-in processors. Reference them by name in `packager.toml` hook
+lists and configure them with their own `[<name>]` section.
+
+---
+
+### `fsh` — FHIR Shorthand compiler
+
+Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build
+context before the core build stage runs.
+
+**Typical stage:** `before_build`
+
+**`packager.toml` configuration** (all fields optional — inferred from `package.json` when absent):
+
+```toml
+[fsh]
+canonical    = "https://example.org/fhir"  # inferred from package.json url
+fhir_version = "4.0.1"                    # inferred from package.json fhirVersions[0]
+id           = "my.package"               # inferred from package.json name
+name         = "MyPackage"                # inferred from package.json name
+version      = "1.0.0"                    # inferred from package.json version
+status       = "draft"                    # default: "draft"
+publisher    = "My Organization"          # optional
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `canonical` | `package.json` `url` | Canonical base URL for generated resources |
+| `fhir_version` | `package.json` `fhirVersions[0]` | FHIR version string (e.g. `"4.0.1"`) |
+| `id` | `package.json` `name` | Package id embedded in generated resources |
+| `name` | `package.json` `name` | Human-readable package name |
+| `version` | `package.json` `version` | Version string for generated resources |
+| `status` | `"draft"` | Resource status for all generated resources |
+| `publisher` | — | Publisher name embedded in generated resources |
+
+**Behavior:**
+
+- Scans the source directory **recursively** for `*.fsh` files and compiles them in a single pass (definitions in one file may reference definitions in another).
+- Each compiled resource is inserted into the build context as `<ResourceType>-<id>`.
+- If a resource with the same key already exists (e.g. a pre-compiled JSON file), the FSH version overwrites it with a warning. Use FSH _or_ JSON for a given resource, not both.
+- Non-fatal compilation warnings are logged; fatal parse or resolve errors abort the pipeline.
+
+---
+
+### `snapshot` — StructureDefinition snapshot expander
+
+Generates missing `snapshot.element` arrays for any `StructureDefinition` resource that has a
+`differential` but no `snapshot`. Loads base definitions from locally cached dependency packages.
+
+**Typical stage:** `before_build` (run after `fsh`, before `validate`)
+
+**`packager.toml` configuration:**
+
+```toml
+[snapshot]
+# Override the shared packages cache for snapshot resolution only.
+# packages_dir = "~/.fhir/packages"
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `packages_dir` | top-level `packages_dir` or `~/.fhir/packages` | Path to locally installed FHIR packages used to resolve base definitions |
+
+**Behavior:**
+
+- Skips `StructureDefinition` resources that already have a `snapshot.element` array.
+- Resolves the base profile from the `baseDefinition` URL against dependency packages.
+- Fails the pipeline if a base definition cannot be found in the local cache.
+- Run `rh download <package>#<version>` first to ensure all dependency packages are available.
+
+---
+
+### `validate` — FHIR resource validator
+
+Validates all FHIR resources in the build context using `rh-validator`, checking conformance
+against the base FHIR specification and any declared profiles.
+
+**Typical stage:** `before_build` (after `snapshot` so profiles are fully expanded) or `after_build`
+
+**`packager.toml` configuration:**
+
+```toml
+[validate]
+# packages_dir = "~/.fhir/packages"
+
+# Reserved for future use:
+# skip_invariants    = false
+# skip_bindings      = false
+# terminology_server = "https://tx.fhir.org/r4"
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `packages_dir` | top-level `packages_dir` or `~/.fhir/packages` | Packages cache used when loading dependency packages for validation |
+| `skip_invariants` | `false` | **Reserved.** Will skip FHIRPath invariant evaluation when implemented |
+| `skip_bindings` | `false` | **Reserved.** Will skip terminology binding checks when implemented |
+| `terminology_server` | — | **Reserved.** FHIR terminology server URL for binding validation when implemented |
+
+**Behavior:**
+
+- Fails the pipeline if any resource has an ERROR-severity validation issue.
+- Validation warnings are logged but do not abort the pipeline.
+- Placing `validate` after `snapshot` in `before_build` ensures profiles are fully expanded before checking.
+
+---
+
+### `cql` — CQL to ELM compiler
+
+Compiles CQL (Clinical Quality Language) source files to ELM JSON and embeds both the source
+and compiled ELM into matching `Library` resources as `content[]` attachments.
+
+**Typical stage:** `before_build`
+
+**`packager.toml` configuration:**
+
+```toml
+[cql]
+# packages_dir = "~/.fhir/packages"
+# model_info = "fhir"
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `packages_dir` | top-level `packages_dir` or `~/.fhir/packages` | Packages cache for resolving CQL library dependencies from FHIR packages |
+| `model_info` | `"fhir"` | CQL model info identifier passed to the compiler (e.g. `"fhir"`, `"qicore"`) |
+
+**Behavior:**
+
+- Scans the source directory recursively for `*.cql` files.
+- Matches each CQL library to a `Library-<name>.json` resource by the CQL library name.
+- If no matching `Library` resource exists, the processor auto-creates a minimal one and logs a warning recommending you check it into source.
+- Embeds the base64-encoded CQL source and compiled ELM JSON as `content[]` attachments on the Library resource.
+- Fails the pipeline on any CQL syntax or compilation error.
+
+**CQL ↔ Library naming:**
+
+| CQL file | Matched Library resource |
+|---|---|
+| `BpCheck.cql` | `Library-BpCheck.json` |
+
+---
+
+## Shell Processors (Custom Hooks)
+
+In addition to the built-in processors above, you can run any external command as a named
+pipeline stage using `[processors.<name>]` in `packager.toml`. The command can be a shell
+one-liner, a script in any language, or any CLI tool.
+
+See [`crates/rh-packager/PROCESSORS.md`](../../../crates/rh-packager/PROCESSORS.md) for the
+full custom processor reference, including:
+
+- Environment variables reference (`PACKAGER_SOURCE_DIR`, `PACKAGER_WORKDIR`, etc.)
+- Resource exchange protocol (reading, modifying, and adding FHIR resources via `$PACKAGER_WORKDIR/resources/`)
+- Worked examples in bash, Python, and Node.js
+- Native Rust `HookProcessor` trait for embedding processors directly in Rust code
+- Error handling and processor ordering semantics
+
+---
+
 ## Step-by-Step Guide
 
 This guide walks through building a complete FHIR Package from scratch using all built-in
@@ -299,7 +460,6 @@ processor API reference.
 
 - `rh` installed (see [README.md](../README.md))
 - FHIR R4 core package cached: `rh download hl7.fhir.r4.core#4.0.1`
-- Python 3 available for the shell hook examples
 
 ---
 
@@ -541,9 +701,11 @@ not yet cached.
 
 ---
 
-### Extending the Pipeline — Python hooks
+### Extending the Pipeline — Custom Hook Scripts
 
-For complex post-processing, Python scripts integrate naturally as shell processors.
+Shell processors can be written in any language. This example uses Python, but the same logic
+works in bash, Ruby, Node.js, or any other scripting language — only the `command` in
+`packager.toml` changes.
 
 #### `scripts/stamp_date.py` — inject build timestamp
 
