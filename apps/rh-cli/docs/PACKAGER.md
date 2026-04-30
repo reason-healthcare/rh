@@ -21,7 +21,7 @@ for the custom processor API.
 
 ### `rh package init`
 
-Scaffold a new FHIR Package source directory with `package.json`, `packager.toml`, and a
+Scaffold a new FHIR Package source directory with `packager.toml` and a
 minimal `ImplementationGuide.json`.
 
 **Usage:**
@@ -87,11 +87,11 @@ rh package init my-r4b-package \
 
 | File | Description |
 |------|-------------|
-| `package.json` | FHIR package manifest with name, version, FHIR version, and base dependency |
-| `packager.toml` | Hook configuration skeleton (all stages empty, built-ins commented) |
+| `packager.toml` | Package metadata and hook configuration skeleton |
 | `ImplementationGuide.json` | Minimal IG with `id`, `name`, `url`, `packageId`, and `dependsOn` |
 
-Returns an error if `package.json` already exists in the target directory.
+`package.json` is **not** created here — it is generated into `output/package/` during `rh package build`.
+Returns an error if `packager.toml` already exists in the target directory.
 
 ---
 
@@ -105,7 +105,7 @@ rh package build [OPTIONS] <DIR>
 ```
 
 **Arguments:**
-- `<DIR>` — Path to the source directory containing `package.json` and FHIR resources
+- `<DIR>` — Path to the source directory containing `packager.toml` and FHIR resources
 
 **Options:**
 - `-o, --out <PATH>` — Output directory for the expanded package (default: `<DIR>/output`)
@@ -122,12 +122,12 @@ rh package build my-package/ --out /tmp/build
 The build pipeline:
 1. Runs `before_build` hook processors (from `packager.toml`)
 2. Processes markdown narrative (embeds `.md` files into matching resource `.text`)
-3. Syncs and validates `ImplementationGuide.json` against `package.json`
+3. Syncs and validates `ImplementationGuide.json` against `packager.toml`
 4. Auto-populates `ImplementationGuide` `dependsOn`, `definition.resource`, and `definition.page`
 5. Applies canonical pinning from `fhir-lock.json` (if present)
 6. Generates `package/.index.json` and `package/examples/.index.json`
 7. Runs `after_build` hook processors
-8. Writes the expanded output directory
+8. Writes the expanded output directory (including generated `package.json`)
 9. Creates the `.tgz` tarball
 
 ---
@@ -212,7 +212,7 @@ rh package check <DIR>
 rh package check my-package/
 ```
 
-Checks that `package.json` and `ImplementationGuide.json` are present and consistent, and that
+Checks that `packager.toml` and `ImplementationGuide.json` are present and consistent, and that
 `fhir-lock.json` is up to date if present. No output is written.
 
 ---
@@ -245,8 +245,7 @@ The source directory can be organised however you like. By convention:
 
 ```
 my-package/
-  package.json                  # FHIR package manifest (required)
-  packager.toml                 # Hook configuration (optional)
+  packager.toml                 # Package metadata and hook configuration (required)
   ImplementationGuide.json      # ImplementationGuide resource (required)
   StructureDefinition-foo.json  # Definitional FHIR resources
   ValueSet-bar.json
@@ -296,18 +295,31 @@ package/
 
 ## `packager.toml` Configuration
 
+`packager.toml` is the **sole source of truth** for all package metadata and hook configuration.
+All metadata you would previously put in `package.json` goes here. `package.json` is **generated**
+into the output directory during `rh package build` — never into the source directory.
+
 ```toml
+# Package / IG metadata
+id           = "example.fhir.my-package"   # required (package name)
+version      = "1.0.0"                     # required
+fhir_version = "4.0.1"                     # required
+canonical    = "https://example.org/fhir"  # required
+description  = "My FHIR Package"           # optional
+author       = "Example Organization"      # optional
+license      = "CC0-1.0"                   # optional
+
 # Shared FHIR packages cache (default: ~/.fhir/packages)
 # packages_dir = "~/.fhir/packages"
 
-# Package / IG metadata (inferred from package.json when absent)
-# canonical    = "https://example.org/fhir"
-# fhir_version = "4.0.1"
-# id           = "my.package"
-# name         = "MyPackage"
-# version      = "1.0.0"
-# status       = "draft"
-# publisher    = "My Organization"
+# Package / IG display metadata
+# name         = "MyPackage"               # default: PascalCase of id
+# status       = "draft"                   # default: "draft"
+# publisher    = "My Organization"         # optional
+
+# Dependency packages (used to generate package.json dependencies)
+[dependencies]
+"hl7.fhir.r4.core" = "4.0.1"
 
 [hooks]
 # Processors run in order before the build stage.
@@ -330,7 +342,7 @@ after_pack   = []
 
 # Custom shell processor
 [processors.my-script]
-command = "python3 scripts/my_script.py"
+command = "./scripts/my_script.sh"
 # working_dir = "."
 # timeout_secs = 60
 # [processors.my-script.env]
@@ -344,9 +356,9 @@ Shell processors receive these environment variables:
 | `PACKAGER_SOURCE_DIR` | Absolute path to the source directory |
 | `PACKAGER_OUTPUT_DIR` | Absolute path to the output directory being assembled |
 | `PACKAGER_WORKDIR` | Temporary directory for resource exchange (see below) |
-| `PACKAGER_PACKAGE_NAME` | Package name from `package.json` |
-| `PACKAGER_PACKAGE_VERSION` | Package version from `package.json` |
-| `PACKAGER_FHIR_VERSIONS` | Comma-separated FHIR versions from `package.json` |
+| `PACKAGER_PACKAGE_NAME` | Package name from `packager.toml` |
+| `PACKAGER_PACKAGE_VERSION` | Package version from `packager.toml` |
+| `PACKAGER_FHIR_VERSIONS` | Comma-separated FHIR versions from `packager.toml` |
 
 To read or modify FHIR resources from within a shell processor, use `$PACKAGER_WORKDIR/resources/`.
 Files are named `<ResourceType>-<id>.json`. Changes written back to this directory are picked up
@@ -370,15 +382,15 @@ context before the core build stage runs.
 
 Package/IG metadata fields (`canonical`, `fhir_version`, `id`, `name`, `status`, `publisher`,
 `version`) are **root-level** `packager.toml` fields shared by all processors. Set them once at
-the top of `packager.toml` — they are inferred from `package.json` when absent.
+the top of `packager.toml` — all processors read them from there.
 
 ```toml
 # Root-level — not under [fsh]
-canonical    = "https://example.org/fhir"  # inferred from package.json url
-fhir_version = "4.0.1"                    # inferred from package.json fhirVersions[0]
-id           = "my.package"               # inferred from package.json name
-name         = "MyPackage"                # inferred from package.json name
-version      = "1.0.0"                    # inferred from package.json version
+canonical    = "https://example.org/fhir"  # canonical base URL
+fhir_version = "4.0.1"                    # FHIR version string
+id           = "my.package"               # package id
+name         = "MyPackage"                # human-readable name
+version      = "1.0.0"                    # version string
 status       = "draft"                    # default: "draft"
 publisher    = "My Organization"          # optional
 
@@ -388,11 +400,11 @@ publisher    = "My Organization"          # optional
 
 | Field | Default | Description |
 |---|---|---|
-| `canonical` | `package.json` `url` | Canonical base URL for generated resources |
-| `fhir_version` | `package.json` `fhirVersions[0]` | FHIR version string (e.g. `"4.0.1"`) |
-| `id` | `package.json` `name` | Package id embedded in generated resources |
-| `name` | `package.json` `name` | Human-readable package name |
-| `version` | `package.json` `version` | Version string for generated resources |
+| `canonical` | — | Canonical base URL for generated resources |
+| `fhir_version` | — | FHIR version string (e.g. `"4.0.1"`) |
+| `id` | — | Package id embedded in generated resources |
+| `name` | — | Human-readable package name |
+| `version` | — | Version string for generated resources |
 | `status` | `"draft"` | Resource status for all generated resources |
 | `publisher` | — | Publisher name embedded in generated resources |
 
@@ -546,15 +558,16 @@ rh package init bp-profiles \
 This creates:
 ```
 bp-profiles/
-  package.json
   packager.toml
   ImplementationGuide.json
 ```
 
 Review and edit these files as needed. The `ImplementationGuide.json` has a minimal skeleton —
 `definition.resource`, `dependsOn`, and `definition.page` are all **auto-populated at build time**
-from the scanned resources and `package.json` dependencies, so you do not need to maintain them
+from the scanned resources and `packager.toml` dependencies, so you do not need to maintain them
 manually.
+
+`package.json` is **generated** into `bp-profiles/output/package/` during `rh package build`.
 
 ---
 

@@ -10,9 +10,8 @@ see [`apps/rh-cli/docs/PACKAGER.md`](../../apps/rh-cli/docs/PACKAGER.md).
 
 ```
 my-package/
-  package.json              # Required: FHIR package manifest
-  packager.toml             # Optional: hook/processor configuration
-  ImplementationGuide.json  # Required: IG resource (must sync with package.json)
+  packager.toml             # Required: package metadata + hook/processor configuration
+  ImplementationGuide.json  # Required: IG resource (must sync with packager.toml)
   StructureDefinition-foo.json
   ValueSet-bar.json
   Library-MyLib.json        # Optional: created/updated by cql processor
@@ -24,6 +23,10 @@ my-package/
   fhir-lock.json            # Canonical version pins
 ```
 
+`package.json` is **not** a source file — it is **generated** into the output directory
+(`output/package/package.json`) during the build. All package metadata (`id`, `version`,
+`canonical`, `fhir_version`, `dependencies`, etc.) lives in `packager.toml`.
+
 ---
 
 ## packager.toml Reference
@@ -34,32 +37,45 @@ sections are optional; absent sections use their defaults.
 ### Top-level fields
 
 ```toml
+# Package / IG metadata — required for building.
+id           = "my.package"                  # package name / IG packageId
+version      = "1.0.0"                       # package version
+fhir_version = "4.0.1"                       # FHIR version
+canonical    = "https://example.org/fhir"    # canonical base URL
+description  = "My FHIR Package"             # optional
+author       = "My Organization"             # optional
+license      = "CC0-1.0"                     # optional
+
 # Shared FHIR packages cache used by all processors that need package resolution.
 # Overridden per-processor with a section-level packages_dir.
 # Default: ~/.fhir/packages
 packages_dir = "/path/to/.fhir/packages"
 
-# Package / IG metadata — used by processors that generate or validate resources.
-# All are optional; absent values are inferred from package.json.
-canonical    = "https://example.org/fhir"   # inferred from package.json url
-fhir_version = "4.0.1"                      # inferred from package.json fhirVersions[0]
-id           = "my.package"                 # inferred from package.json name
-name         = "MyPackage"                  # inferred from package.json name
-version      = "1.0.0"                      # inferred from package.json version
-status       = "active"                     # default: "draft"
-publisher    = "My Organization"
+# Package / IG display metadata
+name         = "MyPackage"                   # default: PascalCase of id
+status       = "active"                      # default: "draft"
+publisher    = "My Organization"             # optional
+
+# Dependency packages (maps directly to package.json dependencies)
+[dependencies]
+"hl7.fhir.r4.core" = "4.0.1"
 ```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `packages_dir` | string | `~/.fhir/packages` | Filesystem path to locally installed FHIR packages (e.g. from `rh download`). Applied to every processor unless overridden in its own section. |
-| `canonical` | string | `package.json` `url` | Canonical base URL for all generated resources. |
-| `fhir_version` | string | `package.json` `fhirVersions[0]` | FHIR version string (e.g. `"4.0.1"`). |
-| `id` | string | `package.json` `name` | Package id embedded in generated resources. |
-| `name` | string | `package.json` `name` | Human-readable package name. |
-| `version` | string | `package.json` `version` | Version string for generated resources. |
+| `id` | string | — | Package identifier (used as `package.json` `name` and IG `packageId`). |
+| `version` | string | `"0.1.0"` | Package version. |
+| `fhir_version` | string | — | FHIR version (e.g. `"4.0.1"`). |
+| `canonical` | string | — | Canonical base URL for generated resources. |
+| `description` | string | — | Package description written to `package.json`. |
+| `author` | string | — | Author name written to `package.json`. |
+| `license` | string | — | SPDX license identifier written to `package.json`. |
+| `packages_dir` | string | `~/.fhir/packages` | Filesystem path to locally installed FHIR packages. Applied to every processor unless overridden in its own section. |
+| `name` | string | PascalCase of `id` | Human-readable package name. |
+| `version` | string | `"0.1.0"` | Version string for generated resources. |
 | `status` | string | `"draft"` | Resource status (`active`, `draft`, `retired`, `unknown`). |
 | `publisher` | string | — | Publisher name embedded in generated resources. |
+| `[dependencies]` | map | `{}` | Dependency package map written to `package.json` `dependencies`. Keys must be quoted in TOML (e.g. `"hl7.fhir.r4.core" = "4.0.1"`). |
 
 ---
 
@@ -200,7 +216,7 @@ For any processor that loads packages, the directory is chosen in this order:
 | `snapshot` | `before_build` | Generates missing `snapshot.element` arrays for `StructureDefinition` resources. Loads base definitions from dependency packages. |
 | `validate` | `before_build` or `after_build` | Validates all FHIR resources using `rh-validator`. Fails on any ERROR-severity issue. |
 | `cql` | `before_build` | Compiles `.cql` files to ELM JSON, embeds source + ELM into `Library.content[]`. Auto-creates a minimal Library resource if none exists. |
-| `fsh` | `before_build` | Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build context. All config inferred from `package.json` unless overridden via `[fsh]`. |
+| `fsh` | `before_build` | Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build context. All metadata config comes from root-level `packager.toml` fields. |
 
 ---
 
@@ -242,14 +258,15 @@ Well-known external code systems (SNOMED CT, LOINC, RxNorm, ICD-10/11) are never
 
 ## package.json ↔ ImplementationGuide Sync
 
-These fields must match between `package.json` and the `ImplementationGuide` resource:
+`package.json` is generated from `packager.toml` at build time. These fields must match
+between the generated `package.json` and the `ImplementationGuide` resource:
 
-| `package.json` | IG field |
-|---|---|
-| `name` | `packageId` |
-| `version` | `version` |
-| `fhirVersions` | `fhirVersion` |
-| (canonical base) `url` | `url` prefix |
+| `packager.toml` | `package.json` | IG field |
+|---|---|---|
+| `id` | `name` | `packageId` |
+| `version` | `version` | `version` |
+| `fhir_version` | `fhirVersions[0]` | `fhirVersion` |
+| `canonical` | `url` | `url` prefix |
 
 ## CQL ↔ Library Naming Convention
 

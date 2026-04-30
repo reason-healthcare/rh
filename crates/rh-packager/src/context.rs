@@ -10,13 +10,14 @@ use std::path::PathBuf;
 /// new ones. A single write pass at the end materialises the map to disk.
 #[derive(Debug)]
 pub struct PublishContext {
-    /// Source directory containing `package.json`, resources, and markdown files.
+    /// Source directory containing `packager.toml`, resources, and markdown files.
     pub source_dir: PathBuf,
 
     /// Directory where the assembled `package/` tree will be written.
     pub output_dir: PathBuf,
 
-    /// Parsed `package.json` manifest from the source directory.
+    /// Package manifest derived from `packager.toml`. Written to the output directory
+    /// as `package.json` during the build — not read from the source directory.
     pub package_json: PackageJson,
 
     /// Mutable map of FHIR resources: filename stem → JSON value.

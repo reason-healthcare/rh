@@ -1,11 +1,8 @@
 //! Scaffolds a new FHIR Package source directory (`rh package init`).
 
-use crate::{manifest::PackageJson, Result};
+use crate::Result;
 use serde_json::json;
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 /// Options for initialising a new FHIR Package source directory.
 #[derive(Debug, Clone)]
@@ -57,55 +54,39 @@ impl Default for InitOptions {
 /// Scaffold a new FHIR Package source directory at `dir`.
 ///
 /// Creates the target directory if it does not exist, then writes:
-/// - `package.json` — FHIR package manifest
-/// - `packager.toml` — hook configuration skeleton
+/// - `packager.toml` — package metadata and hook configuration
 /// - `ImplementationGuide.json` — minimal IG derived from manifest fields
+///
+/// The `package.json` is **not** created in the source directory; it is generated
+/// into the output directory during `rh package build`.
 ///
 /// # Returns
 /// A list of paths that were created.
 ///
 /// # Errors
-/// Returns an error if `package.json` already exists in `dir`.
+/// Returns an error if `packager.toml` already exists in `dir`.
 pub fn init_package(dir: &Path, opts: InitOptions) -> Result<Vec<PathBuf>> {
     std::fs::create_dir_all(dir)?;
 
-    let pkg_json_path = dir.join("package.json");
-    if pkg_json_path.exists() {
+    let toml_path = dir.join("packager.toml");
+    if toml_path.exists() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
-            "package.json already exists — directory is already initialised",
+            "packager.toml already exists — directory is already initialised",
         )
         .into());
     }
 
     let mut created: Vec<PathBuf> = Vec::new();
 
-    // --- package.json ---
     let (base_dep_id, base_dep_version) = base_fhir_dependency(&opts.fhir_version);
-    let mut dependencies = HashMap::new();
-    dependencies.insert(base_dep_id.to_string(), base_dep_version.to_string());
-
-    let pkg = PackageJson {
-        name: opts.name.clone(),
-        version: opts.version.clone(),
-        fhir_versions: vec![opts.fhir_version.clone()],
-        dependencies,
-        url: Some(opts.canonical.clone()),
-        description: opts.description.clone(),
-        author: opts.author.clone(),
-        license: Some(opts.license.clone()),
-        extra: HashMap::new(),
-    };
-    let pkg_json = serde_json::to_string_pretty(&pkg)?;
-    std::fs::write(&pkg_json_path, pkg_json)?;
-    created.push(pkg_json_path);
 
     // --- packager.toml ---
-    let toml_path = dir.join("packager.toml");
-    if !toml_path.exists() {
-        std::fs::write(&toml_path, packager_toml_template())?;
-        created.push(toml_path);
-    }
+    std::fs::write(
+        &toml_path,
+        build_packager_toml(&opts, base_dep_id, base_dep_version),
+    )?;
+    created.push(toml_path);
 
     // --- ImplementationGuide.json ---
     let ig_path = dir.join("ImplementationGuide.json");
@@ -247,28 +228,43 @@ fn build_implementation_guide(
     ig
 }
 
-fn packager_toml_template() -> &'static str {
-    r#"# packager.toml — rh package hook configuration
-# See docs/PACKAGER.md for full documentation.
+fn build_packager_toml(opts: &InitOptions, base_dep_id: &str, base_dep_version: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
 
-[hooks]
-# Processors to run before the build stage.
-# Built-in processors: "fsh", "snapshot", "cql", "validate"
-before_build = []
+    lines.push("# packager.toml — rh package configuration".to_string());
+    lines.push("# See docs/PACKAGER.md for full documentation.".to_string());
+    lines.push(String::new());
+    lines.push(format!("id           = {:?}", opts.name));
+    lines.push(format!("version      = {:?}", opts.version));
+    lines.push(format!("canonical    = {:?}", opts.canonical));
+    lines.push(format!("fhir_version = {:?}", opts.fhir_version));
+    lines.push(format!("license      = {:?}", opts.license));
+    lines.push(format!("status       = {:?}", opts.status));
 
-# Processors to run after the build stage.
-after_build = []
+    if let Some(desc) = &opts.description {
+        lines.push(format!("description  = {:?}", desc));
+    }
+    if let Some(author) = &opts.author {
+        lines.push(format!("author       = {:?}", author));
+    }
 
-# Processors to run before packing to .tgz.
-before_pack = []
+    lines.push(String::new());
+    lines.push("[dependencies]".to_string());
+    lines.push(format!("{:?} = {:?}", base_dep_id, base_dep_version));
+    lines.push(String::new());
+    lines.push("[hooks]".to_string());
+    lines.push("# Built-in processors: \"fsh\", \"snapshot\", \"cql\", \"validate\"".to_string());
+    lines.push("before_build = []".to_string());
+    lines.push("after_build  = []".to_string());
+    lines.push("before_pack  = []".to_string());
+    lines.push("after_pack   = []".to_string());
+    lines.push(String::new());
+    lines.push("# Custom shell processors — uncomment to define your own:".to_string());
+    lines.push("# [processors.my-script]".to_string());
+    lines.push("# command = \"python3 scripts/my_script.py\"".to_string());
+    lines.push(String::new());
 
-# Processors to run after packing to .tgz.
-after_pack = []
-
-# Custom shell processors — uncomment to define your own:
-# [processors.my-script]
-# command = "python3 scripts/my_script.py"
-"#
+    lines.join("\n")
 }
 
 #[cfg(test)]
@@ -277,7 +273,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn creates_all_three_files() {
+    fn creates_two_files() {
         let dir = TempDir::new().unwrap();
         let opts = InitOptions {
             name: "com.example.fhir".to_string(),
@@ -285,14 +281,14 @@ mod tests {
             ..Default::default()
         };
         let created = init_package(dir.path(), opts).unwrap();
-        assert_eq!(created.len(), 3);
-        assert!(dir.path().join("package.json").exists());
+        assert_eq!(created.len(), 2);
+        assert!(!dir.path().join("package.json").exists());
         assert!(dir.path().join("packager.toml").exists());
         assert!(dir.path().join("ImplementationGuide.json").exists());
     }
 
     #[test]
-    fn package_json_has_correct_fields() {
+    fn packager_toml_has_correct_fields() {
         let dir = TempDir::new().unwrap();
         let opts = InitOptions {
             name: "com.example.fhir".to_string(),
@@ -304,16 +300,18 @@ mod tests {
         };
         init_package(dir.path(), opts).unwrap();
 
-        let json: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(dir.path().join("package.json")).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(json["name"], "com.example.fhir");
-        assert_eq!(json["version"], "1.0.0");
-        assert_eq!(json["fhirVersions"][0], "4.0.1");
-        assert_eq!(json["dependencies"]["hl7.fhir.r4.core"], "4.0.1");
-        assert_eq!(json["description"], "A test package");
-        assert_eq!(json["author"], "Test Org");
+        let toml_str = std::fs::read_to_string(dir.path().join("packager.toml")).unwrap();
+        let cfg: crate::config::PublisherConfig = toml::from_str(&toml_str).unwrap();
+        assert_eq!(cfg.id.as_deref(), Some("com.example.fhir"));
+        assert_eq!(cfg.version.as_deref(), Some("1.0.0"));
+        assert_eq!(cfg.canonical.as_deref(), Some("https://example.org/fhir"));
+        assert_eq!(cfg.fhir_version.as_deref(), Some("4.0.1"));
+        assert_eq!(cfg.description.as_deref(), Some("A test package"));
+        assert_eq!(cfg.author.as_deref(), Some("Test Org"));
+        assert_eq!(
+            cfg.dependencies.get("hl7.fhir.r4.core").map(|s| s.as_str()),
+            Some("4.0.1")
+        );
     }
 
     #[test]
@@ -343,9 +341,9 @@ mod tests {
     }
 
     #[test]
-    fn errors_if_package_json_already_exists() {
+    fn errors_if_packager_toml_already_exists() {
         let dir = TempDir::new().unwrap();
-        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+        std::fs::write(dir.path().join("packager.toml"), "").unwrap();
         let opts = InitOptions {
             name: "com.example.fhir".to_string(),
             canonical: "https://example.org/fhir".to_string(),

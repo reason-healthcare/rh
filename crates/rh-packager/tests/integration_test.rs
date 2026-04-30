@@ -170,7 +170,7 @@ fn build_with_snapshot_and_validate_hooks() {
     // Override packager.toml to configure snapshot + validate before_build hooks.
     fs::write(
         tmp.path().join("packager.toml"),
-        "[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
+        "id = \"example.fhir.test\"\nversion = \"1.0.0\"\nfhir_version = \"4.0.1\"\n\n[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
     )
     .unwrap();
 

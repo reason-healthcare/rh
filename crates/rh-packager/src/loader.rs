@@ -10,22 +10,32 @@ use std::{
 };
 use tracing::warn;
 
-const PACKAGE_JSON: &str = "package.json";
 const IG_RESOURCE_TYPE: &str = "ImplementationGuide";
 const PUBLISHER_TOML: &str = "packager.toml";
 
 /// Scanned source resources: (definitional_resources, example_resources, standalone_markdown).
 type ScannedResources = (HashMap<String, Value>, HashMap<String, Value>, Vec<PathBuf>);
 
-/// Scan `source_dir`, load `package.json` and `packager.toml`, populate a
-/// `PublishContext` with the discovered FHIR resources and markdown files.
+/// Scan `source_dir`, load `packager.toml`, populate a `PublishContext` with the
+/// discovered FHIR resources and markdown files.
+///
+/// The `package.json` manifest is **generated** from `packager.toml` fields at load time;
+/// it is not read from the source directory. If a `package.json` file is present in
+/// `source_dir` it is silently ignored (though a warning is emitted).
 ///
 /// # Errors
-/// - `PublisherError::MissingFile` if `package.json` is absent.
 /// - `PublisherError::MissingFile` if no `ImplementationGuide` resource is found.
 pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<PublishContext> {
-    let package_json = load_package_json(source_dir)?;
+    if source_dir.join("package.json").exists() {
+        warn!(
+            "Found package.json in source directory — it is no longer read. \
+             All package metadata should be defined in packager.toml. \
+             You can safely delete the source package.json."
+        );
+    }
+
     let config = load_publisher_config(source_dir)?;
+    let package_json = PackageJson::from_config(&config);
 
     let mut ctx = PublishContext::new(source_dir.to_path_buf(), output_dir, package_json, config);
 
@@ -37,15 +47,6 @@ pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<Publish
     ensure_implementation_guide(&ctx)?;
 
     Ok(ctx)
-}
-
-fn load_package_json(source_dir: &Path) -> Result<PackageJson> {
-    let path = source_dir.join(PACKAGE_JSON);
-    if !path.exists() {
-        return Err(PublisherError::MissingFile(PACKAGE_JSON.to_string()));
-    }
-    let text = std::fs::read_to_string(&path)?;
-    Ok(serde_json::from_str(&text)?)
 }
 
 fn load_publisher_config(source_dir: &Path) -> Result<PublisherConfig> {
@@ -212,23 +213,17 @@ mod tests {
         r#"{"resourceType":"ImplementationGuide","id":"my-ig","version":"1.0.0","packageId":"example.pkg","url":"http://example.org/fhir","fhirVersion":["4.0.1"],"status":"draft"}"#
     }
 
-    fn minimal_package_json() -> &'static str {
-        r#"{"name":"example.pkg","version":"1.0.0","fhirVersions":["4.0.1"]}"#
-    }
-
-    #[test]
-    fn fails_when_package_json_absent() {
-        let dir = TempDir::new().unwrap();
-        let result = load_source_dir(dir.path(), dir.path().join("output"));
-        assert!(
-            matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("package.json"))
-        );
+    fn minimal_packager_toml() -> &'static str {
+        r#"id = "example.pkg"
+version = "1.0.0"
+fhir_version = "4.0.1"
+"#
     }
 
     #[test]
     fn fails_when_no_implementation_guide() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(
             dir.path(),
             "ValueSet-foo.json",
@@ -236,14 +231,14 @@ mod tests {
         );
         let result = load_source_dir(dir.path(), dir.path().join("output"));
         assert!(
-            matches!(result, Err(PublisherError::MissingFile(f)) if f.contains("ImplementationGuide"))
+            matches!(result, Err(crate::PublisherError::MissingFile(f)) if f.contains("ImplementationGuide"))
         );
     }
 
     #[test]
     fn loads_resources_and_partitions_markdown() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
         write_file(
             dir.path(),
@@ -273,7 +268,7 @@ mod tests {
     #[test]
     fn docs_dir_markdown_becomes_standalone() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         let docs_dir = dir.path().join("docs");
@@ -288,7 +283,7 @@ mod tests {
     #[test]
     fn docs_dir_json_is_not_loaded_as_resource() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         let docs_dir = dir.path().join("docs");
@@ -307,8 +302,14 @@ mod tests {
     #[test]
     fn skips_package_json_from_resource_map() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+        // A leftover package.json from a prior layout should not be loaded as a resource.
+        write_file(
+            dir.path(),
+            "package.json",
+            r#"{"name":"example.pkg","version":"1.0.0","fhirVersions":["4.0.1"]}"#,
+        );
 
         let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
         assert!(!ctx.resources.contains_key("package"));
@@ -317,7 +318,7 @@ mod tests {
     #[test]
     fn loads_resources_from_subdirectory() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         let profiles_dir = dir.path().join("profiles");
@@ -336,7 +337,7 @@ mod tests {
     #[test]
     fn routes_examples_subdir_to_examples_map() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         let examples_dir = dir.path().join("examples");
@@ -355,7 +356,7 @@ mod tests {
     #[test]
     fn skips_output_and_hidden_directories() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
+        write_file(dir.path(), "packager.toml", minimal_packager_toml());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         // Place a JSON file in output/ — should be ignored.
@@ -374,10 +375,44 @@ mod tests {
     #[test]
     fn uses_default_config_when_packager_toml_absent() {
         let dir = TempDir::new().unwrap();
-        write_file(dir.path(), "package.json", minimal_package_json());
         write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
 
         let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
         assert!(ctx.config.hooks.before_build.is_empty());
+    }
+
+    #[test]
+    fn derives_package_json_from_packager_toml() {
+        let dir = TempDir::new().unwrap();
+        write_file(
+            dir.path(),
+            "packager.toml",
+            r#"id = "com.example.fhir"
+version = "2.0.0"
+canonical = "https://example.org/fhir"
+fhir_version = "4.0.1"
+description = "Example"
+
+[dependencies]
+"hl7.fhir.r4.core" = "4.0.1"
+"#,
+        );
+        write_file(dir.path(), "ImplementationGuide.json", minimal_ig());
+
+        let ctx = load_source_dir(dir.path(), dir.path().join("output")).unwrap();
+        assert_eq!(ctx.package_json.name, "com.example.fhir");
+        assert_eq!(ctx.package_json.version, "2.0.0");
+        assert_eq!(
+            ctx.package_json.url.as_deref(),
+            Some("https://example.org/fhir")
+        );
+        assert_eq!(ctx.package_json.description.as_deref(), Some("Example"));
+        assert_eq!(
+            ctx.package_json
+                .dependencies
+                .get("hl7.fhir.r4.core")
+                .map(|s| s.as_str()),
+            Some("4.0.1")
+        );
     }
 }
