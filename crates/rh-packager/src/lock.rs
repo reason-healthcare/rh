@@ -1,15 +1,15 @@
-//! Canonical lock file (`fhir-lock.json`) — version pinning for external canonicals.
+//! Canonical lock file (`fhir-lock.json`) — version pinning for canonical references.
 //!
 //! Follows IGPublisher's `pin-all` pinning model:
-//! - Scans source FHIR resources for canonical URL references
-//! - Resolves each against locally installed dependency packages
+//! - Scans source FHIR resources for canonical URL references in typed canonical fields
+//! - Resolves each against source resources (own package) and locally installed dependency packages
 //! - Records resolved versions in `fhir-lock.json`
 //! - During build, applies pinning by appending `|version` to unversioned canonicals
 
 use crate::{context::PublishContext, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -30,6 +30,48 @@ const EXCLUDED_PREFIXES: &[&str] = &[
     "http://hl7.org/fhir/v2/",
     "http://hl7.org/fhir/v3/",
 ];
+
+/// JSON field names whose values are of FHIR type `canonical`.
+///
+/// Pinning is only applied to these well-known fields to avoid incorrectly versioning
+/// non-canonical URLs such as `url`, `system`, or `reference`.
+const CANONICAL_FIELDS: &[&str] = &[
+    "baseDefinition",       // StructureDefinition.baseDefinition
+    "valueSet",             // ElementDefinition.binding.valueSet, ValueSet.compose.include.valueSet
+    "profile",              // ElementDefinition.type.profile, meta.profile, CapabilityStatement.rest.resource.profile
+    "targetProfile",        // ElementDefinition.type.targetProfile
+    "supportedProfile",     // CapabilityStatement.rest.resource.supportedProfile
+    "imports",              // CapabilityStatement.imports
+    "instantiatesCanonical", // Task, CarePlan, RequestGroup, etc.
+    "library",              // Measure, PlanDefinition, ActivityDefinition
+    "derivedFrom",          // SearchParameter, Questionnaire, StructureDefinition
+];
+
+/// A canonical reference found in a FHIR resource, with its pinning status.
+#[derive(Debug, Clone)]
+pub struct CanonicalRef {
+    /// The canonical URL, without any `|version` suffix.
+    pub url: String,
+
+    /// The version string when the reference is already pinned (contains `|version`).
+    pub pinned_version: Option<String>,
+
+    /// Resource map key (`ResourceType-id`) where this reference was found.
+    pub resource_key: String,
+
+    /// Dot-notation path to the field within the resource (e.g. `binding.valueSet`).
+    pub field_path: String,
+}
+
+/// Canonical pinning status report produced by [`lock_status`].
+#[derive(Debug)]
+pub struct LockReport {
+    /// References that are already pinned (have a `|version` suffix).
+    pub pinned: Vec<CanonicalRef>,
+
+    /// References that are present but lack a version suffix.
+    pub unpinned: Vec<CanonicalRef>,
+}
 
 /// A single pinned canonical entry.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -74,20 +116,28 @@ impl FhirLock {
     }
 }
 
-/// Scan all resources in `ctx`, resolve canonicals against installed packages,
-/// and write `fhir-lock.json` to the source directory. Returns the generated lock.
+/// Scan all resources in `ctx`, resolve canonicals against source resources and installed
+/// packages, and write `fhir-lock.json` to the source directory. Returns the generated lock.
+///
+/// All canonical references are included — both references to resources in the same package
+/// and references to external dependency packages.
 pub fn generate_lock(ctx: &PublishContext, packages_dir: &Path) -> Result<FhirLock> {
     let raw_urls: HashSet<String> = ctx
         .resources
         .values()
         .flat_map(collect_canonicals)
-        .filter(|url| !is_excluded(url) && !is_own_canonical(url, ctx))
+        .filter(|url| !is_excluded(url))
         .collect();
 
     let mut canonicals: Vec<LockedCanonical> = Vec::new();
 
     for url in &raw_urls {
-        match resolve_canonical(url, &ctx.package_json.dependencies, packages_dir) {
+        let entry = if is_own_canonical(url, ctx) {
+            resolve_own_canonical(url, ctx)
+        } else {
+            resolve_canonical(url, &ctx.package_json.dependencies, packages_dir)
+        };
+        match entry {
             Some(entry) => canonicals.push(entry),
             None => {
                 warn!("Cannot resolve canonical: {url}");
@@ -129,55 +179,194 @@ pub fn apply_pinning(ctx: &mut PublishContext, pin_map: &HashMap<String, String>
     }
 }
 
+/// Scan all resources in `ctx` and report which canonical references are pinned
+/// (have `|version`) and which are unversioned.
+///
+/// Only fields of FHIR type `canonical` (from [`CANONICAL_FIELDS`]) are inspected.
+pub fn lock_status(ctx: &PublishContext) -> LockReport {
+    let mut pinned = Vec::new();
+    let mut unpinned = Vec::new();
+
+    for (key, resource) in &ctx.resources {
+        if let Value::Object(map) = resource {
+            collect_refs_in_object(map, key, "", &mut pinned, &mut unpinned);
+        }
+    }
+
+    pinned.sort_by(|a, b| a.url.cmp(&b.url).then(a.resource_key.cmp(&b.resource_key)));
+    unpinned.sort_by(|a, b| a.url.cmp(&b.url).then(a.resource_key.cmp(&b.resource_key)));
+
+    LockReport { pinned, unpinned }
+}
 fn pin_resource(value: &mut Value, pin_map: &HashMap<String, String>) {
-    match value {
+    if let Value::Object(map) = value {
+        pin_object(map, pin_map);
+    }
+}
+
+fn pin_object(map: &mut Map<String, Value>, pin_map: &HashMap<String, String>) {
+    for (key, val) in map.iter_mut() {
+        if is_canonical_field(key) {
+            pin_canonical_value(val, pin_map);
+        } else {
+            match val {
+                Value::Object(m) => pin_object(m, pin_map),
+                Value::Array(arr) => {
+                    for item in arr.iter_mut() {
+                        if let Value::Object(m) = item {
+                            pin_object(m, pin_map);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn pin_canonical_value(val: &mut Value, pin_map: &HashMap<String, String>) {
+    match val {
         Value::String(s) if !s.contains('|') => {
             if let Some(version) = pin_map.get(s.as_str()) {
                 *s = format!("{s}|{version}");
             }
         }
         Value::Array(arr) => {
-            for item in arr {
-                pin_resource(item, pin_map);
-            }
-        }
-        Value::Object(map) => {
-            for val in map.values_mut() {
-                pin_resource(val, pin_map);
+            for item in arr.iter_mut() {
+                pin_canonical_value(item, pin_map);
             }
         }
         _ => {}
     }
 }
 
-/// Walk a JSON value tree and collect all canonical URL candidates.
+/// Walk a JSON object and collect unversioned canonical URL strings from canonical-typed fields.
 fn collect_canonicals(value: &Value) -> Vec<String> {
     let mut urls = Vec::new();
-    collect_canonical_values(value, &mut urls);
+    if let Value::Object(map) = value {
+        collect_canonical_values_in_object(map, &mut urls);
+    }
     urls
 }
 
-fn collect_canonical_values(value: &Value, out: &mut Vec<String>) {
-    match value {
+fn collect_canonical_values_in_object(map: &Map<String, Value>, out: &mut Vec<String>) {
+    for (key, val) in map {
+        if is_canonical_field(key) {
+            collect_canonical_strings(val, out);
+        } else {
+            match val {
+                Value::Object(m) => collect_canonical_values_in_object(m, out),
+                Value::Array(arr) => {
+                    for item in arr {
+                        if let Value::Object(m) = item {
+                            collect_canonical_values_in_object(m, out);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn collect_canonical_strings(val: &Value, out: &mut Vec<String>) {
+    match val {
         Value::String(s) if looks_like_canonical(s) && !s.contains('|') => {
             out.push(s.clone());
         }
         Value::Array(arr) => {
             for item in arr {
-                collect_canonical_values(item, out);
-            }
-        }
-        Value::Object(map) => {
-            for val in map.values() {
-                collect_canonical_values(val, out);
+                collect_canonical_strings(item, out);
             }
         }
         _ => {}
     }
 }
 
+/// Walk an object tree collecting all canonical references (pinned and unpinned).
+fn collect_refs_in_object(
+    map: &Map<String, Value>,
+    resource_key: &str,
+    path: &str,
+    pinned: &mut Vec<CanonicalRef>,
+    unpinned: &mut Vec<CanonicalRef>,
+) {
+    for (key, val) in map {
+        let new_path = if path.is_empty() {
+            key.clone()
+        } else {
+            format!("{path}.{key}")
+        };
+        if is_canonical_field(key) {
+            collect_canonical_refs(val, resource_key, &new_path, pinned, unpinned);
+        } else {
+            match val {
+                Value::Object(m) => {
+                    collect_refs_in_object(m, resource_key, &new_path, pinned, unpinned);
+                }
+                Value::Array(arr) => {
+                    for (i, item) in arr.iter().enumerate() {
+                        let arr_path = format!("{new_path}[{i}]");
+                        if let Value::Object(m) = item {
+                            collect_refs_in_object(m, resource_key, &arr_path, pinned, unpinned);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn collect_canonical_refs(
+    val: &Value,
+    resource_key: &str,
+    path: &str,
+    pinned: &mut Vec<CanonicalRef>,
+    unpinned: &mut Vec<CanonicalRef>,
+) {
+    match val {
+        Value::String(s) if looks_like_canonical_any(s) => {
+            if let Some(pipe_idx) = s.find('|') {
+                pinned.push(CanonicalRef {
+                    url: s[..pipe_idx].to_string(),
+                    pinned_version: Some(s[pipe_idx + 1..].to_string()),
+                    resource_key: resource_key.to_string(),
+                    field_path: path.to_string(),
+                });
+            } else {
+                unpinned.push(CanonicalRef {
+                    url: s.clone(),
+                    pinned_version: None,
+                    resource_key: resource_key.to_string(),
+                    field_path: path.to_string(),
+                });
+            }
+        }
+        Value::Array(arr) => {
+            for (i, item) in arr.iter().enumerate() {
+                let arr_path = format!("{path}[{i}]");
+                collect_canonical_refs(item, resource_key, &arr_path, pinned, unpinned);
+            }
+        }
+        _ => {}
+    }
+}
+
+
+
 fn looks_like_canonical(s: &str) -> bool {
     (s.starts_with("http://") || s.starts_with("https://")) && s.contains('/') && !s.ends_with('/')
+}
+
+/// Same as `looks_like_canonical` but also accepts already-versioned strings (`url|version`).
+fn looks_like_canonical_any(s: &str) -> bool {
+    let base = s.split('|').next().unwrap_or(s);
+    looks_like_canonical(base)
+}
+
+fn is_canonical_field(key: &str) -> bool {
+    CANONICAL_FIELDS.contains(&key)
 }
 
 fn is_excluded(url: &str) -> bool {
@@ -192,6 +381,29 @@ fn is_own_canonical(url: &str, ctx: &PublishContext) -> bool {
     } else {
         false
     }
+}
+
+/// Resolve a canonical URL against source resources in the same package.
+fn resolve_own_canonical(url: &str, ctx: &PublishContext) -> Option<LockedCanonical> {
+    for resource in ctx.resources.values() {
+        if resource.get("url").and_then(|v| v.as_str()) == Some(url) {
+            let resolved_version = resource
+                .get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&ctx.package_json.version)
+                .to_string();
+            return Some(LockedCanonical {
+                url: url.to_string(),
+                resolved_version,
+                resolved_package: format!(
+                    "{}#{}",
+                    ctx.package_json.name, ctx.package_json.version
+                ),
+                pinned: true,
+            });
+        }
+    }
+    None
 }
 
 /// Try to resolve a canonical URL by scanning all dependency package directories.
@@ -309,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    fn excludes_own_package_canonicals() {
+    fn is_own_canonical_detects_own_package_urls() {
         let tmp = TempDir::new().unwrap();
         let ctx = make_ctx(
             &tmp,
@@ -329,9 +541,25 @@ mod tests {
 
     #[test]
     fn already_versioned_urls_not_collected() {
-        let value = json!({"url": "http://example.org/fhir/ValueSet/foo|1.0.0"});
+        // `url` is not a canonical-typed field, so nothing is collected regardless.
+        let value = json!({
+            "resourceType": "StructureDefinition",
+            "baseDefinition": "http://example.org/fhir/StructureDefinition/base|1.0.0"
+        });
         let urls = collect_canonicals(&value);
-        assert!(urls.is_empty());
+        assert!(urls.is_empty(), "already-versioned canonicals should not be collected");
+    }
+
+    #[test]
+    fn non_canonical_fields_not_collected() {
+        // `url` and `system` are not canonical-typed fields and should be ignored.
+        let value = json!({
+            "url": "http://example.org/fhir/StructureDefinition/foo",
+            "system": "http://snomed.info/sct",
+            "description": "http://example.org/not-a-canonical"
+        });
+        let urls = collect_canonicals(&value);
+        assert!(urls.is_empty(), "non-canonical fields should not be collected");
     }
 
     #[test]
@@ -428,5 +656,76 @@ mod tests {
         let ctx = make_ctx(&tmp, HashMap::new(), None, HashMap::new());
         let result = load_lock(&ctx).unwrap();
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn generate_lock_includes_own_canonicals() {
+        let tmp = TempDir::new().unwrap();
+        let packages_dir = tmp.path().join("packages");
+        fs::create_dir_all(&packages_dir).unwrap();
+
+        let mut resources = HashMap::new();
+        // Own resource that is referenced by another own resource.
+        resources.insert(
+            "StructureDefinition-base".to_string(),
+            json!({
+                "resourceType": "StructureDefinition",
+                "url": "http://mypackage.org/fhir/StructureDefinition/base",
+                "version": "1.0.0"
+            }),
+        );
+        resources.insert(
+            "StructureDefinition-child".to_string(),
+            json!({
+                "resourceType": "StructureDefinition",
+                "baseDefinition": "http://mypackage.org/fhir/StructureDefinition/base"
+            }),
+        );
+
+        let ctx = make_ctx(
+            &tmp,
+            resources,
+            Some("http://mypackage.org/fhir"),
+            HashMap::new(),
+        );
+        let lock = generate_lock(&ctx, &packages_dir).unwrap();
+
+        let entry = lock
+            .canonicals
+            .iter()
+            .find(|c| c.url.contains("base"));
+        assert!(entry.is_some(), "own canonical should be included in lock");
+        assert_eq!(entry.unwrap().resolved_version, "1.0.0");
+        assert_eq!(entry.unwrap().resolved_package, "test.pkg#1.0.0");
+    }
+
+    #[test]
+    fn lock_status_classifies_pinned_and_unpinned() {
+        let tmp = TempDir::new().unwrap();
+        let mut resources = HashMap::new();
+        resources.insert(
+            "StructureDefinition-foo".to_string(),
+            json!({
+                "resourceType": "StructureDefinition",
+                "baseDefinition": "http://example.org/fhir/StructureDefinition/base|1.0.0",
+                "snapshot": {
+                    "element": [{
+                        "binding": {
+                            "valueSet": "http://example.org/fhir/ValueSet/unversioned"
+                        }
+                    }]
+                }
+            }),
+        );
+        let ctx = make_ctx(&tmp, resources, None, HashMap::new());
+        let report = lock_status(&ctx);
+
+        assert_eq!(report.pinned.len(), 1);
+        assert_eq!(report.pinned[0].url, "http://example.org/fhir/StructureDefinition/base");
+        assert_eq!(report.pinned[0].pinned_version.as_deref(), Some("1.0.0"));
+
+        assert_eq!(report.unpinned.len(), 1);
+        assert_eq!(report.unpinned[0].url, "http://example.org/fhir/ValueSet/unversioned");
+        assert!(report.unpinned[0].pinned_version.is_none());
     }
 }
