@@ -6,7 +6,7 @@ use crate::{
     ig_populate::populate_ig,
     ig_sync::check_ig_sync,
     loader::load_source_dir,
-    lock::{apply_pinning, generate_lock, load_lock},
+    lock::{apply_pinning, generate_lock, load_lock, lock_status, LockReport},
     narrative::process_narrative,
     pack::{create_tarball, write_output_dir},
     utils::resolve_packages_dir,
@@ -136,6 +136,26 @@ pub fn check(source_dir: &Path) -> Result<()> {
 
     info!("Source directory check passed");
     Ok(())
+}
+
+/// Run `rh package lock-check` — scan source resources and report canonical pinning status.
+///
+/// Returns a [`LockReport`] listing which canonical references are already pinned (have
+/// `|version`) and which are unversioned. Only fields of FHIR type `canonical` are inspected.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rh_packager::check_lock;
+/// use std::path::Path;
+///
+/// let report = check_lock(Path::new("my-package")).unwrap();
+/// println!("{} pinned, {} unpinned", report.pinned.len(), report.unpinned.len());
+/// ```
+pub fn check_lock(source_dir: &Path) -> Result<LockReport> {
+    let output_dir = source_dir.join("output");
+    let ctx = load_source_dir(source_dir, output_dir)?;
+    Ok(lock_status(&ctx))
 }
 
 /// Run `rh package pack` — pack an already-built expanded output directory into a tarball.

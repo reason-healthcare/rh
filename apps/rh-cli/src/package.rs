@@ -13,6 +13,9 @@ pub enum PackageCommands {
     /// Resolve canonical references and write/update fhir-lock.json
     Lock(LockArgs),
 
+    /// Report canonical reference pinning status (pinned vs. unpinned)
+    LockCheck(LockCheckArgs),
+
     /// Validate source before building (sync check, lock check)
     Check(CheckArgs),
 
@@ -25,9 +28,10 @@ pub struct InitArgs {
     /// Target directory for the new package (defaults to current directory)
     pub dir: Option<PathBuf>,
 
-    /// Package name in reverse-DNS NPM style (e.g. com.example.fhir)
+    /// Package name (e.g. hl7.fhir.us.core). Inferred from --canonical when absent.
+    /// Convention: <sld>.<path-segments> — http://hl7.org/fhir/us/core → hl7.fhir.us.core
     #[clap(long, short = 'n')]
-    pub name: String,
+    pub name: Option<String>,
 
     /// Canonical URL base for resources (e.g. https://example.org/fhir)
     #[clap(long, short = 'c')]
@@ -79,6 +83,12 @@ pub struct LockArgs {
 }
 
 #[derive(Args)]
+pub struct LockCheckArgs {
+    /// Path to the source directory
+    pub dir: PathBuf,
+}
+
+#[derive(Args)]
 pub struct CheckArgs {
     /// Path to the source directory
     pub dir: PathBuf,
@@ -100,8 +110,23 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
             let dir = args
                 .dir
                 .unwrap_or_else(|| std::env::current_dir().expect("cannot determine current dir"));
+
+            let name = match args.name {
+                Some(n) => n,
+                None => {
+                    let derived = rh_packager::name_from_canonical(&args.canonical)
+                        .ok_or_else(|| anyhow::anyhow!(
+                            "Could not derive a package name from '{}'. \
+                             Provide --name explicitly (e.g. --name hl7.fhir.us.core).",
+                            &args.canonical
+                        ))?;
+                    println!("  Name derived from canonical: {derived}");
+                    derived
+                }
+            };
+
             let opts = rh_packager::InitOptions {
-                name: args.name,
+                name,
                 canonical: args.canonical,
                 version: args.version,
                 fhir_version: args.fhir_version,
@@ -127,6 +152,33 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
         PackageCommands::Lock(args) => {
             let output_dir = args.dir.join("output");
             rh_packager::lock_package(&args.dir, &output_dir)?;
+            Ok(())
+        }
+        PackageCommands::LockCheck(args) => {
+            let report = rh_packager::check_lock(&args.dir)?;
+
+            println!("PINNED ({}):", report.pinned.len());
+            for r in &report.pinned {
+                println!(
+                    "  {}|{} (in: {}, field: {})",
+                    r.url,
+                    r.pinned_version.as_deref().unwrap_or("?"),
+                    r.resource_key,
+                    r.field_path
+                );
+            }
+
+            println!("\nUNPINNED ({}):", report.unpinned.len());
+            for r in &report.unpinned {
+                println!(
+                    "  {} (in: {}, field: {})",
+                    r.url, r.resource_key, r.field_path
+                );
+            }
+
+            if !report.unpinned.is_empty() {
+                println!("\nRun `rh package lock {}` to pin all unversioned references.", args.dir.display());
+            }
             Ok(())
         }
         PackageCommands::Check(args) => {

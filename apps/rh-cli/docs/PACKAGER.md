@@ -26,17 +26,17 @@ minimal `ImplementationGuide.json`.
 
 **Usage:**
 ```bash
-rh package init [DIR] --name <NAME> --canonical <URL> [OPTIONS]
+rh package init [DIR] --canonical <URL> [--name <NAME>] [OPTIONS]
 ```
 
 **Arguments:**
 - `[DIR]` — Target directory (default: current directory)
 
 **Required options:**
-- `-n, --name <NAME>` — Package identifier in reverse-DNS NPM style (e.g. `com.example.fhir`)
 - `-c, --canonical <URL>` — Canonical URL base for resources (e.g. `https://example.org/fhir`)
 
 **Optional options:**
+- `-n, --name <NAME>` — Package name (e.g. `hl7.fhir.us.core`). Inferred from `--canonical` when absent — see naming convention below.
 - `--version <VERSION>` — Package version [default: `0.1.0`]
 - `--fhir-version <VERSION>` — FHIR version [default: `4.0.1`]
 - `--title <TITLE>` — Human-readable title (default: PascalCase of name)
@@ -45,23 +45,40 @@ rh package init [DIR] --name <NAME> --canonical <URL> [OPTIONS]
 - `--license <SPDX>` — SPDX license identifier [default: `CC0-1.0`]
 - `--status <STATUS>` — IG resource status (`draft`|`active`|`retired`) [default: `draft`]
 
+#### Package naming convention
+
+FHIR package names follow the pattern `<domain>.<path-segments>`, derived from the canonical URL:
+
+| Canonical URL | Package name |
+|---|---|
+| `http://hl7.org/fhir/us/core` | `hl7.fhir.us.core` |
+| `http://hl7.org/fhir/uv/extensions` | `hl7.fhir.uv.extensions` |
+| `https://example.org/fhir` | `example.fhir` |
+| `https://example.org/fhir/my-ig` | `example.fhir.my-ig` |
+
+The second-level domain (e.g. `hl7` from `hl7.org`) becomes the first segment; remaining path
+segments follow. When `--name` is omitted, `rh package init` derives the name automatically
+and prints it so you can confirm or override.
+
+The `ImplementationGuide.packageId` field is always set to the package name, keeping the
+IG and `package.json` in sync.
+
 **Examples:**
 ```bash
-# Scaffold a package in a new directory
+# Name inferred from canonical — prints "Name derived from canonical: example.fhir"
 rh package init my-package \
-  --name com.example.bp-profiles \
   --canonical https://example.org/fhir \
-  --title "Blood Pressure Profiles" \
+  --title "Example FHIR Package" \
   --author "Example Organization"
 
-# Scaffold in the current directory
-rh package init \
+# Explicit name override
+rh package init my-package \
+  --canonical https://example.org/fhir \
   --name com.example.fhir \
-  --canonical https://example.org/fhir
+  --title "Example FHIR Package"
 
 # R4B package
 rh package init my-r4b-package \
-  --name com.example.r4b \
   --canonical https://example.org/fhir \
   --fhir-version 4.3.0
 ```
@@ -117,7 +134,7 @@ The build pipeline:
 
 ### `rh package lock`
 
-Resolve external canonical references in source resources and write `fhir-lock.json`.
+Resolve canonical references in source resources and write `fhir-lock.json`.
 
 **Usage:**
 ```bash
@@ -132,12 +149,51 @@ rh package lock <DIR>
 rh package lock my-package/
 ```
 
-Scans all FHIR resources for unversioned canonical references, resolves each against locally
-cached dependency packages (`~/.fhir/packages/`), and writes a `fhir-lock.json` file
-recording resolved `url → version` mappings. Run `rh download` first to ensure dependencies
-are cached locally.
+Scans all FHIR resources for unversioned canonical references in fields of FHIR type `canonical`
+(e.g. `baseDefinition`, `valueSet`, `profile`, `targetProfile`). Resolves each against:
+1. Source resources in the same package (own canonicals)
+2. Locally cached dependency packages (`~/.fhir/packages/`)
+
+Writes a `fhir-lock.json` recording resolved `url → version` mappings. Run `rh download` first
+to ensure dependencies are cached locally.
+
+Well-known external code systems (SNOMED CT, LOINC, RxNorm, ICD-10/11) and base FHIR core
+definitions are excluded from pinning.
 
 ---
+
+### `rh package lock-check`
+
+Report canonical reference pinning status without modifying any files.
+
+**Usage:**
+```bash
+rh package lock-check <DIR>
+```
+
+**Arguments:**
+- `<DIR>` — Path to the source directory
+
+**Example:**
+```bash
+rh package lock-check my-package/
+```
+
+Scans all FHIR resources for canonical-typed fields and reports which references are already
+pinned (have `|version`) and which are unversioned. Useful for auditing a package before
+publishing or after adding new resources.
+
+**Sample output:**
+```
+PINNED (2):
+  http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|7.0.0 (in: StructureDefinition-bp, field: baseDefinition)
+  http://example.org/fhir/ValueSet/bp-status|1.0.0 (in: StructureDefinition-bp, field: snapshot.element[0].binding.valueSet)
+
+UNPINNED (1):
+  http://example.org/fhir/StructureDefinition/base (in: StructureDefinition-child, field: baseDefinition)
+
+Run `rh package lock my-package/` to pin all unversioned references.
+```
 
 ### `rh package check`
 
@@ -481,10 +537,10 @@ processor API reference.
 
 ```bash
 rh package init bp-profiles \
-  --name example.bp-profiles \
   --canonical http://example.org/fhir/bp-profiles \
   --title "Blood Pressure Profiles" \
   --author "Example Organization"
+# → Name derived from canonical: example.fhir.bp-profiles
 ```
 
 This creates:
@@ -682,7 +738,7 @@ Expected output:
 [cql]       ✓ Library/BpCheck
 Building package...
 ✓ Wrote output/package/
-✓ Packed example.bp-profiles-0.1.0.tgz
+✓ Packed example.fhir.bp-profiles-0.1.0.tgz
 ```
 
 Output layout:
@@ -692,13 +748,13 @@ bp-profiles/
     package/
       package.json
       .index.json
-      ImplementationGuide-example.bp-profiles.json
+      ImplementationGuide-example.fhir.bp-profiles.json
       StructureDefinition-bp-observation.json
       Library-BpCheck.json
       examples/
         .index.json
         Observation-bp-example.json
-  example.bp-profiles-0.1.0.tgz
+  example.fhir.bp-profiles-0.1.0.tgz
 ```
 
 ---
@@ -709,11 +765,16 @@ bp-profiles/
 rh package lock bp-profiles/
 ```
 
-This scans all resources for unversioned canonical references, resolves them against locally
-cached packages, and writes `fhir-lock.json`. Run `rh download` first for any dependencies
-not yet cached.
+This scans all FHIR resources for unversioned canonical references (in canonical-typed fields
+such as `baseDefinition`, `valueSet`, `profile`, `targetProfile`), resolves them against source
+resources in the same package and locally cached dependency packages, and writes `fhir-lock.json`.
+Run `rh download` first for any dependencies not yet cached.
 
----
+To audit pinning status without modifying any files:
+
+```bash
+rh package lock-check bp-profiles/
+```
 
 ### Extending the Pipeline — Custom Hook Scripts
 

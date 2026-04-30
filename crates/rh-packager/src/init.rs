@@ -154,6 +154,52 @@ fn to_ig_id(name: &str) -> String {
     name.replace('.', "-")
 }
 
+/// Derive a FHIR package name from a canonical URL following the FHIR naming convention.
+///
+/// The convention used by HL7 and most FHIR IGs is:
+///
+/// ```text
+/// http://hl7.org/fhir/us/core  →  hl7.fhir.us.core
+/// https://example.org/fhir     →  example.fhir
+/// ```
+///
+/// Algorithm:
+/// 1. Strip the URL scheme.
+/// 2. Extract the second-level domain (SLD) from the host — e.g. `hl7` from `hl7.org`.
+/// 3. Append path segments joined by `.`.
+///
+/// Returns `None` if the URL cannot be parsed.
+pub fn name_from_canonical(canonical: &str) -> Option<String> {
+    let without_scheme = canonical
+        .strip_prefix("https://")
+        .or_else(|| canonical.strip_prefix("http://"))?;
+
+    let (host_with_port, path) = without_scheme
+        .split_once('/')
+        .unwrap_or((without_scheme, ""));
+
+    // Strip port if present (e.g. "localhost:8080")
+    let host = host_with_port.split(':').next().unwrap_or(host_with_port);
+
+    // Second-level domain: second-to-last label, or the only label when there's just one.
+    let host_labels: Vec<&str> = host.split('.').filter(|s| !s.is_empty()).collect();
+    let sld = match host_labels.len() {
+        0 => return None,
+        1 => host_labels[0],
+        n => host_labels[n - 2],
+    };
+
+    let path_segments: Vec<&str> = path
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let mut parts = vec![sld];
+    parts.extend_from_slice(&path_segments);
+
+    Some(parts.join("."))
+}
+
 /// Build a minimal `ImplementationGuide` JSON value from `InitOptions`.
 fn build_implementation_guide(
     opts: &InitOptions,
@@ -337,5 +383,37 @@ mod tests {
     #[test]
     fn to_ig_id_replaces_dots_with_hyphens() {
         assert_eq!(to_ig_id("com.example.fhir"), "com-example-fhir");
+    }
+
+    #[test]
+    fn name_from_canonical_follows_fhir_convention() {
+        assert_eq!(
+            name_from_canonical("http://hl7.org/fhir/us/core"),
+            Some("hl7.fhir.us.core".to_string())
+        );
+        assert_eq!(
+            name_from_canonical("http://hl7.org/fhir/uv/extensions"),
+            Some("hl7.fhir.uv.extensions".to_string())
+        );
+        assert_eq!(
+            name_from_canonical("https://example.org/fhir"),
+            Some("example.fhir".to_string())
+        );
+        assert_eq!(
+            name_from_canonical("https://example.org/fhir/my-ig"),
+            Some("example.fhir.my-ig".to_string())
+        );
+        // Domain only (no path)
+        assert_eq!(
+            name_from_canonical("https://example.org"),
+            Some("example".to_string())
+        );
+        // Subdomain — SLD is still the second-to-last label
+        assert_eq!(
+            name_from_canonical("https://build.fhir.org/ig/HL7/us-core"),
+            Some("fhir.ig.HL7.us-core".to_string())
+        );
+        // No scheme → None
+        assert_eq!(name_from_canonical("not-a-url"), None);
     }
 }
