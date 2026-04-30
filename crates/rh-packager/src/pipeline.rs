@@ -184,6 +184,7 @@ pub fn pack_dir(output_dir: &Path) -> Result<PathBuf> {
 
     let ctx = PublishContext {
         source_dir: output_dir.to_path_buf(),
+        input_dir: output_dir.to_path_buf(),
         output_dir: output_dir.to_path_buf(),
         package_json,
         resources: Default::default(),

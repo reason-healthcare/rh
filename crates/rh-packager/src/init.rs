@@ -56,6 +56,12 @@ impl Default for InitOptions {
 /// Creates the target directory if it does not exist, then writes:
 /// - `packager.toml` — package metadata and hook configuration
 /// - `ImplementationGuide.json` — minimal IG derived from manifest fields
+/// - `input/` — input directory with conventional subdirectories:
+///   - `input/fsh/` — FHIR Shorthand source
+///   - `input/cql/` — CQL source
+///   - `input/narrative/` — resource-matched narrative markdown
+///   - `input/docs/` — standalone pages
+///   - `input/examples/` — example FHIR resources
 ///
 /// The `package.json` is **not** created in the source directory; it is generated
 /// into the output directory during `rh package build`.
@@ -95,6 +101,15 @@ pub fn init_package(dir: &Path, opts: InitOptions) -> Result<Vec<PathBuf>> {
         let ig_json = serde_json::to_string_pretty(&ig)?;
         std::fs::write(&ig_path, ig_json)?;
         created.push(ig_path);
+    }
+
+    // --- input/ directory structure ---
+    for subdir in &["fsh", "cql", "narrative", "docs", "examples"] {
+        let subdir_path = dir.join("input").join(subdir);
+        std::fs::create_dir_all(&subdir_path)?;
+        let gitkeep = subdir_path.join(".gitkeep");
+        std::fs::write(&gitkeep, "")?;
+        created.push(subdir_path);
     }
 
     Ok(created)
@@ -263,6 +278,15 @@ fn build_packager_toml(opts: &InitOptions, base_dep_id: &str, base_dep_version: 
     lines.push("# [processors.my-script]".to_string());
     lines.push("# command = \"python3 scripts/my_script.py\"".to_string());
     lines.push(String::new());
+    lines.push("# Input directory layout — defaults shown, uncomment to override:".to_string());
+    lines.push("# [input]".to_string());
+    lines.push("# dir          = \"input\"      # base input directory".to_string());
+    lines.push("# fsh_dir      = \"fsh\"        # FSH source (relative to dir)".to_string());
+    lines.push("# cql_dir      = \"cql\"        # CQL source (relative to dir)".to_string());
+    lines.push("# narrative_dir = \"narrative\" # resource-matched narrative markdown".to_string());
+    lines.push("# docs_dir     = \"docs\"       # standalone pages (relative to dir)".to_string());
+    lines.push("# examples_dir = \"examples\"   # example resources (relative to dir)".to_string());
+    lines.push(String::new());
 
     lines.join("\n")
 }
@@ -273,7 +297,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn creates_two_files() {
+    fn creates_expected_files_and_input_dirs() {
         let dir = TempDir::new().unwrap();
         let opts = InitOptions {
             name: "com.example.fhir".to_string(),
@@ -281,10 +305,17 @@ mod tests {
             ..Default::default()
         };
         let created = init_package(dir.path(), opts).unwrap();
-        assert_eq!(created.len(), 2);
+        // 2 files + 5 input subdirs
+        assert_eq!(created.len(), 7);
         assert!(!dir.path().join("package.json").exists());
         assert!(dir.path().join("packager.toml").exists());
         assert!(dir.path().join("ImplementationGuide.json").exists());
+        for subdir in &["fsh", "cql", "narrative", "docs", "examples"] {
+            assert!(
+                dir.path().join("input").join(subdir).is_dir(),
+                "Missing input/{subdir}"
+            );
+        }
     }
 
     #[test]

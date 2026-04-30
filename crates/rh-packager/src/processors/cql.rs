@@ -14,6 +14,7 @@ use rh_cql::compile_to_json;
 use serde_json::{json, Value};
 use std::{fs, path::PathBuf};
 use tracing::{info, warn};
+use walkdir::WalkDir;
 
 const LOGIC_LIBRARY_TYPE: &str = "logic-library";
 const LIBRARY_TYPE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/library-type";
@@ -27,14 +28,19 @@ impl HookProcessor for CqlProcessor {
     }
 
     fn run(&self, ctx: &mut PublishContext) -> Result<()> {
-        let source_dir = ctx.source_dir.clone();
+        let cql_dir = ctx.cql_dir();
 
-        // Discover .cql files.
-        let cql_files: Vec<PathBuf> = fs::read_dir(&source_dir)?
-            .flatten()
-            .map(|e| e.path())
-            .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cql"))
-            .collect();
+        // Discover .cql files recursively under the configured CQL directory.
+        let cql_files: Vec<PathBuf> = if cql_dir.is_dir() {
+            WalkDir::new(&cql_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().and_then(|ext| ext.to_str()) == Some("cql"))
+                .map(|e| e.path().to_path_buf())
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         for cql_path in cql_files {
             let cql_source = fs::read_to_string(&cql_path)?;
@@ -127,12 +133,13 @@ mod tests {
         manifest::PackageJson,
     };
     use serde_json::json;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, fs};
     use tempfile::TempDir;
 
     fn make_ctx(tmp: &TempDir, resources: HashMap<String, Value>) -> PublishContext {
         PublishContext {
             source_dir: tmp.path().to_path_buf(),
+            input_dir: tmp.path().to_path_buf(),
             output_dir: tmp.path().join("output"),
             package_json: PackageJson {
                 name: "test".to_string(),

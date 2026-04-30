@@ -124,6 +124,90 @@ pub struct PublisherConfig {
     /// ```
     #[serde(default)]
     pub processors: HashMap<String, ShellProcessorConfig>,
+
+    /// Input directory layout configuration.
+    ///
+    /// When an `input/` directory is present at the project root (or the path configured
+    /// here), structured layout is used. Otherwise the legacy flat-root layout is assumed
+    /// for backward compatibility.
+    ///
+    /// ```toml
+    /// [input]
+    /// dir          = "input"      # base input directory (default)
+    /// fsh_dir      = "fsh"        # FHIR Shorthand source (relative to dir)
+    /// cql_dir      = "cql"        # CQL source (relative to dir)
+    /// narrative_dir = "narrative" # resource-matched narrative markdown (relative to dir)
+    /// docs_dir     = "docs"       # standalone pages (relative to dir)
+    /// examples_dir = "examples"   # example resources (relative to dir)
+    /// ```
+    #[serde(default)]
+    pub input: InputConfig,
+}
+
+/// Input directory layout configuration.
+///
+/// All subdirectory fields are relative to `dir`, which is itself relative to the project root.
+/// Defaults match the conventional layout created by `rh package init`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct InputConfig {
+    /// Base input directory, relative to the project root.
+    #[serde(default = "default_input_dir")]
+    pub dir: String,
+
+    /// Subdirectory containing FHIR Shorthand (`*.fsh`) source files.
+    #[serde(default = "default_fsh_dir")]
+    pub fsh_dir: String,
+
+    /// Subdirectory containing CQL (`*.cql`) source files.
+    #[serde(default = "default_cql_dir")]
+    pub cql_dir: String,
+
+    /// Subdirectory containing resource-matched narrative markdown files.
+    ///
+    /// A file `narrative/StructureDefinition-foo.md` is matched to the resource
+    /// with stem `StructureDefinition-foo` and embedded as `resource.text`.
+    #[serde(default = "default_narrative_dir")]
+    pub narrative_dir: String,
+
+    /// Subdirectory containing standalone markdown pages written to `package/other/`.
+    #[serde(default = "default_docs_dir")]
+    pub docs_dir: String,
+
+    /// Subdirectory containing example FHIR resources written to `package/examples/`.
+    #[serde(default = "default_examples_dir")]
+    pub examples_dir: String,
+}
+
+fn default_input_dir() -> String {
+    "input".to_string()
+}
+fn default_fsh_dir() -> String {
+    "fsh".to_string()
+}
+fn default_cql_dir() -> String {
+    "cql".to_string()
+}
+fn default_narrative_dir() -> String {
+    "narrative".to_string()
+}
+fn default_docs_dir() -> String {
+    "docs".to_string()
+}
+fn default_examples_dir() -> String {
+    "examples".to_string()
+}
+
+impl Default for InputConfig {
+    fn default() -> Self {
+        Self {
+            dir: default_input_dir(),
+            fsh_dir: default_fsh_dir(),
+            cql_dir: default_cql_dir(),
+            narrative_dir: default_narrative_dir(),
+            docs_dir: default_docs_dir(),
+            examples_dir: default_examples_dir(),
+        }
+    }
 }
 
 impl PublisherConfig {
@@ -283,6 +367,32 @@ mod tests {
         assert!(cfg.validate.terminology_server.is_none());
         assert!(cfg.cql.packages_dir.is_none());
         assert_eq!(cfg.cql.model_info, "fhir");
+        assert_eq!(cfg.input.dir, "input");
+        assert_eq!(cfg.input.fsh_dir, "fsh");
+        assert_eq!(cfg.input.cql_dir, "cql");
+        assert_eq!(cfg.input.narrative_dir, "narrative");
+        assert_eq!(cfg.input.docs_dir, "docs");
+        assert_eq!(cfg.input.examples_dir, "examples");
+    }
+
+    #[test]
+    fn parses_input_section_overrides() {
+        let toml = r#"
+[input]
+dir           = "src"
+fsh_dir       = "shorthand"
+cql_dir       = "logic"
+narrative_dir = "text"
+docs_dir      = "pages"
+examples_dir  = "samples"
+"#;
+        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.input.dir, "src");
+        assert_eq!(cfg.input.fsh_dir, "shorthand");
+        assert_eq!(cfg.input.cql_dir, "logic");
+        assert_eq!(cfg.input.narrative_dir, "text");
+        assert_eq!(cfg.input.docs_dir, "pages");
+        assert_eq!(cfg.input.examples_dir, "samples");
     }
 
     #[test]
