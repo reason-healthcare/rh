@@ -23,6 +23,12 @@ type ScannedResources = (HashMap<String, Value>, HashMap<String, Value>, Vec<Pat
 /// it is not read from the source directory. If a `package.json` file is present in
 /// `source_dir` it is silently ignored (though a warning is emitted).
 ///
+/// ## Input Directory Resolution
+///
+/// If `source_dir/<config.input.dir>` (default: `source_dir/input/`) exists on disk,
+/// structured layout is used and resources are scanned from there. Otherwise the legacy
+/// flat-root layout is assumed for backward compatibility.
+///
 /// # Errors
 /// - `PublisherError::MissingFile` if no `ImplementationGuide` resource is found.
 pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<PublishContext> {
@@ -37,9 +43,27 @@ pub fn load_source_dir(source_dir: &Path, output_dir: PathBuf) -> Result<Publish
     let config = load_publisher_config(source_dir)?;
     let package_json = PackageJson::from_config(&config);
 
-    let mut ctx = PublishContext::new(source_dir.to_path_buf(), output_dir, package_json, config);
+    // Resolve the input directory: use structured layout if the input/ dir exists.
+    let candidate = source_dir.join(&config.input.dir);
+    let input_dir = if candidate.is_dir() {
+        candidate
+    } else {
+        source_dir.to_path_buf()
+    };
 
-    let (resources, examples, standalone_md) = scan_resources(source_dir)?;
+    let mut ctx = PublishContext::new(
+        source_dir.to_path_buf(),
+        input_dir.clone(),
+        output_dir,
+        package_json,
+        config,
+    );
+
+    let (resources, examples, standalone_md) = scan_resources(
+        &input_dir,
+        &ctx.config.input.examples_dir,
+        &ctx.config.input.docs_dir,
+    )?;
     ctx.resources = resources;
     ctx.examples = examples;
     ctx.standalone_markdown = standalone_md;
@@ -59,30 +83,34 @@ fn load_publisher_config(source_dir: &Path) -> Result<PublisherConfig> {
     }
 }
 
-/// Walk `source_dir` recursively, loading `*.json` FHIR resources into definitional
+/// Walk `scan_root` recursively, loading `*.json` FHIR resources into definitional
 /// and example maps, and partitioning `*.md` files into resource-matched and standalone lists.
 ///
-/// Resources found under an `examples/` subdirectory (at any depth) are placed in the
-/// examples map and will be written to `package/examples/` in the output. All other
-/// resources are definitional and go into `package/` flat.
+/// Resources found under `examples_dir_name` (at any depth) are placed in the examples map
+/// and will be written to `package/examples/` in the output. All other resources are
+/// definitional and go into `package/` flat.
 ///
-/// JSON files inside a `docs/` subdirectory are ignored — `docs/` is reserved for
-/// standalone narrative markdown (e.g. overview pages) that are copied to `package/other/`.
+/// JSON files inside `docs_dir_name` are ignored — that directory is reserved for
+/// standalone narrative markdown (e.g. overview pages) copied to `package/other/`.
 ///
 /// Returns `(resources, examples, standalone_markdown)`.
-fn scan_resources(source_dir: &Path) -> Result<ScannedResources> {
+fn scan_resources(
+    scan_root: &Path,
+    examples_dir_name: &str,
+    docs_dir_name: &str,
+) -> Result<ScannedResources> {
     let mut resources: HashMap<String, Value> = HashMap::new();
     let mut examples: HashMap<String, Value> = HashMap::new();
     let mut md_stems: HashMap<String, PathBuf> = HashMap::new();
 
-    scan_dir(
-        source_dir,
-        false,
-        false,
-        &mut resources,
-        &mut examples,
-        &mut md_stems,
-    )?;
+    let mut state = ScanState {
+        examples_dir_name,
+        docs_dir_name,
+        resources: &mut resources,
+        examples: &mut examples,
+        md_stems: &mut md_stems,
+    };
+    scan_dir(scan_root, false, false, &mut state)?;
 
     // Partition markdown files: matched (have a corresponding JSON resource) vs standalone.
     let mut standalone_markdown: Vec<PathBuf> = Vec::new();
@@ -101,21 +129,22 @@ fn is_skip_dir(name: &str) -> bool {
     name.starts_with('.') || matches!(name, "output" | "target" | "node_modules")
 }
 
+struct ScanState<'a> {
+    examples_dir_name: &'a str,
+    docs_dir_name: &'a str,
+    resources: &'a mut HashMap<String, Value>,
+    examples: &'a mut HashMap<String, Value>,
+    md_stems: &'a mut HashMap<String, PathBuf>,
+}
+
 /// Recursively walk `dir`, collecting FHIR JSON resources and markdown files.
 ///
-/// `in_examples` is true when scanning a path that descends from an `examples/` directory,
+/// `in_examples` is true when scanning a path that descends from `examples_dir_name`,
 /// which routes resources to the `examples` map instead of `resources`.
 ///
-/// `in_docs` is true when scanning a path that descends from a `docs/` directory.
-/// JSON files in `docs/` are ignored (the directory is for standalone narrative markdown).
-fn scan_dir(
-    dir: &Path,
-    in_examples: bool,
-    in_docs: bool,
-    resources: &mut HashMap<String, Value>,
-    examples: &mut HashMap<String, Value>,
-    md_stems: &mut HashMap<String, PathBuf>,
-) -> Result<()> {
+/// `in_docs` is true when scanning a path that descends from `docs_dir_name`.
+/// JSON files in that subtree are ignored (the directory is for standalone narrative markdown).
+fn scan_dir(dir: &Path, in_examples: bool, in_docs: bool, state: &mut ScanState<'_>) -> Result<()> {
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -125,16 +154,9 @@ fn scan_dir(
             if is_skip_dir(name) {
                 continue;
             }
-            let next_in_examples = in_examples || name == "examples";
-            let next_in_docs = in_docs || name == "docs";
-            scan_dir(
-                &path,
-                next_in_examples,
-                next_in_docs,
-                resources,
-                examples,
-                md_stems,
-            )?;
+            let next_in_examples = in_examples || name == state.examples_dir_name;
+            let next_in_docs = in_docs || name == state.docs_dir_name;
+            scan_dir(&path, next_in_examples, next_in_docs, state)?;
             continue;
         }
 
@@ -159,9 +181,9 @@ fn scan_dir(
                 match load_json_resource(&path) {
                     Ok(value) => {
                         if in_examples {
-                            examples.insert(stem.to_string(), value);
+                            state.examples.insert(stem.to_string(), value);
                         } else {
-                            resources.insert(stem.to_string(), value);
+                            state.resources.insert(stem.to_string(), value);
                         }
                     }
                     Err(e) => {
@@ -170,7 +192,7 @@ fn scan_dir(
                 }
             }
             "md" => {
-                md_stems.insert(stem.to_string(), path.clone());
+                state.md_stems.insert(stem.to_string(), path.clone());
             }
             _ => {}
         }

@@ -132,6 +132,7 @@ mod tests {
 
         PublishContext {
             source_dir: std::path::PathBuf::from("/tmp/src"),
+            input_dir: std::path::PathBuf::from("/tmp/src"),
             output_dir: std::path::PathBuf::from("/tmp/out"),
             package_json: pkg,
             resources,
