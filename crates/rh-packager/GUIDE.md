@@ -25,7 +25,7 @@ bp-profiles/
   package.json                          # FHIR package manifest
   packager.toml                         # Processor pipeline configuration
   ImplementationGuide.json              # IG resource (must stay in sync with package.json)
-  profiles/
+  fsh/
     BpObservation.fsh                   # FSH source — compiled by the fsh processor
   cql/
     BpCheck.cql                         # CQL library — compiled by the cql processor
@@ -116,7 +116,7 @@ command = "echo \"Built: $(date -u +%Y-%m-%dT%H:%M:%SZ)\" >> \"$PACKAGER_OUTPUT_
 The `fsh` built-in processor scans your source directory recursively for `*.fsh` files and
 compiles them into FHIR JSON resources, making them available to all subsequent pipeline stages.
 
-Create `bp-profiles/profiles/BpObservation.fsh`:
+Create `bp-profiles/fsh/BpObservation.fsh`:
 
 ```fsh
 Alias: $LNC = http://loinc.org

@@ -195,7 +195,7 @@ my-package/
   ValueSet-bar.json
   examples/
     Patient-example.json        # Example resources — published to package/examples/
-  profiles/
+  fsh/
     MyProfile.fsh               # FSH source (compiled by fsh processor)
   cql/
     MyLibrary.cql               # CQL source (compiled by cql processor)
@@ -341,7 +341,7 @@ before_build = ["fsh", "snapshot", "validate", "cql"]
 
 ### Step 3 — Author a profile with FHIR Shorthand
 
-Create `bp-profiles/profiles/BpObservation.fsh`:
+Create `bp-profiles/fsh/BpObservation.fsh`:
 
 ```fsh
 Alias: $LNC = http://loinc.org
