@@ -71,11 +71,18 @@ Every FHIR Package starts with a `package.json`. Create `bp-profiles/package.jso
   "title": "Blood Pressure Profiles",
   "status": "draft",
   "packageId": "example.bp-profiles",
-  "fhirVersion": ["4.0.1"],
-  "definition": {
-    "resource": []
-  }
+  "fhirVersion": ["4.0.1"]
 }
+```
+
+> **Auto-populated at build time.** You do not need to maintain `dependsOn`,
+> `definition.resource`, or `definition.page` manually. `rh publish build` derives them
+> automatically:
+>
+> - `dependsOn` — from `package.json` dependencies (excluding the core FHIR package)
+> - `definition.resource` — one entry per resource/example in the package
+> - `definition.page` — one child entry per `docs/*.md` standalone narrative file,
+>   with `title` parsed from the first `# Heading` in each file
 ```
 
 ### `packager.toml`
@@ -468,13 +475,61 @@ bp-profiles/
   output/
     package/
       package.json
-      .index.json                             # Generated resource index
-      ImplementationGuide-example.bp-profiles.json
-      StructureDefinition-bp-observation.json  # Compiled from FSH, with snapshot
-      Library-BpCheck.json                    # Compiled from CQL
+      .index.json                              # Generated resource index
+      ImplementationGuide-example.bp-profiles.json  # With dependsOn, definition.resource, definition.page auto-populated
+      StructureDefinition-bp-observation.json  # Compiled from FSH, with snapshot and embedded narrative
+      Library-BpCheck.json                     # Compiled from CQL
+      examples/
+        .index.json
+        Observation-bp-example.json
       other/
-        build-info.txt                        # Written by build-info shell hook
-  example.bp-profiles-0.1.0.tgz              # The final FHIR Package tarball
+        overview.md                            # Copied from docs/overview.md
+        build-info.txt                         # Written by build-info shell hook
+  example.bp-profiles-0.1.0.tgz               # The final FHIR Package tarball
+```
+
+The built `ImplementationGuide.json` will have `dependsOn`, `definition.resource`, and
+`definition.page` fully populated — for example:
+
+```json
+{
+  "resourceType": "ImplementationGuide",
+  "id": "example.bp-profiles",
+  "packageId": "example.bp-profiles",
+  "version": "0.1.0",
+  "fhirVersion": ["4.0.1"],
+  "definition": {
+    "resource": [
+      {
+        "reference": { "reference": "Library/BpCheck" },
+        "name": "BpCheck",
+        "exampleBoolean": false
+      },
+      {
+        "reference": { "reference": "StructureDefinition/bp-observation" },
+        "name": "Blood Pressure Observation",
+        "description": "A blood pressure panel with systolic and diastolic components.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": { "reference": "Observation/bp-example" },
+        "exampleBoolean": true
+      }
+    ],
+    "page": {
+      "nameUrl": "index.md",
+      "title": "Blood Pressure Profiles",
+      "generation": "markdown",
+      "page": [
+        {
+          "nameUrl": "other/overview.md",
+          "title": "Blood Pressure Profiles",
+          "generation": "markdown"
+        }
+      ]
+    }
+  }
+}
 ```
 
 The `.tgz` filename follows the convention `<package-name>-<version>.tgz` — matching the

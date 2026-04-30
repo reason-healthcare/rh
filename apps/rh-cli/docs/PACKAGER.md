@@ -106,11 +106,12 @@ The build pipeline:
 1. Runs `before_build` hook processors (from `packager.toml`)
 2. Processes markdown narrative (embeds `.md` files into matching resource `.text`)
 3. Syncs and validates `ImplementationGuide.json` against `package.json`
-4. Applies canonical pinning from `fhir-lock.json` (if present)
-5. Generates `package/.index.json` and `package/examples/.index.json`
-6. Runs `after_build` hook processors
-7. Writes the expanded output directory
-8. Creates the `.tgz` tarball
+4. Auto-populates `ImplementationGuide` `dependsOn`, `definition.resource`, and `definition.page`
+5. Applies canonical pinning from `fhir-lock.json` (if present)
+6. Generates `package/.index.json` and `package/examples/.index.json`
+7. Runs `after_build` hook processors
+8. Writes the expanded output directory
+9. Creates the `.tgz` tarball
 
 ---
 
@@ -320,9 +321,10 @@ bp-profiles/
   ImplementationGuide.json
 ```
 
-Review and edit these files as needed. The `ImplementationGuide.json` has a skeleton
-`definition.resource` array — populate it as you add resources, or leave it empty and let the
-build auto-discover resources.
+Review and edit these files as needed. The `ImplementationGuide.json` has a minimal skeleton —
+`definition.resource`, `dependsOn`, and `definition.page` are all **auto-populated at build time**
+from the scanned resources and `package.json` dependencies, so you do not need to maintain them
+manually.
 
 ---
 
@@ -410,7 +412,9 @@ This package defines FHIR profiles for recording blood pressure observations.
 ```
 
 During the build, `StructureDefinition-bp-observation.md` is converted to XHTML and embedded
-as `resource.text`, while `docs/overview.md` is copied to `package/other/overview.md`.
+as `resource.text`, while `docs/overview.md` is copied to `package/other/overview.md` and
+registered in `ImplementationGuide.definition.page` as a child page with `nameUrl: "other/overview.md"`.
+The page `title` is parsed from the first `# Heading` in the file — in this case `"Blood Pressure Profiles"`.
 
 ---
 
