@@ -145,7 +145,10 @@ mod tests {
         let entry = &idx.files[0];
         assert_eq!(entry.kind.as_deref(), Some("code-system"));
         assert_eq!(entry.resource_kind_type.as_deref(), Some("example"));
-        assert_eq!(entry.supplements.as_deref(), Some("http://example.org/base"));
+        assert_eq!(
+            entry.supplements.as_deref(),
+            Some("http://example.org/base")
+        );
         assert_eq!(entry.content.as_deref(), Some("complete"));
     }
 

@@ -46,28 +46,30 @@ pub fn populate_ig(ctx: &mut PublishContext) -> Result<()> {
     let depends_on = build_depends_on(&ctx.package_json.dependencies);
     let def_resources = build_definition_resources(&ctx.resources, &ctx.examples);
 
-    let ig = ctx.resources.get_mut(&ig_stem).expect("stem found above");
+    let ig = ctx
+        .resources
+        .get_mut(&ig_stem)
+        .ok_or_else(|| crate::PublisherError::MissingFile("ImplementationGuide".into()))?;
 
     if depends_on.is_empty() {
-        ig.as_object_mut().map(|o| o.remove("dependsOn"));
+        if let Some(obj) = ig.as_object_mut() {
+            obj.remove("dependsOn");
+        }
     } else {
         ig["dependsOn"] = json!(depends_on);
     }
 
     // Preserve any existing definition extensions/pages/etc; only replace managed fields.
-    if ig.get("definition").map_or(true, |d| d.is_null()) {
+    if ig.get("definition").is_none_or(|d| d.is_null()) {
         ig["definition"] = json!({ "resource": [] });
     }
     ig["definition"]["resource"] = json!(def_resources);
 
     // Populate definition.page from standalone markdown files (docs/).
     if !ctx.standalone_markdown.is_empty() {
-        let pkg_title = ctx
-            .package_json
-            .extra
-            .get("title")
-            .and_then(|v| v.as_str());
-        let page_tree = build_page_tree(&ctx.standalone_markdown, &ctx.package_json.name, pkg_title);
+        let pkg_title = ctx.package_json.extra.get("title").and_then(|v| v.as_str());
+        let page_tree =
+            build_page_tree(&ctx.standalone_markdown, &ctx.package_json.name, pkg_title);
         ig["definition"]["page"] = page_tree;
     }
 
@@ -338,11 +340,7 @@ mod tests {
 
     #[test]
     fn depends_on_id_slug_replaces_dots_and_hyphens() {
-        let mut ctx = make_ctx(
-            &[("hl7.fhir.uv.smart-app-launch", "2.0.0")],
-            &[],
-            &[],
-        );
+        let mut ctx = make_ctx(&[("hl7.fhir.uv.smart-app-launch", "2.0.0")], &[], &[]);
         populate_ig(&mut ctx).unwrap();
         let ig = ctx.resources.get("ImplementationGuide").unwrap();
         let slug = ig["dependsOn"][0]["id"].as_str().unwrap();
@@ -587,8 +585,14 @@ mod tests {
     #[test]
     fn stem_to_title_humanises_correctly() {
         use std::path::PathBuf;
-        assert_eq!(stem_to_title(&PathBuf::from("blood-pressure.md")), "Blood Pressure");
-        assert_eq!(stem_to_title(&PathBuf::from("my_overview.md")), "My Overview");
+        assert_eq!(
+            stem_to_title(&PathBuf::from("blood-pressure.md")),
+            "Blood Pressure"
+        );
+        assert_eq!(
+            stem_to_title(&PathBuf::from("my_overview.md")),
+            "My Overview"
+        );
         assert_eq!(stem_to_title(&PathBuf::from("intro.md")), "Intro");
     }
 }

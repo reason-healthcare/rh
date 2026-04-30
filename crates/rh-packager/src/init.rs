@@ -189,10 +189,7 @@ pub fn name_from_canonical(canonical: &str) -> Option<String> {
         n => host_labels[n - 2],
     };
 
-    let path_segments: Vec<&str> = path
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .collect();
+    let path_segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
 
     let mut parts = vec![sld];
     parts.extend_from_slice(&path_segments);
@@ -307,9 +304,10 @@ mod tests {
         };
         init_package(dir.path(), opts).unwrap();
 
-        let json: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(dir.path().join("package.json")).unwrap())
-                .unwrap();
+        let json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join("package.json")).unwrap(),
+        )
+        .unwrap();
         assert_eq!(json["name"], "com.example.fhir");
         assert_eq!(json["version"], "1.0.0");
         assert_eq!(json["fhirVersions"][0], "4.0.1");
@@ -367,10 +365,7 @@ mod tests {
 
     #[test]
     fn r5_dependency_for_5_x_fhir_version() {
-        assert_eq!(
-            base_fhir_dependency("5.0.0"),
-            ("hl7.fhir.r5.core", "5.0.0")
-        );
+        assert_eq!(base_fhir_dependency("5.0.0"), ("hl7.fhir.r5.core", "5.0.0"));
     }
 
     #[test]
