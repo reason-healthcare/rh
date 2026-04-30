@@ -38,11 +38,28 @@ sections are optional; absent sections use their defaults.
 # Overridden per-processor with a section-level packages_dir.
 # Default: ~/.fhir/packages
 packages_dir = "/path/to/.fhir/packages"
+
+# Package / IG metadata — used by processors that generate or validate resources.
+# All are optional; absent values are inferred from package.json.
+canonical    = "https://example.org/fhir"   # inferred from package.json url
+fhir_version = "4.0.1"                      # inferred from package.json fhirVersions[0]
+id           = "my.package"                 # inferred from package.json name
+name         = "MyPackage"                  # inferred from package.json name
+version      = "1.0.0"                      # inferred from package.json version
+status       = "active"                     # default: "draft"
+publisher    = "My Organization"
 ```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `packages_dir` | string | `~/.fhir/packages` | Filesystem path to locally installed FHIR packages (e.g. from `rh download`). Applied to every processor unless overridden in its own section. |
+| `canonical` | string | `package.json` `url` | Canonical base URL for all generated resources. |
+| `fhir_version` | string | `package.json` `fhirVersions[0]` | FHIR version string (e.g. `"4.0.1"`). |
+| `id` | string | `package.json` `name` | Package id embedded in generated resources. |
+| `name` | string | `package.json` `name` | Human-readable package name. |
+| `version` | string | `package.json` `version` | Version string for generated resources. |
+| `status` | string | `"draft"` | Resource status (`active`, `draft`, `retired`, `unknown`). |
+| `publisher` | string | — | Publisher name embedded in generated resources. |
 
 ---
 
@@ -150,42 +167,14 @@ The processor fails the pipeline on any CQL syntax or compilation error.
 Configuration for the built-in `fsh` processor, which compiles FHIR Shorthand (`*.fsh`) files
 and injects the resulting resources into the build context.
 
+Package/IG metadata (`canonical`, `fhir_version`, `id`, `name`, `status`, `publisher`,
+`version`) are **root-level** `packager.toml` fields (see [Top-level fields](#top-level-fields))
+and apply to all processors. The `[fsh]` section is reserved for future FSH-specific settings.
+
 ```toml
 [fsh]
-# Canonical base URL. Inferred from package.json `url` when absent.
-canonical = "https://example.org/fhir"
-
-# FHIR version string (e.g. "4.0.1"). Inferred from package.json `fhirVersions[0]` when absent.
-fhir_version = "4.0.1"
-
-# Package id. Inferred from package.json `name` when absent.
-id = "my.package"
-
-# Human-readable name. Inferred from package.json `name` when absent.
-name = "MyPackage"
-
-# Resource status: active, draft, retired, unknown. Defaults to "draft".
-status = "active"
-
-# Publisher name (organization or individual).
-publisher = "My Organization"
-
-# Package version string. Inferred from package.json `version` when absent.
-version = "1.0.0"
+# Future FSH-specific options go here.
 ```
-
-All fields are optional. When absent, values are inferred from `package.json`. The `[fsh]`
-section only needs to be present when you want to override a derived value.
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `canonical` | string | `package.json` `url` | Canonical base URL for all generated resources. |
-| `fhir_version` | string | `package.json` `fhirVersions[0]` | FHIR version string (e.g. `"4.0.1"`). |
-| `id` | string | `package.json` `name` | Package id embedded in generated resources. |
-| `name` | string | `package.json` `name` | Human-readable package name. |
-| `status` | string | `"draft"` | Resource status for generated resources. |
-| `publisher` | string | — | Publisher name embedded in generated resources. |
-| `version` | string | `package.json` `version` | Version string for generated resources. |
 
 The processor scans the source directory **recursively** for `*.fsh` files, compiles them all in
 one pass, and upserts each result into the resource map using the key `<ResourceType>-<id>`.

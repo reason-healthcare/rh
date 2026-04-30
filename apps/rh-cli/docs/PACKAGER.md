@@ -244,6 +244,15 @@ package/
 # Shared FHIR packages cache (default: ~/.fhir/packages)
 # packages_dir = "~/.fhir/packages"
 
+# Package / IG metadata (inferred from package.json when absent)
+# canonical    = "https://example.org/fhir"
+# fhir_version = "4.0.1"
+# id           = "my.package"
+# name         = "MyPackage"
+# version      = "1.0.0"
+# status       = "draft"
+# publisher    = "My Organization"
+
 [hooks]
 # Processors run in order before the build stage.
 # Built-in processors: "fsh", "snapshot", "cql", "validate"
@@ -261,7 +270,7 @@ after_pack   = []
 # packages_dir = "~/.fhir/packages"
 
 [fsh]
-# canonical = "https://example.org/fhir"  # inferred from package.json when absent
+# Future FSH-specific options go here.
 
 # Custom shell processor
 [processors.my-script]
@@ -303,10 +312,12 @@ context before the core build stage runs.
 
 **Typical stage:** `before_build`
 
-**`packager.toml` configuration** (all fields optional — inferred from `package.json` when absent):
+Package/IG metadata fields (`canonical`, `fhir_version`, `id`, `name`, `status`, `publisher`,
+`version`) are **root-level** `packager.toml` fields shared by all processors. Set them once at
+the top of `packager.toml` — they are inferred from `package.json` when absent.
 
 ```toml
-[fsh]
+# Root-level — not under [fsh]
 canonical    = "https://example.org/fhir"  # inferred from package.json url
 fhir_version = "4.0.1"                    # inferred from package.json fhirVersions[0]
 id           = "my.package"               # inferred from package.json name
@@ -314,6 +325,9 @@ name         = "MyPackage"                # inferred from package.json name
 version      = "1.0.0"                    # inferred from package.json version
 status       = "draft"                    # default: "draft"
 publisher    = "My Organization"          # optional
+
+[fsh]
+# Future FSH-specific options go here.
 ```
 
 | Field | Default | Description |

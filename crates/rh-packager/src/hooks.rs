@@ -29,20 +29,15 @@ pub fn build_registry() -> ProcessorRegistry {
     registry.register(SnapshotProcessor);
     registry.register(ValidateProcessor);
     registry.register(CqlProcessor);
-    registry.register(FshProcessor::new(Default::default()));
+    registry.register(FshProcessor::new());
     registry
 }
 
 /// Build the default registry with built-in processors plus any shell processors
 /// declared under `[processors.*]` in `packager.toml`.
-///
-/// The `[fsh]` section of the config is forwarded to the built-in `FshProcessor`,
-/// overriding the default registration created by [`build_registry`].
 pub fn build_registry_with_config(config: &PublisherConfig) -> ProcessorRegistry {
-    use crate::processors::{fsh::FshProcessor, shell::ShellProcessor};
+    use crate::processors::shell::ShellProcessor;
     let mut registry = build_registry();
-    // Re-register FshProcessor with config-supplied [fsh] overrides.
-    registry.register(FshProcessor::new(config.fsh.clone()));
     for (name, cfg) in &config.processors {
         registry.register(ShellProcessor::new(name.clone(), cfg.clone()));
     }

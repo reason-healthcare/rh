@@ -10,17 +10,15 @@
 //! before_build = ["fsh"]
 //! ```
 //!
-//! All configuration is optional — values are inferred from `package.json` when absent:
+//! Package metadata (canonical URL, status, publisher, etc.) is read from
+//! root-level fields in `packager.toml`, falling back to `package.json` values:
 //! ```toml
-//! [fsh]
-//! canonical  = "https://example.org/fhir"   # inferred from package.json url
-//! status     = "active"
-//! publisher  = "My Organization"
+//! canonical = "https://example.org/fhir"   # inferred from package.json url
+//! status    = "active"
+//! publisher = "My Organization"
 //! ```
 
-use crate::{
-    config::FshConfig, context::PublishContext, hooks::HookProcessor, PublisherError, Result,
-};
+use crate::{context::PublishContext, hooks::HookProcessor, PublisherError, Result};
 use rh_fsh::{FhirDefs, FshExporter, FshParser, FshResolver, FshTank};
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -28,13 +26,17 @@ use walkdir::WalkDir;
 
 /// Built-in processor that compiles FSH source files and injects the resulting
 /// FHIR resources into the build context.
-pub struct FshProcessor {
-    config: FshConfig,
-}
+pub struct FshProcessor;
 
 impl FshProcessor {
-    pub fn new(config: FshConfig) -> Self {
-        Self { config }
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for FshProcessor {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -53,7 +55,7 @@ impl HookProcessor for FshProcessor {
 
         info!("fsh: compiling {} .fsh file(s)", fsh_files.len());
 
-        let fsh_config = build_fsh_config(&self.config, ctx);
+        let fsh_config = build_fsh_config(ctx);
 
         let mut tank = FshTank::new();
         for path in &fsh_files {
@@ -112,9 +114,10 @@ impl HookProcessor for FshProcessor {
     }
 }
 
-/// Build an `rh_fsh::FshConfig` by merging `[fsh]` overrides with values
-/// derived from `package.json`.
-fn build_fsh_config(cfg: &FshConfig, ctx: &PublishContext) -> rh_fsh::FshConfig {
+/// Build an `rh_fsh::FshConfig` by merging root-level `packager.toml` overrides
+/// with values derived from `package.json`.
+fn build_fsh_config(ctx: &PublishContext) -> rh_fsh::FshConfig {
+    let cfg = &ctx.config;
     rh_fsh::FshConfig {
         canonical: cfg
             .canonical
@@ -174,7 +177,7 @@ fn collect_fsh_files(dir: &Path) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{FshConfig, PublisherConfig};
+    use crate::config::PublisherConfig;
     use serde_json::json;
     use std::collections::HashMap;
 
@@ -204,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let p = FshProcessor::new(FshConfig::default());
+        let p = FshProcessor::new();
         assert_eq!(p.name(), "fsh");
     }
 
@@ -212,7 +215,7 @@ mod tests {
     fn test_no_fsh_files_is_ok() {
         let dir = tempfile::tempdir().unwrap();
         let mut ctx = make_ctx(dir.path().to_path_buf());
-        let p = FshProcessor::new(FshConfig::default());
+        let p = FshProcessor::new();
         assert!(p.run(&mut ctx).is_ok());
         assert!(ctx.resources.is_empty());
     }
@@ -233,7 +236,7 @@ Description: "A simple patient profile."
         .unwrap();
 
         let mut ctx = make_ctx(dir.path().to_path_buf());
-        let p = FshProcessor::new(FshConfig::default());
+        let p = FshProcessor::new();
         p.run(&mut ctx).unwrap();
 
         assert!(
@@ -260,7 +263,7 @@ Description: "A simple patient profile."
     fn test_config_infers_from_package_json() {
         let dir = tempfile::tempdir().unwrap();
         let ctx = make_ctx(dir.path().to_path_buf());
-        let fsh_cfg = build_fsh_config(&FshConfig::default(), &ctx);
+        let fsh_cfg = build_fsh_config(&ctx);
         assert_eq!(
             fsh_cfg.canonical,
             Some("https://example.org/fhir".to_string())
@@ -273,13 +276,10 @@ Description: "A simple patient profile."
     #[test]
     fn test_config_overrides_take_precedence() {
         let dir = tempfile::tempdir().unwrap();
-        let ctx = make_ctx(dir.path().to_path_buf());
-        let cfg = FshConfig {
-            canonical: Some("https://override.org".to_string()),
-            status: Some("active".to_string()),
-            ..Default::default()
-        };
-        let fsh_cfg = build_fsh_config(&cfg, &ctx);
+        let mut ctx = make_ctx(dir.path().to_path_buf());
+        ctx.config.canonical = Some("https://override.org".to_string());
+        ctx.config.status = Some("active".to_string());
+        let fsh_cfg = build_fsh_config(&ctx);
         assert_eq!(fsh_cfg.canonical, Some("https://override.org".to_string()));
         assert_eq!(fsh_cfg.status, Some("active".to_string()));
         // Non-overridden fields still come from package.json

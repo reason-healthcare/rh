@@ -10,6 +10,11 @@ use std::collections::HashMap;
 /// # Shared packages cache for all processors (override per-processor as needed).
 /// packages_dir = "/custom/.fhir/packages"
 ///
+/// # Package / IG metadata — used by processors that generate or validate resources.
+/// canonical    = "https://example.org/fhir"
+/// status       = "active"
+/// publisher    = "My Organization"
+///
 /// [hooks]
 /// before_build = ["snapshot", "cql", "validate"]
 /// after_build  = []
@@ -31,6 +36,39 @@ pub struct PublisherConfig {
     /// override this value when present.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub packages_dir: Option<String>,
+
+    /// Canonical base URL for all generated resources.
+    /// Inferred from `package.json` `url` field when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical: Option<String>,
+
+    /// FHIR version string (e.g. `"4.0.1"`).
+    /// Inferred from the first entry of `package.json` `fhirVersions` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fhir_version: Option<String>,
+
+    /// Package id embedded in generated resources.
+    /// Inferred from `package.json` `name` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// Human-readable package name.
+    /// Inferred from `package.json` `name` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+
+    /// Resource status: `active`, `draft`, `retired`, or `unknown`.
+    /// Defaults to `"draft"` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+
+    /// Publisher name (organization or individual).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+
+    /// Package version string. Inferred from `package.json` `version` when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
 
     /// Hook stage processor lists.
     #[serde(default)]
@@ -150,49 +188,17 @@ impl Default for CqlConfig {
 
 /// Configuration for the `fsh` built-in hook processor.
 ///
-/// All fields are optional. When absent, values are derived from `package.json`
-/// and the `ImplementationGuide` resource already present in the source directory.
+/// Package/IG metadata fields (`canonical`, `fhir_version`, `id`, `name`,
+/// `status`, `publisher`, `version`) are root-level fields in `packager.toml`
+/// and apply to all processors. This section is reserved for future
+/// FSH-specific settings.
 ///
 /// ```toml
 /// [fsh]
-/// canonical  = "https://example.org/fhir"
-/// status     = "active"
-/// publisher  = "My Organization"
-/// # fhir_version, id, name, and version are inferred from package.json when absent
+/// # Future FSH-specific options go here.
 /// ```
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct FshConfig {
-    /// Canonical base URL for all generated resources.
-    /// Inferred from `package.json` `url` field when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub canonical: Option<String>,
-
-    /// FHIR version string (e.g. `"4.0.1"`).
-    /// Inferred from the first entry of `package.json` `fhirVersions` when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fhir_version: Option<String>,
-
-    /// Package id. Inferred from `package.json` `name` when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-
-    /// Human-readable package name. Inferred from `package.json` `name` when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-
-    /// Resource status: `active`, `draft`, `retired`, or `unknown`.
-    /// Defaults to `"draft"` when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-
-    /// Publisher name (organization or individual).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub publisher: Option<String>,
-
-    /// Package version string. Inferred from `package.json` `version` when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-}
+pub struct FshConfig {}
 
 /// Configuration for a named shell processor declared under `[processors.<name>]`.
 ///
@@ -237,6 +243,13 @@ mod tests {
     fn empty_toml_uses_all_defaults() {
         let cfg = PublisherConfig::from_toml_str("").unwrap();
         assert!(cfg.packages_dir.is_none());
+        assert!(cfg.canonical.is_none());
+        assert!(cfg.fhir_version.is_none());
+        assert!(cfg.id.is_none());
+        assert!(cfg.name.is_none());
+        assert!(cfg.status.is_none());
+        assert!(cfg.publisher.is_none());
+        assert!(cfg.version.is_none());
         assert!(cfg.hooks.before_build.is_empty());
         assert!(cfg.hooks.after_build.is_empty());
         assert!(cfg.hooks.before_pack.is_empty());
@@ -246,6 +259,27 @@ mod tests {
         assert!(cfg.validate.terminology_server.is_none());
         assert!(cfg.cql.packages_dir.is_none());
         assert_eq!(cfg.cql.model_info, "fhir");
+    }
+
+    #[test]
+    fn parses_root_level_meta_fields() {
+        let toml = r#"
+canonical    = "https://example.org/fhir"
+fhir_version = "4.0.1"
+id           = "my.package"
+name         = "MyPackage"
+status       = "active"
+publisher    = "My Org"
+version      = "1.0.0"
+"#;
+        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.canonical.as_deref(), Some("https://example.org/fhir"));
+        assert_eq!(cfg.fhir_version.as_deref(), Some("4.0.1"));
+        assert_eq!(cfg.id.as_deref(), Some("my.package"));
+        assert_eq!(cfg.name.as_deref(), Some("MyPackage"));
+        assert_eq!(cfg.status.as_deref(), Some("active"));
+        assert_eq!(cfg.publisher.as_deref(), Some("My Org"));
+        assert_eq!(cfg.version.as_deref(), Some("1.0.0"));
     }
 
     #[test]
