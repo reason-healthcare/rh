@@ -126,7 +126,14 @@ fn scan_dir(
             }
             let next_in_examples = in_examples || name == "examples";
             let next_in_docs = in_docs || name == "docs";
-            scan_dir(&path, next_in_examples, next_in_docs, resources, examples, md_stems)?;
+            scan_dir(
+                &path,
+                next_in_examples,
+                next_in_docs,
+                resources,
+                examples,
+                md_stems,
+            )?;
             continue;
         }
 
@@ -142,7 +149,12 @@ fn scan_dir(
         };
 
         match ext {
-            "json" if !in_docs && stem != "package" && stem != "fhir-lock" && !stem.starts_with('.') => {
+            "json"
+                if !in_docs
+                    && stem != "package"
+                    && stem != "fhir-lock"
+                    && !stem.starts_with('.') =>
+            {
                 match load_json_resource(&path) {
                     Ok(value) => {
                         if in_examples {

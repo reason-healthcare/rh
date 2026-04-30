@@ -47,6 +47,6 @@ pub use config::PublisherConfig;
 pub use context::PublishContext;
 pub use error::{PublisherError, Result};
 pub use init::{init_package, name_from_canonical, InitOptions};
+pub use lock::{CanonicalRef, LockReport};
 pub use manifest::PackageJson;
 pub use pipeline::{build, check, check_lock, lock as lock_package, pack_dir};
-pub use lock::{CanonicalRef, LockReport};

@@ -114,12 +114,14 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
             let name = match args.name {
                 Some(n) => n,
                 None => {
-                    let derived = rh_packager::name_from_canonical(&args.canonical)
-                        .ok_or_else(|| anyhow::anyhow!(
-                            "Could not derive a package name from '{}'. \
+                    let derived =
+                        rh_packager::name_from_canonical(&args.canonical).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Could not derive a package name from '{}'. \
                              Provide --name explicitly (e.g. --name hl7.fhir.us.core).",
-                            &args.canonical
-                        ))?;
+                                &args.canonical
+                            )
+                        })?;
                     println!("  Name derived from canonical: {derived}");
                     derived
                 }
@@ -141,7 +143,10 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
                 println!("  Created: {}", path.display());
             }
             println!("\nPackage initialised at {}", dir.display());
-            println!("Next: edit package.json, then run `rh package build {}`", dir.display());
+            println!(
+                "Next: edit package.json, then run `rh package build {}`",
+                dir.display()
+            );
             Ok(())
         }
         PackageCommands::Build(args) => {
@@ -177,7 +182,10 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
             }
 
             if !report.unpinned.is_empty() {
-                println!("\nRun `rh package lock {}` to pin all unversioned references.", args.dir.display());
+                println!(
+                    "\nRun `rh package lock {}` to pin all unversioned references.",
+                    args.dir.display()
+                );
             }
             Ok(())
         }
