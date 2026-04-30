@@ -30,6 +30,7 @@ pub mod config;
 pub mod context;
 pub mod error;
 pub mod hooks;
+pub mod ig_populate;
 pub mod ig_sync;
 pub mod index;
 pub mod init;

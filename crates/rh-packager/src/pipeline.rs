@@ -3,6 +3,7 @@
 use crate::{
     context::PublishContext,
     hooks::{build_registry_with_config, run_stage},
+    ig_populate::populate_ig,
     ig_sync::check_ig_sync,
     loader::load_source_dir,
     lock::{apply_pinning, generate_lock, load_lock},
@@ -50,6 +51,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     run_stage(&registry, &before, &mut ctx)?;
 
     process_narrative(&mut ctx)?;
+    populate_ig(&mut ctx)?;
 
     match load_lock(&ctx)? {
         Some(lock) => {
