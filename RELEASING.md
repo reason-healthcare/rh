@@ -19,7 +19,7 @@ This document describes the end-to-end process for versioning, validating, and p
 | `rh-cql` | `version.workspace` | CQL library |
 | `rh-fhirpath` | `version.workspace` | FHIRPath library |
 | `rh-vcl` | `version.workspace` | VCL library |
-| `rh-validator` | standalone | Has its own version independent of the workspace |
+| `rh-validator` | standalone | Standalone version; normally bumped alongside all other crates |
 | `rh-cli` | `version.workspace` | CLI binary (`rh`) |
 
 ## Publish Order
@@ -54,25 +54,17 @@ just show-versions
 
 ### 2. Update version numbers
 
-Use the version management script — it updates the workspace version and all internal path dependency version specifiers in one pass:
+Bump all crates to the same version in one command:
 
 ```bash
-# Bump all workspace crates (everything except rh-validator)
 just bump-version 0.2.0-beta.1
-
-# Bump rh-validator's standalone version
-just bump-validator-version 0.3.0-beta.1
-
-# Or bump both at once
-just bump-all-versions 0.2.0-beta.1 0.3.0-beta.1
 ```
 
-The script updates:
-- `version` in `[workspace.package]` in the root `Cargo.toml`
-- All `{ path = "...", version = "..." }` internal dependency specifiers across every crate
-- `rh-validator`'s own `version` field and its entry in `apps/rh-cli/Cargo.toml`
+This updates the workspace version, `rh-validator`'s standalone version, and all internal path dependency version specifiers across every crate.
 
 See [`scripts/bump-version`](scripts/bump-version) for the full implementation.
+
+> **Releasing a single crate?** See [Releasing a single crate](#releasing-a-single-crate) below.
 
 ### 3. Run the full quality gate
 
@@ -170,6 +162,22 @@ cd crates/rh-vcl && just wasm
 ```
 
 See [crates/rh-fhirpath/WASM_BUILD.md](crates/rh-fhirpath/WASM_BUILD.md) and [crates/rh-vcl/WASM_BUILD.md](crates/rh-vcl/WASM_BUILD.md) for full WASM build and deployment details.
+
+## Releasing a single crate
+
+Occasionally you may need to release one crate at a different version — for example, a patch fix in `rh-validator` without touching the rest of the workspace. Use the targeted recipes:
+
+```bash
+# Bump only rh-validator (leaves all workspace crates unchanged)
+just bump-validator-version 0.2.1
+
+# Bump only workspace crates (leaves rh-validator unchanged)
+just bump-workspace-version 0.1.1
+```
+
+Then publish only the affected crate(s) and their dependents in dependency order. Dependents that weren't re-versioned do **not** need to be re-published unless their `version` specifier for the changed crate no longer satisfies the new version.
+
+---
 
 ## Troubleshooting
 
