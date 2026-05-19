@@ -28,6 +28,9 @@ pub struct SemanticMeta {
     pub implicit_conversions: Vec<String>,
     pub list_promotion: bool,
     pub resolved_symbol: Option<String>,
+    /// Kind of the resolved symbol — used by the emitter to distinguish
+    /// `Code` / `Concept` refs from plain `ExpressionRef`.
+    pub symbol_kind: Option<crate::semantics::scope::SymbolKind>,
 }
 
 /// A wrapper struct representing a typed node in the Typed AST.
@@ -124,6 +127,9 @@ pub struct TypedSortItem {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedRetrieve {
     pub data_type: crate::parser::ast::NamedTypeSpecifier,
+    /// Property path used to filter by code (e.g. `"code"` for Observation).
+    /// Populated from the model info's `primaryCodePath` during semantic analysis.
+    pub code_property: Option<String>,
     pub codes: Option<Box<TypedNode<TypedExpression>>>,
     pub date_range: Option<Box<TypedNode<TypedExpression>>>,
 }

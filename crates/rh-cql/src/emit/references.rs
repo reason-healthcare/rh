@@ -14,12 +14,39 @@ pub fn emit_identifier_ref(
     node: &TypedNode<TypedExpression>,
     ctx: &mut ElmEmitter,
 ) -> elm::Expression {
+    use crate::semantics::scope::SymbolKind;
     let element = ctx.element_fields(node);
-    elm::Expression::ExpressionRef(elm::ExpressionRef {
-        element,
-        name: Some(id_ref.name.clone()),
-        library_name: None,
-    })
+    // Emit the correct ELM ref node based on the resolved symbol kind so that
+    // evaluators (e.g. cql-execution) can look the name up in the right table
+    // (library.codes vs library.expressions).
+    match &node.meta.symbol_kind {
+        Some(SymbolKind::Code) => elm::Expression::CodeRef(elm::CodeRef {
+            element,
+            name: Some(id_ref.name.clone()),
+            library_name: None,
+        }),
+        Some(SymbolKind::Concept) => elm::Expression::ConceptRef(elm::ConceptRef {
+            element,
+            name: Some(id_ref.name.clone()),
+            library_name: None,
+        }),
+        Some(SymbolKind::ValueSet) => elm::Expression::ValueSetRef(elm::ValueSetRef {
+            element,
+            name: Some(id_ref.name.clone()),
+            library_name: None,
+            preserve: None,
+        }),
+        Some(SymbolKind::CodeSystem) => elm::Expression::CodeSystemRef(elm::CodeSystemRef {
+            element,
+            name: Some(id_ref.name.clone()),
+            library_name: None,
+        }),
+        _ => elm::Expression::ExpressionRef(elm::ExpressionRef {
+            element,
+            name: Some(id_ref.name.clone()),
+            library_name: None,
+        }),
+    }
 }
 
 pub fn emit_qualified_identifier_ref(

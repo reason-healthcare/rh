@@ -14,6 +14,7 @@ use rh_cql::parser::CqlParser;
 use rh_cql::provider::{MemoryModelInfoProvider, ModelInfoProvider};
 use rh_cql::semantics::analyzer::SemanticAnalyzer;
 use rh_cql::semantics::typed_ast::TypedStatement;
+use rh_cql::{CompilationContext};
 use std::sync::Arc;
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,24 @@ fn analyze(
     let provider: Arc<dyn ModelInfoProvider> = Arc::new(MemoryModelInfoProvider::new());
     let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
     let analyzer = SemanticAnalyzer::new(provider, opts);
+    analyzer.analyze(ast_lib)
+}
+
+/// Like `analyze` but uses the full FHIR R4 model provider so that
+/// `primaryCodePath` and other model-info fields are available.
+fn analyze_fhir(
+    cql: &str,
+) -> (
+    rh_cql::semantics::typed_ast::TypedLibrary,
+    Vec<rh_cql::CqlCompilerException>,
+) {
+    let parser = CqlParser::new();
+    let ast_lib = parser.parse(cql).expect("parse failed");
+    let ctx = CompilationContext::new(
+        CompilerOptions::new().with_option(CompilerOption::EnableResultTypes),
+        None, // resolves to fhir_r4_provider_from_package()
+    );
+    let analyzer = SemanticAnalyzer::with_context(&ctx);
     analyzer.analyze(ast_lib)
 }
 
@@ -366,4 +385,193 @@ fn test_conformance_negative_decimal_literal_emits_negate_literal() {
         },
         other => panic!("Expected Negate, got {other:?}"),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Fix: ExpressionDef.context propagated from library context declaration
+// ---------------------------------------------------------------------------
+
+/// A library with `context Patient` must emit `context: Some("Patient")` on
+/// every ExpressionDef.  Previously the field was always emitted as `None`.
+#[test]
+fn test_expression_def_context_propagated_from_library_context() {
+    let cql = r#"
+library ContextTest version '1.0'
+using FHIR version '4.0.1'
+context Patient
+define "IsAlive": true
+define "PatientName": 'test'
+"#;
+    let (typed_lib, diags) = analyze(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let mut emitter = emitter_with_result_types();
+    let elm_lib = emitter.emit(typed_lib);
+
+    let stmts = elm_lib.statements.expect("statements missing").defs;
+    assert!(!stmts.is_empty(), "no statements emitted");
+    for stmt in &stmts {
+        match stmt {
+            elm::StatementDef::Expression(ed) => {
+                assert_eq!(
+                    ed.context.as_deref(),
+                    Some("Patient"),
+                    "ExpressionDef '{}' should have context Patient, got {:?}",
+                    ed.name.as_deref().unwrap_or("?"),
+                    ed.context
+                );
+            }
+            elm::StatementDef::Function(fd) => {
+                assert_eq!(
+                    fd.context.as_deref(),
+                    Some("Patient"),
+                    "FunctionDef '{}' should have context Patient",
+                    fd.name.as_deref().unwrap_or("?")
+                );
+            }
+        }
+    }
+}
+
+/// A library without any context declaration must not emit a context on
+/// ExpressionDef (context should be None).
+#[test]
+fn test_expression_def_context_none_without_context_declaration() {
+    let cql = "library NoCtx version '1.0'\ndefine \"X\": 1\n";
+    let (typed_lib, diags) = analyze(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let mut emitter = emitter_with_result_types();
+    let elm_lib = emitter.emit(typed_lib);
+
+    let stmts = elm_lib.statements.expect("statements missing").defs;
+    for stmt in &stmts {
+        if let elm::StatementDef::Expression(ed) = stmt {
+            assert_eq!(
+                ed.context, None,
+                "ExpressionDef without context declaration should emit context: None"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Fix: Retrieve.code_property populated from model primaryCodePath
+// ---------------------------------------------------------------------------
+
+/// `[Observation: "some-code"]` must emit `code_property: Some("code")` because
+/// the FHIR model info declares Observation.primaryCodePath = "code".
+/// Previously the field was always emitted as `None`.
+#[test]
+fn test_retrieve_code_property_from_model_primary_code_path() {
+    let cql = r#"
+library RetrieveTest version '1.0'
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1'
+codesystem "LOINC": 'http://loinc.org'
+code "HER2": '85319-2' from "LOINC"
+context Patient
+define "HER2Obs": [Observation: "HER2"]
+"#;
+    let (typed_lib, diags) = analyze_fhir(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let retrieve = match &body.inner {
+        rh_cql::semantics::typed_ast::TypedExpression::Retrieve(r) => r,
+        other => panic!("expected Retrieve, got {other:?}"),
+    };
+    assert_eq!(
+        retrieve.code_property.as_deref(),
+        Some("code"),
+        "Observation retrieve should have code_property = 'code'"
+    );
+
+    let mut emitter = emitter_with_result_types();
+    let elm_lib = emitter.emit(typed_lib);
+    let stmts = elm_lib.statements.expect("statements").defs;
+    let expr_def = match stmts.first().expect("stmt") {
+        elm::StatementDef::Expression(e) => e,
+        other => panic!("expected ExpressionDef: {other:?}"),
+    };
+    let retrieve_elm = match expr_def.expression.as_deref().expect("expression") {
+        elm::Expression::Retrieve(r) => r,
+        other => panic!("expected Retrieve in ELM: {other:?}"),
+    };
+    assert_eq!(
+        retrieve_elm.code_property.as_deref(),
+        Some("code"),
+        "ELM Retrieve.code_property should be 'code'"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Fix: IdentifierRef to a code def emits CodeRef, not ExpressionRef
+// ---------------------------------------------------------------------------
+
+/// When `Retrieve.codes` refers to a declared `code` definition, the emitted
+/// ELM node must be `CodeRef` so that evaluators look it up in `library.codes`
+/// rather than `library.expressions`.
+#[test]
+fn test_code_ref_emitted_for_code_definition_in_retrieve() {
+    let cql = r#"
+library CodeRefTest version '1.0'
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1'
+codesystem "LOINC": 'http://loinc.org'
+code "HER2": '85319-2' from "LOINC"
+context Patient
+define "HER2Obs": [Observation: "HER2"]
+"#;
+    let (typed_lib, diags) = analyze_fhir(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let mut emitter = emitter_with_result_types();
+    let elm_lib = emitter.emit(typed_lib);
+    let stmts = elm_lib.statements.expect("statements").defs;
+    let expr_def = match stmts.first().expect("stmt") {
+        elm::StatementDef::Expression(e) => e,
+        other => panic!("expected ExpressionDef: {other:?}"),
+    };
+    let retrieve = match expr_def.expression.as_deref().expect("expression") {
+        elm::Expression::Retrieve(r) => r,
+        other => panic!("expected Retrieve: {other:?}"),
+    };
+    let codes_expr = retrieve.codes.as_deref().expect("Retrieve.codes should be set");
+    assert!(
+        matches!(codes_expr, elm::Expression::CodeRef(_)),
+        "Retrieve.codes referencing a code def must emit CodeRef, got {codes_expr:?}"
+    );
+    if let elm::Expression::CodeRef(cr) = codes_expr {
+        assert_eq!(cr.name.as_deref(), Some("HER2"));
+    }
+}
+
+/// An `ExpressionRef` to a regular define must still emit `ExpressionRef`
+/// (regression guard: fix must not affect non-code references).
+#[test]
+fn test_expression_ref_still_emitted_for_expression_define() {
+    let cql = r#"
+library ExprRefTest version '1.0'
+define "MyBool": true
+define "UseMyBool": "MyBool"
+"#;
+    let (typed_lib, diags) = analyze(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = {
+        let stmts = &typed_lib.statements;
+        // Second statement: UseMyBool
+        match &stmts[1].inner {
+            rh_cql::semantics::typed_ast::TypedStatement::ExpressionDef { body, .. } => body.clone(),
+            _ => panic!("expected ExpressionDef"),
+        }
+    };
+
+    let mut emitter = emitter_with_result_types();
+    let elm_expr = emitter.emit_expression(&body);
+    assert!(
+        matches!(elm_expr, elm::Expression::ExpressionRef(_)),
+        "Reference to a regular define should emit ExpressionRef, got {elm_expr:?}"
+    );
 }
