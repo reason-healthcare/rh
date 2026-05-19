@@ -68,7 +68,7 @@ pub struct InitArgs {
 
 #[derive(Args)]
 pub struct BuildArgs {
-    /// Path to the source directory containing package.json and FHIR resources
+    /// Path to the source directory containing packager.toml and FHIR resources
     pub dir: PathBuf,
 
     /// Output directory for the expanded package (default: <dir>/output)
@@ -144,7 +144,7 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
             }
             println!("\nPackage initialised at {}", dir.display());
             println!(
-                "Next: edit package.json, then run `rh package build {}`",
+                "Next: edit packager.toml, then run `rh package build {}`",
                 dir.display()
             );
             Ok(())

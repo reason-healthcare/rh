@@ -289,6 +289,8 @@ impl ElmEmitter {
         };
 
         let mut contexts = Vec::new();
+        // Extract active context name before consuming the Vec.
+        let active_context: Option<String> = typed_library.contexts.last().map(|c| c.name.clone());
         for ctx in typed_library.contexts {
             contexts.push(elm::ContextDef {
                 name: Some(ctx.name),
@@ -335,6 +337,7 @@ impl ElmEmitter {
         };
 
         let mut statements = Vec::new();
+        // `active_context` was computed above when iterating `typed_library.contexts`.
         for s in typed_library.statements {
             use crate::semantics::typed_ast::TypedStatement;
             match s.inner {
@@ -342,7 +345,7 @@ impl ElmEmitter {
                     let expression = self.emit_expression(&body);
                     statements.push(elm::StatementDef::Expression(elm::ExpressionDef {
                         name: Some(name),
-                        context: None,
+                        context: active_context.clone(),
                         access_level: Some(elm::AccessModifier::Public),
                         expression: Some(Box::new(expression)),
                         local_id: None,
@@ -362,7 +365,7 @@ impl ElmEmitter {
                     let expression = body.as_ref().map(|b| Box::new(self.emit_expression(b)));
                     statements.push(elm::StatementDef::Function(elm::FunctionDef {
                         name: Some(name),
-                        context: None,
+                        context: active_context.clone(),
                         access_level: Some(elm::AccessModifier::Public),
                         expression,
                         local_id: None,

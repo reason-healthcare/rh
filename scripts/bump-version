@@ -4,22 +4,23 @@ Manage crate versions across the workspace.
 
 Usage:
   bump-version show
+  bump-version <new-version>
   bump-version workspace <new-version>
   bump-version validator <new-version>
-  bump-version all <new-workspace-version> <new-validator-version>
 
 Commands:
-  show        Display current versions for all crates
-  workspace   Bump the shared workspace version (all crates using version.workspace = true)
-              Also updates internal path dependency version specifiers
-  validator   Bump rh-validator's standalone version and its dep entry in rh-cli
-  all         Bump both workspace and validator versions in one pass
+  show               Display current versions for all crates
+  <new-version>      Bump all crates to the same version (default workflow)
+  workspace          Bump only workspace crates — exceptional, use when releasing
+                     a single non-validator crate at a different version
+  validator          Bump only rh-validator — exceptional, use when releasing
+                     rh-validator independently of the rest of the workspace
 
 Examples:
   bump-version show
-  bump-version workspace 0.2.0-beta.1
-  bump-version validator 0.3.0-beta.1
-  bump-version all 0.2.0-beta.1 0.3.0-beta.1
+  bump-version 0.2.0-beta.1          # normal: all crates to same version
+  bump-version workspace 0.2.0-beta.1  # exceptional: workspace crates only
+  bump-version validator 0.3.0-beta.1  # exceptional: rh-validator only
 """
 
 import re
@@ -182,20 +183,17 @@ def cmd_validator(args):
         print(f"No changes — rh-validator is already at {new_version}.")
 
 
-def cmd_all(args):
-    if len(args) < 2:
-        print("Usage: bump-version all <new-workspace-version> <new-validator-version>", file=sys.stderr)
-        sys.exit(1)
-    ws_new, val_new = args[0], args[1]
-    changes = bump_workspace(ws_new) + bump_validator(val_new)
+def cmd_all(new_version):
+    """Bump workspace and validator to the same version (default workflow)."""
+    changes = bump_workspace(new_version) + bump_validator(new_version)
     if changes:
         print("Changes made:")
         for c in changes:
             print(c)
-        print(f"\nAll versions bumped (workspace={ws_new}, validator={val_new}).")
+        print(f"\nAll crates bumped to {new_version}.")
         print("Next: cargo check --workspace")
     else:
-        print("No changes.")
+        print(f"No changes — all crates already at {new_version}.")
 
 
 if __name__ == "__main__":
@@ -212,9 +210,6 @@ if __name__ == "__main__":
         cmd_workspace(rest)
     elif cmd == "validator":
         cmd_validator(rest)
-    elif cmd == "all":
-        cmd_all(rest)
     else:
-        print(f"Unknown command: {cmd}", file=sys.stderr)
-        print(__doc__, file=sys.stderr)
-        sys.exit(1)
+        # Treat the first argument as a version — bump everything
+        cmd_all(cmd)

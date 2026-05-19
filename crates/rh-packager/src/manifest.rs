@@ -43,6 +43,33 @@ pub struct PackageJson {
     pub extra: HashMap<String, serde_json::Value>,
 }
 
+impl PackageJson {
+    /// Construct a `PackageJson` from a [`PublisherConfig`].
+    ///
+    /// This is the primary way `package.json` is produced — derived from `packager.toml`
+    /// rather than read from a file in the source directory.
+    pub fn from_config(config: &crate::config::PublisherConfig) -> Self {
+        PackageJson {
+            name: config.id.clone().unwrap_or_default(),
+            version: config
+                .version
+                .clone()
+                .unwrap_or_else(|| "0.1.0".to_string()),
+            fhir_versions: config
+                .fhir_version
+                .as_ref()
+                .map(|v| vec![v.clone()])
+                .unwrap_or_default(),
+            dependencies: config.dependencies.clone(),
+            url: config.canonical.clone(),
+            description: config.description.clone(),
+            author: config.author.clone(),
+            license: config.license.clone(),
+            extra: HashMap::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +142,48 @@ mod tests {
         let json = r#"{"name": "test", "version": "1.0.0"}"#;
         let pkg: PackageJson = serde_json::from_str(json).unwrap();
         assert!(pkg.dependencies.is_empty());
+    }
+
+    #[test]
+    fn from_config_maps_all_fields() {
+        use crate::config::PublisherConfig;
+        let toml = r#"
+id           = "hl7.fhir.us.core"
+version      = "6.1.0"
+canonical    = "http://hl7.org/fhir/us/core"
+fhir_version = "4.0.1"
+description  = "US Core IG"
+author       = "HL7 US Realm"
+license      = "CC0-1.0"
+
+[dependencies]
+"hl7.fhir.r4.core" = "4.0.1"
+"#;
+        let config = PublisherConfig::from_toml_str(toml).unwrap();
+        let pkg = PackageJson::from_config(&config);
+        assert_eq!(pkg.name, "hl7.fhir.us.core");
+        assert_eq!(pkg.version, "6.1.0");
+        assert_eq!(pkg.fhir_versions, vec!["4.0.1"]);
+        assert_eq!(pkg.url.as_deref(), Some("http://hl7.org/fhir/us/core"));
+        assert_eq!(pkg.description.as_deref(), Some("US Core IG"));
+        assert_eq!(pkg.author.as_deref(), Some("HL7 US Realm"));
+        assert_eq!(pkg.license.as_deref(), Some("CC0-1.0"));
+        assert_eq!(
+            pkg.dependencies.get("hl7.fhir.r4.core").map(|s| s.as_str()),
+            Some("4.0.1")
+        );
+        assert!(pkg.extra.is_empty());
+    }
+
+    #[test]
+    fn from_config_uses_defaults_for_absent_fields() {
+        use crate::config::PublisherConfig;
+        let config = PublisherConfig::default();
+        let pkg = PackageJson::from_config(&config);
+        assert_eq!(pkg.name, "");
+        assert_eq!(pkg.version, "0.1.0");
+        assert!(pkg.fhir_versions.is_empty());
+        assert!(pkg.dependencies.is_empty());
+        assert!(pkg.url.is_none());
     }
 }

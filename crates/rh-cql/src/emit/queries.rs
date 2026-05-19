@@ -180,7 +180,7 @@ pub fn emit_retrieve(
         data_type: Some(data_type),
         template_id: None,
         context: None,
-        code_property: None,
+        code_property: retrieve.code_property.clone(),
         code_comparator: None,
         codes: retrieve.codes.as_ref().map(|c| Box::new(emit_expr(c, ctx))),
         date_property: None,

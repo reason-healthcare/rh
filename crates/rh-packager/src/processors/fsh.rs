@@ -46,10 +46,11 @@ impl HookProcessor for FshProcessor {
     }
 
     fn run(&self, ctx: &mut PublishContext) -> Result<()> {
-        let fsh_files = collect_fsh_files(&ctx.source_dir);
+        let fsh_dir = ctx.fsh_dir();
+        let fsh_files = collect_fsh_files(&fsh_dir);
 
         if fsh_files.is_empty() {
-            info!("fsh: no .fsh files found in {:?}, skipping", ctx.source_dir);
+            info!("fsh: no .fsh files found in {:?}, skipping", fsh_dir);
             return Ok(());
         }
 
@@ -185,6 +186,7 @@ mod tests {
         use crate::manifest::PackageJson;
         use std::collections::HashMap as HM;
         PublishContext {
+            input_dir: source_dir.clone(),
             source_dir,
             output_dir: PathBuf::from("/tmp/out"),
             package_json: PackageJson {

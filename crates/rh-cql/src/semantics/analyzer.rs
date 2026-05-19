@@ -144,6 +144,7 @@ impl SemanticAnalyzer {
 
         let meta = SemanticMeta {
             resolved_symbol,
+            symbol_kind: sym.map(|s| s.kind.clone()),
             ..Default::default()
         };
 
@@ -870,8 +871,20 @@ impl SemanticAnalyzer {
             },
         };
 
+        // Look up the model's primaryCodePath for this type so `Retrieve.code_property`
+        // is populated correctly in the emitted ELM. Fall back to any explicit
+        // code path from the CQL source (e.g. `[Obs: path in codes]` form).
+        let code_property: Option<String> = {
+            let model_name = named_type.namespace.as_deref().unwrap_or("FHIR");
+            self._model_provider
+                .resolve_class(model_name, None, &named_type.name)
+                .and_then(|ci| ci.primary_code_path)
+                .or_else(|| e.code_path.as_ref().map(|p| p.to_string()))
+        };
+
         let inner = TypedExpression::Retrieve(crate::semantics::typed_ast::TypedRetrieve {
             data_type: named_type.clone(),
+            code_property,
             codes: e
                 .codes
                 .as_ref()

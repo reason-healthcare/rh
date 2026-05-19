@@ -8,9 +8,18 @@ use tempfile::TempDir;
 /// Copy the fixture directory into a temp dir so tests can mutate it.
 fn copy_fixture(tmp: &TempDir) {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/my-package");
-    for entry in fs::read_dir(&src).unwrap().flatten() {
-        let dest = tmp.path().join(entry.file_name());
-        fs::copy(entry.path(), dest).unwrap();
+    copy_dir_recursive(&src, tmp.path());
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) {
+    for entry in fs::read_dir(src).unwrap().flatten() {
+        let dest = dst.join(entry.file_name());
+        if entry.path().is_dir() {
+            fs::create_dir_all(&dest).unwrap();
+            copy_dir_recursive(&entry.path(), &dest);
+        } else {
+            fs::copy(entry.path(), dest).unwrap();
+        }
     }
 }
 
@@ -170,7 +179,7 @@ fn build_with_snapshot_and_validate_hooks() {
     // Override packager.toml to configure snapshot + validate before_build hooks.
     fs::write(
         tmp.path().join("packager.toml"),
-        "[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
+        "id = \"example.fhir.test\"\nversion = \"1.0.0\"\nfhir_version = \"4.0.1\"\n\n[hooks]\nbefore_build = [\"snapshot\", \"validate\"]\n",
     )
     .unwrap();
 
@@ -206,7 +215,7 @@ fn check_fails_on_ig_version_mismatch() {
     copy_fixture(&tmp);
 
     // Tamper the IG version.
-    let ig_path = tmp.path().join("ImplementationGuide.json");
+    let ig_path = tmp.path().join("input").join("ImplementationGuide.json");
     let mut ig: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&ig_path).unwrap()).unwrap();
     ig["version"] = serde_json::Value::String("9.9.9".to_string());
