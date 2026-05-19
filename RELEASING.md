@@ -17,8 +17,10 @@ This document describes the end-to-end process for versioning, validating, and p
 | `rh-hl7-fhir-r4-core` | `version.workspace` | Generated FHIR types |
 | `rh-codegen` | `version.workspace` | Code generation |
 | `rh-cql` | `version.workspace` | CQL library |
+| `rh-fsh` | `version.workspace` | FSH compiler |
 | `rh-fhirpath` | `version.workspace` | FHIRPath library |
 | `rh-vcl` | `version.workspace` | VCL library |
+| `rh-packager` | `version.workspace` | Package tooling |
 | `rh-validator` | standalone | Standalone version; normally bumped alongside all other crates |
 | `rh-cli` | `version.workspace` | CLI binary (`rh`) |
 
@@ -29,9 +31,9 @@ Crates must be published in dependency order. Crates on the same line have no de
 ```
 rh-foundation
     ↓
-rh-hl7-fhir-r4-core  rh-codegen  rh-cql
+rh-hl7-fhir-r4-core  rh-codegen  rh-cql  rh-fsh
     ↓
-rh-fhirpath  rh-vcl
+rh-fhirpath  rh-vcl  rh-packager
     ↓
 rh-validator
     ↓
@@ -91,8 +93,10 @@ cargo publish --dry-run -p rh-foundation
 cargo publish --dry-run -p rh-hl7-fhir-r4-core
 cargo publish --dry-run -p rh-codegen
 cargo publish --dry-run -p rh-cql
+cargo publish --dry-run -p rh-fsh
 cargo publish --dry-run -p rh-fhirpath
 cargo publish --dry-run -p rh-vcl
+cargo publish --dry-run -p rh-packager
 cargo publish --dry-run -p rh-validator
 cargo publish --dry-run -p rh-cli
 ```
@@ -119,10 +123,12 @@ sleep 30
 cargo publish -p rh-hl7-fhir-r4-core
 cargo publish -p rh-codegen
 cargo publish -p rh-cql
+cargo publish -p rh-fsh
 sleep 30
 
 cargo publish -p rh-fhirpath
 cargo publish -p rh-vcl
+cargo publish -p rh-packager
 sleep 30
 
 cargo publish -p rh-validator
@@ -142,8 +148,10 @@ https://crates.io/crates/rh-foundation
 https://crates.io/crates/rh-hl7-fhir-r4-core
 https://crates.io/crates/rh-codegen
 https://crates.io/crates/rh-cql
+https://crates.io/crates/rh-fsh
 https://crates.io/crates/rh-fhirpath
 https://crates.io/crates/rh-vcl
+https://crates.io/crates/rh-packager
 https://crates.io/crates/rh-validator
 https://crates.io/crates/rh-cli
 ```
