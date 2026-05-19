@@ -182,7 +182,27 @@ pub fn emit_retrieve(
         context: None,
         code_property: retrieve.code_property.clone(),
         code_comparator: None,
-        codes: retrieve.codes.as_ref().map(|c| Box::new(emit_expr(c, ctx))),
+        codes: retrieve.codes.as_ref().map(|c| {
+            let emitted = emit_expr(c, ctx);
+            // The ELM spec requires Retrieve.codes to be a list expression or a
+            // ValueSet reference. cql-execution calls resolveValueSet() on any
+            // non-array result, which fails for plain Code/Concept values.
+            // Wrap single Code/Concept refs in a List so evaluators receive
+            // [Code] — matching the output of the Java reference translator.
+            let needs_list_wrap = matches!(
+                emitted,
+                elm::Expression::CodeRef(_) | elm::Expression::ConceptRef(_)
+            );
+            if needs_list_wrap {
+                Box::new(elm::Expression::List(elm::ListExpr {
+                    element: elm::ElementFields::default(),
+                    type_specifier: None,
+                    elements: vec![emitted],
+                }))
+            } else {
+                Box::new(emitted)
+            }
+        }),
         date_property: None,
         date_range: retrieve
             .date_range

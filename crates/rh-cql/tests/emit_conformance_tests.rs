@@ -537,15 +537,24 @@ define "HER2Obs": [Observation: "HER2"]
         elm::Expression::Retrieve(r) => r,
         other => panic!("expected Retrieve: {other:?}"),
     };
+    // codes is now wrapped in a List([CodeRef]) so evaluators receive [Code]
+    // rather than a bare Code — required by cql-execution's typeIsArray check.
     let codes_expr = retrieve
         .codes
         .as_deref()
         .expect("Retrieve.codes should be set");
+    let code_ref = match codes_expr {
+        elm::Expression::List(list) => list
+            .elements
+            .first()
+            .expect("List should have one element"),
+        other => panic!("Expected List wrapper around CodeRef, got {other:?}"),
+    };
     assert!(
-        matches!(codes_expr, elm::Expression::CodeRef(_)),
-        "Retrieve.codes referencing a code def must emit CodeRef, got {codes_expr:?}"
+        matches!(code_ref, elm::Expression::CodeRef(_)),
+        "Retrieve.codes element must be CodeRef, got {code_ref:?}"
     );
-    if let elm::Expression::CodeRef(cr) = codes_expr {
+    if let elm::Expression::CodeRef(cr) = code_ref {
         assert_eq!(cr.name.as_deref(), Some("HER2"));
     }
 }
