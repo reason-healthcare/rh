@@ -14,7 +14,7 @@ use rh_cql::parser::CqlParser;
 use rh_cql::provider::{MemoryModelInfoProvider, ModelInfoProvider};
 use rh_cql::semantics::analyzer::SemanticAnalyzer;
 use rh_cql::semantics::typed_ast::TypedStatement;
-use rh_cql::{CompilationContext};
+use rh_cql::CompilationContext;
 use std::sync::Arc;
 
 // ---------------------------------------------------------------------------
@@ -537,7 +537,10 @@ define "HER2Obs": [Observation: "HER2"]
         elm::Expression::Retrieve(r) => r,
         other => panic!("expected Retrieve: {other:?}"),
     };
-    let codes_expr = retrieve.codes.as_deref().expect("Retrieve.codes should be set");
+    let codes_expr = retrieve
+        .codes
+        .as_deref()
+        .expect("Retrieve.codes should be set");
     assert!(
         matches!(codes_expr, elm::Expression::CodeRef(_)),
         "Retrieve.codes referencing a code def must emit CodeRef, got {codes_expr:?}"
@@ -563,7 +566,9 @@ define "UseMyBool": "MyBool"
         let stmts = &typed_lib.statements;
         // Second statement: UseMyBool
         match &stmts[1].inner {
-            rh_cql::semantics::typed_ast::TypedStatement::ExpressionDef { body, .. } => body.clone(),
+            rh_cql::semantics::typed_ast::TypedStatement::ExpressionDef { body, .. } => {
+                body.clone()
+            }
             _ => panic!("expected ExpressionDef"),
         }
     };

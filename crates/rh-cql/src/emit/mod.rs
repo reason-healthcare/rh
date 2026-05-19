@@ -290,8 +290,7 @@ impl ElmEmitter {
 
         let mut contexts = Vec::new();
         // Extract active context name before consuming the Vec.
-        let active_context: Option<String> =
-            typed_library.contexts.last().map(|c| c.name.clone());
+        let active_context: Option<String> = typed_library.contexts.last().map(|c| c.name.clone());
         for ctx in typed_library.contexts {
             contexts.push(elm::ContextDef {
                 name: Some(ctx.name),
