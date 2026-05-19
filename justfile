@@ -151,21 +151,22 @@ update:
 show-versions:
     @python3 scripts/bump-version show
 
-# Bump the shared workspace version (all crates using version.workspace = true)
-# Also updates all internal path dependency version specifiers
+# Bump all crates to the same version (default release workflow)
 # Usage: just bump-version 0.2.0-beta.1
 bump-version new-version:
+    python3 scripts/bump-version {{new-version}}
+
+# [exceptional] Bump only the shared workspace version, leaving rh-validator unchanged
+# Use when releasing workspace crates independently of rh-validator
+# Usage: just bump-workspace-version 0.2.0-beta.1
+bump-workspace-version new-version:
     python3 scripts/bump-version workspace {{new-version}}
 
-# Bump rh-validator's standalone version (and its dep entry in rh-cli)
+# [exceptional] Bump rh-validator's standalone version only, leaving workspace crates unchanged
+# Use when releasing rh-validator independently of the rest of the workspace
 # Usage: just bump-validator-version 0.3.0-beta.1
 bump-validator-version new-version:
     python3 scripts/bump-version validator {{new-version}}
-
-# Bump all versions at once
-# Usage: just bump-all-versions 0.2.0-beta.1 0.3.0-beta.1
-bump-all-versions ws-version val-version:
-    python3 scripts/bump-version all {{ws-version}} {{val-version}}
 
 # Build WASM packages for all WASM-capable crates (rh-fhirpath and rh-vcl)
 wasm:
