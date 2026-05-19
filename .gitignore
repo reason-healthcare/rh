@@ -6,7 +6,6 @@ __pycache__/
 # Rust
 /target/
 **/target/*
-/Cargo.lock
 **/*.rs.bk
 *.pdb
 
