@@ -15,7 +15,7 @@ keywords = [
     "profile",
     "hl7",
 ]
-categories = ["parsing", "data-structures", "healthcare"]
+categories = ["parsing", "data-structures", "science"]
 readme = "README.md"
 
 [lib]
