@@ -22,7 +22,7 @@ wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:console_error_panic_hook"]
 wasm-opt = ["-O4"]
 
 [dependencies]
-rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1" }
+rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -32,11 +32,11 @@ regex = { workspace = true }
 chrono = { workspace = true }
 
 # FHIR type metadata
-rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.1.0-beta.1" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.0-beta.2" }
 
 # WASM dependencies - only included when targeting wasm32
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-rh-foundation = { path = "../rh-foundation", version = "0.1.0-beta.1", features = ["wasm"] }
+rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2", features = ["wasm"] }
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
