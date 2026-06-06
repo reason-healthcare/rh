@@ -54,10 +54,10 @@ CQL compiles to ELM (Expression Logical Model), a structured representation that
 The compiler follows a strict three-stage pipeline:
 
 ```
-┌─────────────┐    ┌─────────────────┐    ┌─────────────┐    ┌─────────────┐
+┌─────────────┐    ┌──────────────────┐    ┌─────────────┐    ┌─────────────┐
 │  CQL Source │ ──▶│  SemanticAnalyzer│──▶ │ ElmEmitter  │──▶ │  ELM JSON   │
 │   parser/   │    │  semantics/      │    │  emit/      │    │ (+ SourceMap│
-└─────────────┘    └─────────────────┘    └─────────────┘    │  optional)  │
+└─────────────┘    └──────────────────┘    └─────────────┘    │  optional)  │
                                                               └─────────────┘
                                                                      │
                                                               ┌──────▼──────┐
@@ -345,13 +345,6 @@ Full Rust type definitions for ELM, supporting:
 - **Model providers**: In-memory model storage (WASM-compatible)
 - **Built-in FHIR R4**: Pre-loaded model with core resource types
 - **DataType system**: Type checking, subtyping, implicit conversions
-
-### � Planned / In Progress
-
-- [ ] WASM build for browser/Node.js usage
-- [ ] Full CQL conformance parity (Phase F)
-- [ ] Retrieve expression full model-driven translation
-- [ ] Incremental compilation and caching
 
 ## Additional APIs
 
