@@ -9,25 +9,24 @@
 
 **Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extensible. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: composable commands, strong UX, and automation-friendly output.
 
-Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Several crates also support **WebAssembly** targets for browser and embedded use cases.
+Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Three crates (`rh-foundation`, `rh-fhirpath`, `rh-vcl`) also support **WebAssembly** targets for browser and embedded use cases.
 
 ## Components
 
 | Status | Component | Description |
 |--------|-----------|-------------|
-| ✅ | [rh-cli](apps/rh-cli/README.md) | First-class CLI for all RH features |
-| ✅ | [rh-codegen](crates/rh-codegen/README.md)  | FHIR to Rust type code generator |
-| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | Extendable FHIRPath engine |
-| ✅ | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) to FHIR JSON compiler |
-| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator |
-| ✅ | [rh-foundation](crates/rh-foundation/README.md)  | Foundation utilities (errors, HTTP, I/O, package loader, snapshot generation) |
-| ✅ | [rh-validator](crates/rh-validator/README.md)  | FHIR validator |
-| ✅ | [rh-packager](crates/rh-packager/README.md)  | FHIR Package assembler and related tools |
-| 🔜 | rh-sql  | SQL-on-FHIR view runner and related tools |
-| ✅ | [rh-cql](crates/rh-cql/README.md)  | CQL compiler, evaluator, explain mode, and source maps |
-| ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md)  | **Generated** R4 FHIR for Rust |
-| 🔜 | rh-hl7_fhir_r5_core  | **Generated** R5 FHIR for Rust |
-| 🔜 | rh-hl7_fhir_r6_core  | **Generated** R6 FHIR for Rust |
+| ✅ | [rh-cli](apps/rh-cli/README.md) | Unified CLI for FHIR processing tools |
+| ✅ | [rh-codegen](crates/rh-codegen/README.md) | Code generation library for creating Rust types from FHIR StructureDefinitions |
+| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | FHIRPath expression parser and evaluator (WASM support) |
+| ✅ | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) compiler — transforms FSH source into FHIR JSON packages |
+| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser, translator, and explainer (WASM support) |
+| ✅ | [rh-foundation](crates/rh-foundation/README.md) | Foundation utilities (errors, HTTP, I/O, CLI, package loader, snapshot generation) |
+| ✅ | [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with snapshot-based profile validation |
+| ✅ | [rh-packager](crates/rh-packager/README.md) | FHIR Package assembler with built-in processors (snapshot, validate, CQL, FSH) |
+| ✅ | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, and source maps |
+| ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md) | **Generated** R4 FHIR types for Rust (1,388 public types) |
+| 🔜 | rh-hl7_fhir_r5_core | **Generated** R5 FHIR for Rust |
+| 🔜 | rh-hl7_fhir_r6_core | **Generated** R6 FHIR for Rust |
 
 ## Quick Start
 
@@ -37,7 +36,6 @@ git clone <repo-url>
 cd rh
 cargo build
 ```
-
 
 ## Workspace Structure
 
@@ -51,7 +49,7 @@ cargo build
 │   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
 │   ├── rh-fsh/                # FHIR Shorthand (FSH) to FHIR JSON compiler
 │   ├── rh-packager/           # FHIR Package assembler
-│   ├── rh-validator/          # FHIR resource validation library
+│   ├── rh-validator/          # Hybrid FHIR R4 validator
 │   ├── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
 │   └── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
 ├── apps/                   # Executable applications
@@ -134,22 +132,64 @@ All functionality is available through the unified `rh` CLI.
 
 **For complete CLI documentation and examples, see the [RH CLI documentation](apps/rh-cli/README.md)**
 
-**Unified CLI (recommended):**
 ```bash
-# Code generation
-rh codegen --help
+rh --help
+```
 
-# FHIRPath operations
-rh fhirpath --help
+**Subcommands:**
 
-# FHIR Shorthand (FSH) compilation
+| Command | Description |
+|---------|-------------|
+| `rh codegen` | Generate organized Rust crates from FHIR Packages |
+| `rh cql` | Compile CQL (Clinical Quality Language) to ELM |
+| `rh download` | Download and install FHIR packages from npm-style registries |
+| `rh fhirpath` | Parse and evaluate FHIRPath expressions |
+| `rh fsh` | Compile and work with FHIR Shorthand (FSH) files |
+| `rh vcl` | Parse and translate VCL (ValueSet Compose Language) expressions |
+| `rh snapshot` | Generate and manage StructureDefinition snapshots |
+| `rh package` | Assemble a conformant FHIR Package from a source directory |
+| `rh validate` | Validate FHIR resources |
+
+**Examples:**
+
+```bash
+# Code generation — generate Rust types from a FHIR package
+rh codegen hl7.fhir.r4.core 4.0.1
+
+# FHIRPath — evaluate an expression against FHIR data
+rh fhirpath eval "Patient.name.given" -d patient.json
+
+# FHIRPath — interactive REPL
+rh fhirpath repl
+
+# FSH — compile FSH source to FHIR JSON
 rh fsh compile myprofile.fsh --output output/
 
-# ValueSet Compose Language (VCL) operations
-rh vcl --help
+# VCL — translate a VCL expression to FHIR ValueSet.compose
+rh vcl translate "http://loinc.org|718-7*"
 
-# Build a FHIR Package from a source directory
+# CQL — compile CQL source to ELM JSON
+rh cql compile measure.cql
+
+# CQL — evaluate a named expression
+rh cql eval measure.cql "InitialPopulation" --data patients.ndjson
+
+# Validate a single FHIR resource
+rh validate resource -i patient.json
+
+# Validate multiple resources from NDJSON with a terminology server
+rh validate batch -i resources.ndjson --terminology-server https://tx.fhir.org/r4
+
+# Download a FHIR package
+rh download package hl7.fhir.r4.core 4.0.1
+
+# Generate a StructureDefinition snapshot
+rh snapshot generate http://hl7.org/fhir/StructureDefinition/Patient
+
+# Package — scaffold, build, and pack a FHIR Package
+rh package init --canonical https://example.org/fhir my-package/
 rh package build my-package/
+rh package pack my-package/output/
 ```
 
 Check code formatting:
