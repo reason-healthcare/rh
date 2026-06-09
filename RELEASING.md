@@ -156,6 +156,48 @@ https://crates.io/crates/rh-validator
 https://crates.io/crates/rh-cli
 ```
 
+## Homebrew Tap
+
+The Homebrew formula lives in the separate `reason-healthcare/homebrew-rh` tap repository and automatically updates when a GitHub Release is published. The `publish-homebrew` workflow:
+
+1. Downloads the macOS and Linux release assets
+2. Computes SHA256 checksums for each binary
+3. Generates an updated `Formula/rh.rb` with version, URLs, and checksums
+4. Commits and pushes to the `reason-healthcare/homebrew-rh` repository
+
+The workflow only runs for stable releases (skips `-beta` and `-alpha` tags).
+
+**Secrets required:**
+- `HOMEBREW_TAP_TOKEN` — a PAT with `repo` scope, stored in the main repo's GitHub Actions secrets
+
+**First-time setup:**
+1. Create the `reason-healthcare/homebrew-rh` repository on GitHub (empty, with a `Formula/` directory)
+2. Generate a PAT with `repo` scope for pushing to the tap
+3. Add it as `HOMEBREW_TAP_TOKEN` in the main repo's GitHub Actions secrets
+4. Copy the template formula from `homebrew-tap/Formula/rh.rb` as the initial formula
+
+**Manual formula update** (if needed):
+```bash
+git clone https://github.com/reason-healthcare/homebrew-rh
+cd homebrew-rh
+# Edit Formula/rh.rb with version, URLs, and SHA256 checksums
+git add Formula/rh.rb
+git commit -m "rh x.y.z"
+git push
+```
+
+**User install:**
+```bash
+brew tap reason-healthcare/rh
+brew install rh
+```
+
+**User install:**
+```bash
+brew tap reason-healthcare/rh
+brew install rh
+```
+
 ## WASM Builds
 
 `rh-fhirpath` and `rh-vcl` also ship as WebAssembly packages. Build them after the Rust crates are published:

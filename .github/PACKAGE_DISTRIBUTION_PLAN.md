@@ -1,0 +1,1 @@
+| `reason-healthcare/homebrew-rh` repo | **Create** (external) — Homebrew tap with `Formula/rh.rb` | Pending (manual) |

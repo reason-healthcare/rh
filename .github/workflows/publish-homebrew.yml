@@ -1,0 +1,98 @@
+name: Publish Homebrew Tap
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-tap:
+    name: Update Homebrew tap formula
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.release.tag_name, '-beta') && !contains(github.event.release.tag_name, '-alpha')"
+
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ steps.version.outputs.tag }} \
+            --repo reason-healthcare/rh \
+            --pattern 'rh-aarch64-apple-darwin.tar.gz' \
+            --pattern 'rh-x86_64-apple-darwin.tar.gz' \
+            --pattern 'rh-x86_64-unknown-linux-musl.tar.gz'
+
+      - name: Compute SHA256 checksums
+        id: checksums
+        run: |
+          SHA_ARM64_MACOS=$(shasum -a 256 rh-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)
+          SHA_X86_MACOS=$(shasum -a 256 rh-x86_64-apple-darwin.tar.gz | cut -d' ' -f1)
+          SHA_X86_LINUX=$(shasum -a 256 rh-x86_64-unknown-linux-musl.tar.gz | cut -d' ' -f1)
+          echo "arm64_macos=${SHA_ARM64_MACOS}" >> "$GITHUB_OUTPUT"
+          echo "x86_macos=${SHA_X86_MACOS}" >> "$GITHUB_OUTPUT"
+          echo "x86_linux=${SHA_X86_LINUX}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: reason-healthcare/homebrew-rh
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap-repo
+
+      - name: Generate formula
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA_ARM64_MACOS: ${{ steps.checksums.outputs.arm64_macos }}
+          SHA_X86_MACOS: ${{ steps.checksums.outputs.x86_macos }}
+          SHA_X86_LINUX: ${{ steps.checksums.outputs.x86_linux }}
+        run: |
+          cat > homebrew-tap-repo/Formula/rh.rb <<'FORMULA'
+          class Rh < Formula
+            desc "Unified CLI for FHIR processing tools"
+            homepage "https://github.com/reason-healthcare/rh"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/reason-healthcare/rh/releases/download/v${VERSION}/rh-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA_ARM64_MACOS}"
+              else
+                url "https://github.com/reason-healthcare/rh/releases/download/v${VERSION}/rh-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA_X86_MACOS}"
+              end
+            end
+
+            on_linux do
+              url "https://github.com/reason-healthcare/rh/releases/download/v${VERSION}/rh-x86_64-unknown-linux-musl.tar.gz"
+              sha256 "${SHA_X86_LINUX}"
+            end
+
+            def install
+              bin.install "rh"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("\#{bin}/rh --version")
+            end
+          end
+          FORMULA
+
+      - name: Commit and push formula
+        working-directory: homebrew-tap-repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/rh.rb
+          git diff --cached --quiet || git commit -m "rh ${VERSION}"
+          git push

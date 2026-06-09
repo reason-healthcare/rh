@@ -128,6 +128,15 @@ jobs:
 
             ---
 
+            ## Install via Homebrew
+
+            ```bash
+            brew tap reason-healthcare/rh
+            brew install rh
+            ```
+
+            ---
+
             ## Publish to crates.io
 
             After verifying the binaries, publish each crate in dependency order.
@@ -178,7 +187,8 @@ jobs:
           echo "### Next steps" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "1. Review and publish the release draft on GitHub" >> "$GITHUB_STEP_SUMMARY"
-          echo "2. Publish crates to crates.io in dependency order:" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Homebrew tap will auto-update when the release is published" >> "$GITHUB_STEP_SUMMARY"
+          echo "3. Publish crates to crates.io in dependency order:" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```bash' >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-foundation && sleep 30" >> "$GITHUB_STEP_SUMMARY"
