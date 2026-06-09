@@ -1,0 +1,71 @@
+name: Publish Chocolatey Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-choco:
+    name: Publish Chocolatey package
+    runs-on: windows-latest
+    if: "!contains(github.event.release.tag_name, '-beta') && !contains(github.event.release.tag_name, '-alpha')"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Download Windows release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release download ${{ steps.version.outputs.tag }} \
+            --repo reason-healthcare/rh \
+            --pattern 'rh-x86_64-pc-windows-msvc.zip'
+
+      - name: Compute SHA256
+        id: checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 'rh-x86_64-pc-windows-msvc.zip').Hash
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+      - name: Update nuspec version
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $nuspec = Get-Content 'choco/rh.nuspec' -Raw
+          $nuspec = $nuspec -replace '<version>[^<]+</version>', "<version>$version</version>"
+          Set-Content 'choco/rh.nuspec' -Value $nuspec -NoNewline
+
+      - name: Update install script checksum
+        shell: pwsh
+        run: |
+          $sha256 = '${{ steps.checksum.outputs.sha256 }}'
+          $script = Get-Content 'choco/tools/chocolateyinstall.ps1' -Raw
+          $script = $script -replace "checksum      = '[^']+'", "checksum      = '$sha256'"
+          Set-Content 'choco/tools/chocolateyinstall.ps1' -Value $script -NoNewline
+
+      - name: Pack Chocolatey package
+        shell: pwsh
+        run: |
+          cd choco
+          choco pack
+
+      - name: Push Chocolatey package
+        shell: pwsh
+        run: |
+          cd choco
+          choco push rh.${{ steps.version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}

@@ -102,6 +102,9 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Copy install script
+        run: cp scripts/install-rh.sh artifacts/
+
       - name: Create GitHub release (draft)
         uses: softprops/action-gh-release@v2
         with:
@@ -109,6 +112,31 @@ jobs:
           prerelease: true
           files: artifacts/*
           body: |
+            ## Install
+
+            **macOS / Linux (Homebrew):**
+            ```bash
+            brew tap reason-healthcare/rh
+            brew install rh
+            ```
+
+            **Linux (install script):**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh | sh
+            ```
+
+            **Windows (Chocolatey):**
+            ```powershell
+            choco install rh
+            ```
+
+            **Docker:**
+            ```bash
+            docker pull ghcr.io/reason-healthcare/rh:latest
+            ```
+
+            ---
+
             ## CLI Binaries
 
             Download the binary for your platform and extract it to a directory on your `$PATH`.
@@ -124,15 +152,6 @@ jobs:
             # Example install on macOS / Linux
             tar xzf rh-<platform>.tar.gz
             mv rh /usr/local/bin/
-            ```
-
-            ---
-
-            ## Install via Homebrew
-
-            ```bash
-            brew tap reason-healthcare/rh
-            brew install rh
             ```
 
             ---
@@ -188,7 +207,8 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "1. Review and publish the release draft on GitHub" >> "$GITHUB_STEP_SUMMARY"
           echo "2. Homebrew tap will auto-update when the release is published" >> "$GITHUB_STEP_SUMMARY"
-          echo "3. Publish crates to crates.io in dependency order:" >> "$GITHUB_STEP_SUMMARY"
+          echo "3. Chocolatey package will auto-publish when the release is published" >> "$GITHUB_STEP_SUMMARY"
+          echo "4. Publish crates to crates.io in dependency order:" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```bash' >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-foundation && sleep 30" >> "$GITHUB_STEP_SUMMARY"

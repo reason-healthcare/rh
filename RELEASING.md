@@ -192,10 +192,49 @@ brew tap reason-healthcare/rh
 brew install rh
 ```
 
+## Chocolatey Package
+
+The Chocolatey package auto-publishes to the community feed when a GitHub Release is published. The `publish-choco` workflow:
+
+1. Downloads the Windows release asset
+2. Computes SHA256 checksum
+3. Updates `choco/rh.nuspec` version and `choco/tools/chocolateyinstall.ps1` checksum
+4. Packs and pushes the `.nupkg` to chocolatey.org
+
+The workflow only runs for stable releases (skips `-beta` and `-alpha` tags).
+
+**Secrets required:**
+- `CHOCOLATEY_API_KEY` — stored in the main repo's GitHub Actions secrets
+
+**Manual package update** (if needed):
+```powershell
+cd choco
+# Update version in rh.nuspec and checksum in tools/chocolateyinstall.ps1
+choco pack
+choco push rh.X.Y.Z.nupkg --source https://push.chocolatey.org/ --api-key <API_KEY>
+```
+
 **User install:**
+```powershell
+choco install rh
+```
+
+## Linux Install Script
+
+The `scripts/install-rh.sh` script provides a `curl | sh` install experience for Linux and macOS. It auto-detects OS and architecture, downloads the correct binary from the latest GitHub Release, and installs it to `/usr/local/bin`.
+
+The script is attached to each GitHub Release as a release asset.
+
+**Usage:**
 ```bash
-brew tap reason-healthcare/rh
-brew install rh
+# Install latest version
+curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh | sh
+
+# Install specific version
+curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh | sh -s -- -v 1.0.0
+
+# Install to custom directory
+curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh | sh -s -- -d ~/.local/bin
 ```
 
 ## WASM Builds

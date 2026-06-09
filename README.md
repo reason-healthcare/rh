@@ -13,12 +13,15 @@ Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Th
 
 ## Install
 
-```bash
-brew tap reason-healthcare/rh
-brew install rh
-```
+| Platform | Method | Command |
+|----------|--------|---------|
+| macOS / Linux | Homebrew | `brew tap reason-healthcare/rh && brew install rh` |
+| Linux | Install script | `curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh \| sh` |
+| Windows | Chocolatey | `choco install rh` |
+| Any | Docker | `docker pull ghcr.io/reason-healthcare/rh:latest` |
+| Any | Cargo | `cargo install rh-cli` |
 
-Other install methods (Docker, cargo, pre-built binaries) are documented in the [CLI README](apps/rh-cli/README.md).
+Other install methods (pre-built binaries from GitHub Releases) are documented in the [CLI README](apps/rh-cli/README.md).
 
 ## Components
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <metadata>
+    <id>rh</id>
+    <version>0.2.0-beta.2</version>
+    <title>RH - FHIR CLI</title>
+    <authors>Reason Healthcare</authors>
+    <owners>Reason Healthcare</owners>
+    <projectUrl>https://github.com/reason-healthcare/rh</projectUrl>
+    <licenseUrl>https://github.com/reason-healthcare/rh/raw/main/LICENSE-MIT</licenseUrl>
+    <projectSourceUrl>https://github.com/reason-healthcare/rh</projectSourceUrl>
+    <packageSourceUrl>https://github.com/reason-healthcare/rh/tree/main/choco</packageSourceUrl>
+    <bugTrackerUrl>https://github.com/reason-healthcare/rh/issues</bugTrackerUrl>
+    <tags>fhir healthcare hl7 cli validation cql fhirpath</tags>
+    <summary>Unified CLI for FHIR processing tools</summary>
+    <description>RH is a modern, high-performance toolkit for working with HL7 FHIR. This package installs the `rh` command-line interface for FHIR validation, CQL compilation, FHIRPath evaluation, FSH compilation, and more.</description>
+    <releaseNotes>https://github.com/reason-healthcare/rh/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
