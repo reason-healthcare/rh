@@ -11,6 +11,15 @@
 
 Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Three crates (`rh-foundation`, `rh-fhirpath`, `rh-vcl`) also support **WebAssembly** targets for browser and embedded use cases.
 
+## Install
+
+```bash
+brew tap reason-healthcare/rh
+brew install rh
+```
+
+Other install methods (Docker, cargo, pre-built binaries) are documented in the [CLI README](apps/rh-cli/README.md).
+
 ## Components
 
 | Status | Component | Description |
