@@ -35,27 +35,6 @@ pub struct ImmunizationRecommendation {
     /// Vaccine administration recommendations
     pub recommendation: Vec<ImmunizationRecommendationRecommendation>,
 }
-/// ImmunizationRecommendationRecommendation nested structure for the 'dateCriterion' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationRecommendationRecommendationDatecriterion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of date
-    ///
-    /// Binding: example (Classifies date criterion with respect to conveying information about a patient's vaccination status (e.g. due date, latest to give date, etc.).)
-    ///
-    /// Available values:
-    /// - `30981-5`
-    /// - `30980-7`
-    /// - `59777-3`
-    /// - `59778-1`
-    pub code: CodeableConcept,
-    /// Recommended date
-    pub value: DateTimeType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// ImmunizationRecommendation nested structure for the 'recommendation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationRecommendationRecommendation {
@@ -140,6 +119,27 @@ pub struct ImmunizationRecommendationRecommendation {
     #[serde(rename = "supportingPatientInformation")]
     pub supporting_patient_information: Option<Vec<Reference>>,
 }
+/// ImmunizationRecommendationRecommendation nested structure for the 'dateCriterion' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationRecommendationRecommendationDatecriterion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of date
+    ///
+    /// Binding: example (Classifies date criterion with respect to conveying information about a patient's vaccination status (e.g. due date, latest to give date, etc.).)
+    ///
+    /// Available values:
+    /// - `30981-5`
+    /// - `30980-7`
+    /// - `59777-3`
+    /// - `59778-1`
+    pub code: CodeableConcept,
+    /// Recommended date
+    pub value: DateTimeType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 
 impl Default for ImmunizationRecommendation {
     fn default() -> Self {
@@ -151,17 +151,6 @@ impl Default for ImmunizationRecommendation {
             _date: Default::default(),
             authority: Default::default(),
             recommendation: Vec::new(),
-        }
-    }
-}
-
-impl Default for ImmunizationRecommendationRecommendationDatecriterion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -186,6 +175,17 @@ impl Default for ImmunizationRecommendationRecommendation {
             _series_doses: Default::default(),
             supporting_immunization: Default::default(),
             supporting_patient_information: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationRecommendationRecommendationDatecriterion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
         }
     }
 }
@@ -498,18 +498,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImmunizationReco
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ImmunizationRecommendation {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -593,33 +581,6 @@ impl crate::traits::immunization_recommendation::ImmunizationRecommendationMutat
 impl crate::traits::immunization_recommendation::ImmunizationRecommendationExistence
     for ImmunizationRecommendation
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

@@ -53,17 +53,44 @@ pub struct MolecularSequence {
     /// A sequence defined relative to another sequence
     pub relative: Option<Vec<MolecularSequenceRelative>>,
 }
+/// MolecularSequenceRelative nested structure for the 'edit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceRelativeEdit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Start position of the edit on the starting sequence
+    pub start: Option<IntegerType>,
+    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
+    pub _start: Option<Element>,
+    /// End position of the edit on the starting sequence
+    pub end: Option<IntegerType>,
+    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
+    pub _end: Option<Element>,
+    /// Allele that was observed
+    #[serde(rename = "replacementSequence")]
+    pub replacement_sequence: Option<StringType>,
+    /// Extension element for the 'replacementSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_replacementSequence")]
+    pub _replacement_sequence: Option<Element>,
+    /// Allele in the starting sequence
+    #[serde(rename = "replacedSequence")]
+    pub replaced_sequence: Option<StringType>,
+    /// Extension element for the 'replacedSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_replacedSequence")]
+    pub _replaced_sequence: Option<Element>,
+}
 /// MolecularSequence nested structure for the 'relative' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolecularSequenceRelative {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Changes in sequence from the starting sequence
-    pub edit: Option<Vec<MolecularSequenceRelativeEdit>>,
     /// A sequence used as starting sequence
     #[serde(rename = "startingSequence")]
     pub starting_sequence: Option<MolecularSequenceRelativeStartingsequence>,
+    /// Changes in sequence from the starting sequence
+    pub edit: Option<Vec<MolecularSequenceRelativeEdit>>,
     /// Ways of identifying nucleotides or amino acids within a sequence
     ///
     /// Binding: extensible (Genomic coordinate system.)
@@ -126,33 +153,6 @@ pub struct MolecularSequenceRelativeStartingsequence {
     /// Extension element for the 'strand' primitive field. Contains metadata and extensions.
     pub _strand: Option<Element>,
 }
-/// MolecularSequenceRelative nested structure for the 'edit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceRelativeEdit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Start position of the edit on the starting sequence
-    pub start: Option<IntegerType>,
-    /// Extension element for the 'start' primitive field. Contains metadata and extensions.
-    pub _start: Option<Element>,
-    /// End position of the edit on the starting sequence
-    pub end: Option<IntegerType>,
-    /// Extension element for the 'end' primitive field. Contains metadata and extensions.
-    pub _end: Option<Element>,
-    /// Allele that was observed
-    #[serde(rename = "replacementSequence")]
-    pub replacement_sequence: Option<StringType>,
-    /// Extension element for the 'replacementSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_replacementSequence")]
-    pub _replacement_sequence: Option<Element>,
-    /// Allele in the starting sequence
-    #[serde(rename = "replacedSequence")]
-    pub replaced_sequence: Option<StringType>,
-    /// Extension element for the 'replacedSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_replacedSequence")]
-    pub _replaced_sequence: Option<Element>,
-}
 
 impl Default for MolecularSequence {
     fn default() -> Self {
@@ -174,12 +174,28 @@ impl Default for MolecularSequence {
     }
 }
 
+impl Default for MolecularSequenceRelativeEdit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            start: Default::default(),
+            _start: Default::default(),
+            end: Default::default(),
+            _end: Default::default(),
+            replacement_sequence: Default::default(),
+            _replacement_sequence: Default::default(),
+            replaced_sequence: Default::default(),
+            _replaced_sequence: Default::default(),
+        }
+    }
+}
+
 impl Default for MolecularSequenceRelative {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            edit: Default::default(),
             starting_sequence: Default::default(),
+            edit: Default::default(),
             coordinate_system: CodeableConcept::default(),
             ordinal_position: Default::default(),
             _ordinal_position: Default::default(),
@@ -205,22 +221,6 @@ impl Default for MolecularSequenceRelativeStartingsequence {
             _orientation: Default::default(),
             strand: Default::default(),
             _strand: Default::default(),
-        }
-    }
-}
-
-impl Default for MolecularSequenceRelativeEdit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            start: Default::default(),
-            _start: Default::default(),
-            end: Default::default(),
-            _end: Default::default(),
-            replacement_sequence: Default::default(),
-            _replacement_sequence: Default::default(),
-            replaced_sequence: Default::default(),
-            _replaced_sequence: Default::default(),
         }
     }
 }
@@ -550,18 +550,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MolecularSequenc
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MolecularSequence {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -689,33 +677,6 @@ impl crate::traits::molecular_sequence::MolecularSequenceMutators for MolecularS
 }
 
 impl crate::traits::molecular_sequence::MolecularSequenceExistence for MolecularSequence {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

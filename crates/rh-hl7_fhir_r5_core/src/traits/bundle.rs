@@ -101,14 +101,6 @@ pub trait BundleMutators: ResourceMutators {
 /// - Type: Bundle
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Resource
 pub trait BundleExistence: ResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
     /// Returns true if the identifier field is present (Some).
     fn has_identifier(&self) -> bool;
     /// Returns true if the type_ field is present (Some).

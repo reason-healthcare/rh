@@ -85,83 +85,6 @@ pub struct AuditEvent {
     /// Data or objects used
     pub entity: Option<Vec<AuditEventEntity>>,
 }
-/// AuditEventEntity nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntityDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of the property
-    ///
-    /// Binding: example (Additional detail about an entity used in an event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Property value (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Property value (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Property value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Property value (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Property value (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Property value (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Property value (Ratio)
-    #[serde(rename = "valueRatio")]
-    pub value_ratio: Ratio,
-    /// Property value (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Property value (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Property value (Period)
-    #[serde(rename = "valuePeriod")]
-    pub value_period: Period,
-    /// Property value (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-}
-/// AuditEvent nested structure for the 'entity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additional Information about the entity
-    pub detail: Option<Vec<AuditEventEntityDetail>>,
-    /// Specific instance of resource
-    pub what: Option<Reference>,
-    /// What role the entity played
-    ///
-    /// Binding: example (DICOM Audit Event Entity Role)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/object-role
-    pub role: Option<CodeableConcept>,
-    /// Security labels on the entity
-    ///
-    /// Binding: example (Example Security Labels from the Healthcare Privacy and Security Classification System.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/security-label-examples
-    #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<CodeableConcept>>,
-    /// Query parameters
-    pub query: Option<Base64BinaryType>,
-    /// Extension element for the 'query' primitive field. Contains metadata and extensions.
-    pub _query: Option<Element>,
-    /// Entity is attributed to this agent
-    pub agent: Option<Vec<StringType>>,
-}
 /// AuditEvent nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEventSource {
@@ -187,25 +110,6 @@ pub struct AuditEventSource {
     /// - `8`
     #[serde(rename = "type")]
     pub type_: Option<Vec<CodeableConcept>>,
-}
-/// AuditEvent nested structure for the 'outcome' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventOutcome {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether the event succeeded or failed
-    ///
-    /// Binding: preferred (DICOM Audit Event Outcome)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome
-    pub code: Coding,
-    /// Additional outcome detail
-    ///
-    /// Binding: example (A code that provides details as the exact issue.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome-detail
-    pub detail: Option<Vec<CodeableConcept>>,
 }
 /// AuditEvent nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -254,6 +158,102 @@ pub struct AuditEventAgent {
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
     pub authorization: Option<Vec<CodeableConcept>>,
 }
+/// AuditEventEntity nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntityDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the property
+    ///
+    /// Binding: example (Additional detail about an entity used in an event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Property value (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Property value (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Property value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Property value (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Property value (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Property value (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Property value (Ratio)
+    #[serde(rename = "valueRatio")]
+    pub value_ratio: Ratio,
+    /// Property value (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Property value (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Property value (Period)
+    #[serde(rename = "valuePeriod")]
+    pub value_period: Period,
+    /// Property value (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+}
+/// AuditEvent nested structure for the 'outcome' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventOutcome {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether the event succeeded or failed
+    ///
+    /// Binding: preferred (DICOM Audit Event Outcome)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome
+    pub code: Coding,
+    /// Additional outcome detail
+    ///
+    /// Binding: example (A code that provides details as the exact issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome-detail
+    pub detail: Option<Vec<CodeableConcept>>,
+}
+/// AuditEvent nested structure for the 'entity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additional Information about the entity
+    pub detail: Option<Vec<AuditEventEntityDetail>>,
+    /// Specific instance of resource
+    pub what: Option<Reference>,
+    /// What role the entity played
+    ///
+    /// Binding: example (DICOM Audit Event Entity Role)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/object-role
+    pub role: Option<CodeableConcept>,
+    /// Security labels on the entity
+    ///
+    /// Binding: example (Example Security Labels from the Healthcare Privacy and Security Classification System.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/security-label-examples
+    #[serde(rename = "securityLabel")]
+    pub security_label: Option<Vec<CodeableConcept>>,
+    /// Query parameters
+    pub query: Option<Base64BinaryType>,
+    /// Extension element for the 'query' primitive field. Contains metadata and extensions.
+    pub _query: Option<Element>,
+    /// Entity is attributed to this agent
+    pub agent: Option<Vec<StringType>>,
+}
 
 impl Default for AuditEvent {
     fn default() -> Self {
@@ -281,41 +281,6 @@ impl Default for AuditEvent {
     }
 }
 
-impl Default for AuditEventEntityDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_integer: Default::default(),
-            value_range: Default::default(),
-            value_ratio: Default::default(),
-            value_time: Default::default(),
-            value_date_time: Default::default(),
-            value_period: Default::default(),
-            value_base64_binary: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventEntity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail: Default::default(),
-            what: Default::default(),
-            role: Default::default(),
-            security_label: Default::default(),
-            query: Default::default(),
-            _query: Default::default(),
-            agent: Default::default(),
-        }
-    }
-}
-
 impl Default for AuditEventSource {
     fn default() -> Self {
         Self {
@@ -323,16 +288,6 @@ impl Default for AuditEventSource {
             site: Default::default(),
             observer: Reference::default(),
             type_: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventOutcome {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Coding::default(),
-            detail: Default::default(),
         }
     }
 }
@@ -353,6 +308,51 @@ impl Default for AuditEventAgent {
             network_uri: Default::default(),
             network_string: Default::default(),
             authorization: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventEntityDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_integer: Default::default(),
+            value_range: Default::default(),
+            value_ratio: Default::default(),
+            value_time: Default::default(),
+            value_date_time: Default::default(),
+            value_period: Default::default(),
+            value_base64_binary: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventOutcome {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Coding::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventEntity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            detail: Default::default(),
+            what: Default::default(),
+            role: Default::default(),
+            security_label: Default::default(),
+            query: Default::default(),
+            _query: Default::default(),
+            agent: Default::default(),
         }
     }
 }
@@ -584,18 +584,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for AuditEvent {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for AuditEvent {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -755,33 +743,6 @@ impl crate::traits::audit_event::AuditEventMutators for AuditEvent {
 }
 
 impl crate::traits::audit_event::AuditEventExistence for AuditEvent {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_occurred(&self) -> bool {
         self.occurred_period.is_some() || self.occurred_date_time.is_some()
     }

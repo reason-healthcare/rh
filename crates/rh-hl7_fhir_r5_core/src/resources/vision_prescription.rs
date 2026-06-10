@@ -55,22 +55,6 @@ pub struct VisionPrescription {
     #[serde(rename = "lensSpecification")]
     pub lens_specification: Vec<VisionPrescriptionLensspecification>,
 }
-/// VisionPrescriptionLensspecification nested structure for the 'prism' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisionPrescriptionLensspecificationPrism {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Amount of adjustment
-    pub amount: DecimalType,
-    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
-    pub _amount: Option<Element>,
-    /// up | down | in | out
-    #[serde(rename = "base")]
-    pub base_definition: VisionBaseCodes,
-    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
-    pub _base: Option<Element>,
-}
 /// VisionPrescription nested structure for the 'lensSpecification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisionPrescriptionLensspecification {
@@ -132,6 +116,22 @@ pub struct VisionPrescriptionLensspecification {
     /// Notes for coatings
     pub note: Option<Vec<Annotation>>,
 }
+/// VisionPrescriptionLensspecification nested structure for the 'prism' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisionPrescriptionLensspecificationPrism {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Amount of adjustment
+    pub amount: DecimalType,
+    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
+    pub _amount: Option<Element>,
+    /// up | down | in | out
+    #[serde(rename = "base")]
+    pub base_definition: VisionBaseCodes,
+    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
+    pub _base: Option<Element>,
+}
 
 impl Default for VisionPrescription {
     fn default() -> Self {
@@ -148,18 +148,6 @@ impl Default for VisionPrescription {
             _date_written: Default::default(),
             prescriber: Reference::default(),
             lens_specification: Vec::new(),
-        }
-    }
-}
-
-impl Default for VisionPrescriptionLensspecificationPrism {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            amount: Default::default(),
-            _amount: Default::default(),
-            base_definition: Default::default(),
-            _base: Default::default(),
         }
     }
 }
@@ -192,6 +180,18 @@ impl Default for VisionPrescriptionLensspecification {
             brand: Default::default(),
             _brand: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for VisionPrescriptionLensspecificationPrism {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            amount: Default::default(),
+            _amount: Default::default(),
+            base_definition: Default::default(),
+            _base: Default::default(),
         }
     }
 }
@@ -508,18 +508,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for VisionPrescripti
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for VisionPrescription {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -621,33 +609,6 @@ impl crate::traits::vision_prescription::VisionPrescriptionMutators for VisionPr
 }
 
 impl crate::traits::vision_prescription::VisionPrescriptionExistence for VisionPrescription {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

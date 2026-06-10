@@ -66,6 +66,21 @@ pub struct NutritionProduct {
     /// Comments made about the product
     pub note: Option<Vec<Annotation>>,
 }
+/// NutritionProduct nested structure for the 'nutrient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductNutrient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The (relevant) nutrients in the product
+    ///
+    /// Binding: example (Codes that identify nutrients that could be parts of nutrition products.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-nutrient
+    pub item: Option<CodeableReference>,
+    /// The amount of nutrient expressed in one or more units: X per pack / per serving / per dose
+    pub amount: Option<Vec<Ratio>>,
+}
 /// NutritionProduct nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionProductCharacteristic {
@@ -97,6 +112,17 @@ pub struct NutritionProductCharacteristic {
     /// The value of the characteristic (boolean)
     #[serde(rename = "valueBoolean")]
     pub value_boolean: BooleanType,
+}
+/// NutritionProduct nested structure for the 'ingredient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductIngredient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The ingredient contained in the product
+    pub item: CodeableReference,
+    /// The amount of ingredient that is in the product
+    pub amount: Option<Vec<Ratio>>,
 }
 /// NutritionProduct nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,32 +158,6 @@ pub struct NutritionProductInstance {
     #[serde(rename = "biologicalSourceEvent")]
     pub biological_source_event: Option<Identifier>,
 }
-/// NutritionProduct nested structure for the 'nutrient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductNutrient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The (relevant) nutrients in the product
-    ///
-    /// Binding: example (Codes that identify nutrients that could be parts of nutrition products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-nutrient
-    pub item: Option<CodeableReference>,
-    /// The amount of nutrient expressed in one or more units: X per pack / per serving / per dose
-    pub amount: Option<Vec<Ratio>>,
-}
-/// NutritionProduct nested structure for the 'ingredient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductIngredient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The ingredient contained in the product
-    pub item: CodeableReference,
-    /// The amount of ingredient that is in the product
-    pub amount: Option<Vec<Ratio>>,
-}
 
 impl Default for NutritionProduct {
     fn default() -> Self {
@@ -178,6 +178,16 @@ impl Default for NutritionProduct {
     }
 }
 
+impl Default for NutritionProductNutrient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
 impl Default for NutritionProductCharacteristic {
     fn default() -> Self {
         Self {
@@ -189,6 +199,16 @@ impl Default for NutritionProductCharacteristic {
             value_base64_binary: Default::default(),
             value_attachment: Default::default(),
             value_boolean: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionProductIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: CodeableReference::default(),
+            amount: Default::default(),
         }
     }
 }
@@ -208,26 +228,6 @@ impl Default for NutritionProductInstance {
             use_by: Default::default(),
             _use_by: Default::default(),
             biological_source_event: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductNutrient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: CodeableReference::default(),
-            amount: Default::default(),
         }
     }
 }
@@ -497,18 +497,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for NutritionProduct
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for NutritionProduct {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -665,33 +653,6 @@ impl crate::traits::nutrition_product::NutritionProductMutators for NutritionPro
 }
 
 impl crate::traits::nutrition_product::NutritionProductExistence for NutritionProduct {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_code(&self) -> bool {
         self.code.is_some()
     }

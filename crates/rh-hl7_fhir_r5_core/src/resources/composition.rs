@@ -110,6 +110,21 @@ pub struct CompositionAttester {
     /// Who attested the composition
     pub party: Option<Reference>,
 }
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented, as code(s), reference(s), or both
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    pub detail: Option<Vec<CodeableReference>>,
+}
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionSection {
@@ -162,21 +177,6 @@ pub struct CompositionSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
-/// Composition nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented, as code(s), reference(s), or both
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub detail: Option<Vec<CodeableReference>>,
-}
 
 impl Default for Composition {
     fn default() -> Self {
@@ -223,6 +223,16 @@ impl Default for CompositionAttester {
     }
 }
 
+impl Default for CompositionEvent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            period: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
 impl Default for CompositionSection {
     fn default() -> Self {
         Self {
@@ -237,16 +247,6 @@ impl Default for CompositionSection {
             entry: Default::default(),
             empty_reason: Default::default(),
             section: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionEvent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            period: Default::default(),
-            detail: Default::default(),
         }
     }
 }
@@ -485,18 +485,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Composition {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Composition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -726,33 +714,6 @@ impl crate::traits::composition::CompositionMutators for Composition {
 }
 
 impl crate::traits::composition::CompositionExistence for Composition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }

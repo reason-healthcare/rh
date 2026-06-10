@@ -29,19 +29,6 @@ pub struct Availability {
     #[serde(rename = "notAvailableTime")]
     pub not_available_time: Option<Vec<Element>>,
 }
-/// Availability nested structure for the 'notAvailableTime' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AvailabilityNotavailabletime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reason presented to the user explaining why time not available
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Service not available during this period
-    pub during: Option<Period>,
-}
 /// Availability nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AvailabilityAvailabletime {
@@ -73,6 +60,19 @@ pub struct AvailabilityAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
+/// Availability nested structure for the 'notAvailableTime' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AvailabilityNotavailabletime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reason presented to the user explaining why time not available
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Service not available during this period
+    pub during: Option<Period>,
+}
 
 impl Default for Availability {
     fn default() -> Self {
@@ -80,17 +80,6 @@ impl Default for Availability {
             base: DataType::default(),
             available_time: Default::default(),
             not_available_time: Default::default(),
-        }
-    }
-}
-
-impl Default for AvailabilityNotavailabletime {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            during: Default::default(),
         }
     }
 }
@@ -107,6 +96,17 @@ impl Default for AvailabilityAvailabletime {
             _available_start_time: Default::default(),
             available_end_time: Default::default(),
             _available_end_time: Default::default(),
+        }
+    }
+}
+
+impl Default for AvailabilityNotavailabletime {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            during: Default::default(),
         }
     }
 }

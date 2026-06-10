@@ -52,6 +52,71 @@ pub struct BodyStructure {
     /// Who this is about
     pub patient: Reference,
 }
+/// BodyStructure nested structure for the 'includedStructure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BodyStructureIncludedstructure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Landmark relative location
+    #[serde(rename = "bodyLandmarkOrientation")]
+    pub body_landmark_orientation:
+        Option<Vec<BodyStructureIncludedstructureBodylandmarkorientation>>,
+    /// Code that represents the included structure
+    ///
+    /// Binding: example (SNOMED CT Body site concepts)
+    ///
+    /// Available values:
+    /// - `53075003`: Distal phalanx of hallux
+    /// - `76986006`: Distal phalanx of second toe
+    /// - `65258003`: Distal phalanx of third toe
+    /// - `54333003`: Distal phalanx of fourth toe
+    /// - `10770001`: Distal phalanx of fifth toe
+    /// - `363670009`: Interphalangeal joint structure of great toe
+    /// - `371216008`: Distal interphalangeal joint of second toe
+    /// - `371219001`: Distal interphalangeal joint of third toe
+    /// - `371205001`: Distal interphalangeal joint of fourth toe
+    /// - `371203008`: Distal interphalangeal joint of fifth toe
+    /// - ... and 30 more values
+    pub structure: CodeableConcept,
+    /// Code that represents the included structure laterality
+    ///
+    /// Binding: example (Concepts modifying the anatomic location.)
+    ///
+    /// Available values:
+    /// - `7771000`: Left (qualifier value)
+    /// - `24028007`: Right (qualifier value)
+    /// - `51440002`: Bilateral
+    /// - `46053002`: Distal
+    /// - `255554000`: Dorsal
+    /// - `264147007`: Plantar
+    /// - `261183002`: Upper
+    /// - `261122009`: Lower
+    /// - `255561001`: Medial
+    /// - `49370004`: Lateral
+    /// - ... and 5 more values
+    pub laterality: Option<CodeableConcept>,
+    /// Cartesian reference for structure
+    #[serde(rename = "spatialReference")]
+    pub spatial_reference: Option<Vec<Reference>>,
+    /// Code that represents the included structure qualifier
+    ///
+    /// Binding: example (Concepts modifying the anatomic location.)
+    ///
+    /// Available values:
+    /// - `7771000`: Left (qualifier value)
+    /// - `24028007`: Right (qualifier value)
+    /// - `51440002`: Bilateral
+    /// - `46053002`: Distal
+    /// - `255554000`: Dorsal
+    /// - `264147007`: Plantar
+    /// - `261183002`: Upper
+    /// - `261122009`: Lower
+    /// - `255561001`: Medial
+    /// - `49370004`: Lateral
+    /// - ... and 5 more values
+    pub qualifier: Option<Vec<CodeableConcept>>,
+}
 /// BodyStructureIncludedstructureBodylandmarkorientation nested structure for the 'distanceFromLandmark' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BodyStructureIncludedstructureBodylandmarkorientationDistancefromlandmark {
@@ -139,71 +204,6 @@ pub struct BodyStructureIncludedstructureBodylandmarkorientation {
     #[serde(rename = "surfaceOrientation")]
     pub surface_orientation: Option<Vec<CodeableConcept>>,
 }
-/// BodyStructure nested structure for the 'includedStructure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BodyStructureIncludedstructure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Landmark relative location
-    #[serde(rename = "bodyLandmarkOrientation")]
-    pub body_landmark_orientation:
-        Option<Vec<BodyStructureIncludedstructureBodylandmarkorientation>>,
-    /// Code that represents the included structure
-    ///
-    /// Binding: example (SNOMED CT Body site concepts)
-    ///
-    /// Available values:
-    /// - `53075003`: Distal phalanx of hallux
-    /// - `76986006`: Distal phalanx of second toe
-    /// - `65258003`: Distal phalanx of third toe
-    /// - `54333003`: Distal phalanx of fourth toe
-    /// - `10770001`: Distal phalanx of fifth toe
-    /// - `363670009`: Interphalangeal joint structure of great toe
-    /// - `371216008`: Distal interphalangeal joint of second toe
-    /// - `371219001`: Distal interphalangeal joint of third toe
-    /// - `371205001`: Distal interphalangeal joint of fourth toe
-    /// - `371203008`: Distal interphalangeal joint of fifth toe
-    /// - ... and 30 more values
-    pub structure: CodeableConcept,
-    /// Code that represents the included structure laterality
-    ///
-    /// Binding: example (Concepts modifying the anatomic location.)
-    ///
-    /// Available values:
-    /// - `7771000`: Left (qualifier value)
-    /// - `24028007`: Right (qualifier value)
-    /// - `51440002`: Bilateral
-    /// - `46053002`: Distal
-    /// - `255554000`: Dorsal
-    /// - `264147007`: Plantar
-    /// - `261183002`: Upper
-    /// - `261122009`: Lower
-    /// - `255561001`: Medial
-    /// - `49370004`: Lateral
-    /// - ... and 5 more values
-    pub laterality: Option<CodeableConcept>,
-    /// Cartesian reference for structure
-    #[serde(rename = "spatialReference")]
-    pub spatial_reference: Option<Vec<Reference>>,
-    /// Code that represents the included structure qualifier
-    ///
-    /// Binding: example (Concepts modifying the anatomic location.)
-    ///
-    /// Available values:
-    /// - `7771000`: Left (qualifier value)
-    /// - `24028007`: Right (qualifier value)
-    /// - `51440002`: Bilateral
-    /// - `46053002`: Distal
-    /// - `255554000`: Dorsal
-    /// - `264147007`: Plantar
-    /// - `261183002`: Upper
-    /// - `261122009`: Lower
-    /// - `255561001`: Medial
-    /// - `49370004`: Lateral
-    /// - ... and 5 more values
-    pub qualifier: Option<Vec<CodeableConcept>>,
-}
 
 impl Default for BodyStructure {
     fn default() -> Self {
@@ -219,6 +219,19 @@ impl Default for BodyStructure {
             _description: Default::default(),
             image: Default::default(),
             patient: Reference::default(),
+        }
+    }
+}
+
+impl Default for BodyStructureIncludedstructure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            body_landmark_orientation: Default::default(),
+            structure: Default::default(),
+            laterality: Default::default(),
+            spatial_reference: Default::default(),
+            qualifier: Default::default(),
         }
     }
 }
@@ -240,19 +253,6 @@ impl Default for BodyStructureIncludedstructureBodylandmarkorientation {
             landmark_description: Default::default(),
             clock_face_position: Default::default(),
             surface_orientation: Default::default(),
-        }
-    }
-}
-
-impl Default for BodyStructureIncludedstructure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            body_landmark_orientation: Default::default(),
-            structure: Default::default(),
-            laterality: Default::default(),
-            spatial_reference: Default::default(),
-            qualifier: Default::default(),
         }
     }
 }
@@ -459,18 +459,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for BodyStructure {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for BodyStructure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -582,33 +570,6 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
 }
 
 impl crate::traits::body_structure::BodyStructureExistence for BodyStructure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

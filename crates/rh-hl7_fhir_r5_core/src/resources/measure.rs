@@ -225,16 +225,72 @@ pub struct Measure {
     #[serde(rename = "supplementalData")]
     pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
 }
+/// MeasureGroupStratifier nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifierComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for stratifier component in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the stratifier component
+    ///
+    /// Binding: example (Meaning of the stratifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier component
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Component of how the measure should be stratified
+    pub criteria: Option<Expression>,
+    /// A group resource that defines this population
+    #[serde(rename = "groupDefinition")]
+    pub group_definition: Option<Reference>,
+}
+/// MeasureGroup nested structure for the 'stratifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for stratifier in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the stratifier
+    ///
+    /// Binding: example (Meaning of the stratifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How the measure should be stratified
+    pub criteria: Option<Expression>,
+    /// A group resource that defines this population
+    #[serde(rename = "groupDefinition")]
+    pub group_definition: Option<Reference>,
+}
 /// Measure nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Stratifier criteria for the measure
     pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
     /// Unique id for group in measure
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -328,23 +384,6 @@ pub struct MeasureSupplementaldata {
     /// Expression describing additional data to be reported
     pub criteria: Expression,
 }
-/// Measure nested structure for the 'term' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureTerm {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What term?
-    ///
-    /// Binding: example (Codeable representations of measure definition terms.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-definition-example
-    pub code: Option<CodeableConcept>,
-    /// Meaning of the term
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-}
 /// MeasureGroup nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroupPopulation {
@@ -386,61 +425,22 @@ pub struct MeasureGroupPopulation {
     #[serde(rename = "aggregateMethod")]
     pub aggregate_method: Option<CodeableConcept>,
 }
-/// MeasureGroupStratifier nested structure for the 'component' field
+/// Measure nested structure for the 'term' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifierComponent {
+pub struct MeasureTerm {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Unique id for stratifier component in measure
-    #[serde(rename = "linkId")]
-    pub link_id: Option<StringType>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// Meaning of the stratifier component
+    /// What term?
     ///
-    /// Binding: example (Meaning of the stratifier.)
+    /// Binding: example (Codeable representations of measure definition terms.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-definition-example
     pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier component
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Component of how the measure should be stratified
-    pub criteria: Option<Expression>,
-    /// A group resource that defines this population
-    #[serde(rename = "groupDefinition")]
-    pub group_definition: Option<Reference>,
-}
-/// MeasureGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Unique id for stratifier in measure
-    #[serde(rename = "linkId")]
-    pub link_id: Option<StringType>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// Meaning of the stratifier
-    ///
-    /// Binding: example (Meaning of the stratifier.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How the measure should be stratified
-    pub criteria: Option<Expression>,
-    /// A group resource that defines this population
-    #[serde(rename = "groupDefinition")]
-    pub group_definition: Option<Reference>,
+    /// Meaning of the term
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
 }
 
 impl Default for Measure {
@@ -522,12 +522,42 @@ impl Default for Measure {
     }
 }
 
+impl Default for MeasureGroupStratifierComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+            group_definition: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupStratifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+            group_definition: Default::default(),
+        }
+    }
+}
+
 impl Default for MeasureGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            population: Default::default(),
             stratifier: Default::default(),
+            population: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             code: Default::default(),
@@ -564,17 +594,6 @@ impl Default for MeasureSupplementaldata {
     }
 }
 
-impl Default for MeasureTerm {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureGroupPopulation {
     fn default() -> Self {
         Self {
@@ -593,32 +612,13 @@ impl Default for MeasureGroupPopulation {
     }
 }
 
-impl Default for MeasureGroupStratifierComponent {
+impl Default for MeasureTerm {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
             code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-            group_definition: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-            group_definition: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
         }
     }
 }
@@ -979,18 +979,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Measure {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Measure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1446,33 +1434,6 @@ impl crate::traits::measure::MeasureMutators for Measure {
 }
 
 impl crate::traits::measure::MeasureExistence for Measure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_subject(&self) -> bool {
         self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
     }

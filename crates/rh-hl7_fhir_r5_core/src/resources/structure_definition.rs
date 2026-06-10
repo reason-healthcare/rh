@@ -155,6 +155,24 @@ pub struct StructureDefinition {
     /// Differential view of the structure
     pub differential: Option<StructureDefinitionDifferential>,
 }
+/// StructureDefinition nested structure for the 'snapshot' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionSnapshot {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
+}
+/// StructureDefinition nested structure for the 'differential' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionDifferential {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
+}
 /// StructureDefinition nested structure for the 'context' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinitionContext {
@@ -170,24 +188,6 @@ pub struct StructureDefinitionContext {
     pub expression: StringType,
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
     pub _expression: Option<Element>,
-}
-/// StructureDefinition nested structure for the 'differential' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionDifferential {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
-}
-/// StructureDefinition nested structure for the 'snapshot' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionSnapshot {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
 }
 /// StructureDefinition nested structure for the 'mapping' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,14 +270,11 @@ impl Default for StructureDefinition {
     }
 }
 
-impl Default for StructureDefinitionContext {
+impl Default for StructureDefinitionSnapshot {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            expression: StringType::default(),
-            _expression: Default::default(),
+            element: Vec::new(),
         }
     }
 }
@@ -291,11 +288,14 @@ impl Default for StructureDefinitionDifferential {
     }
 }
 
-impl Default for StructureDefinitionSnapshot {
+impl Default for StructureDefinitionContext {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            element: Vec::new(),
+            type_: Default::default(),
+            _type: Default::default(),
+            expression: StringType::default(),
+            _expression: Default::default(),
         }
     }
 }
@@ -665,18 +665,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for StructureDefinit
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for StructureDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -974,33 +962,6 @@ impl crate::traits::structure_definition::StructureDefinitionMutators for Struct
 }
 
 impl crate::traits::structure_definition::StructureDefinitionExistence for StructureDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

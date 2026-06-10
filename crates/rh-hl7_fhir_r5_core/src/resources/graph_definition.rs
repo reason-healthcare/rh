@@ -109,6 +109,34 @@ pub struct GraphDefinition {
     /// Links this graph makes rules about
     pub link: Option<Vec<GraphDefinitionLink>>,
 }
+/// GraphDefinitionLink nested structure for the 'compartment' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLinkCompartment {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// where | requires
+    #[serde(rename = "use")]
+    pub use_: GraphCompartmentUse,
+    /// Extension element for the 'use' primitive field. Contains metadata and extensions.
+    pub _use: Option<Element>,
+    /// identical | matching | different | custom
+    pub rule: GraphCompartmentRule,
+    /// Extension element for the 'rule' primitive field. Contains metadata and extensions.
+    pub _rule: Option<Element>,
+    /// Patient | Encounter | RelatedPerson | Practitioner | Device | EpisodeOfCare
+    pub code: CompartmentType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Custom rule, as a FHIRPath expression
+    pub expression: Option<StringType>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+    /// Documentation for FHIRPath expression
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// GraphDefinition nested structure for the 'link' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLink {
@@ -182,34 +210,6 @@ pub struct GraphDefinitionNode {
     /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
     pub _profile: Option<Element>,
 }
-/// GraphDefinitionLink nested structure for the 'compartment' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLinkCompartment {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// where | requires
-    #[serde(rename = "use")]
-    pub use_: GraphCompartmentUse,
-    /// Extension element for the 'use' primitive field. Contains metadata and extensions.
-    pub _use: Option<Element>,
-    /// identical | matching | different | custom
-    pub rule: GraphCompartmentRule,
-    /// Extension element for the 'rule' primitive field. Contains metadata and extensions.
-    pub _rule: Option<Element>,
-    /// Patient | Encounter | RelatedPerson | Practitioner | Device | EpisodeOfCare
-    pub code: CompartmentType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Custom rule, as a FHIRPath expression
-    pub expression: Option<StringType>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-    /// Documentation for FHIRPath expression
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -253,6 +253,24 @@ impl Default for GraphDefinition {
     }
 }
 
+impl Default for GraphDefinitionLinkCompartment {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            use_: Default::default(),
+            _use: Default::default(),
+            rule: Default::default(),
+            _rule: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for GraphDefinitionLink {
     fn default() -> Self {
         Self {
@@ -290,24 +308,6 @@ impl Default for GraphDefinitionNode {
             _type: Default::default(),
             profile: Default::default(),
             _profile: Default::default(),
-        }
-    }
-}
-
-impl Default for GraphDefinitionLinkCompartment {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            use_: Default::default(),
-            _use: Default::default(),
-            rule: Default::default(),
-            _rule: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
         }
     }
 }
@@ -603,18 +603,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for GraphDefinition 
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for GraphDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -827,33 +815,6 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
 }
 
 impl crate::traits::graph_definition::GraphDefinitionExistence for GraphDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

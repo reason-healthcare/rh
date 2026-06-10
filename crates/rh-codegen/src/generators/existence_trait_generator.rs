@@ -45,24 +45,37 @@ impl ExistenceTraitGenerator {
         structure_def: &StructureDefinition,
         rust_trait: &mut RustTrait,
     ) -> CodegenResult<()> {
-        if let Some(snapshot) = &structure_def.snapshot {
-            for element in &snapshot.element {
-                // Skip the root element
-                if element.path == structure_def.id {
+        // Prefer differential elements (what the struct actually has) over snapshot.
+        // Snapshot includes inherited fields from parent types that won't be on the
+        // generated struct, causing missing-method errors in the trait impl.
+        let elements: Vec<_> = if let Some(diff) = &structure_def.differential {
+            if !diff.element.is_empty() {
+                diff.element.iter().collect()
+            } else if let Some(snapshot) = &structure_def.snapshot {
+                snapshot.element.iter().collect()
+            } else {
+                return Ok(());
+            }
+        } else if let Some(snapshot) = &structure_def.snapshot {
+            snapshot.element.iter().collect()
+        } else {
+            return Ok(());
+        };
+
+        for element in elements {
+            // Skip the root element
+            if element.path == structure_def.id {
+                continue;
+            }
+
+            // Extract field name from the element path
+            if let Some(field_name) = element.path.strip_prefix(&format!("{}.", structure_def.id)) {
+                // Skip nested elements (those with dots in the remaining path)
+                if field_name.contains('.') {
                     continue;
                 }
 
-                // Extract field name from the element path
-                if let Some(field_name) =
-                    element.path.strip_prefix(&format!("{}.", structure_def.id))
-                {
-                    // Skip nested elements (those with dots in the remaining path)
-                    if field_name.contains('.') {
-                        continue;
-                    }
-
-                    self.add_existence_method(element, field_name, rust_trait)?;
-                }
+                self.add_existence_method(element, field_name, rust_trait)?;
             }
         }
 

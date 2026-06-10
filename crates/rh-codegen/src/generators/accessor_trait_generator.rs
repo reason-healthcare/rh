@@ -123,11 +123,24 @@ impl AccessorTraitGenerator {
             }
         } else {
             // Use TypeMapper to get the correct type including enum bindings
-            type_mapper.map_fhir_type_with_binding(
+            let resolved = type_mapper.map_fhir_type_with_binding(
                 element_types,
                 element.binding.as_ref(),
                 is_array,
-            )
+            );
+            // Guard: if the resolved binding enum has the same name as the containing
+            // resource/type, fall back to StringType to avoid a self-referential type.
+            let resource_name = element.path.split('.').next().unwrap_or("");
+            let collides = matches!(&resolved, RustType::Custom(n) if n == resource_name);
+            if collides {
+                if is_array {
+                    RustType::Vec(Box::new(RustType::Custom("StringType".to_string())))
+                } else {
+                    RustType::Custom("StringType".to_string())
+                }
+            } else {
+                resolved
+            }
         };
 
         // Convert the type for trait return types

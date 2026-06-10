@@ -98,6 +98,35 @@ pub struct SpecimenContainer {
     #[serde(rename = "specimenQuantity")]
     pub specimen_quantity: Option<Quantity>,
 }
+/// Specimen nested structure for the 'feature' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenFeature {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Highlighted feature
+    ///
+    /// Binding: example (SNOMED CT Body site concepts)
+    ///
+    /// Available values:
+    /// - `53075003`: Distal phalanx of hallux
+    /// - `76986006`: Distal phalanx of second toe
+    /// - `65258003`: Distal phalanx of third toe
+    /// - `54333003`: Distal phalanx of fourth toe
+    /// - `10770001`: Distal phalanx of fifth toe
+    /// - `363670009`: Interphalangeal joint structure of great toe
+    /// - `371216008`: Distal interphalangeal joint of second toe
+    /// - `371219001`: Distal interphalangeal joint of third toe
+    /// - `371205001`: Distal interphalangeal joint of fourth toe
+    /// - `371203008`: Distal interphalangeal joint of fifth toe
+    /// - ... and 30 more values
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Information about the feature
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// Specimen nested structure for the 'collection' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenCollection {
@@ -188,35 +217,6 @@ pub struct SpecimenProcessing {
     #[serde(rename = "timePeriod")]
     pub time_period: Option<Period>,
 }
-/// Specimen nested structure for the 'feature' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenFeature {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Highlighted feature
-    ///
-    /// Binding: example (SNOMED CT Body site concepts)
-    ///
-    /// Available values:
-    /// - `53075003`: Distal phalanx of hallux
-    /// - `76986006`: Distal phalanx of second toe
-    /// - `65258003`: Distal phalanx of third toe
-    /// - `54333003`: Distal phalanx of fourth toe
-    /// - `10770001`: Distal phalanx of fifth toe
-    /// - `363670009`: Interphalangeal joint structure of great toe
-    /// - `371216008`: Distal interphalangeal joint of second toe
-    /// - `371219001`: Distal interphalangeal joint of third toe
-    /// - `371205001`: Distal interphalangeal joint of fourth toe
-    /// - `371203008`: Distal interphalangeal joint of fifth toe
-    /// - ... and 30 more values
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Information about the feature
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 
 impl Default for Specimen {
     fn default() -> Self {
@@ -256,6 +256,17 @@ impl Default for SpecimenContainer {
     }
 }
 
+impl Default for SpecimenFeature {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            description: StringType::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenCollection {
     fn default() -> Self {
         Self {
@@ -285,17 +296,6 @@ impl Default for SpecimenProcessing {
             additive: Default::default(),
             time_date_time: Default::default(),
             time_period: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenFeature {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            description: StringType::default(),
-            _description: Default::default(),
         }
     }
 }
@@ -550,18 +550,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Specimen {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Specimen {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -762,33 +750,6 @@ impl crate::traits::specimen::SpecimenMutators for Specimen {
 }
 
 impl crate::traits::specimen::SpecimenExistence for Specimen {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

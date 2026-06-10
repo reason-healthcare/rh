@@ -69,6 +69,47 @@ pub struct InventoryItem {
     #[serde(rename = "productReference")]
     pub product_reference: Option<Reference>,
 }
+/// InventoryItem nested structure for the 'description' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryItemDescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language that is used in the item description
+    pub language: Option<StringType>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Textual description of the item
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// InventoryItem nested structure for the 'responsibleOrganization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryItemResponsibleorganization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The role of the organization e.g. manufacturer, distributor, or other
+    pub role: CodeableConcept,
+    /// An organization that is associated with the item
+    pub organization: Reference,
+}
+/// InventoryItem nested structure for the 'association' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryItemAssociation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of association between the device and the other item
+    #[serde(rename = "associationType")]
+    pub association_type: CodeableConcept,
+    /// The related item or product
+    #[serde(rename = "relatedItem")]
+    pub related_item: Reference,
+    /// The quantity of the product in this product
+    pub quantity: Ratio,
+}
 /// InventoryItem nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InventoryItemName {
@@ -91,35 +132,28 @@ pub struct InventoryItemName {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
 }
-/// InventoryItem nested structure for the 'description' field
+/// InventoryItem nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemDescription {
+pub struct InventoryItemInstance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The language that is used in the item description
-    pub language: Option<StringType>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Textual description of the item
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// InventoryItem nested structure for the 'association' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemAssociation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of association between the device and the other item
-    #[serde(rename = "associationType")]
-    pub association_type: CodeableConcept,
-    /// The related item or product
-    #[serde(rename = "relatedItem")]
-    pub related_item: Reference,
-    /// The quantity of the product in this product
-    pub quantity: Ratio,
+    /// The identifier for the physical instance, typically a serial number
+    pub identifier: Option<Vec<Identifier>>,
+    /// The lot or batch number of the item
+    #[serde(rename = "lotNumber")]
+    pub lot_number: Option<StringType>,
+    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lotNumber")]
+    pub _lot_number: Option<Element>,
+    /// The expiry date or date and time for the product
+    pub expiry: Option<DateTimeType>,
+    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
+    pub _expiry: Option<Element>,
+    /// The subject that the item is associated with
+    pub subject: Option<Reference>,
+    /// The location that the item is associated with
+    pub location: Option<Reference>,
 }
 /// InventoryItem nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,40 +204,6 @@ pub struct InventoryItemCharacteristic {
     #[serde(rename = "valueCodeableConcept")]
     pub value_codeable_concept: CodeableConcept,
 }
-/// InventoryItem nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The identifier for the physical instance, typically a serial number
-    pub identifier: Option<Vec<Identifier>>,
-    /// The lot or batch number of the item
-    #[serde(rename = "lotNumber")]
-    pub lot_number: Option<StringType>,
-    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lotNumber")]
-    pub _lot_number: Option<Element>,
-    /// The expiry date or date and time for the product
-    pub expiry: Option<DateTimeType>,
-    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
-    pub _expiry: Option<Element>,
-    /// The subject that the item is associated with
-    pub subject: Option<Reference>,
-    /// The location that the item is associated with
-    pub location: Option<Reference>,
-}
-/// InventoryItem nested structure for the 'responsibleOrganization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemResponsibleorganization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The role of the organization e.g. manufacturer, distributor, or other
-    pub role: CodeableConcept,
-    /// An organization that is associated with the item
-    pub organization: Reference,
-}
 
 impl Default for InventoryItem {
     fn default() -> Self {
@@ -228,6 +228,39 @@ impl Default for InventoryItem {
     }
 }
 
+impl Default for InventoryItemDescription {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for InventoryItemResponsibleorganization {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            organization: Default::default(),
+        }
+    }
+}
+
+impl Default for InventoryItemAssociation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            association_type: CodeableConcept::default(),
+            related_item: Reference::default(),
+            quantity: Ratio::default(),
+        }
+    }
+}
+
 impl Default for InventoryItemName {
     fn default() -> Self {
         Self {
@@ -241,25 +274,17 @@ impl Default for InventoryItemName {
     }
 }
 
-impl Default for InventoryItemDescription {
+impl Default for InventoryItemInstance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for InventoryItemAssociation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            association_type: CodeableConcept::default(),
-            related_item: Reference::default(),
-            quantity: Ratio::default(),
+            identifier: Default::default(),
+            lot_number: Default::default(),
+            _lot_number: Default::default(),
+            expiry: Default::default(),
+            _expiry: Default::default(),
+            subject: Default::default(),
+            location: Default::default(),
         }
     }
 }
@@ -282,31 +307,6 @@ impl Default for InventoryItemCharacteristic {
             value_address: Default::default(),
             value_duration: Default::default(),
             value_codeable_concept: Default::default(),
-        }
-    }
-}
-
-impl Default for InventoryItemInstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            lot_number: Default::default(),
-            _lot_number: Default::default(),
-            expiry: Default::default(),
-            _expiry: Default::default(),
-            subject: Default::default(),
-            location: Default::default(),
-        }
-    }
-}
-
-impl Default for InventoryItemResponsibleorganization {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            organization: Default::default(),
         }
     }
 }
@@ -626,18 +626,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for InventoryItem {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for InventoryItem {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -829,33 +817,6 @@ impl crate::traits::inventory_item::InventoryItemMutators for InventoryItem {
 }
 
 impl crate::traits::inventory_item::InventoryItemExistence for InventoryItem {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

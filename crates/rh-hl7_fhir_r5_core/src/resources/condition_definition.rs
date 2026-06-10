@@ -166,36 +166,6 @@ pub struct ConditionDefinition {
     /// Plan that is appropriate
     pub plan: Option<Vec<ConditionDefinitionPlan>>,
 }
-/// ConditionDefinition nested structure for the 'observation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionObservation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category that is relevant
-    ///
-    /// Binding: preferred (Codes for high level observation categories.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
-    pub category: Option<CodeableConcept>,
-    /// Code for relevant Observation
-    ///
-    /// Binding: example (Codes identifying names of simple observations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
-    pub code: Option<CodeableConcept>,
-}
-/// ConditionDefinition nested structure for the 'plan' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionPlan {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Use for the plan
-    pub role: Option<CodeableConcept>,
-    /// The actual plan
-    pub reference: Reference,
-}
 /// ConditionDefinition nested structure for the 'medication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionDefinitionMedication {
@@ -252,6 +222,36 @@ pub struct ConditionDefinitionPrecondition {
     #[serde(rename = "valueQuantity")]
     pub value_quantity: Option<Quantity>,
 }
+/// ConditionDefinition nested structure for the 'observation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionObservation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category that is relevant
+    ///
+    /// Binding: preferred (Codes for high level observation categories.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
+    pub category: Option<CodeableConcept>,
+    /// Code for relevant Observation
+    ///
+    /// Binding: example (Codes identifying names of simple observations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
+    pub code: Option<CodeableConcept>,
+}
+/// ConditionDefinition nested structure for the 'plan' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionPlan {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Use for the plan
+    pub role: Option<CodeableConcept>,
+    /// The actual plan
+    pub reference: Reference,
+}
 
 impl Default for ConditionDefinition {
     fn default() -> Self {
@@ -305,26 +305,6 @@ impl Default for ConditionDefinition {
     }
 }
 
-impl Default for ConditionDefinitionObservation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            code: Default::default(),
-        }
-    }
-}
-
-impl Default for ConditionDefinitionPlan {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            reference: Reference::default(),
-        }
-    }
-}
-
 impl Default for ConditionDefinitionMedication {
     fn default() -> Self {
         Self {
@@ -355,6 +335,26 @@ impl Default for ConditionDefinitionPrecondition {
             code: CodeableConcept::default(),
             value_codeable_concept: Default::default(),
             value_quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionDefinitionObservation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            code: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionDefinitionPlan {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            reference: Reference::default(),
         }
     }
 }
@@ -701,18 +701,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ConditionDefinit
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ConditionDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1028,33 +1016,6 @@ impl crate::traits::condition_definition::ConditionDefinitionMutators for Condit
 }
 
 impl crate::traits::condition_definition::ConditionDefinitionExistence for ConditionDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

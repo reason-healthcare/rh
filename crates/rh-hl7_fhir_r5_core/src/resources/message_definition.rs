@@ -138,21 +138,6 @@ pub struct MessageDefinition {
     /// Extension element for the 'graph' primitive field. Contains metadata and extensions.
     pub _graph: Option<Element>,
 }
-/// MessageDefinition nested structure for the 'allowedResponse' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageDefinitionAllowedresponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to allowed message definition response
-    pub message: StringType,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// When should this response be used
-    pub situation: Option<StringType>,
-    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
-    pub _situation: Option<Element>,
-}
 /// MessageDefinition nested structure for the 'focus' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageDefinitionFocus {
@@ -175,6 +160,21 @@ pub struct MessageDefinitionFocus {
     pub max: Option<StringType>,
     /// Extension element for the 'max' primitive field. Contains metadata and extensions.
     pub _max: Option<Element>,
+}
+/// MessageDefinition nested structure for the 'allowedResponse' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDefinitionAllowedresponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to allowed message definition response
+    pub message: StringType,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// When should this response be used
+    pub situation: Option<StringType>,
+    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
+    pub _situation: Option<Element>,
 }
 
 impl Default for MessageDefinition {
@@ -231,18 +231,6 @@ impl Default for MessageDefinition {
     }
 }
 
-impl Default for MessageDefinitionAllowedresponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            situation: Default::default(),
-            _situation: Default::default(),
-        }
-    }
-}
-
 impl Default for MessageDefinitionFocus {
     fn default() -> Self {
         Self {
@@ -255,6 +243,18 @@ impl Default for MessageDefinitionFocus {
             _min: Default::default(),
             max: Default::default(),
             _max: Default::default(),
+        }
+    }
+}
+
+impl Default for MessageDefinitionAllowedresponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            situation: Default::default(),
+            _situation: Default::default(),
         }
     }
 }
@@ -502,18 +502,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MessageDefinitio
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MessageDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -779,33 +767,6 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
 }
 
 impl crate::traits::message_definition::MessageDefinitionExistence for MessageDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

@@ -85,25 +85,72 @@ pub struct CoverageEligibilityResponse {
     /// Processing errors
     pub error: Option<Vec<CoverageEligibilityResponseError>>,
 }
-/// CoverageEligibilityResponse nested structure for the 'event' field
+/// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseEvent {
+pub struct CoverageEligibilityResponseInsuranceItemBenefit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Specific event
+    /// Benefit classification
     ///
-    /// Binding: example (No description)
+    /// Binding: example (Deductable, visits, co-pay, etc.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/datestype
+    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// Occurance date or period (dateTime)
-    #[serde(rename = "whenDateTime")]
-    pub when_date_time: DateTimeType,
-    /// Occurance date or period (Period)
-    #[serde(rename = "whenPeriod")]
-    pub when_period: Period,
+    /// Benefits allowed (unsignedInt)
+    #[serde(rename = "allowedUnsignedInt")]
+    pub allowed_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits allowed (string)
+    #[serde(rename = "allowedString")]
+    pub allowed_string: Option<StringType>,
+    /// Benefits allowed (Money)
+    #[serde(rename = "allowedMoney")]
+    pub allowed_money: Option<Money>,
+    /// Benefits used (unsignedInt)
+    #[serde(rename = "usedUnsignedInt")]
+    pub used_unsigned_int: Option<UnsignedIntType>,
+    /// Benefits used (string)
+    #[serde(rename = "usedString")]
+    pub used_string: Option<StringType>,
+    /// Benefits used (Money)
+    #[serde(rename = "usedMoney")]
+    pub used_money: Option<Money>,
+}
+/// CoverageEligibilityResponse nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefits and authorization details
+    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Coverage inforce indicator
+    pub inforce: Option<BooleanType>,
+    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
+    pub _inforce: Option<Element>,
+    /// When the benefits are applicable
+    #[serde(rename = "benefitPeriod")]
+    pub benefit_period: Option<Period>,
+}
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+    /// FHIRPath of element(s) related to issue
+    pub expression: Option<Vec<StringType>>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
 }
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,72 +229,25 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
-/// CoverageEligibilityResponse nested structure for the 'error' field
+/// CoverageEligibilityResponse nested structure for the 'event' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
+pub struct CoverageEligibilityResponseEvent {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Error code detailing processing issues
+    /// Specific event
     ///
-    /// Binding: example (The error codes for adjudication processing.)
+    /// Binding: example (No description)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-    /// FHIRPath of element(s) related to issue
-    pub expression: Option<Vec<StringType>>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-}
-/// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsuranceItemBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefit classification
-    ///
-    /// Binding: example (Deductable, visits, co-pay, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/benefit-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/datestype
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// Benefits allowed (unsignedInt)
-    #[serde(rename = "allowedUnsignedInt")]
-    pub allowed_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits allowed (string)
-    #[serde(rename = "allowedString")]
-    pub allowed_string: Option<StringType>,
-    /// Benefits allowed (Money)
-    #[serde(rename = "allowedMoney")]
-    pub allowed_money: Option<Money>,
-    /// Benefits used (unsignedInt)
-    #[serde(rename = "usedUnsignedInt")]
-    pub used_unsigned_int: Option<UnsignedIntType>,
-    /// Benefits used (string)
-    #[serde(rename = "usedString")]
-    pub used_string: Option<StringType>,
-    /// Benefits used (Money)
-    #[serde(rename = "usedMoney")]
-    pub used_money: Option<Money>,
-}
-/// CoverageEligibilityResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefits and authorization details
-    pub item: Option<Vec<CoverageEligibilityResponseInsuranceItem>>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Coverage inforce indicator
-    pub inforce: Option<BooleanType>,
-    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
-    pub _inforce: Option<Element>,
-    /// When the benefits are applicable
-    #[serde(rename = "benefitPeriod")]
-    pub benefit_period: Option<Period>,
+    /// Occurance date or period (dateTime)
+    #[serde(rename = "whenDateTime")]
+    pub when_date_time: DateTimeType,
+    /// Occurance date or period (Period)
+    #[serde(rename = "whenPeriod")]
+    pub when_period: Period,
 }
 
 impl Default for CoverageEligibilityResponse {
@@ -281,13 +281,41 @@ impl Default for CoverageEligibilityResponse {
     }
 }
 
-impl Default for CoverageEligibilityResponseEvent {
+impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            when_date_time: Default::default(),
-            when_period: Default::default(),
+            allowed_unsigned_int: Default::default(),
+            allowed_string: Default::default(),
+            allowed_money: Default::default(),
+            used_unsigned_int: Default::default(),
+            used_string: Default::default(),
+            used_money: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            coverage: Reference::default(),
+            inforce: Default::default(),
+            _inforce: Default::default(),
+            benefit_period: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
         }
     }
 }
@@ -318,41 +346,13 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
     }
 }
 
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
+impl Default for CoverageEligibilityResponseEvent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            allowed_unsigned_int: Default::default(),
-            allowed_string: Default::default(),
-            allowed_money: Default::default(),
-            used_unsigned_int: Default::default(),
-            used_string: Default::default(),
-            used_money: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            coverage: Reference::default(),
-            inforce: Default::default(),
-            _inforce: Default::default(),
-            benefit_period: Default::default(),
+            when_date_time: Default::default(),
+            when_period: Default::default(),
         }
     }
 }
@@ -836,18 +836,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for CoverageEligibil
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for CoverageEligibilityResponse {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1026,33 +1014,6 @@ impl crate::traits::coverage_eligibility_response::CoverageEligibilityResponseMu
 impl crate::traits::coverage_eligibility_response::CoverageEligibilityResponseExistence
     for CoverageEligibilityResponse
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_serviced(&self) -> bool {
         self.serviced_date.is_some() || self.serviced_period.is_some()
     }

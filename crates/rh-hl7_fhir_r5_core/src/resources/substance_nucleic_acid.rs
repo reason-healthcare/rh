@@ -43,38 +43,6 @@ pub struct SubstanceNucleicAcid {
     /// Subunits are listed in order of decreasing length; sequences of the same length will be ordered by molecular weight; subunits that have identical sequences will be repeated multiple times
     pub subunit: Option<Vec<SubstanceNucleicAcidSubunit>>,
 }
-/// SubstanceNucleicAcid nested structure for the 'subunit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// 5.3.6.8.1 Sugar ID (Mandatory)
-    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
-    /// The linkages between sugar residues will also be captured
-    pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
-    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
-    pub subunit: Option<IntegerType>,
-    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
-    pub _subunit: Option<Element>,
-    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
-    pub sequence: Option<StringType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// The length of the sequence shall be captured
-    pub length: Option<IntegerType>,
-    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
-    pub _length: Option<Element>,
-    /// (TBC)
-    #[serde(rename = "sequenceAttachment")]
-    pub sequence_attachment: Option<Attachment>,
-    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
-    #[serde(rename = "fivePrime")]
-    pub five_prime: Option<CodeableConcept>,
-    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
-    #[serde(rename = "threePrime")]
-    pub three_prime: Option<CodeableConcept>,
-}
 /// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceNucleicAcidSubunitSugar {
@@ -117,6 +85,38 @@ pub struct SubstanceNucleicAcidSubunitLinkage {
     #[serde(rename = "_residueSite")]
     pub _residue_site: Option<Element>,
 }
+/// SubstanceNucleicAcid nested structure for the 'subunit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// 5.3.6.8.1 Sugar ID (Mandatory)
+    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
+    /// The linkages between sugar residues will also be captured
+    pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
+    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
+    pub subunit: Option<IntegerType>,
+    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
+    pub _subunit: Option<Element>,
+    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
+    pub sequence: Option<StringType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// The length of the sequence shall be captured
+    pub length: Option<IntegerType>,
+    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
+    pub _length: Option<Element>,
+    /// (TBC)
+    #[serde(rename = "sequenceAttachment")]
+    pub sequence_attachment: Option<Attachment>,
+    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
+    #[serde(rename = "fivePrime")]
+    pub five_prime: Option<CodeableConcept>,
+    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
+    #[serde(rename = "threePrime")]
+    pub three_prime: Option<CodeableConcept>,
+}
 
 impl Default for SubstanceNucleicAcid {
     fn default() -> Self {
@@ -129,25 +129,6 @@ impl Default for SubstanceNucleicAcid {
             _area_of_hybridisation: Default::default(),
             oligo_nucleotide_type: Default::default(),
             subunit: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceNucleicAcidSubunit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sugar: Default::default(),
-            linkage: Default::default(),
-            subunit: Default::default(),
-            _subunit: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            length: Default::default(),
-            _length: Default::default(),
-            sequence_attachment: Default::default(),
-            five_prime: Default::default(),
-            three_prime: Default::default(),
         }
     }
 }
@@ -176,6 +157,25 @@ impl Default for SubstanceNucleicAcidSubunitLinkage {
             _name: Default::default(),
             residue_site: Default::default(),
             _residue_site: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceNucleicAcidSubunit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sugar: Default::default(),
+            linkage: Default::default(),
+            subunit: Default::default(),
+            _subunit: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            length: Default::default(),
+            _length: Default::default(),
+            sequence_attachment: Default::default(),
+            five_prime: Default::default(),
+            three_prime: Default::default(),
         }
     }
 }
@@ -487,18 +487,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceNucleic
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SubstanceNucleicAcid {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -571,33 +559,6 @@ impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidMutators for Sub
 }
 
 impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidExistence for SubstanceNucleicAcid {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_sequence_type(&self) -> bool {
         self.sequence_type.is_some()
     }

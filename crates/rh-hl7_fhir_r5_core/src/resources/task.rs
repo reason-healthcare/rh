@@ -187,21 +187,6 @@ pub struct Task {
     /// Information produced as part of task
     pub output: Option<Vec<TaskOutput>>,
 }
-/// Task nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment is sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
-}
 /// Task nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskOutput {
@@ -375,6 +360,34 @@ pub struct TaskOutput {
     /// Result of output (Meta)
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
+}
+/// Task nested structure for the 'restriction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskRestriction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment is sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
+}
+/// Task nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performance
+    ///
+    /// Binding: example (Codes to identify types of task performers.)
+    pub function: Option<CodeableConcept>,
+    /// Who performed the task
+    pub actor: Reference,
 }
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -550,19 +563,6 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Task nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performance
-    ///
-    /// Binding: example (Codes to identify types of task performers.)
-    pub function: Option<CodeableConcept>,
-    /// Who performed the task
-    pub actor: Reference,
-}
 
 impl Default for Task {
     fn default() -> Self {
@@ -610,18 +610,6 @@ impl Default for Task {
             restriction: Default::default(),
             input: Default::default(),
             output: Default::default(),
-        }
-    }
-}
-
-impl Default for TaskRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
         }
     }
 }
@@ -689,6 +677,28 @@ impl Default for TaskOutput {
     }
 }
 
+impl Default for TaskRestriction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
+        }
+    }
+}
+
+impl Default for TaskPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for TaskInput {
     fn default() -> Self {
         Self {
@@ -748,16 +758,6 @@ impl Default for TaskInput {
             value_extended_contact_detail: Default::default(),
             value_dosage: Default::default(),
             value_meta: Default::default(),
-        }
-    }
-}
-
-impl Default for TaskPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }
@@ -1014,18 +1014,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Task {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Task {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1378,33 +1366,6 @@ impl crate::traits::task::TaskMutators for Task {
 }
 
 impl crate::traits::task::TaskExistence for Task {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

@@ -208,35 +208,6 @@ pub struct ObservationDefinition {
     /// Component results
     pub component: Option<Vec<ObservationDefinitionComponent>>,
 }
-/// ObservationDefinition nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDefinitionComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of observation
-    ///
-    /// Binding: example (Codes identifying names of simple observations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
-    pub code: CodeableConcept,
-    /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
-    #[serde(rename = "permittedDataType")]
-    pub permitted_data_type: Option<Vec<PermittedDataType>>,
-    /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_permittedDataType")]
-    pub _permitted_data_type: Option<Element>,
-    /// Unit for quantitative results
-    ///
-    /// Binding: preferred (Codes identifying units of measure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
-    #[serde(rename = "permittedUnit")]
-    pub permitted_unit: Option<Vec<Coding>>,
-    /// Set of qualified values for observation results
-    #[serde(rename = "qualifiedValue")]
-    pub qualified_value: Option<Vec<StringType>>,
-}
 /// ObservationDefinition nested structure for the 'qualifiedValue' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservationDefinitionQualifiedvalue {
@@ -305,6 +276,35 @@ pub struct ObservationDefinitionQualifiedvalue {
     #[serde(rename = "_criticalCodedValueSet")]
     pub _critical_coded_value_set: Option<Element>,
 }
+/// ObservationDefinition nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationDefinitionComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of observation
+    ///
+    /// Binding: example (Codes identifying names of simple observations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
+    pub code: CodeableConcept,
+    /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
+    #[serde(rename = "permittedDataType")]
+    pub permitted_data_type: Option<Vec<PermittedDataType>>,
+    /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_permittedDataType")]
+    pub _permitted_data_type: Option<Element>,
+    /// Unit for quantitative results
+    ///
+    /// Binding: preferred (Codes identifying units of measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
+    #[serde(rename = "permittedUnit")]
+    pub permitted_unit: Option<Vec<Coding>>,
+    /// Set of qualified values for observation results
+    #[serde(rename = "qualifiedValue")]
+    pub qualified_value: Option<Vec<StringType>>,
+}
 
 impl Default for ObservationDefinition {
     fn default() -> Self {
@@ -371,19 +371,6 @@ impl Default for ObservationDefinition {
     }
 }
 
-impl Default for ObservationDefinitionComponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            permitted_data_type: Default::default(),
-            _permitted_data_type: Default::default(),
-            permitted_unit: Default::default(),
-            qualified_value: Default::default(),
-        }
-    }
-}
-
 impl Default for ObservationDefinitionQualifiedvalue {
     fn default() -> Self {
         Self {
@@ -407,6 +394,19 @@ impl Default for ObservationDefinitionQualifiedvalue {
             _abnormal_coded_value_set: Default::default(),
             critical_coded_value_set: Default::default(),
             _critical_coded_value_set: Default::default(),
+        }
+    }
+}
+
+impl Default for ObservationDefinitionComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            permitted_data_type: Default::default(),
+            _permitted_data_type: Default::default(),
+            permitted_unit: Default::default(),
+            qualified_value: Default::default(),
         }
     }
 }
@@ -812,18 +812,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ObservationDefin
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ObservationDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1233,33 +1221,6 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
 impl crate::traits::observation_definition::ObservationDefinitionExistence
     for ObservationDefinition
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

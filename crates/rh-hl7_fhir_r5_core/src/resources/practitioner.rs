@@ -65,6 +65,19 @@ pub struct Practitioner {
     /// A language which may be used to communicate with the practitioner
     pub communication: Option<Vec<PractitionerCommunication>>,
 }
+/// Practitioner nested structure for the 'communication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerCommunication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language code used to communicate with the practitioner
+    pub language: StringType,
+    /// Language preference indicator
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+}
 /// Practitioner nested structure for the 'qualification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerQualification {
@@ -83,19 +96,6 @@ pub struct PractitionerQualification {
     pub period: Option<Period>,
     /// Organization that regulates and issues the qualification
     pub issuer: Option<Reference>,
-}
-/// Practitioner nested structure for the 'communication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerCommunication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The language code used to communicate with the practitioner
-    pub language: StringType,
-    /// Language preference indicator
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
 }
 
 impl Default for Practitioner {
@@ -121,6 +121,17 @@ impl Default for Practitioner {
     }
 }
 
+impl Default for PractitionerCommunication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: StringType::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
+        }
+    }
+}
+
 impl Default for PractitionerQualification {
     fn default() -> Self {
         Self {
@@ -129,17 +140,6 @@ impl Default for PractitionerQualification {
             code: CodeableConcept::default(),
             period: Default::default(),
             issuer: Default::default(),
-        }
-    }
-}
-
-impl Default for PractitionerCommunication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: StringType::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
         }
     }
 }
@@ -375,18 +375,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Practitioner {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Practitioner {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -535,33 +523,6 @@ impl crate::traits::practitioner::PractitionerMutators for Practitioner {
 }
 
 impl crate::traits::practitioner::PractitionerExistence for Practitioner {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some() || self.deceased_date_time.is_some()
     }

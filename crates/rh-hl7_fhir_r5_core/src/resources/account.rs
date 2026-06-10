@@ -86,59 +86,6 @@ pub struct Account {
     #[serde(rename = "_calculatedAt")]
     pub _calculated_at: Option<Element>,
 }
-/// Account nested structure for the 'balance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountBalance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who is expected to pay this part of the balance
-    ///
-    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-aggregate
-    pub aggregate: Option<CodeableConcept>,
-    /// current | 30 | 60 | 90 | 120
-    ///
-    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-balance-term
-    pub term: Option<CodeableConcept>,
-    /// Estimated balance
-    pub estimate: Option<BooleanType>,
-    /// Extension element for the 'estimate' primitive field. Contains metadata and extensions.
-    pub _estimate: Option<Element>,
-    /// Calculated amount
-    pub amount: Money,
-}
-/// Account nested structure for the 'relatedAccount' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountRelatedaccount {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Relationship of the associated Account
-    ///
-    /// Binding: example (Indicates the relationship between the accounts)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-relationship
-    pub relationship: Option<CodeableConcept>,
-    /// Reference to an associated Account
-    pub account: Reference,
-}
-/// Account nested structure for the 'coverage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountCoverage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The party(s), such as insurances, that may contribute to the payment of this account
-    pub coverage: Reference,
-    /// The priority of the coverage in the context of this account
-    pub priority: Option<PositiveIntType>,
-    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
-    pub _priority: Option<Element>,
-}
 /// Account nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountDiagnosis {
@@ -181,22 +128,30 @@ pub struct AccountDiagnosis {
     #[serde(rename = "packageCode")]
     pub package_code: Option<Vec<CodeableConcept>>,
 }
-/// Account nested structure for the 'guarantor' field
+/// Account nested structure for the 'balance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountGuarantor {
+pub struct AccountBalance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Responsible entity
-    pub party: Reference,
-    /// Credit or other hold applied
-    #[serde(rename = "onHold")]
-    pub on_hold: Option<BooleanType>,
-    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_onHold")]
-    pub _on_hold: Option<Element>,
-    /// Guarantee account during
-    pub period: Option<Period>,
+    /// Who is expected to pay this part of the balance
+    ///
+    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-aggregate
+    pub aggregate: Option<CodeableConcept>,
+    /// current | 30 | 60 | 90 | 120
+    ///
+    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-balance-term
+    pub term: Option<CodeableConcept>,
+    /// Estimated balance
+    pub estimate: Option<BooleanType>,
+    /// Extension element for the 'estimate' primitive field. Contains metadata and extensions.
+    pub _estimate: Option<Element>,
+    /// Calculated amount
+    pub amount: Money,
 }
 /// Account nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,6 +188,51 @@ pub struct AccountProcedure {
     /// Any devices that were associated with the procedure
     pub device: Option<Vec<Reference>>,
 }
+/// Account nested structure for the 'guarantor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountGuarantor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Responsible entity
+    pub party: Reference,
+    /// Credit or other hold applied
+    #[serde(rename = "onHold")]
+    pub on_hold: Option<BooleanType>,
+    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_onHold")]
+    pub _on_hold: Option<Element>,
+    /// Guarantee account during
+    pub period: Option<Period>,
+}
+/// Account nested structure for the 'relatedAccount' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountRelatedaccount {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Relationship of the associated Account
+    ///
+    /// Binding: example (Indicates the relationship between the accounts)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-relationship
+    pub relationship: Option<CodeableConcept>,
+    /// Reference to an associated Account
+    pub account: Reference,
+}
+/// Account nested structure for the 'coverage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountCoverage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The party(s), such as insurances, that may contribute to the payment of this account
+    pub coverage: Reference,
+    /// The priority of the coverage in the context of this account
+    pub priority: Option<PositiveIntType>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
+}
 
 impl Default for Account {
     fn default() -> Self {
@@ -263,6 +263,23 @@ impl Default for Account {
     }
 }
 
+impl Default for AccountDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            condition: CodeableReference::default(),
+            date_of_diagnosis: Default::default(),
+            _date_of_diagnosis: Default::default(),
+            type_: Default::default(),
+            on_admission: Default::default(),
+            _on_admission: Default::default(),
+            package_code: Default::default(),
+        }
+    }
+}
+
 impl Default for AccountBalance {
     fn default() -> Self {
         Self {
@@ -272,6 +289,34 @@ impl Default for AccountBalance {
             estimate: Default::default(),
             _estimate: Default::default(),
             amount: Money::default(),
+        }
+    }
+}
+
+impl Default for AccountProcedure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            code: CodeableReference::default(),
+            date_of_service: Default::default(),
+            _date_of_service: Default::default(),
+            type_: Default::default(),
+            package_code: Default::default(),
+            device: Default::default(),
+        }
+    }
+}
+
+impl Default for AccountGuarantor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            party: Reference::default(),
+            on_hold: Default::default(),
+            _on_hold: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -293,51 +338,6 @@ impl Default for AccountCoverage {
             coverage: Reference::default(),
             priority: Default::default(),
             _priority: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            condition: CodeableReference::default(),
-            date_of_diagnosis: Default::default(),
-            _date_of_diagnosis: Default::default(),
-            type_: Default::default(),
-            on_admission: Default::default(),
-            _on_admission: Default::default(),
-            package_code: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountGuarantor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            party: Reference::default(),
-            on_hold: Default::default(),
-            _on_hold: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountProcedure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            code: CodeableReference::default(),
-            date_of_service: Default::default(),
-            _date_of_service: Default::default(),
-            type_: Default::default(),
-            package_code: Default::default(),
-            device: Default::default(),
         }
     }
 }
@@ -597,18 +597,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Account {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Account {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -815,33 +803,6 @@ impl crate::traits::account::AccountMutators for Account {
 }
 
 impl crate::traits::account::AccountExistence for Account {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

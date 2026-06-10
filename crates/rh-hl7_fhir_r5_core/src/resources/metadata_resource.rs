@@ -282,18 +282,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MetadataResource
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MetadataResource {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -426,33 +414,6 @@ impl crate::traits::metadata_resource::MetadataResourceMutators for MetadataReso
 }
 
 impl crate::traits::metadata_resource::MetadataResourceExistence for MetadataResource {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_approval_date(&self) -> bool {
         self.approval_date.is_some()
     }
@@ -482,24 +443,6 @@ impl crate::traits::metadata_resource::MetadataResourceExistence for MetadataRes
             .as_ref()
             .is_some_and(|v| !v.is_empty())
     }
-    // CanonicalResource fields — abstract in MetadataResource; always absent
-    fn has_url(&self) -> bool { false }
-    fn has_identifier(&self) -> bool { false }
-    fn has_version(&self) -> bool { false }
-    fn has_version_algorithm(&self) -> bool { false }
-    fn has_name(&self) -> bool { false }
-    fn has_title(&self) -> bool { false }
-    fn has_status(&self) -> bool { false }
-    fn has_experimental(&self) -> bool { false }
-    fn has_date(&self) -> bool { false }
-    fn has_publisher(&self) -> bool { false }
-    fn has_contact(&self) -> bool { false }
-    fn has_description(&self) -> bool { false }
-    fn has_use_context(&self) -> bool { false }
-    fn has_jurisdiction(&self) -> bool { false }
-    fn has_purpose(&self) -> bool { false }
-    fn has_copyright(&self) -> bool { false }
-    fn has_copyright_label(&self) -> bool { false }
 }
 
 impl crate::validation::ValidatableResource for MetadataResource {

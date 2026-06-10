@@ -177,40 +177,6 @@ pub struct OperationDefinitionOverload {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
 }
-/// OperationDefinitionParameter nested structure for the 'referencedFrom' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationDefinitionParameterReferencedfrom {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Referencing parameter
-    pub source: StringType,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// Element id of reference
-    #[serde(rename = "sourceId")]
-    pub source_id: Option<StringType>,
-    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceId")]
-    pub _source_id: Option<Element>,
-}
-/// OperationDefinitionParameter nested structure for the 'binding' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationDefinitionParameterBinding {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// required | extensible | preferred | example
-    pub strength: BindingStrength,
-    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
-    pub _strength: Option<Element>,
-    /// Source of value set
-    #[serde(rename = "valueSet")]
-    pub value_set: StringType,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-}
 /// OperationDefinition nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationDefinitionParameter {
@@ -272,6 +238,40 @@ pub struct OperationDefinitionParameter {
     pub _search_type: Option<Element>,
     /// Parts of a nested Parameter
     pub part: Option<Vec<StringType>>,
+}
+/// OperationDefinitionParameter nested structure for the 'binding' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationDefinitionParameterBinding {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// required | extensible | preferred | example
+    pub strength: BindingStrength,
+    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
+    pub _strength: Option<Element>,
+    /// Source of value set
+    #[serde(rename = "valueSet")]
+    pub value_set: StringType,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+}
+/// OperationDefinitionParameter nested structure for the 'referencedFrom' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationDefinitionParameterReferencedfrom {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Referencing parameter
+    pub source: StringType,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// Element id of reference
+    #[serde(rename = "sourceId")]
+    pub source_id: Option<StringType>,
+    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceId")]
+    pub _source_id: Option<Element>,
 }
 
 impl Default for OperationDefinition {
@@ -348,30 +348,6 @@ impl Default for OperationDefinitionOverload {
     }
 }
 
-impl Default for OperationDefinitionParameterReferencedfrom {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            source_id: Default::default(),
-            _source_id: Default::default(),
-        }
-    }
-}
-
-impl Default for OperationDefinitionParameterBinding {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            _strength: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-        }
-    }
-}
-
 impl Default for OperationDefinitionParameter {
     fn default() -> Self {
         Self {
@@ -399,6 +375,30 @@ impl Default for OperationDefinitionParameter {
             search_type: Default::default(),
             _search_type: Default::default(),
             part: Default::default(),
+        }
+    }
+}
+
+impl Default for OperationDefinitionParameterBinding {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            _strength: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+        }
+    }
+}
+
+impl Default for OperationDefinitionParameterReferencedfrom {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            source_id: Default::default(),
+            _source_id: Default::default(),
         }
     }
 }
@@ -756,18 +756,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for OperationDefinit
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for OperationDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1065,33 +1053,6 @@ impl crate::traits::operation_definition::OperationDefinitionMutators for Operat
 }
 
 impl crate::traits::operation_definition::OperationDefinitionExistence for OperationDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

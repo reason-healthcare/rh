@@ -169,11 +169,28 @@ impl<'a> FieldGenerator<'a> {
                     }
                 } else {
                     let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
-                    type_mapper.map_fhir_type_with_binding(
+                    let resolved = type_mapper.map_fhir_type_with_binding(
                         element_types,
                         element.binding.as_ref(),
                         is_array,
-                    )
+                    );
+                    // Guard against naming collision: if the resolved binding enum has the
+                    // same name as the containing resource/type, the field would create a
+                    // self-referential struct. Fall back to StringType in that case.
+                    let resource_name = element.path.split('.').next().unwrap_or("");
+                    let collides = match &resolved {
+                        RustType::Custom(name) => name == resource_name,
+                        _ => false,
+                    };
+                    if collides {
+                        if is_array {
+                            RustType::Vec(Box::new(RustType::Custom("StringType".to_string())))
+                        } else {
+                            RustType::Custom("StringType".to_string())
+                        }
+                    } else {
+                        resolved
+                    }
                 }
             }
         } else {

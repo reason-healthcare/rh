@@ -161,6 +161,17 @@ pub struct MedicationRequest {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationRequestDispenserequestInitialfill {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// First fill quantity
+    pub quantity: Option<Quantity>,
+    /// First fill duration
+    pub duration: Option<Duration>,
+}
 /// MedicationRequest nested structure for the 'dispenseRequest' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationRequestDispenserequest {
@@ -199,17 +210,6 @@ pub struct MedicationRequestDispenserequest {
     /// ValueSet: http://hl7.org/fhir/ValueSet/medication-dose-aid
     #[serde(rename = "doseAdministrationAid")]
     pub dose_administration_aid: Option<CodeableConcept>,
-}
-/// MedicationRequestDispenserequest nested structure for the 'initialFill' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationRequestDispenserequestInitialfill {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// First fill quantity
-    pub quantity: Option<Quantity>,
-    /// First fill duration
-    pub duration: Option<Duration>,
 }
 /// MedicationRequest nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -280,6 +280,16 @@ impl Default for MedicationRequest {
     }
 }
 
+impl Default for MedicationRequestDispenserequestInitialfill {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            duration: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationRequestDispenserequest {
     fn default() -> Self {
         Self {
@@ -294,16 +304,6 @@ impl Default for MedicationRequestDispenserequest {
             dispenser: Default::default(),
             dispenser_instruction: Default::default(),
             dose_administration_aid: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationRequestDispenserequestInitialfill {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            duration: Default::default(),
         }
     }
 }
@@ -652,18 +652,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicationReques
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicationRequest {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1027,33 +1015,6 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
 }
 
 impl crate::traits::medication_request::MedicationRequestExistence for MedicationRequest {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

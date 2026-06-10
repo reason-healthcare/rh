@@ -26,10 +26,6 @@ impl CardinalityGenerator {
     pub fn generate_cardinalities_constant(structure_def: &StructureDefinition) -> String {
         let cardinalities = Self::extract_cardinalities(structure_def);
 
-        if cardinalities.is_empty() {
-            return String::new();
-        }
-
         let mut code = String::new();
         code.push_str("/// FHIR cardinality constraints for this resource/datatype\n");
         code.push_str("///\n");

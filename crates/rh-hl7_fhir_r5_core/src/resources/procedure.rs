@@ -206,21 +206,6 @@ pub struct Procedure {
     #[serde(rename = "supportingInfo")]
     pub supporting_info: Option<Vec<Reference>>,
 }
-/// Procedure nested structure for the 'focalDevice' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureFocaldevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Kind of change to device
-    ///
-    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
-    pub action: Option<CodeableConcept>,
-    /// Device that was changed
-    pub manipulated: Reference,
-}
 /// Procedure nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcedurePerformer {
@@ -240,6 +225,21 @@ pub struct ProcedurePerformer {
     pub on_behalf_of: Option<Reference>,
     /// When the performer performed the procedure
     pub period: Option<Period>,
+}
+/// Procedure nested structure for the 'focalDevice' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureFocaldevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Kind of change to device
+    ///
+    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
+    pub action: Option<CodeableConcept>,
+    /// Device that was changed
+    pub manipulated: Reference,
 }
 
 impl Default for Procedure {
@@ -288,16 +288,6 @@ impl Default for Procedure {
     }
 }
 
-impl Default for ProcedureFocaldevice {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Default::default(),
-            manipulated: Default::default(),
-        }
-    }
-}
-
 impl Default for ProcedurePerformer {
     fn default() -> Self {
         Self {
@@ -306,6 +296,16 @@ impl Default for ProcedurePerformer {
             actor: Reference::default(),
             on_behalf_of: Default::default(),
             period: Default::default(),
+        }
+    }
+}
+
+impl Default for ProcedureFocaldevice {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Default::default(),
+            manipulated: Default::default(),
         }
     }
 }
@@ -541,18 +541,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Procedure {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Procedure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -883,32 +871,8 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
 }
 
 impl crate::traits::procedure::ProcedureExistence for Procedure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_reported(&self) -> bool {
+        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
@@ -917,9 +881,6 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
             || self.occurrence_age.is_some()
             || self.occurrence_range.is_some()
             || self.occurrence_timing.is_some()
-    }
-    fn has_reported(&self) -> bool {
-        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

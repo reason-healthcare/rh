@@ -89,72 +89,6 @@ pub struct EvidenceReport {
     /// Composition is broken into sections
     pub section: Option<Vec<EvidenceReportSection>>,
 }
-/// EvidenceReportRelatesto nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatestoTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship URL
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Target of the relationship Identifier
-    pub identifier: Option<Identifier>,
-    /// Target of the relationship Display
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Target of the relationship Resource reference
-    pub resource: Option<Reference>,
-}
-/// EvidenceReport nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship
-    pub target: EvidenceReportRelatestoTarget,
-    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
-    pub code: ReportRelationType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-}
-/// EvidenceReportSubject nested structure for the 'characteristic' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportSubjectCharacteristic {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Characteristic code
-    ///
-    /// Binding: extensible (Evidence focus characteristic code.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/focus-characteristic-code
-    pub code: CodeableConcept,
-    /// Characteristic value (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Characteristic value (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Characteristic value (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Characteristic value (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Characteristic value (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Is used to express not the characteristic
-    pub exclude: Option<BooleanType>,
-    /// Extension element for the 'exclude' primitive field. Contains metadata and extensions.
-    pub _exclude: Option<Element>,
-    /// Timeframe for the characteristic
-    pub period: Option<Period>,
-}
 /// EvidenceReport nested structure for the 'subject' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceReportSubject {
@@ -223,6 +157,72 @@ pub struct EvidenceReportSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
+/// EvidenceReport nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship
+    pub target: EvidenceReportRelatestoTarget,
+    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
+    pub code: ReportRelationType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+}
+/// EvidenceReportRelatesto nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatestoTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship URL
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Target of the relationship Identifier
+    pub identifier: Option<Identifier>,
+    /// Target of the relationship Display
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Target of the relationship Resource reference
+    pub resource: Option<Reference>,
+}
+/// EvidenceReportSubject nested structure for the 'characteristic' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportSubjectCharacteristic {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Characteristic code
+    ///
+    /// Binding: extensible (Evidence focus characteristic code.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/focus-characteristic-code
+    pub code: CodeableConcept,
+    /// Characteristic value (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Characteristic value (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Characteristic value (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Characteristic value (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Characteristic value (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Is used to express not the characteristic
+    pub exclude: Option<BooleanType>,
+    /// Extension element for the 'exclude' primitive field. Contains metadata and extensions.
+    pub _exclude: Option<Element>,
+    /// Timeframe for the characteristic
+    pub period: Option<Period>,
+}
 
 impl Default for EvidenceReport {
     fn default() -> Self {
@@ -250,48 +250,6 @@ impl Default for EvidenceReport {
             endorser: Default::default(),
             relates_to: Default::default(),
             section: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportRelatestoTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            url: Default::default(),
-            _url: Default::default(),
-            identifier: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            resource: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportSubjectCharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value_reference: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            exclude: Default::default(),
-            _exclude: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -324,6 +282,48 @@ impl Default for EvidenceReportSection {
             entry_quantity: Default::default(),
             empty_reason: Default::default(),
             section: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportRelatestoTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            url: Default::default(),
+            _url: Default::default(),
+            identifier: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            resource: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportSubjectCharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value_reference: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            exclude: Default::default(),
+            _exclude: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -663,18 +663,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for EvidenceReport {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for EvidenceReport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -904,33 +892,6 @@ impl crate::traits::evidence_report::EvidenceReportMutators for EvidenceReport {
 }
 
 impl crate::traits::evidence_report::EvidenceReportExistence for EvidenceReport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_cite_as(&self) -> bool {
         self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
     }

@@ -110,56 +110,6 @@ pub trait MetadataResourceMutators: DomainResourceMutators {
 /// - Type: MetadataResource
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
 pub trait MetadataResourceExistence: DomainResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
-    /// Returns true if the text field is present (Some).
-    fn has_text(&self) -> bool;
-    /// Returns true if the contained field is not empty.
-    fn has_contained(&self) -> bool;
-    /// Returns true if the extension field is not empty.
-    fn has_extension(&self) -> bool;
-    /// Returns true if the modifier_extension field is not empty.
-    fn has_modifier_extension(&self) -> bool;
-    /// Returns true if the url field is present (Some).
-    fn has_url(&self) -> bool;
-    /// Returns true if the identifier field is not empty.
-    fn has_identifier(&self) -> bool;
-    /// Returns true if the version field is present (Some).
-    fn has_version(&self) -> bool;
-    /// Returns true if the version_algorithm field is present (Some).
-    fn has_version_algorithm(&self) -> bool;
-    /// Returns true if the name field is present (Some).
-    fn has_name(&self) -> bool;
-    /// Returns true if the title field is present (Some).
-    fn has_title(&self) -> bool;
-    /// Returns true if the status field is present (Some).
-    fn has_status(&self) -> bool;
-    /// Returns true if the experimental field is present (Some).
-    fn has_experimental(&self) -> bool;
-    /// Returns true if the date field is present (Some).
-    fn has_date(&self) -> bool;
-    /// Returns true if the publisher field is present (Some).
-    fn has_publisher(&self) -> bool;
-    /// Returns true if the contact field is not empty.
-    fn has_contact(&self) -> bool;
-    /// Returns true if the description field is present (Some).
-    fn has_description(&self) -> bool;
-    /// Returns true if the use_context field is not empty.
-    fn has_use_context(&self) -> bool;
-    /// Returns true if the jurisdiction field is not empty.
-    fn has_jurisdiction(&self) -> bool;
-    /// Returns true if the purpose field is present (Some).
-    fn has_purpose(&self) -> bool;
-    /// Returns true if the copyright field is present (Some).
-    fn has_copyright(&self) -> bool;
-    /// Returns true if the copyright_label field is present (Some).
-    fn has_copyright_label(&self) -> bool;
     /// Returns true if the approval_date field is present (Some).
     fn has_approval_date(&self) -> bool;
     /// Returns true if the last_review_date field is present (Some).

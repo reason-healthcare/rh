@@ -97,21 +97,6 @@ pub struct AllergyIntolerance {
     /// Adverse Reaction Events linked to exposure to substance
     pub reaction: Option<Vec<AllergyIntoleranceReaction>>,
 }
-/// AllergyIntolerance nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AllergyIntoleranceParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub function: Option<CodeableConcept>,
-    /// Who or what participated in the activities related to the allergy or intolerance
-    pub actor: Reference,
-}
 /// AllergyIntolerance nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllergyIntoleranceReaction {
@@ -152,6 +137,21 @@ pub struct AllergyIntoleranceReaction {
     /// Text about event not captured in other fields
     pub note: Option<Vec<Annotation>>,
 }
+/// AllergyIntolerance nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AllergyIntoleranceParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the allergy or intolerance
+    pub actor: Reference,
+}
 
 impl Default for AllergyIntolerance {
     fn default() -> Self {
@@ -184,16 +184,6 @@ impl Default for AllergyIntolerance {
     }
 }
 
-impl Default for AllergyIntoleranceParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for AllergyIntoleranceReaction {
     fn default() -> Self {
         Self {
@@ -208,6 +198,16 @@ impl Default for AllergyIntoleranceReaction {
             _severity: Default::default(),
             exposure_route: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for AllergyIntoleranceParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -466,18 +466,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for AllergyIntoleran
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for AllergyIntolerance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -642,33 +630,6 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceMutators for AllergyI
 }
 
 impl crate::traits::allergy_intolerance::AllergyIntoleranceExistence for AllergyIntolerance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_onset(&self) -> bool {
         self.onset_date_time.is_some()
             || self.onset_age.is_some()

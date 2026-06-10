@@ -595,31 +595,10 @@ impl TraitImplGenerator {
             struct_name.to_string(),
         );
 
-        // Duplicate methods from ResourceExistence (required by trait inheritance)
-        // has_id method
-        let has_id_method = RustTraitImplMethod::new("has_id".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.id.is_some()".to_string());
-        trait_impl.add_method(has_id_method);
-
-        // has_meta method
-        let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.meta.is_some()".to_string());
-        trait_impl.add_method(has_meta_method);
-
-        // has_implicit_rules method
-        let has_implicit_rules_method = RustTraitImplMethod::new("has_implicit_rules".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.implicit_rules.is_some()".to_string());
-        trait_impl.add_method(has_implicit_rules_method);
-
-        // has_language method
-        let has_language_method = RustTraitImplMethod::new("has_language".to_string())
-            .with_return_type("bool".to_string())
-            .with_body("self.base.base.language.is_some()".to_string());
-        trait_impl.add_method(has_language_method);
-
+        // DomainResourceExistence only declares the fields DomainResource itself adds
+        // (text, contained, extension, modifierExtension). The Resource-level methods
+        // (has_id, has_meta, has_implicit_rules, has_language) are declared in
+        // ResourceExistence and satisfied by the separate impl ResourceExistence block.
         // has_text method
         let has_text_method = RustTraitImplMethod::new("has_text".to_string())
             .with_return_type("bool".to_string())
@@ -762,91 +741,18 @@ impl TraitImplGenerator {
             .unwrap_or(false);
 
         // Only add inherited methods for non-profiles
-        // Profiles extend ResourceExistence or DomainResourceExistence, so they inherit these methods automatically
-        if !is_profile {
-            // Determine the correct base access path based on inheritance
-            let (id_access, meta_access, implicit_rules_access, language_access) =
-                if extends_resource_directly {
-                    // Binary, Bundle, Parameters extend Resource directly -> self.base.id
-                    (
-                        "self.base.id.is_some()".to_string(),
-                        "self.base.meta.is_some()".to_string(),
-                        "self.base.implicit_rules.is_some()".to_string(),
-                        "self.base.language.is_some()".to_string(),
-                    )
-                } else {
-                    // Most resources extend DomainResource -> self.base.base.id
-                    (
-                        "self.base.base.id.is_some()".to_string(),
-                        "self.base.base.meta.is_some()".to_string(),
-                        "self.base.base.implicit_rules.is_some()".to_string(),
-                        "self.base.base.language.is_some()".to_string(),
-                    )
-                };
-
-            // Add inherited methods from ResourceExistence
-            // has_id method
-            let has_id_method = RustTraitImplMethod::new("has_id".to_string())
-                .with_return_type("bool".to_string())
-                .with_body(id_access);
-            trait_impl.add_method(has_id_method);
-
-            // has_meta method
-            let has_meta_method = RustTraitImplMethod::new("has_meta".to_string())
-                .with_return_type("bool".to_string())
-                .with_body(meta_access);
-            trait_impl.add_method(has_meta_method);
-
-            // has_implicit_rules method
-            let has_implicit_rules_method =
-                RustTraitImplMethod::new("has_implicit_rules".to_string())
-                    .with_return_type("bool".to_string())
-                    .with_body(implicit_rules_access);
-            trait_impl.add_method(has_implicit_rules_method);
-
-            // has_language method
-            let has_language_method = RustTraitImplMethod::new("has_language".to_string())
-                .with_return_type("bool".to_string())
-                .with_body(language_access);
-            trait_impl.add_method(has_language_method);
-
-            // Only add DomainResource-specific methods if this resource extends DomainResource
-            // Resources like Binary, Bundle, Parameters extend Resource directly and don't have these fields
-            if extends_domain_resource {
-                // Add inherited methods from DomainResourceExistence
-                // has_text method
-                let has_text_method = RustTraitImplMethod::new("has_text".to_string())
-                    .with_return_type("bool".to_string())
-                    .with_body("self.base.text.is_some()".to_string());
-                trait_impl.add_method(has_text_method);
-
-                // has_contained method
-                let has_contained_method = RustTraitImplMethod::new("has_contained".to_string())
-                    .with_return_type("bool".to_string())
-                    .with_body(
-                        "self.base.contained.as_ref().is_some_and(|c| !c.is_empty())".to_string(),
-                    );
-                trait_impl.add_method(has_contained_method);
-
-                // has_extension method
-                let has_extension_method = RustTraitImplMethod::new("has_extension".to_string())
-                    .with_return_type("bool".to_string())
-                    .with_body(
-                        "self.base.extension.as_ref().is_some_and(|e| !e.is_empty())".to_string(),
-                    );
-                trait_impl.add_method(has_extension_method);
-
-                // has_modifier_extension method
-                let has_modifier_extension_method =
-                    RustTraitImplMethod::new("has_modifier_extension".to_string())
-                        .with_return_type("bool".to_string())
-                        .with_body(
-                            "self.base.modifier_extension.as_ref().is_some_and(|m| !m.is_empty())"
-                                .to_string(),
-                        );
-                trait_impl.add_method(has_modifier_extension_method);
-            }
-        }
+        // Profiles extend ResourceExistence or DomainResourceExistence, so they inherit these methods automatically.
+        // For non-profiles, the inherited base-class existence methods (has_id, has_meta,
+        // has_text, has_contained, has_extension, has_modifier_extension) are provided by
+        // the separate impl ResourceExistence / impl DomainResourceExistence blocks and
+        // must NOT be repeated here. Since the existence trait now uses differential
+        // elements (matching the struct), those inherited fields are not declared in the
+        // specific trait body, so adding them here would cause "not a member of trait" errors.
+        let _ = (
+            is_profile,
+            extends_domain_resource,
+            extends_resource_directly,
+        ); // suppress unused warnings
 
         // Extract element definitions to generate trait methods for specific fields
         let elements = if let Some(differential) = &structure_def.differential {
@@ -971,7 +877,19 @@ impl TraitImplGenerator {
             self.get_nested_type_for_backbone_element(element, is_array)
         } else {
             // Map FHIR type to Rust type using TypeMapper with binding information
-            type_mapper.map_fhir_type_with_binding(fhir_types, element.binding.as_ref(), is_array)
+            let resolved = type_mapper.map_fhir_type_with_binding(
+                fhir_types,
+                element.binding.as_ref(),
+                is_array,
+            );
+            // Guard: if the resolved binding enum collides with the containing type name,
+            // fall back to StringType to avoid self-referential types.
+            let resource_name = element.path.split('.').next().unwrap_or("");
+            if matches!(&resolved, crate::rust_types::RustType::Custom(n) if n == resource_name) {
+                crate::rust_types::RustType::Custom("StringType".to_string())
+            } else {
+                resolved
+            }
         };
 
         // Generate return type and body based on the mapped type
@@ -1326,12 +1244,7 @@ impl TraitImplGenerator {
     fn is_copy_primitive_type(&self, type_name: &str) -> bool {
         matches!(
             type_name,
-            "BooleanType"
-                | "IntegerType"
-                | "UnsignedIntType"
-                | "PositiveIntType"
-                | "DecimalType"
-                | "Integer64Type"
+            "BooleanType" | "IntegerType" | "UnsignedIntType" | "PositiveIntType" | "DecimalType"
         )
     }
 
@@ -1591,7 +1504,11 @@ impl TraitImplGenerator {
                         if let Some(enum_name) =
                             self.extract_enum_name_from_value_set(value_set_url)
                         {
-                            return Ok(RustType::Custom(enum_name));
+                            // Guard: if the binding enum collides with the containing type, fall back.
+                            let resource_name = element.path.split('.').next().unwrap_or("");
+                            if enum_name != resource_name {
+                                return Ok(RustType::Custom(enum_name));
+                            }
                         }
                     }
                 }

@@ -66,21 +66,6 @@ pub struct Ingredient {
     /// The substance that comprises this ingredient
     pub substance: IngredientSubstance,
 }
-/// Ingredient nested structure for the 'substance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IngredientSubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The quantity of substance, per presentation, or per volume or mass, and type of quantity
-    pub strength: Option<Vec<IngredientSubstanceStrength>>,
-    /// A code or full resource that represents the ingredient substance
-    ///
-    /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
-    pub code: CodeableReference,
-}
 /// IngredientSubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngredientSubstanceStrength {
@@ -138,6 +123,21 @@ pub struct IngredientSubstanceStrength {
     /// ValueSet: http://hl7.org/fhir/ValueSet/country
     pub country: Option<Vec<CodeableConcept>>,
 }
+/// Ingredient nested structure for the 'substance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngredientSubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The quantity of substance, per presentation, or per volume or mass, and type of quantity
+    pub strength: Option<Vec<IngredientSubstanceStrength>>,
+    /// A code or full resource that represents the ingredient substance
+    ///
+    /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
+    pub code: CodeableReference,
+}
 /// Ingredient nested structure for the 'manufacturer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngredientManufacturer {
@@ -173,16 +173,6 @@ impl Default for Ingredient {
     }
 }
 
-impl Default for IngredientSubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: CodeableReference::default(),
-        }
-    }
-}
-
 impl Default for IngredientSubstanceStrength {
     fn default() -> Self {
         Self {
@@ -203,6 +193,16 @@ impl Default for IngredientSubstanceStrength {
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
+        }
+    }
+}
+
+impl Default for IngredientSubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: CodeableReference::default(),
         }
     }
 }
@@ -527,18 +527,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Ingredient {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Ingredient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -664,33 +652,6 @@ impl crate::traits::ingredient::IngredientMutators for Ingredient {
 }
 
 impl crate::traits::ingredient::IngredientExistence for Ingredient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.is_some()
     }

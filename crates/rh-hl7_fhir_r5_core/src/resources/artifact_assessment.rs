@@ -427,18 +427,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ArtifactAssessme
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ArtifactAssessment {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -548,38 +536,11 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentMutators for Artifact
 }
 
 impl crate::traits::artifact_assessment::ArtifactAssessmentExistence for ArtifactAssessment {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_cite_as(&self) -> bool {
+        self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
     }
     fn has_artifact(&self) -> bool {
         true
-    }
-    fn has_cite_as(&self) -> bool {
-        self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

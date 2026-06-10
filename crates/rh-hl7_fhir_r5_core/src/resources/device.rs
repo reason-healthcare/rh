@@ -177,25 +177,39 @@ pub struct Device {
     /// The higher level or encompassing device that this device is a logical part of
     pub parent: Option<Reference>,
 }
-/// Device nested structure for the 'name' field
+/// Device nested structure for the 'conformsTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceName {
+pub struct DeviceConformsto {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The term that names the device
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// registered-name | user-friendly-name | patient-reported-name
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The preferred device name
-    pub display: Option<BooleanType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
+    /// Describes the common type of the standard, specification, or formal guidance.  communication | performance | measurement
+    ///
+    /// Binding: example (The kind of standards used by the device.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/device-specification-category
+    pub category: Option<CodeableConcept>,
+    /// Identifies the standard, specification, or formal guidance that the device adheres to
+    ///
+    /// Binding: example (The type of version indicated for the device.)
+    ///
+    /// Available values:
+    /// - `528391`: Blood Pressure Cuff
+    /// - `528404`: Body Composition Analyzer
+    /// - `528425`: Cardiovascular Device
+    /// - `528402`: Coagulation meter
+    /// - `528409`: Continuous Glucose Monitor
+    /// - `528390`: Electro cardiograph
+    /// - `528457`: Generic 20601 Device
+    /// - `528401`: Glucose Monitor
+    /// - `528455`: Independent Activity/Living Hub
+    /// - `528403`: Insulin Pump
+    /// - ... and 7 more values
+    pub specification: CodeableConcept,
+    /// Specific form or variant of the standard
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
 }
 /// Device nested structure for the 'version' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -227,6 +241,65 @@ pub struct DeviceVersion {
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
+}
+/// Device nested structure for the 'udiCarrier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceUdicarrier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Mandatory fixed portion of UDI
+    #[serde(rename = "deviceIdentifier")]
+    pub device_identifier: StringType,
+    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_deviceIdentifier")]
+    pub _device_identifier: Option<Element>,
+    /// UDI Issuing Organization
+    pub issuer: StringType,
+    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
+    pub _issuer: Option<Element>,
+    /// Regional UDI authority
+    pub jurisdiction: Option<StringType>,
+    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
+    pub _jurisdiction: Option<Element>,
+    /// UDI Machine Readable Barcode String
+    #[serde(rename = "carrierAIDC")]
+    pub carrier_a_i_d_c: Option<Base64BinaryType>,
+    /// Extension element for the 'carrierAIDC' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_carrierAIDC")]
+    pub _carrier_a_i_d_c: Option<Element>,
+    /// UDI Human Readable Barcode String
+    #[serde(rename = "carrierHRF")]
+    pub carrier_h_r_f: Option<StringType>,
+    /// Extension element for the 'carrierHRF' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_carrierHRF")]
+    pub _carrier_h_r_f: Option<Element>,
+    /// barcode | rfid | manual | card | self-reported | electronic-transmission | unknown
+    #[serde(rename = "entryType")]
+    pub entry_type: Option<UdiEntryType>,
+    /// Extension element for the 'entryType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_entryType")]
+    pub _entry_type: Option<Element>,
+}
+/// Device nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The term that names the device
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// registered-name | user-friendly-name | patient-reported-name
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The preferred device name
+    pub display: Option<BooleanType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
 }
 /// Device nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -273,79 +346,6 @@ pub struct DeviceProperty {
     /// Value of the property (Attachment)
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Attachment,
-}
-/// Device nested structure for the 'conformsTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceConformsto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes the common type of the standard, specification, or formal guidance.  communication | performance | measurement
-    ///
-    /// Binding: example (The kind of standards used by the device.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/device-specification-category
-    pub category: Option<CodeableConcept>,
-    /// Identifies the standard, specification, or formal guidance that the device adheres to
-    ///
-    /// Binding: example (The type of version indicated for the device.)
-    ///
-    /// Available values:
-    /// - `528391`: Blood Pressure Cuff
-    /// - `528404`: Body Composition Analyzer
-    /// - `528425`: Cardiovascular Device
-    /// - `528402`: Coagulation meter
-    /// - `528409`: Continuous Glucose Monitor
-    /// - `528390`: Electro cardiograph
-    /// - `528457`: Generic 20601 Device
-    /// - `528401`: Glucose Monitor
-    /// - `528455`: Independent Activity/Living Hub
-    /// - `528403`: Insulin Pump
-    /// - ... and 7 more values
-    pub specification: CodeableConcept,
-    /// Specific form or variant of the standard
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-}
-/// Device nested structure for the 'udiCarrier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceUdicarrier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Mandatory fixed portion of UDI
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: StringType,
-    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_deviceIdentifier")]
-    pub _device_identifier: Option<Element>,
-    /// UDI Issuing Organization
-    pub issuer: StringType,
-    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
-    pub _issuer: Option<Element>,
-    /// Regional UDI authority
-    pub jurisdiction: Option<StringType>,
-    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
-    pub _jurisdiction: Option<Element>,
-    /// UDI Machine Readable Barcode String
-    #[serde(rename = "carrierAIDC")]
-    pub carrier_a_i_d_c: Option<Base64BinaryType>,
-    /// Extension element for the 'carrierAIDC' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_carrierAIDC")]
-    pub _carrier_a_i_d_c: Option<Element>,
-    /// UDI Human Readable Barcode String
-    #[serde(rename = "carrierHRF")]
-    pub carrier_h_r_f: Option<StringType>,
-    /// Extension element for the 'carrierHRF' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_carrierHRF")]
-    pub _carrier_h_r_f: Option<Element>,
-    /// barcode | rfid | manual | card | self-reported | electronic-transmission | unknown
-    #[serde(rename = "entryType")]
-    pub entry_type: Option<UdiEntryType>,
-    /// Extension element for the 'entryType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_entryType")]
-    pub _entry_type: Option<Element>,
 }
 
 impl Default for Device {
@@ -398,16 +398,14 @@ impl Default for Device {
     }
 }
 
-impl Default for DeviceName {
+impl Default for DeviceConformsto {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
+            category: Default::default(),
+            specification: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
         }
     }
 }
@@ -422,34 +420,6 @@ impl Default for DeviceVersion {
             _install_date: Default::default(),
             value: StringType::default(),
             _value: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_integer: Default::default(),
-            value_range: Default::default(),
-            value_attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceConformsto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            specification: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
         }
     }
 }
@@ -470,6 +440,36 @@ impl Default for DeviceUdicarrier {
             _carrier_h_r_f: Default::default(),
             entry_type: Default::default(),
             _entry_type: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceName {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value: StringType::default(),
+            _value: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_integer: Default::default(),
+            value_range: Default::default(),
+            value_attachment: Default::default(),
         }
     }
 }
@@ -738,18 +738,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Device {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Device {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1098,33 +1086,6 @@ impl crate::traits::device::DeviceMutators for Device {
 }
 
 impl crate::traits::device::DeviceExistence for Device {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

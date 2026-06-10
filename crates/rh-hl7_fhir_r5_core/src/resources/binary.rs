@@ -190,18 +190,6 @@ impl crate::traits::binary::BinaryMutators for Binary {
 }
 
 impl crate::traits::binary::BinaryExistence for Binary {
-    fn has_id(&self) -> bool {
-        self.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.language.is_some()
-    }
     fn has_content_type(&self) -> bool {
         true
     }

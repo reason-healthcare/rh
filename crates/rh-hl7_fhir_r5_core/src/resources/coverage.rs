@@ -141,6 +141,22 @@ pub struct CoverageCosttobeneficiary {
     #[serde(rename = "valueMoney")]
     pub value_money: Option<Money>,
 }
+/// CoverageCosttobeneficiary nested structure for the 'exception' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageCosttobeneficiaryException {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Exception category
+    ///
+    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The effective period of the exception
+    pub period: Option<Period>,
+}
 /// Coverage nested structure for the 'class' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageClass {
@@ -173,22 +189,6 @@ pub struct CoveragePaymentby {
     pub responsibility: Option<StringType>,
     /// Extension element for the 'responsibility' primitive field. Contains metadata and extensions.
     pub _responsibility: Option<Element>,
-}
-/// CoverageCosttobeneficiary nested structure for the 'exception' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageCosttobeneficiaryException {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Exception category
-    ///
-    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The effective period of the exception
-    pub period: Option<Period>,
 }
 
 impl Default for Coverage {
@@ -241,6 +241,16 @@ impl Default for CoverageCosttobeneficiary {
     }
 }
 
+impl Default for CoverageCosttobeneficiaryException {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageClass {
     fn default() -> Self {
         Self {
@@ -260,16 +270,6 @@ impl Default for CoveragePaymentby {
             party: Default::default(),
             responsibility: Default::default(),
             _responsibility: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageCosttobeneficiaryException {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -543,18 +543,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Coverage {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Coverage {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -778,33 +766,6 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
 }
 
 impl crate::traits::coverage::CoverageExistence for Coverage {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

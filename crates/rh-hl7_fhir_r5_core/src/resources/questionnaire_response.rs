@@ -61,6 +61,31 @@ pub struct QuestionnaireResponse {
     /// Groups and questions
     pub item: Option<Vec<QuestionnaireResponseItem>>,
 }
+/// QuestionnaireResponse nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireResponseItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The response(s) to the question
+    pub answer: Option<Vec<QuestionnaireResponseItemAnswer>>,
+    /// Pointer to specific item from Questionnaire
+    #[serde(rename = "linkId")]
+    pub link_id: StringType,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// ElementDefinition - details for the item
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Name for group or question text
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Child items of group item
+    pub item: Option<Vec<StringType>>,
+}
 /// QuestionnaireResponseItem nested structure for the 'answer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireResponseItemAnswer {
@@ -106,31 +131,6 @@ pub struct QuestionnaireResponseItemAnswer {
     /// Child items of question
     pub item: Option<Vec<StringType>>,
 }
-/// QuestionnaireResponse nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireResponseItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The response(s) to the question
-    pub answer: Option<Vec<QuestionnaireResponseItemAnswer>>,
-    /// Pointer to specific item from Questionnaire
-    #[serde(rename = "linkId")]
-    pub link_id: StringType,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// ElementDefinition - details for the item
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Name for group or question text
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-    /// Child items of group item
-    pub item: Option<Vec<StringType>>,
-}
 
 impl Default for QuestionnaireResponse {
     fn default() -> Self {
@@ -154,6 +154,22 @@ impl Default for QuestionnaireResponse {
     }
 }
 
+impl Default for QuestionnaireResponseItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            answer: Default::default(),
+            link_id: StringType::default(),
+            _link_id: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            item: Default::default(),
+        }
+    }
+}
+
 impl Default for QuestionnaireResponseItemAnswer {
     fn default() -> Self {
         Self {
@@ -170,22 +186,6 @@ impl Default for QuestionnaireResponseItemAnswer {
             value_coding: Default::default(),
             value_quantity: Default::default(),
             value_reference: Default::default(),
-            item: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireResponseItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            answer: Default::default(),
-            link_id: StringType::default(),
-            _link_id: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
             item: Default::default(),
         }
     }
@@ -439,18 +439,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for QuestionnaireRes
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for QuestionnaireResponse {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -592,33 +580,6 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseMutators
 impl crate::traits::questionnaire_response::QuestionnaireResponseExistence
     for QuestionnaireResponse
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

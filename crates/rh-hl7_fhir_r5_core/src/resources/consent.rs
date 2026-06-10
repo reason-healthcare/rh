@@ -91,21 +91,6 @@ pub struct Consent {
     /// Constraints to the base Consent.policyRule/Consent.policy
     pub provision: Option<Vec<ConsentProvision>>,
 }
-/// ConsentProvision nested structure for the 'actor' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionActor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How the actor is involved
-    ///
-    /// Binding: extensible (How an actor is involved in the consent considerations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub role: Option<CodeableConcept>,
-    /// Resource for the actor (or group, by role)
-    pub reference: Option<Reference>,
-}
 /// Consent nested structure for the 'verification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentVerification {
@@ -136,18 +121,18 @@ pub struct ConsentVerification {
     #[serde(rename = "_verificationDate")]
     pub _verification_date: Option<Element>,
 }
-/// ConsentProvision nested structure for the 'data' field
+/// Consent nested structure for the 'policyBasis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionData {
+pub struct ConsentPolicybasis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// instance | related | dependents | authoredby
-    pub meaning: ConsentDataMeaning,
-    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
-    pub _meaning: Option<Element>,
-    /// The actual data reference
-    pub reference: Reference,
+    /// Reference backing policy resource
+    pub reference: Option<Reference>,
+    /// URL to a computable backing policy
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
 }
 /// Consent nested structure for the 'provision' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,10 +140,10 @@ pub struct ConsentProvision {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Who|what controlled by this provision (or group, by role)
-    pub actor: Option<Vec<ConsentProvisionActor>>,
     /// Data controlled by this provision
     pub data: Option<Vec<ConsentProvisionData>>,
+    /// Who|what controlled by this provision (or group, by role)
+    pub actor: Option<Vec<ConsentProvisionActor>>,
     /// Timeframe for this provision
     pub period: Option<Period>,
     /// Actions controlled by this provision
@@ -221,18 +206,33 @@ pub struct ConsentProvision {
     /// Nested Exception Provisions
     pub provision: Option<Vec<StringType>>,
 }
-/// Consent nested structure for the 'policyBasis' field
+/// ConsentProvision nested structure for the 'data' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentPolicybasis {
+pub struct ConsentProvisionData {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference backing policy resource
+    /// instance | related | dependents | authoredby
+    pub meaning: ConsentDataMeaning,
+    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
+    pub _meaning: Option<Element>,
+    /// The actual data reference
+    pub reference: Reference,
+}
+/// ConsentProvision nested structure for the 'actor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvisionActor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How the actor is involved
+    ///
+    /// Binding: extensible (How an actor is involved in the consent considerations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub role: Option<CodeableConcept>,
+    /// Resource for the actor (or group, by role)
     pub reference: Option<Reference>,
-    /// URL to a computable backing policy
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
 }
 
 impl Default for Consent {
@@ -264,16 +264,6 @@ impl Default for Consent {
     }
 }
 
-impl Default for ConsentProvisionActor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
 impl Default for ConsentVerification {
     fn default() -> Self {
         Self {
@@ -289,13 +279,13 @@ impl Default for ConsentVerification {
     }
 }
 
-impl Default for ConsentProvisionData {
+impl Default for ConsentPolicybasis {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            meaning: Default::default(),
-            _meaning: Default::default(),
             reference: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -304,8 +294,8 @@ impl Default for ConsentProvision {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            actor: Default::default(),
             data: Default::default(),
+            actor: Default::default(),
             period: Default::default(),
             action: Default::default(),
             security_label: Default::default(),
@@ -320,13 +310,23 @@ impl Default for ConsentProvision {
     }
 }
 
-impl Default for ConsentPolicybasis {
+impl Default for ConsentProvisionData {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            meaning: Default::default(),
+            _meaning: Default::default(),
             reference: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionActor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            reference: Default::default(),
         }
     }
 }
@@ -585,18 +585,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Consent {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Consent {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -840,33 +828,6 @@ impl crate::traits::consent::ConsentMutators for Consent {
 }
 
 impl crate::traits::consent::ConsentExistence for Consent {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

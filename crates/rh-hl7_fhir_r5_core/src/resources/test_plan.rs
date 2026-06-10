@@ -124,55 +124,6 @@ pub struct TestPlan {
     #[serde(rename = "testCase")]
     pub test_case: Option<Vec<TestPlanTestcase>>,
 }
-/// TestPlan nested structure for the 'dependency' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestPlanDependency {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of the dependency criterium
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Link to predecessor test plans
-    pub predecessor: Option<Reference>,
-}
-/// TestPlan nested structure for the 'testCase' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestPlanTestcase {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Required criteria to execute the test case
-    pub dependency: Option<Vec<TestPlanTestcaseDependency>>,
-    /// Test assertions or expectations
-    pub assertion: Option<Vec<TestPlanTestcaseAssertion>>,
-    /// The actual test to be executed
-    #[serde(rename = "testRun")]
-    pub test_run: Option<Vec<TestPlanTestcaseTestrun>>,
-    /// The test data used in the test case
-    #[serde(rename = "testData")]
-    pub test_data: Option<Vec<TestPlanTestcaseTestdata>>,
-    /// Sequence of test case in the test plan
-    pub sequence: Option<IntegerType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// The scope or artifact covered by the case
-    pub scope: Option<Vec<Reference>>,
-}
-/// TestPlanTestcase nested structure for the 'dependency' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestPlanTestcaseDependency {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of the criteria
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Link to predecessor test plans
-    pub predecessor: Option<Reference>,
-}
 /// TestPlanTestcase nested structure for the 'testRun' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestPlanTestcaseTestrun {
@@ -197,6 +148,55 @@ pub struct TestPlanTestcaseAssertion {
     pub object: Option<Vec<CodeableReference>>,
     /// The actual result assertion
     pub result: Option<Vec<CodeableReference>>,
+}
+/// TestPlanTestcase nested structure for the 'dependency' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPlanTestcaseDependency {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the criteria
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Link to predecessor test plans
+    pub predecessor: Option<Reference>,
+}
+/// TestPlan nested structure for the 'dependency' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPlanDependency {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the dependency criterium
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Link to predecessor test plans
+    pub predecessor: Option<Reference>,
+}
+/// TestPlan nested structure for the 'testCase' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPlanTestcase {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Required criteria to execute the test case
+    pub dependency: Option<Vec<TestPlanTestcaseDependency>>,
+    /// The actual test to be executed
+    #[serde(rename = "testRun")]
+    pub test_run: Option<Vec<TestPlanTestcaseTestrun>>,
+    /// Test assertions or expectations
+    pub assertion: Option<Vec<TestPlanTestcaseAssertion>>,
+    /// The test data used in the test case
+    #[serde(rename = "testData")]
+    pub test_data: Option<Vec<TestPlanTestcaseTestdata>>,
+    /// Sequence of test case in the test plan
+    pub sequence: Option<IntegerType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// The scope or artifact covered by the case
+    pub scope: Option<Vec<Reference>>,
 }
 /// TestPlanTestcase nested structure for the 'testData' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,43 +263,6 @@ impl Default for TestPlan {
     }
 }
 
-impl Default for TestPlanDependency {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            predecessor: Default::default(),
-        }
-    }
-}
-
-impl Default for TestPlanTestcase {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            dependency: Default::default(),
-            assertion: Default::default(),
-            test_run: Default::default(),
-            test_data: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            scope: Default::default(),
-        }
-    }
-}
-
-impl Default for TestPlanTestcaseDependency {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            predecessor: Default::default(),
-        }
-    }
-}
-
 impl Default for TestPlanTestcaseTestrun {
     fn default() -> Self {
         Self {
@@ -317,6 +280,43 @@ impl Default for TestPlanTestcaseAssertion {
             type_: Default::default(),
             object: Default::default(),
             result: Default::default(),
+        }
+    }
+}
+
+impl Default for TestPlanTestcaseDependency {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            predecessor: Default::default(),
+        }
+    }
+}
+
+impl Default for TestPlanDependency {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            predecessor: Default::default(),
+        }
+    }
+}
+
+impl Default for TestPlanTestcase {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            dependency: Default::default(),
+            test_run: Default::default(),
+            assertion: Default::default(),
+            test_data: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            scope: Default::default(),
         }
     }
 }
@@ -644,18 +644,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for TestPlan {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for TestPlan {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -902,33 +890,6 @@ impl crate::traits::test_plan::TestPlanMutators for TestPlan {
 }
 
 impl crate::traits::test_plan::TestPlanExistence for TestPlan {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

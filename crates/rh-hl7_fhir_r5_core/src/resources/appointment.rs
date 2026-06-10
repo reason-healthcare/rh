@@ -179,21 +179,34 @@ pub struct Appointment {
     #[serde(rename = "recurrenceTemplate")]
     pub recurrence_template: Option<Vec<AppointmentRecurrencetemplate>>,
 }
+/// AppointmentRecurrencetemplate nested structure for the 'yearlyTemplate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentRecurrencetemplateYearlytemplate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Recurs every nth year
+    #[serde(rename = "yearInterval")]
+    pub year_interval: PositiveIntType,
+    /// Extension element for the 'yearInterval' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_yearInterval")]
+    pub _year_interval: Option<Element>,
+}
 /// Appointment nested structure for the 'recurrenceTemplate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentRecurrencetemplate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// Information about weekly recurring appointments
+    #[serde(rename = "weeklyTemplate")]
+    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
     /// Information about yearly recurring appointments
     #[serde(rename = "yearlyTemplate")]
     pub yearly_template: Option<AppointmentRecurrencetemplateYearlytemplate>,
     /// Information about monthly recurring appointments
     #[serde(rename = "monthlyTemplate")]
     pub monthly_template: Option<AppointmentRecurrencetemplateMonthlytemplate>,
-    /// Information about weekly recurring appointments
-    #[serde(rename = "weeklyTemplate")]
-    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
     /// The timezone of the occurrences
     pub timezone: Option<CodeableConcept>,
     /// The frequency of the recurrence
@@ -237,19 +250,6 @@ pub struct AppointmentRecurrencetemplate {
     /// Extension element for the 'excludingRecurrenceId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_excludingRecurrenceId")]
     pub _excluding_recurrence_id: Option<Element>,
-}
-/// AppointmentRecurrencetemplate nested structure for the 'yearlyTemplate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppointmentRecurrencetemplateYearlytemplate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Recurs every nth year
-    #[serde(rename = "yearInterval")]
-    pub year_interval: PositiveIntType,
-    /// Extension element for the 'yearInterval' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_yearInterval")]
-    pub _year_interval: Option<Element>,
 }
 /// AppointmentRecurrencetemplate nested structure for the 'weeklyTemplate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -393,13 +393,23 @@ impl Default for Appointment {
     }
 }
 
+impl Default for AppointmentRecurrencetemplateYearlytemplate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            year_interval: Default::default(),
+            _year_interval: Default::default(),
+        }
+    }
+}
+
 impl Default for AppointmentRecurrencetemplate {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            weekly_template: Default::default(),
             yearly_template: Default::default(),
             monthly_template: Default::default(),
-            weekly_template: Default::default(),
             timezone: Default::default(),
             recurrence_type: Default::default(),
             last_occurrence_date: Default::default(),
@@ -412,16 +422,6 @@ impl Default for AppointmentRecurrencetemplate {
             _excluding_date: Default::default(),
             excluding_recurrence_id: Default::default(),
             _excluding_recurrence_id: Default::default(),
-        }
-    }
-}
-
-impl Default for AppointmentRecurrencetemplateYearlytemplate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            year_interval: Default::default(),
-            _year_interval: Default::default(),
         }
     }
 }
@@ -911,18 +911,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Appointment {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Appointment {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1312,33 +1300,6 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
 }
 
 impl crate::traits::appointment::AppointmentExistence for Appointment {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

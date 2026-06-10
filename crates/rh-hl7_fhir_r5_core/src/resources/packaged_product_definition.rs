@@ -87,6 +87,25 @@ pub struct PackagedProductDefinition {
     /// Allows the key features to be recorded, such as "hospital pack", "nurse prescribable"
     pub characteristic: Option<Vec<StringType>>,
 }
+/// PackagedProductDefinition nested structure for the 'legalStatusOfSupply' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackagedProductDefinitionLegalstatusofsupply {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The actual status of supply. In what situation this package type may be supplied for use
+    ///
+    /// Binding: example (The prescription supply types appropriate to a medicinal product)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/legal-status-of-supply
+    pub code: Option<CodeableConcept>,
+    /// The place where the legal status of supply applies
+    ///
+    /// Binding: example (Jurisdiction codes)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
+    pub jurisdiction: Option<CodeableConcept>,
+}
 /// PackagedProductDefinitionPackaging nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackagedProductDefinitionPackagingProperty {
@@ -116,25 +135,6 @@ pub struct PackagedProductDefinitionPackagingProperty {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Option<Attachment>,
 }
-/// PackagedProductDefinition nested structure for the 'legalStatusOfSupply' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackagedProductDefinitionLegalstatusofsupply {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The actual status of supply. In what situation this package type may be supplied for use
-    ///
-    /// Binding: example (The prescription supply types appropriate to a medicinal product)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/legal-status-of-supply
-    pub code: Option<CodeableConcept>,
-    /// The place where the legal status of supply applies
-    ///
-    /// Binding: example (Jurisdiction codes)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<CodeableConcept>,
-}
 /// PackagedProductDefinitionPackaging nested structure for the 'containedItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackagedProductDefinitionPackagingContaineditem {
@@ -152,11 +152,11 @@ pub struct PackagedProductDefinitionPackaging {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// General characteristics of this item
-    pub property: Option<Vec<PackagedProductDefinitionPackagingProperty>>,
     /// The item(s) within the packaging
     #[serde(rename = "containedItem")]
     pub contained_item: Option<Vec<PackagedProductDefinitionPackagingContaineditem>>,
+    /// General characteristics of this item
+    pub property: Option<Vec<PackagedProductDefinitionPackagingProperty>>,
     /// An identifier that is specific to this particular part of the packaging. Including possibly a Data Carrier Identifier
     pub identifier: Option<Vec<Identifier>>,
     /// The physical type of the container of the items
@@ -225,6 +225,16 @@ impl Default for PackagedProductDefinition {
     }
 }
 
+impl Default for PackagedProductDefinitionLegalstatusofsupply {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            jurisdiction: Default::default(),
+        }
+    }
+}
+
 impl Default for PackagedProductDefinitionPackagingProperty {
     fn default() -> Self {
         Self {
@@ -235,16 +245,6 @@ impl Default for PackagedProductDefinitionPackagingProperty {
             value_date: Default::default(),
             value_boolean: Default::default(),
             value_attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for PackagedProductDefinitionLegalstatusofsupply {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            jurisdiction: Default::default(),
         }
     }
 }
@@ -263,8 +263,8 @@ impl Default for PackagedProductDefinitionPackaging {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            property: Default::default(),
             contained_item: Default::default(),
+            property: Default::default(),
             identifier: Default::default(),
             type_: Default::default(),
             component_part: Default::default(),
@@ -666,18 +666,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for PackagedProductD
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for PackagedProductDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -892,33 +880,6 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
 impl crate::traits::packaged_product_definition::PackagedProductDefinitionExistence
     for PackagedProductDefinition
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

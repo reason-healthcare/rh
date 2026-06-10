@@ -64,14 +64,6 @@ pub trait ParametersMutators: ResourceMutators {
 /// - Type: Parameters
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Resource
 pub trait ParametersExistence: ResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
     /// Returns true if the parameter field is not empty.
     fn has_parameter(&self) -> bool;
 }

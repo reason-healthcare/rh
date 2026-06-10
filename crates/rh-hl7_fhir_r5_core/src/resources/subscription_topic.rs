@@ -135,6 +135,46 @@ pub struct SubscriptionTopic {
     #[serde(rename = "notificationShape")]
     pub notification_shape: Option<Vec<SubscriptionTopicNotificationshape>>,
 }
+/// SubscriptionTopic nested structure for the 'canFilterBy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionTopicCanfilterby {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of this filter parameter
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// URL of the triggering Resource that this filter applies to
+    ///
+    /// Binding: extensible (A type of resource, or a Reference (from all versions))
+    ///
+    /// Available values:
+    /// - `Reference`
+    pub resource: Option<StringType>,
+    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
+    pub _resource: Option<Element>,
+    /// Human-readable and computation-friendly name for a filter parameter usable by subscriptions on this topic, via Subscription.filterBy.filterParameter
+    #[serde(rename = "filterParameter")]
+    pub filter_parameter: StringType,
+    /// Extension element for the 'filterParameter' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_filterParameter")]
+    pub _filter_parameter: Option<Element>,
+    /// Canonical URL for a filterParameter definition
+    #[serde(rename = "filterDefinition")]
+    pub filter_definition: Option<StringType>,
+    /// Extension element for the 'filterDefinition' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_filterDefinition")]
+    pub _filter_definition: Option<Element>,
+    /// eq | ne | gt | lt | ge | le | sa | eb | ap
+    pub comparator: Option<Vec<SearchComparator>>,
+    /// Extension element for the 'comparator' primitive field. Contains metadata and extensions.
+    pub _comparator: Option<Element>,
+    /// missing | exact | contains | not | text | in | not-in | below | above | type | identifier | of-type | code-text | text-advanced | iterate
+    pub modifier: Option<Vec<SearchModifierCode>>,
+    /// Extension element for the 'modifier' primitive field. Contains metadata and extensions.
+    pub _modifier: Option<Element>,
+}
 /// SubscriptionTopicResourcetrigger nested structure for the 'queryCriteria' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionTopicResourcetriggerQuerycriteria {
@@ -167,6 +207,32 @@ pub struct SubscriptionTopicResourcetriggerQuerycriteria {
     /// Extension element for the 'requireBoth' primitive field. Contains metadata and extensions.
     #[serde(rename = "_requireBoth")]
     pub _require_both: Option<Element>,
+}
+/// SubscriptionTopic nested structure for the 'notificationShape' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionTopicNotificationshape {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// URL of the Resource that is the focus (main) resource in a notification shape
+    ///
+    /// Binding: extensible (A type of resource, or a Reference (from all versions))
+    ///
+    /// Available values:
+    /// - `Reference`
+    pub resource: StringType,
+    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
+    pub _resource: Option<Element>,
+    /// Include directives, rooted in the resource for this shape
+    pub include: Option<Vec<StringType>>,
+    /// Extension element for the 'include' primitive field. Contains metadata and extensions.
+    pub _include: Option<Element>,
+    /// Reverse include directives, rooted in the resource for this shape
+    #[serde(rename = "revInclude")]
+    pub rev_include: Option<Vec<StringType>>,
+    /// Extension element for the 'revInclude' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_revInclude")]
+    pub _rev_include: Option<Element>,
 }
 /// SubscriptionTopic nested structure for the 'resourceTrigger' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,72 +295,6 @@ pub struct SubscriptionTopicEventtrigger {
     /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
     pub _resource: Option<Element>,
 }
-/// SubscriptionTopic nested structure for the 'canFilterBy' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionTopicCanfilterby {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of this filter parameter
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// URL of the triggering Resource that this filter applies to
-    ///
-    /// Binding: extensible (A type of resource, or a Reference (from all versions))
-    ///
-    /// Available values:
-    /// - `Reference`
-    pub resource: Option<StringType>,
-    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
-    pub _resource: Option<Element>,
-    /// Human-readable and computation-friendly name for a filter parameter usable by subscriptions on this topic, via Subscription.filterBy.filterParameter
-    #[serde(rename = "filterParameter")]
-    pub filter_parameter: StringType,
-    /// Extension element for the 'filterParameter' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_filterParameter")]
-    pub _filter_parameter: Option<Element>,
-    /// Canonical URL for a filterParameter definition
-    #[serde(rename = "filterDefinition")]
-    pub filter_definition: Option<StringType>,
-    /// Extension element for the 'filterDefinition' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_filterDefinition")]
-    pub _filter_definition: Option<Element>,
-    /// eq | ne | gt | lt | ge | le | sa | eb | ap
-    pub comparator: Option<Vec<SearchComparator>>,
-    /// Extension element for the 'comparator' primitive field. Contains metadata and extensions.
-    pub _comparator: Option<Element>,
-    /// missing | exact | contains | not | text | in | not-in | below | above | type | identifier | of-type | code-text | text-advanced | iterate
-    pub modifier: Option<Vec<SearchModifierCode>>,
-    /// Extension element for the 'modifier' primitive field. Contains metadata and extensions.
-    pub _modifier: Option<Element>,
-}
-/// SubscriptionTopic nested structure for the 'notificationShape' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionTopicNotificationshape {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// URL of the Resource that is the focus (main) resource in a notification shape
-    ///
-    /// Binding: extensible (A type of resource, or a Reference (from all versions))
-    ///
-    /// Available values:
-    /// - `Reference`
-    pub resource: StringType,
-    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
-    pub _resource: Option<Element>,
-    /// Include directives, rooted in the resource for this shape
-    pub include: Option<Vec<StringType>>,
-    /// Extension element for the 'include' primitive field. Contains metadata and extensions.
-    pub _include: Option<Element>,
-    /// Reverse include directives, rooted in the resource for this shape
-    #[serde(rename = "revInclude")]
-    pub rev_include: Option<Vec<StringType>>,
-    /// Extension element for the 'revInclude' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_revInclude")]
-    pub _rev_include: Option<Element>,
-}
 
 impl Default for SubscriptionTopic {
     fn default() -> Self {
@@ -345,6 +345,26 @@ impl Default for SubscriptionTopic {
     }
 }
 
+impl Default for SubscriptionTopicCanfilterby {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            resource: Default::default(),
+            _resource: Default::default(),
+            filter_parameter: Default::default(),
+            _filter_parameter: Default::default(),
+            filter_definition: Default::default(),
+            _filter_definition: Default::default(),
+            comparator: Default::default(),
+            _comparator: Default::default(),
+            modifier: Default::default(),
+            _modifier: Default::default(),
+        }
+    }
+}
+
 impl Default for SubscriptionTopicResourcetriggerQuerycriteria {
     fn default() -> Self {
         Self {
@@ -359,6 +379,20 @@ impl Default for SubscriptionTopicResourcetriggerQuerycriteria {
             _result_for_delete: Default::default(),
             require_both: Default::default(),
             _require_both: Default::default(),
+        }
+    }
+}
+
+impl Default for SubscriptionTopicNotificationshape {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            resource: Default::default(),
+            _resource: Default::default(),
+            include: Default::default(),
+            _include: Default::default(),
+            rev_include: Default::default(),
+            _rev_include: Default::default(),
         }
     }
 }
@@ -389,40 +423,6 @@ impl Default for SubscriptionTopicEventtrigger {
             event: Default::default(),
             resource: Default::default(),
             _resource: Default::default(),
-        }
-    }
-}
-
-impl Default for SubscriptionTopicCanfilterby {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            resource: Default::default(),
-            _resource: Default::default(),
-            filter_parameter: Default::default(),
-            _filter_parameter: Default::default(),
-            filter_definition: Default::default(),
-            _filter_definition: Default::default(),
-            comparator: Default::default(),
-            _comparator: Default::default(),
-            modifier: Default::default(),
-            _modifier: Default::default(),
-        }
-    }
-}
-
-impl Default for SubscriptionTopicNotificationshape {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            resource: Default::default(),
-            _resource: Default::default(),
-            include: Default::default(),
-            _include: Default::default(),
-            rev_include: Default::default(),
-            _rev_include: Default::default(),
         }
     }
 }
@@ -815,18 +815,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubscriptionTopi
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SubscriptionTopic {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1109,33 +1097,6 @@ impl crate::traits::subscription_topic::SubscriptionTopicMutators for Subscripti
 }
 
 impl crate::traits::subscription_topic::SubscriptionTopicExistence for SubscriptionTopic {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

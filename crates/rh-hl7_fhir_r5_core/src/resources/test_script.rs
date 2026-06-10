@@ -126,6 +126,144 @@ pub struct TestScript {
     /// A series of required clean up steps
     pub teardown: Option<TestScriptTeardown>,
 }
+/// TestScript nested structure for the 'variable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptVariable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Descriptive name for this variable
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Default, hard-coded, or user-defined value for this variable
+    #[serde(rename = "defaultValue")]
+    pub default_value: Option<StringType>,
+    /// Extension element for the 'defaultValue' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_defaultValue")]
+    pub _default_value: Option<Element>,
+    /// Natural language description of the variable
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The FHIRPath expression against the fixture body
+    pub expression: Option<StringType>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+    /// HTTP header field name for source
+    #[serde(rename = "headerField")]
+    pub header_field: Option<StringType>,
+    /// Extension element for the 'headerField' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_headerField")]
+    pub _header_field: Option<Element>,
+    /// Hint help text for default value to enter
+    pub hint: Option<StringType>,
+    /// Extension element for the 'hint' primitive field. Contains metadata and extensions.
+    pub _hint: Option<Element>,
+    /// XPath or JSONPath against the fixture body
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Fixture Id of source expression or headerField within this variable
+    #[serde(rename = "sourceId")]
+    pub source_id: Option<StringType>,
+    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceId")]
+    pub _source_id: Option<Element>,
+}
+/// TestScript nested structure for the 'scope' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptScope {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific conformance artifact being tested
+    pub artifact: StringType,
+    /// Extension element for the 'artifact' primitive field. Contains metadata and extensions.
+    pub _artifact: Option<Element>,
+    /// required | optional | strict
+    ///
+    /// Binding: extensible (The expectation of whether the test must pass for the system to be considered conformant with the artifact.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-scope-conformance-codes
+    pub conformance: Option<CodeableConcept>,
+    /// unit | integration | production
+    ///
+    /// Binding: extensible (The phase of testing for this artifact.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-scope-phase-codes
+    pub phase: Option<CodeableConcept>,
+}
+/// TestScriptSetupActionOperation nested structure for the 'requestHeader' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptSetupActionOperationRequestheader {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// HTTP header field name
+    pub field: StringType,
+    /// Extension element for the 'field' primitive field. Contains metadata and extensions.
+    pub _field: Option<Element>,
+    /// HTTP headerfield value
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// TestScriptTeardown nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptTeardownAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The teardown operation to perform
+    pub operation: StringType,
+}
+/// TestScript nested structure for the 'metadata' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptMetadata {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Capabilities  that are assumed to function correctly on the FHIR server being tested
+    pub capability: Vec<TestScriptMetadataCapability>,
+    /// Links to the FHIR specification
+    pub link: Option<Vec<TestScriptMetadataLink>>,
+}
+/// TestScriptMetadata nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptMetadataCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Are the capabilities required?
+    pub required: BooleanType,
+    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
+    pub _required: Option<Element>,
+    /// Are the capabilities validated?
+    pub validated: BooleanType,
+    /// Extension element for the 'validated' primitive field. Contains metadata and extensions.
+    pub _validated: Option<Element>,
+    /// The expected capabilities of the server
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Which origin server these requirements apply to
+    pub origin: Option<Vec<IntegerType>>,
+    /// Extension element for the 'origin' primitive field. Contains metadata and extensions.
+    pub _origin: Option<Element>,
+    /// Which server these requirements apply to
+    pub destination: Option<IntegerType>,
+    /// Extension element for the 'destination' primitive field. Contains metadata and extensions.
+    pub _destination: Option<Element>,
+    /// Links to the FHIR specification
+    pub link: Option<Vec<StringType>>,
+    /// Extension element for the 'link' primitive field. Contains metadata and extensions.
+    pub _link: Option<Element>,
+    /// Required Capability Statement
+    pub capabilities: StringType,
+    /// Extension element for the 'capabilities' primitive field. Contains metadata and extensions.
+    pub _capabilities: Option<Element>,
+}
 /// TestScript nested structure for the 'origin' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestScriptOrigin {
@@ -147,14 +285,74 @@ pub struct TestScriptOrigin {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
 }
-/// TestScriptTeardown nested structure for the 'action' field
+/// TestScript nested structure for the 'fixture' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTeardownAction {
+pub struct TestScriptFixture {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The teardown operation to perform
-    pub operation: StringType,
+    /// Whether or not to implicitly create the fixture during setup
+    pub autocreate: BooleanType,
+    /// Extension element for the 'autocreate' primitive field. Contains metadata and extensions.
+    pub _autocreate: Option<Element>,
+    /// Whether or not to implicitly delete the fixture during teardown
+    pub autodelete: BooleanType,
+    /// Extension element for the 'autodelete' primitive field. Contains metadata and extensions.
+    pub _autodelete: Option<Element>,
+    /// Reference of the resource
+    pub resource: Option<Reference>,
+}
+/// TestScriptMetadata nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptMetadataLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// URL to the specification
+    pub url: StringType,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Short description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// TestScriptSetup nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptSetupAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+}
+/// TestScript nested structure for the 'destination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptDestination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The index of the abstract destination server starting at 1
+    pub index: IntegerType,
+    /// Extension element for the 'index' primitive field. Contains metadata and extensions.
+    pub _index: Option<Element>,
+    /// FHIR-Server | FHIR-SDC-FormManager | FHIR-SDC-FormReceiver | FHIR-SDC-FormProcessor
+    ///
+    /// Binding: extensible (The type of destination profile the test system supports.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-profile-destination-types
+    pub profile: Coding,
+    /// The url path of the destination server
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+}
+/// TestScript nested structure for the 'teardown' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptTeardown {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// One or more teardown operations to perform
+    pub action: Vec<TestScriptTeardownAction>,
 }
 /// TestScriptSetupAction nested structure for the 'assert' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -304,73 +502,55 @@ pub struct TestScriptSetupActionAssert {
     #[serde(rename = "_warningOnly")]
     pub _warning_only: Option<Element>,
 }
-/// TestScript nested structure for the 'variable' field
+/// TestScript nested structure for the 'test' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptVariable {
+pub struct TestScriptTest {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Descriptive name for this variable
-    pub name: StringType,
+    /// A test operation or assert to perform
+    pub action: Vec<TestScriptTestAction>,
+    /// Tracking/logging name of this test
+    pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Default, hard-coded, or user-defined value for this variable
-    #[serde(rename = "defaultValue")]
-    pub default_value: Option<StringType>,
-    /// Extension element for the 'defaultValue' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_defaultValue")]
-    pub _default_value: Option<Element>,
-    /// Natural language description of the variable
+    /// Tracking/reporting short description of the test
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// The FHIRPath expression against the fixture body
-    pub expression: Option<StringType>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-    /// HTTP header field name for source
-    #[serde(rename = "headerField")]
-    pub header_field: Option<StringType>,
-    /// Extension element for the 'headerField' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_headerField")]
-    pub _header_field: Option<Element>,
-    /// Hint help text for default value to enter
-    pub hint: Option<StringType>,
-    /// Extension element for the 'hint' primitive field. Contains metadata and extensions.
-    pub _hint: Option<Element>,
-    /// XPath or JSONPath against the fixture body
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Fixture Id of source expression or headerField within this variable
-    #[serde(rename = "sourceId")]
-    pub source_id: Option<StringType>,
-    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceId")]
-    pub _source_id: Option<Element>,
 }
-/// TestScript nested structure for the 'scope' field
+/// TestScriptTest nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptScope {
+pub struct TestScriptTestAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The specific conformance artifact being tested
-    pub artifact: StringType,
-    /// Extension element for the 'artifact' primitive field. Contains metadata and extensions.
-    pub _artifact: Option<Element>,
-    /// required | optional | strict
-    ///
-    /// Binding: extensible (The expectation of whether the test must pass for the system to be considered conformant with the artifact.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-scope-conformance-codes
-    pub conformance: Option<CodeableConcept>,
-    /// unit | integration | production
-    ///
-    /// Binding: extensible (The phase of testing for this artifact.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-scope-phase-codes
-    pub phase: Option<CodeableConcept>,
+    /// The setup operation to perform
+    pub operation: Option<StringType>,
+    /// The setup assertion to perform
+    pub assert: Option<StringType>,
+}
+/// TestScriptSetupActionAssert nested structure for the 'requirement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptSetupActionAssertRequirement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Link or reference to the testing requirement (uri)
+    #[serde(rename = "linkUri")]
+    pub link_uri: Option<StringType>,
+    /// Link or reference to the testing requirement (canonical)
+    #[serde(rename = "linkCanonical")]
+    pub link_canonical: Option<StringType>,
+}
+/// TestScript nested structure for the 'setup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestScriptSetup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A setup operation or assert to perform
+    pub action: Vec<TestScriptSetupAction>,
 }
 /// TestScriptSetupAction nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -473,186 +653,6 @@ pub struct TestScriptSetupActionOperation {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
 }
-/// TestScript nested structure for the 'metadata' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadata {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Capabilities  that are assumed to function correctly on the FHIR server being tested
-    pub capability: Vec<TestScriptMetadataCapability>,
-    /// Links to the FHIR specification
-    pub link: Option<Vec<TestScriptMetadataLink>>,
-}
-/// TestScript nested structure for the 'fixture' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptFixture {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether or not to implicitly create the fixture during setup
-    pub autocreate: BooleanType,
-    /// Extension element for the 'autocreate' primitive field. Contains metadata and extensions.
-    pub _autocreate: Option<Element>,
-    /// Whether or not to implicitly delete the fixture during teardown
-    pub autodelete: BooleanType,
-    /// Extension element for the 'autodelete' primitive field. Contains metadata and extensions.
-    pub _autodelete: Option<Element>,
-    /// Reference of the resource
-    pub resource: Option<Reference>,
-}
-/// TestScriptMetadata nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadataLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// URL to the specification
-    pub url: StringType,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Short description
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// TestScript nested structure for the 'setup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A setup operation or assert to perform
-    pub action: Vec<TestScriptSetupAction>,
-}
-/// TestScriptSetup nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetupAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-}
-/// TestScriptTest nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTestAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The setup operation to perform
-    pub operation: Option<StringType>,
-    /// The setup assertion to perform
-    pub assert: Option<StringType>,
-}
-/// TestScriptSetupActionOperation nested structure for the 'requestHeader' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetupActionOperationRequestheader {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// HTTP header field name
-    pub field: StringType,
-    /// Extension element for the 'field' primitive field. Contains metadata and extensions.
-    pub _field: Option<Element>,
-    /// HTTP headerfield value
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// TestScript nested structure for the 'teardown' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTeardown {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// One or more teardown operations to perform
-    pub action: Vec<TestScriptTeardownAction>,
-}
-/// TestScriptSetupActionAssert nested structure for the 'requirement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptSetupActionAssertRequirement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Link or reference to the testing requirement (uri)
-    #[serde(rename = "linkUri")]
-    pub link_uri: Option<StringType>,
-    /// Link or reference to the testing requirement (canonical)
-    #[serde(rename = "linkCanonical")]
-    pub link_canonical: Option<StringType>,
-}
-/// TestScript nested structure for the 'test' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptTest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A test operation or assert to perform
-    pub action: Vec<TestScriptTestAction>,
-    /// Tracking/logging name of this test
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Tracking/reporting short description of the test
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// TestScript nested structure for the 'destination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptDestination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The index of the abstract destination server starting at 1
-    pub index: IntegerType,
-    /// Extension element for the 'index' primitive field. Contains metadata and extensions.
-    pub _index: Option<Element>,
-    /// FHIR-Server | FHIR-SDC-FormManager | FHIR-SDC-FormReceiver | FHIR-SDC-FormProcessor
-    ///
-    /// Binding: extensible (The type of destination profile the test system supports.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/testscript-profile-destination-types
-    pub profile: Coding,
-    /// The url path of the destination server
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
-/// TestScriptMetadata nested structure for the 'capability' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScriptMetadataCapability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Are the capabilities required?
-    pub required: BooleanType,
-    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
-    pub _required: Option<Element>,
-    /// Are the capabilities validated?
-    pub validated: BooleanType,
-    /// Extension element for the 'validated' primitive field. Contains metadata and extensions.
-    pub _validated: Option<Element>,
-    /// The expected capabilities of the server
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Which origin server these requirements apply to
-    pub origin: Option<Vec<IntegerType>>,
-    /// Extension element for the 'origin' primitive field. Contains metadata and extensions.
-    pub _origin: Option<Element>,
-    /// Which server these requirements apply to
-    pub destination: Option<IntegerType>,
-    /// Extension element for the 'destination' primitive field. Contains metadata and extensions.
-    pub _destination: Option<Element>,
-    /// Links to the FHIR specification
-    pub link: Option<Vec<StringType>>,
-    /// Extension element for the 'link' primitive field. Contains metadata and extensions.
-    pub _link: Option<Element>,
-    /// Required Capability Statement
-    pub capabilities: StringType,
-    /// Extension element for the 'capabilities' primitive field. Contains metadata and extensions.
-    pub _capabilities: Option<Element>,
-}
 
 impl Default for TestScript {
     fn default() -> Self {
@@ -703,6 +703,95 @@ impl Default for TestScript {
     }
 }
 
+impl Default for TestScriptVariable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            default_value: Default::default(),
+            _default_value: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+            header_field: Default::default(),
+            _header_field: Default::default(),
+            hint: Default::default(),
+            _hint: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            source_id: Default::default(),
+            _source_id: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptScope {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            artifact: StringType::default(),
+            _artifact: Default::default(),
+            conformance: Default::default(),
+            phase: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptSetupActionOperationRequestheader {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            field: Default::default(),
+            _field: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptTeardownAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptMetadata {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            capability: Vec::new(),
+            link: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptMetadataCapability {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            required: Default::default(),
+            _required: Default::default(),
+            validated: Default::default(),
+            _validated: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            origin: Default::default(),
+            _origin: Default::default(),
+            destination: Default::default(),
+            _destination: Default::default(),
+            link: Default::default(),
+            _link: Default::default(),
+            capabilities: Default::default(),
+            _capabilities: Default::default(),
+        }
+    }
+}
+
 impl Default for TestScriptOrigin {
     fn default() -> Self {
         Self {
@@ -716,11 +805,57 @@ impl Default for TestScriptOrigin {
     }
 }
 
-impl Default for TestScriptTeardownAction {
+impl Default for TestScriptFixture {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            operation: Default::default(),
+            autocreate: BooleanType::default(),
+            _autocreate: Default::default(),
+            autodelete: BooleanType::default(),
+            _autodelete: Default::default(),
+            resource: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptMetadataLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            url: Default::default(),
+            _url: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptSetupAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+        }
+    }
+}
+
+impl Default for TestScriptDestination {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            index: IntegerType::default(),
+            _index: Default::default(),
+            profile: Coding::default(),
+            url: Default::default(),
+            _url: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptTeardown {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
         }
     }
 }
@@ -781,38 +916,44 @@ impl Default for TestScriptSetupActionAssert {
     }
 }
 
-impl Default for TestScriptVariable {
+impl Default for TestScriptTest {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: StringType::default(),
+            action: Vec::new(),
+            name: Default::default(),
             _name: Default::default(),
-            default_value: Default::default(),
-            _default_value: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
-            header_field: Default::default(),
-            _header_field: Default::default(),
-            hint: Default::default(),
-            _hint: Default::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            source_id: Default::default(),
-            _source_id: Default::default(),
         }
     }
 }
 
-impl Default for TestScriptScope {
+impl Default for TestScriptTestAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            artifact: StringType::default(),
-            _artifact: Default::default(),
-            conformance: Default::default(),
-            phase: Default::default(),
+            operation: Default::default(),
+            assert: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptSetupActionAssertRequirement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_uri: Default::default(),
+            link_canonical: Default::default(),
+        }
+    }
+}
+
+impl Default for TestScriptSetup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
         }
     }
 }
@@ -852,147 +993,6 @@ impl Default for TestScriptSetupActionOperation {
             _target_id: Default::default(),
             url: Default::default(),
             _url: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptMetadata {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            capability: Vec::new(),
-            link: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptFixture {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            autocreate: BooleanType::default(),
-            _autocreate: Default::default(),
-            autodelete: BooleanType::default(),
-            _autodelete: Default::default(),
-            resource: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptMetadataLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            url: Default::default(),
-            _url: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptSetup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestScriptSetupAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTestAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
-            assert: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptSetupActionOperationRequestheader {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            field: Default::default(),
-            _field: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTeardown {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestScriptSetupActionAssertRequirement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            link_uri: Default::default(),
-            link_canonical: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptTest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptDestination {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            index: IntegerType::default(),
-            _index: Default::default(),
-            profile: Coding::default(),
-            url: Default::default(),
-            _url: Default::default(),
-        }
-    }
-}
-
-impl Default for TestScriptMetadataCapability {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            required: Default::default(),
-            _required: Default::default(),
-            validated: Default::default(),
-            _validated: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            origin: Default::default(),
-            _origin: Default::default(),
-            destination: Default::default(),
-            _destination: Default::default(),
-            link: Default::default(),
-            _link: Default::default(),
-            capabilities: Default::default(),
-            _capabilities: Default::default(),
         }
     }
 }
@@ -1706,18 +1706,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for TestScript {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for TestScript {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -2011,33 +1999,6 @@ impl crate::traits::test_script::TestScriptMutators for TestScript {
 }
 
 impl crate::traits::test_script::TestScriptExistence for TestScript {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

@@ -182,179 +182,20 @@ pub struct Transport {
     /// Parent (or preceding) transport
     pub history: Option<Reference>,
 }
-/// Transport nested structure for the 'output' field
+/// Transport nested structure for the 'restriction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransportOutput {
+pub struct TransportRestriction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Label for output
-    ///
-    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Result of output (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-    /// Result of output (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Result of output (canonical)
-    #[serde(rename = "valueCanonical")]
-    pub value_canonical: StringType,
-    /// Result of output (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Result of output (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Result of output (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Result of output (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Result of output (id)
-    #[serde(rename = "valueId")]
-    pub value_id: StringType,
-    /// Result of output (instant)
-    #[serde(rename = "valueInstant")]
-    pub value_instant: InstantType,
-    /// Result of output (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Result of output (integer64)
-    #[serde(rename = "valueInteger64")]
-    pub value_integer64: Integer64Type,
-    /// Result of output (markdown)
-    #[serde(rename = "valueMarkdown")]
-    pub value_markdown: StringType,
-    /// Result of output (oid)
-    #[serde(rename = "valueOid")]
-    pub value_oid: StringType,
-    /// Result of output (positiveInt)
-    #[serde(rename = "valuePositiveInt")]
-    pub value_positive_int: PositiveIntType,
-    /// Result of output (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Result of output (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Result of output (unsignedInt)
-    #[serde(rename = "valueUnsignedInt")]
-    pub value_unsigned_int: UnsignedIntType,
-    /// Result of output (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Result of output (url)
-    #[serde(rename = "valueUrl")]
-    pub value_url: StringType,
-    /// Result of output (uuid)
-    #[serde(rename = "valueUuid")]
-    pub value_uuid: StringType,
-    /// Result of output (Address)
-    #[serde(rename = "valueAddress")]
-    pub value_address: Address,
-    /// Result of output (Age)
-    #[serde(rename = "valueAge")]
-    pub value_age: Age,
-    /// Result of output (Annotation)
-    #[serde(rename = "valueAnnotation")]
-    pub value_annotation: Annotation,
-    /// Result of output (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Result of output (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Result of output (CodeableReference)
-    #[serde(rename = "valueCodeableReference")]
-    pub value_codeable_reference: CodeableReference,
-    /// Result of output (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Result of output (ContactPoint)
-    #[serde(rename = "valueContactPoint")]
-    pub value_contact_point: ContactPoint,
-    /// Result of output (Count)
-    #[serde(rename = "valueCount")]
-    pub value_count: Count,
-    /// Result of output (Distance)
-    #[serde(rename = "valueDistance")]
-    pub value_distance: Distance,
-    /// Result of output (Duration)
-    #[serde(rename = "valueDuration")]
-    pub value_duration: Duration,
-    /// Result of output (HumanName)
-    #[serde(rename = "valueHumanName")]
-    pub value_human_name: HumanName,
-    /// Result of output (Identifier)
-    #[serde(rename = "valueIdentifier")]
-    pub value_identifier: Identifier,
-    /// Result of output (Money)
-    #[serde(rename = "valueMoney")]
-    pub value_money: Money,
-    /// Result of output (Period)
-    #[serde(rename = "valuePeriod")]
-    pub value_period: Period,
-    /// Result of output (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Result of output (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Result of output (Ratio)
-    #[serde(rename = "valueRatio")]
-    pub value_ratio: Ratio,
-    /// Result of output (RatioRange)
-    #[serde(rename = "valueRatioRange")]
-    pub value_ratio_range: RatioRange,
-    /// Result of output (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Result of output (SampledData)
-    #[serde(rename = "valueSampledData")]
-    pub value_sampled_data: SampledData,
-    /// Result of output (Signature)
-    #[serde(rename = "valueSignature")]
-    pub value_signature: Signature,
-    /// Result of output (Timing)
-    #[serde(rename = "valueTiming")]
-    pub value_timing: Timing,
-    /// Result of output (ContactDetail)
-    #[serde(rename = "valueContactDetail")]
-    pub value_contact_detail: ContactDetail,
-    /// Result of output (DataRequirement)
-    #[serde(rename = "valueDataRequirement")]
-    pub value_data_requirement: DataRequirement,
-    /// Result of output (Expression)
-    #[serde(rename = "valueExpression")]
-    pub value_expression: Expression,
-    /// Result of output (ParameterDefinition)
-    #[serde(rename = "valueParameterDefinition")]
-    pub value_parameter_definition: ParameterDefinition,
-    /// Result of output (RelatedArtifact)
-    #[serde(rename = "valueRelatedArtifact")]
-    pub value_related_artifact: RelatedArtifact,
-    /// Result of output (TriggerDefinition)
-    #[serde(rename = "valueTriggerDefinition")]
-    pub value_trigger_definition: TriggerDefinition,
-    /// Result of output (UsageContext)
-    #[serde(rename = "valueUsageContext")]
-    pub value_usage_context: UsageContext,
-    /// Result of output (Availability)
-    #[serde(rename = "valueAvailability")]
-    pub value_availability: Availability,
-    /// Result of output (ExtendedContactDetail)
-    #[serde(rename = "valueExtendedContactDetail")]
-    pub value_extended_contact_detail: ExtendedContactDetail,
-    /// Result of output (Dosage)
-    #[serde(rename = "valueDosage")]
-    pub value_dosage: Dosage,
-    /// Result of output (Meta)
-    #[serde(rename = "valueMeta")]
-    pub value_meta: Meta,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
 }
 /// Transport nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -530,20 +371,179 @@ pub struct TransportInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Transport nested structure for the 'restriction' field
+/// Transport nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransportRestriction {
+pub struct TransportOutput {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
+    /// Label for output
+    ///
+    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Result of output (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+    /// Result of output (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Result of output (canonical)
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: StringType,
+    /// Result of output (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Result of output (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Result of output (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Result of output (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Result of output (id)
+    #[serde(rename = "valueId")]
+    pub value_id: StringType,
+    /// Result of output (instant)
+    #[serde(rename = "valueInstant")]
+    pub value_instant: InstantType,
+    /// Result of output (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Result of output (integer64)
+    #[serde(rename = "valueInteger64")]
+    pub value_integer64: Integer64Type,
+    /// Result of output (markdown)
+    #[serde(rename = "valueMarkdown")]
+    pub value_markdown: StringType,
+    /// Result of output (oid)
+    #[serde(rename = "valueOid")]
+    pub value_oid: StringType,
+    /// Result of output (positiveInt)
+    #[serde(rename = "valuePositiveInt")]
+    pub value_positive_int: PositiveIntType,
+    /// Result of output (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Result of output (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Result of output (unsignedInt)
+    #[serde(rename = "valueUnsignedInt")]
+    pub value_unsigned_int: UnsignedIntType,
+    /// Result of output (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Result of output (url)
+    #[serde(rename = "valueUrl")]
+    pub value_url: StringType,
+    /// Result of output (uuid)
+    #[serde(rename = "valueUuid")]
+    pub value_uuid: StringType,
+    /// Result of output (Address)
+    #[serde(rename = "valueAddress")]
+    pub value_address: Address,
+    /// Result of output (Age)
+    #[serde(rename = "valueAge")]
+    pub value_age: Age,
+    /// Result of output (Annotation)
+    #[serde(rename = "valueAnnotation")]
+    pub value_annotation: Annotation,
+    /// Result of output (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Result of output (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Result of output (CodeableReference)
+    #[serde(rename = "valueCodeableReference")]
+    pub value_codeable_reference: CodeableReference,
+    /// Result of output (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Result of output (ContactPoint)
+    #[serde(rename = "valueContactPoint")]
+    pub value_contact_point: ContactPoint,
+    /// Result of output (Count)
+    #[serde(rename = "valueCount")]
+    pub value_count: Count,
+    /// Result of output (Distance)
+    #[serde(rename = "valueDistance")]
+    pub value_distance: Distance,
+    /// Result of output (Duration)
+    #[serde(rename = "valueDuration")]
+    pub value_duration: Duration,
+    /// Result of output (HumanName)
+    #[serde(rename = "valueHumanName")]
+    pub value_human_name: HumanName,
+    /// Result of output (Identifier)
+    #[serde(rename = "valueIdentifier")]
+    pub value_identifier: Identifier,
+    /// Result of output (Money)
+    #[serde(rename = "valueMoney")]
+    pub value_money: Money,
+    /// Result of output (Period)
+    #[serde(rename = "valuePeriod")]
+    pub value_period: Period,
+    /// Result of output (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Result of output (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Result of output (Ratio)
+    #[serde(rename = "valueRatio")]
+    pub value_ratio: Ratio,
+    /// Result of output (RatioRange)
+    #[serde(rename = "valueRatioRange")]
+    pub value_ratio_range: RatioRange,
+    /// Result of output (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Result of output (SampledData)
+    #[serde(rename = "valueSampledData")]
+    pub value_sampled_data: SampledData,
+    /// Result of output (Signature)
+    #[serde(rename = "valueSignature")]
+    pub value_signature: Signature,
+    /// Result of output (Timing)
+    #[serde(rename = "valueTiming")]
+    pub value_timing: Timing,
+    /// Result of output (ContactDetail)
+    #[serde(rename = "valueContactDetail")]
+    pub value_contact_detail: ContactDetail,
+    /// Result of output (DataRequirement)
+    #[serde(rename = "valueDataRequirement")]
+    pub value_data_requirement: DataRequirement,
+    /// Result of output (Expression)
+    #[serde(rename = "valueExpression")]
+    pub value_expression: Expression,
+    /// Result of output (ParameterDefinition)
+    #[serde(rename = "valueParameterDefinition")]
+    pub value_parameter_definition: ParameterDefinition,
+    /// Result of output (RelatedArtifact)
+    #[serde(rename = "valueRelatedArtifact")]
+    pub value_related_artifact: RelatedArtifact,
+    /// Result of output (TriggerDefinition)
+    #[serde(rename = "valueTriggerDefinition")]
+    pub value_trigger_definition: TriggerDefinition,
+    /// Result of output (UsageContext)
+    #[serde(rename = "valueUsageContext")]
+    pub value_usage_context: UsageContext,
+    /// Result of output (Availability)
+    #[serde(rename = "valueAvailability")]
+    pub value_availability: Availability,
+    /// Result of output (ExtendedContactDetail)
+    #[serde(rename = "valueExtendedContactDetail")]
+    pub value_extended_contact_detail: ExtendedContactDetail,
+    /// Result of output (Dosage)
+    #[serde(rename = "valueDosage")]
+    pub value_dosage: Dosage,
+    /// Result of output (Meta)
+    #[serde(rename = "valueMeta")]
+    pub value_meta: Meta,
 }
 
 impl Default for Transport {
@@ -595,65 +595,14 @@ impl Default for Transport {
     }
 }
 
-impl Default for TransportOutput {
+impl Default for TransportRestriction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            value_base64_binary: Default::default(),
-            value_boolean: Default::default(),
-            value_canonical: Default::default(),
-            value_code: Default::default(),
-            value_date: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-            value_id: Default::default(),
-            value_instant: Default::default(),
-            value_integer: Default::default(),
-            value_integer64: Default::default(),
-            value_markdown: Default::default(),
-            value_oid: Default::default(),
-            value_positive_int: Default::default(),
-            value_string: Default::default(),
-            value_time: Default::default(),
-            value_unsigned_int: Default::default(),
-            value_uri: Default::default(),
-            value_url: Default::default(),
-            value_uuid: Default::default(),
-            value_address: Default::default(),
-            value_age: Default::default(),
-            value_annotation: Default::default(),
-            value_attachment: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_codeable_reference: Default::default(),
-            value_coding: Default::default(),
-            value_contact_point: Default::default(),
-            value_count: Default::default(),
-            value_distance: Default::default(),
-            value_duration: Default::default(),
-            value_human_name: Default::default(),
-            value_identifier: Default::default(),
-            value_money: Default::default(),
-            value_period: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            value_ratio: Default::default(),
-            value_ratio_range: Default::default(),
-            value_reference: Default::default(),
-            value_sampled_data: Default::default(),
-            value_signature: Default::default(),
-            value_timing: Default::default(),
-            value_contact_detail: Default::default(),
-            value_data_requirement: Default::default(),
-            value_expression: Default::default(),
-            value_parameter_definition: Default::default(),
-            value_related_artifact: Default::default(),
-            value_trigger_definition: Default::default(),
-            value_usage_context: Default::default(),
-            value_availability: Default::default(),
-            value_extended_contact_detail: Default::default(),
-            value_dosage: Default::default(),
-            value_meta: Default::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }
@@ -721,14 +670,65 @@ impl Default for TransportInput {
     }
 }
 
-impl Default for TransportRestriction {
+impl Default for TransportOutput {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
+            type_: Default::default(),
+            value_base64_binary: Default::default(),
+            value_boolean: Default::default(),
+            value_canonical: Default::default(),
+            value_code: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+            value_id: Default::default(),
+            value_instant: Default::default(),
+            value_integer: Default::default(),
+            value_integer64: Default::default(),
+            value_markdown: Default::default(),
+            value_oid: Default::default(),
+            value_positive_int: Default::default(),
+            value_string: Default::default(),
+            value_time: Default::default(),
+            value_unsigned_int: Default::default(),
+            value_uri: Default::default(),
+            value_url: Default::default(),
+            value_uuid: Default::default(),
+            value_address: Default::default(),
+            value_age: Default::default(),
+            value_annotation: Default::default(),
+            value_attachment: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_codeable_reference: Default::default(),
+            value_coding: Default::default(),
+            value_contact_point: Default::default(),
+            value_count: Default::default(),
+            value_distance: Default::default(),
+            value_duration: Default::default(),
+            value_human_name: Default::default(),
+            value_identifier: Default::default(),
+            value_money: Default::default(),
+            value_period: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_ratio: Default::default(),
+            value_ratio_range: Default::default(),
+            value_reference: Default::default(),
+            value_sampled_data: Default::default(),
+            value_signature: Default::default(),
+            value_timing: Default::default(),
+            value_contact_detail: Default::default(),
+            value_data_requirement: Default::default(),
+            value_expression: Default::default(),
+            value_parameter_definition: Default::default(),
+            value_related_artifact: Default::default(),
+            value_trigger_definition: Default::default(),
+            value_usage_context: Default::default(),
+            value_availability: Default::default(),
+            value_extended_contact_detail: Default::default(),
+            value_dosage: Default::default(),
+            value_meta: Default::default(),
         }
     }
 }
@@ -983,18 +983,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Transport {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Transport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1329,33 +1317,6 @@ impl crate::traits::transport::TransportMutators for Transport {
 }
 
 impl crate::traits::transport::TransportExistence for Transport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

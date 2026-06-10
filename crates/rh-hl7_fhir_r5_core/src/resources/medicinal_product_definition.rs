@@ -169,21 +169,39 @@ pub struct MedicinalProductDefinition {
     /// Key product features such as "sugar free", "modified release"
     pub characteristic: Option<Vec<MedicinalProductDefinitionCharacteristic>>,
 }
-/// MedicinalProductDefinition nested structure for the 'crossReference' field
+/// MedicinalProductDefinitionName nested structure for the 'part' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionCrossreference {
+pub struct MedicinalProductDefinitionNamePart {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference to another product, e.g. for linking authorised to investigational product
-    pub product: CodeableReference,
-    /// The type of relationship, for instance branded to generic or virtual to actual product
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Identifying type for this part of the name (e.g. strength part)
+    ///
+    /// Binding: example (Type of part of a name for a Medicinal Product.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-part-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+}
+/// MedicinalProductDefinition nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductDefinitionContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Allows the contact to be classified, for example QPPV, Pharmacovigilance Enquiry Information
     ///
     /// Binding: example (Extra measures defined for a Medicinal Product, such as heightened reporting requirements.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-cross-reference-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-contact-type
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
+    /// A product specific contact, person (in a role), or an organization
+    pub contact: Reference,
 }
 /// MedicinalProductDefinition nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,26 +238,29 @@ pub struct MedicinalProductDefinitionCharacteristic {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Option<Attachment>,
 }
-/// MedicinalProductDefinitionName nested structure for the 'usage' field
+/// MedicinalProductDefinition nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionNameUsage {
+pub struct MedicinalProductDefinitionName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Country code for where this name applies
+    /// Coding words or phrases of the name
+    pub part: Option<Vec<MedicinalProductDefinitionNamePart>>,
+    /// Country and jurisdiction where the name applies
+    pub usage: Option<Vec<MedicinalProductDefinitionNameUsage>>,
+    /// The full product name
+    #[serde(rename = "productName")]
+    pub product_name: StringType,
+    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_productName")]
+    pub _product_name: Option<Element>,
+    /// Type of product name, such as rINN, BAN, Proprietary, Non-Proprietary
     ///
-    /// Binding: example (Jurisdiction codes)
+    /// Binding: example (Type of a name for a Medicinal Product.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/country
-    pub country: CodeableConcept,
-    /// Jurisdiction code for where this name applies
-    ///
-    /// Binding: example (Jurisdiction codes)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<CodeableConcept>,
-    /// Language code for this name
-    pub language: StringType,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
 }
 /// MedicinalProductDefinition nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,61 +284,40 @@ pub struct MedicinalProductDefinitionOperation {
     #[serde(rename = "confidentialityIndicator")]
     pub confidentiality_indicator: Option<CodeableConcept>,
 }
-/// MedicinalProductDefinition nested structure for the 'contact' field
+/// MedicinalProductDefinitionName nested structure for the 'usage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionContact {
+pub struct MedicinalProductDefinitionNameUsage {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Allows the contact to be classified, for example QPPV, Pharmacovigilance Enquiry Information
+    /// Country code for where this name applies
+    ///
+    /// Binding: example (Jurisdiction codes)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/country
+    pub country: CodeableConcept,
+    /// Jurisdiction code for where this name applies
+    ///
+    /// Binding: example (Jurisdiction codes)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
+    pub jurisdiction: Option<CodeableConcept>,
+    /// Language code for this name
+    pub language: StringType,
+}
+/// MedicinalProductDefinition nested structure for the 'crossReference' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductDefinitionCrossreference {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to another product, e.g. for linking authorised to investigational product
+    pub product: CodeableReference,
+    /// The type of relationship, for instance branded to generic or virtual to actual product
     ///
     /// Binding: example (Extra measures defined for a Medicinal Product, such as heightened reporting requirements.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-contact-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A product specific contact, person (in a role), or an organization
-    pub contact: Reference,
-}
-/// MedicinalProductDefinitionName nested structure for the 'part' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionNamePart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Identifying type for this part of the name (e.g. strength part)
-    ///
-    /// Binding: example (Type of part of a name for a Medicinal Product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-part-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-}
-/// MedicinalProductDefinition nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coding words or phrases of the name
-    pub part: Option<Vec<MedicinalProductDefinitionNamePart>>,
-    /// Country and jurisdiction where the name applies
-    pub usage: Option<Vec<MedicinalProductDefinitionNameUsage>>,
-    /// The full product name
-    #[serde(rename = "productName")]
-    pub product_name: StringType,
-    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_productName")]
-    pub _product_name: Option<Element>,
-    /// Type of product name, such as rINN, BAN, Proprietary, Non-Proprietary
-    ///
-    /// Binding: example (Type of a name for a Medicinal Product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-cross-reference-type
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
 }
@@ -363,12 +363,23 @@ impl Default for MedicinalProductDefinition {
     }
 }
 
-impl Default for MedicinalProductDefinitionCrossreference {
+impl Default for MedicinalProductDefinitionNamePart {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            product: Default::default(),
+            part: Default::default(),
+            _part: Default::default(),
             type_: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductDefinitionContact {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            contact: Reference::default(),
         }
     }
 }
@@ -389,13 +400,15 @@ impl Default for MedicinalProductDefinitionCharacteristic {
     }
 }
 
-impl Default for MedicinalProductDefinitionNameUsage {
+impl Default for MedicinalProductDefinitionName {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            country: Default::default(),
-            jurisdiction: Default::default(),
-            language: Default::default(),
+            part: Default::default(),
+            usage: Default::default(),
+            product_name: StringType::default(),
+            _product_name: Default::default(),
+            type_: Default::default(),
         }
     }
 }
@@ -412,35 +425,22 @@ impl Default for MedicinalProductDefinitionOperation {
     }
 }
 
-impl Default for MedicinalProductDefinitionContact {
+impl Default for MedicinalProductDefinitionNameUsage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            contact: Reference::default(),
+            country: Default::default(),
+            jurisdiction: Default::default(),
+            language: Default::default(),
         }
     }
 }
 
-impl Default for MedicinalProductDefinitionNamePart {
+impl Default for MedicinalProductDefinitionCrossreference {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductDefinitionName {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            usage: Default::default(),
-            product_name: StringType::default(),
-            _product_name: Default::default(),
+            product: Default::default(),
             type_: Default::default(),
         }
     }
@@ -945,18 +945,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProductDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1339,33 +1327,6 @@ impl crate::traits::medicinal_product_definition::MedicinalProductDefinitionMuta
 impl crate::traits::medicinal_product_definition::MedicinalProductDefinitionExistence
     for MedicinalProductDefinition
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

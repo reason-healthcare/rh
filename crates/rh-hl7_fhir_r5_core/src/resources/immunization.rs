@@ -172,44 +172,6 @@ pub struct Immunization {
     #[serde(rename = "protocolApplied")]
     pub protocol_applied: Option<Vec<ImmunizationProtocolapplied>>,
 }
-/// Immunization nested structure for the 'programEligibility' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationProgrameligibility {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The program that eligibility is declared for
-    ///
-    /// Binding: example (x)
-    ///
-    /// Available values:
-    /// - `64994-7`
-    pub program: CodeableConcept,
-    /// The patient's eligibility status for the program
-    ///
-    /// Binding: example (x)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
-    #[serde(rename = "programStatus")]
-    pub program_status: CodeableConcept,
-}
-/// Immunization nested structure for the 'reaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub manifestation: Option<CodeableReference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
-}
 /// Immunization nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationPerformer {
@@ -270,6 +232,44 @@ pub struct ImmunizationProtocolapplied {
     #[serde(rename = "_seriesDoses")]
     pub _series_doses: Option<Element>,
 }
+/// Immunization nested structure for the 'reaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationReaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub manifestation: Option<CodeableReference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
+}
+/// Immunization nested structure for the 'programEligibility' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationProgrameligibility {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The program that eligibility is declared for
+    ///
+    /// Binding: example (x)
+    ///
+    /// Available values:
+    /// - `64994-7`
+    pub program: CodeableConcept,
+    /// The patient's eligibility status for the program
+    ///
+    /// Binding: example (x)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
+    #[serde(rename = "programStatus")]
+    pub program_status: CodeableConcept,
+}
 
 impl Default for Immunization {
     fn default() -> Self {
@@ -313,29 +313,6 @@ impl Default for Immunization {
     }
 }
 
-impl Default for ImmunizationProgrameligibility {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            program: Default::default(),
-            program_status: Default::default(),
-        }
-    }
-}
-
-impl Default for ImmunizationReaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            manifestation: Default::default(),
-            reported: Default::default(),
-            _reported: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationPerformer {
     fn default() -> Self {
         Self {
@@ -358,6 +335,29 @@ impl Default for ImmunizationProtocolapplied {
             _dose_number: Default::default(),
             series_doses: Default::default(),
             _series_doses: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationReaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            manifestation: Default::default(),
+            reported: Default::default(),
+            _reported: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationProgrameligibility {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            program: Default::default(),
+            program_status: Default::default(),
         }
     }
 }
@@ -656,18 +656,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Immunization {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Immunization {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -973,33 +961,6 @@ impl crate::traits::immunization::ImmunizationMutators for Immunization {
 }
 
 impl crate::traits::immunization::ImmunizationExistence for Immunization {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_occurrence(&self) -> bool {
         true
     }

@@ -203,6 +203,19 @@ pub struct ServiceRequestOrderdetail {
     #[serde(rename = "parameterFocus")]
     pub parameter_focus: Option<CodeableReference>,
 }
+/// ServiceRequest nested structure for the 'patientInstruction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceRequestPatientinstruction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Patient or consumer-oriented instructions (markdown)
+    #[serde(rename = "instructionMarkdown")]
+    pub instruction_markdown: Option<StringType>,
+    /// Patient or consumer-oriented instructions (Reference)
+    #[serde(rename = "instructionReference")]
+    pub instruction_reference: Option<Reference>,
+}
 /// ServiceRequestOrderdetail nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceRequestOrderdetailParameter {
@@ -236,19 +249,6 @@ pub struct ServiceRequestOrderdetailParameter {
     /// The value for the order detail (Period)
     #[serde(rename = "valuePeriod")]
     pub value_period: Period,
-}
-/// ServiceRequest nested structure for the 'patientInstruction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceRequestPatientinstruction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Patient or consumer-oriented instructions (markdown)
-    #[serde(rename = "instructionMarkdown")]
-    pub instruction_markdown: Option<StringType>,
-    /// Patient or consumer-oriented instructions (Reference)
-    #[serde(rename = "instructionReference")]
-    pub instruction_reference: Option<Reference>,
 }
 
 impl Default for ServiceRequest {
@@ -314,6 +314,16 @@ impl Default for ServiceRequestOrderdetail {
     }
 }
 
+impl Default for ServiceRequestPatientinstruction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            instruction_markdown: Default::default(),
+            instruction_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for ServiceRequestOrderdetailParameter {
     fn default() -> Self {
         Self {
@@ -326,16 +336,6 @@ impl Default for ServiceRequestOrderdetailParameter {
             value_codeable_concept: Default::default(),
             value_string: Default::default(),
             value_period: Default::default(),
-        }
-    }
-}
-
-impl Default for ServiceRequestPatientinstruction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            instruction_markdown: Default::default(),
-            instruction_reference: Default::default(),
         }
     }
 }
@@ -629,18 +629,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ServiceRequest {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ServiceRequest {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1016,33 +1004,6 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
 }
 
 impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_quantity(&self) -> bool {
         self.quantity_quantity.is_some()
             || self.quantity_ratio.is_some()

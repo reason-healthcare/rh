@@ -260,6 +260,16 @@ impl MutatorTraitGenerator {
                         if let Some(enum_name) =
                             self.extract_enum_name_from_value_set(value_set_url)
                         {
+                            // Guard: if the binding enum has the same name as the containing
+                            // resource, fall back to String to avoid a self-referential type.
+                            let resource_name = element.path.split('.').next().unwrap_or("");
+                            if enum_name == resource_name {
+                                return TypeUtilities::map_fhir_type_to_rust(
+                                    element_type,
+                                    field_name,
+                                    &element.path,
+                                );
+                            }
                             return Ok(RustType::Custom(enum_name));
                         }
                     }

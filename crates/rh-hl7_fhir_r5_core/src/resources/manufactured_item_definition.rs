@@ -68,22 +68,6 @@ pub struct ManufacturedItemDefinition {
     /// Physical parts of the manufactured item, that it is intrisically made from. This is distinct from the ingredients that are part of its chemical makeup
     pub component: Option<Vec<ManufacturedItemDefinitionComponent>>,
 }
-/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ManufacturedItemDefinitionComponentConstituent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
-    pub amount: Option<Vec<Quantity>>,
-    /// The physical location of the constituent/ingredient within the component
-    pub location: Option<Vec<CodeableConcept>>,
-    /// The function of this constituent within the component e.g. binder
-    pub function: Option<Vec<CodeableConcept>>,
-    /// The ingredient that is the constituent of the given component
-    #[serde(rename = "hasIngredient")]
-    pub has_ingredient: Option<Vec<CodeableReference>>,
-}
 /// ManufacturedItemDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManufacturedItemDefinitionProperty {
@@ -139,6 +123,22 @@ pub struct ManufacturedItemDefinitionComponent {
     /// A component that this component contains or is made from
     pub component: Option<Vec<StringType>>,
 }
+/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ManufacturedItemDefinitionComponentConstituent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
+    pub amount: Option<Vec<Quantity>>,
+    /// The physical location of the constituent/ingredient within the component
+    pub location: Option<Vec<CodeableConcept>>,
+    /// The function of this constituent within the component e.g. binder
+    pub function: Option<Vec<CodeableConcept>>,
+    /// The ingredient that is the constituent of the given component
+    #[serde(rename = "hasIngredient")]
+    pub has_ingredient: Option<Vec<CodeableReference>>,
+}
 
 impl Default for ManufacturedItemDefinition {
     fn default() -> Self {
@@ -156,18 +156,6 @@ impl Default for ManufacturedItemDefinition {
             ingredient: Default::default(),
             property: Default::default(),
             component: Default::default(),
-        }
-    }
-}
-
-impl Default for ManufacturedItemDefinitionComponentConstituent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            amount: Default::default(),
-            location: Default::default(),
-            function: Default::default(),
-            has_ingredient: Default::default(),
         }
     }
 }
@@ -198,6 +186,18 @@ impl Default for ManufacturedItemDefinitionComponent {
             amount: Default::default(),
             property: Default::default(),
             component: Default::default(),
+        }
+    }
+}
+
+impl Default for ManufacturedItemDefinitionComponentConstituent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            amount: Default::default(),
+            location: Default::default(),
+            function: Default::default(),
+            has_ingredient: Default::default(),
         }
     }
 }
@@ -535,18 +535,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ManufacturedItem
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ManufacturedItemDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -696,33 +684,6 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionMuta
 impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionExistence
     for ManufacturedItemDefinition
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

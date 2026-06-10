@@ -72,6 +72,51 @@ pub struct AdministrableProductDefinition {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<AdministrableProductDefinitionRouteofadministration>,
 }
+/// AdministrableProductDefinition nested structure for the 'routeOfAdministration' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdministrableProductDefinitionRouteofadministration {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A species for which this route applies
+    #[serde(rename = "targetSpecies")]
+    pub target_species:
+        Option<Vec<AdministrableProductDefinitionRouteofadministrationTargetspecies>>,
+    /// Coded expression for the route
+    ///
+    /// Binding: example (A code specifying the route or physiological path of administration of a therapeutic agent into or onto a patient's body.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/route-codes
+    pub code: CodeableConcept,
+    /// The first dose (dose quantity) administered can be specified for the product
+    #[serde(rename = "firstDose")]
+    pub first_dose: Option<Quantity>,
+    /// The maximum single dose that can be administered
+    #[serde(rename = "maxSingleDose")]
+    pub max_single_dose: Option<Quantity>,
+    /// The maximum dose quantity to be administered in any one 24-h period
+    #[serde(rename = "maxDosePerDay")]
+    pub max_dose_per_day: Option<Quantity>,
+    /// The maximum dose per treatment period that can be administered
+    #[serde(rename = "maxDosePerTreatmentPeriod")]
+    pub max_dose_per_treatment_period: Option<Ratio>,
+    /// The maximum treatment period during which the product can be administered
+    #[serde(rename = "maxTreatmentPeriod")]
+    pub max_treatment_period: Option<Duration>,
+}
+/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the species
+    ///
+    /// Binding: example (A tissue type of an animal.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
+    pub code: CodeableConcept,
+}
 /// AdministrableProductDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdministrableProductDefinitionProperty {
@@ -109,51 +154,6 @@ pub struct AdministrableProductDefinitionProperty {
     /// The status of characteristic e.g. assigned or pending
     pub status: Option<CodeableConcept>,
 }
-/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the species
-    ///
-    /// Binding: example (A tissue type of an animal.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
-    pub code: CodeableConcept,
-}
-/// AdministrableProductDefinition nested structure for the 'routeOfAdministration' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdministrableProductDefinitionRouteofadministration {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A species for which this route applies
-    #[serde(rename = "targetSpecies")]
-    pub target_species:
-        Option<Vec<AdministrableProductDefinitionRouteofadministrationTargetspecies>>,
-    /// Coded expression for the route
-    ///
-    /// Binding: example (A code specifying the route or physiological path of administration of a therapeutic agent into or onto a patient's body.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/route-codes
-    pub code: CodeableConcept,
-    /// The first dose (dose quantity) administered can be specified for the product
-    #[serde(rename = "firstDose")]
-    pub first_dose: Option<Quantity>,
-    /// The maximum single dose that can be administered
-    #[serde(rename = "maxSingleDose")]
-    pub max_single_dose: Option<Quantity>,
-    /// The maximum dose quantity to be administered in any one 24-h period
-    #[serde(rename = "maxDosePerDay")]
-    pub max_dose_per_day: Option<Quantity>,
-    /// The maximum dose per treatment period that can be administered
-    #[serde(rename = "maxDosePerTreatmentPeriod")]
-    pub max_dose_per_treatment_period: Option<Ratio>,
-    /// The maximum treatment period during which the product can be administered
-    #[serde(rename = "maxTreatmentPeriod")]
-    pub max_treatment_period: Option<Duration>,
-}
 
 impl Default for AdministrableProductDefinition {
     fn default() -> Self {
@@ -176,19 +176,17 @@ impl Default for AdministrableProductDefinition {
     }
 }
 
-impl Default for AdministrableProductDefinitionProperty {
+impl Default for AdministrableProductDefinitionRouteofadministration {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_quantity: Default::default(),
-            value_date: Default::default(),
-            value_boolean: Default::default(),
-            value_markdown: Default::default(),
-            value_attachment: Default::default(),
-            value_reference: Default::default(),
-            status: Default::default(),
+            target_species: Default::default(),
+            code: Default::default(),
+            first_dose: Default::default(),
+            max_single_dose: Default::default(),
+            max_dose_per_day: Default::default(),
+            max_dose_per_treatment_period: Default::default(),
+            max_treatment_period: Default::default(),
         }
     }
 }
@@ -202,17 +200,19 @@ impl Default for AdministrableProductDefinitionRouteofadministrationTargetspecie
     }
 }
 
-impl Default for AdministrableProductDefinitionRouteofadministration {
+impl Default for AdministrableProductDefinitionProperty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            target_species: Default::default(),
-            code: Default::default(),
-            first_dose: Default::default(),
-            max_single_dose: Default::default(),
-            max_dose_per_day: Default::default(),
-            max_dose_per_treatment_period: Default::default(),
-            max_treatment_period: Default::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+            value_date: Default::default(),
+            value_boolean: Default::default(),
+            value_markdown: Default::default(),
+            value_attachment: Default::default(),
+            value_reference: Default::default(),
+            status: Default::default(),
         }
     }
 }
@@ -444,18 +444,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for AdministrablePro
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for AdministrableProductDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -616,33 +604,6 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
 impl crate::traits::administrable_product_definition::AdministrableProductDefinitionExistence
     for AdministrableProductDefinition
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

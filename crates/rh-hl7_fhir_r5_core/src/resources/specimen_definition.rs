@@ -175,6 +175,30 @@ pub struct SpecimenDefinition {
     #[serde(rename = "typeTested")]
     pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
 }
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Qualifies the interval of temperature
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range for these handling instructions
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedContainer {
@@ -275,30 +299,6 @@ pub struct SpecimenDefinitionTypetested {
     #[serde(rename = "testingDestination")]
     pub testing_destination: Option<Vec<CodeableConcept>>,
 }
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Qualifies the interval of temperature
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range for these handling instructions
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
 /// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedContainerAdditive {
@@ -368,6 +368,19 @@ impl Default for SpecimenDefinition {
     }
 }
 
+impl Default for SpecimenDefinitionTypetestedHandling {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            temperature_qualifier: Default::default(),
+            temperature_range: Default::default(),
+            max_duration: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenDefinitionTypetestedContainer {
     fn default() -> Self {
         Self {
@@ -404,19 +417,6 @@ impl Default for SpecimenDefinitionTypetested {
             _single_use: Default::default(),
             rejection_criterion: Default::default(),
             testing_destination: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetestedHandling {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            temperature_qualifier: Default::default(),
-            temperature_range: Default::default(),
-            max_duration: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
         }
     }
 }
@@ -839,18 +839,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SpecimenDefiniti
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SpecimenDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1138,38 +1126,11 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
 }
 
 impl crate::traits::specimen_definition::SpecimenDefinitionExistence for SpecimenDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_subject(&self) -> bool {
         self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
-    }
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

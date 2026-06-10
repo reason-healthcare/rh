@@ -110,37 +110,22 @@ pub struct ImagingSelection {
     /// The selected instances
     pub instance: Option<Vec<ImagingSelectionInstance>>,
 }
-/// ImagingSelection nested structure for the 'instance' field
+/// ImagingSelectionInstance nested structure for the 'imageRegion3D' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingSelectionInstance {
+pub struct ImagingSelectionInstanceImageregion3d {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A specific 2D region in a DICOM image / frame
-    #[serde(rename = "imageRegion2D")]
-    pub image_region2_d: Option<Vec<ImagingSelectionInstanceImageregion2d>>,
-    /// A specific 3D region in a DICOM frame of reference
-    #[serde(rename = "imageRegion3D")]
-    pub image_region3_d: Option<Vec<ImagingSelectionInstanceImageregion3d>>,
-    /// DICOM SOP Instance UID
-    pub uid: StringType,
-    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
-    pub _uid: Option<Element>,
-    /// DICOM Instance Number
-    pub number: Option<UnsignedIntType>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// DICOM SOP Class UID
-    ///
-    /// Binding: extensible (DICOM SOP Classes.)
-    ///
-    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
-    #[serde(rename = "sopClass")]
-    pub sop_class: Option<Coding>,
-    /// The selected subset of the SOP Instance
-    pub subset: Option<Vec<StringType>>,
-    /// Extension element for the 'subset' primitive field. Contains metadata and extensions.
-    pub _subset: Option<Element>,
+    /// point | multipoint | polyline | polygon | ellipse | ellipsoid
+    #[serde(rename = "regionType")]
+    pub region_type: Imagingselection3dgraphictype,
+    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_regionType")]
+    pub _region_type: Option<Element>,
+    /// Specifies the coordinates that define the image region
+    pub coordinate: Vec<DecimalType>,
+    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
+    pub _coordinate: Option<Element>,
 }
 /// ImagingSelection nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,22 +164,37 @@ pub struct ImagingSelectionInstanceImageregion2d {
     /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
     pub _coordinate: Option<Element>,
 }
-/// ImagingSelectionInstance nested structure for the 'imageRegion3D' field
+/// ImagingSelection nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingSelectionInstanceImageregion3d {
+pub struct ImagingSelectionInstance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// point | multipoint | polyline | polygon | ellipse | ellipsoid
-    #[serde(rename = "regionType")]
-    pub region_type: Imagingselection3dgraphictype,
-    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_regionType")]
-    pub _region_type: Option<Element>,
-    /// Specifies the coordinates that define the image region
-    pub coordinate: Vec<DecimalType>,
-    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
-    pub _coordinate: Option<Element>,
+    /// A specific 2D region in a DICOM image / frame
+    #[serde(rename = "imageRegion2D")]
+    pub image_region2_d: Option<Vec<ImagingSelectionInstanceImageregion2d>>,
+    /// A specific 3D region in a DICOM frame of reference
+    #[serde(rename = "imageRegion3D")]
+    pub image_region3_d: Option<Vec<ImagingSelectionInstanceImageregion3d>>,
+    /// DICOM SOP Instance UID
+    pub uid: StringType,
+    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
+    pub _uid: Option<Element>,
+    /// DICOM Instance Number
+    pub number: Option<UnsignedIntType>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// DICOM SOP Class UID
+    ///
+    /// Binding: extensible (DICOM SOP Classes.)
+    ///
+    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
+    #[serde(rename = "sopClass")]
+    pub sop_class: Option<Coding>,
+    /// The selected subset of the SOP Instance
+    pub subset: Option<Vec<StringType>>,
+    /// Extension element for the 'subset' primitive field. Contains metadata and extensions.
+    pub _subset: Option<Element>,
 }
 
 impl Default for ImagingSelection {
@@ -228,19 +228,14 @@ impl Default for ImagingSelection {
     }
 }
 
-impl Default for ImagingSelectionInstance {
+impl Default for ImagingSelectionInstanceImageregion3d {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            image_region2_d: Default::default(),
-            image_region3_d: Default::default(),
-            uid: StringType::default(),
-            _uid: Default::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            sop_class: Default::default(),
-            subset: Default::default(),
-            _subset: Default::default(),
+            region_type: Default::default(),
+            _region_type: Default::default(),
+            coordinate: Default::default(),
+            _coordinate: Default::default(),
         }
     }
 }
@@ -267,14 +262,19 @@ impl Default for ImagingSelectionInstanceImageregion2d {
     }
 }
 
-impl Default for ImagingSelectionInstanceImageregion3d {
+impl Default for ImagingSelectionInstance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            region_type: Default::default(),
-            _region_type: Default::default(),
-            coordinate: Default::default(),
-            _coordinate: Default::default(),
+            image_region2_d: Default::default(),
+            image_region3_d: Default::default(),
+            uid: StringType::default(),
+            _uid: Default::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            sop_class: Default::default(),
+            subset: Default::default(),
+            _subset: Default::default(),
         }
     }
 }
@@ -582,18 +582,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImagingSelection
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ImagingSelection {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -800,33 +788,6 @@ impl crate::traits::imaging_selection::ImagingSelectionMutators for ImagingSelec
 }
 
 impl crate::traits::imaging_selection::ImagingSelectionExistence for ImagingSelection {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

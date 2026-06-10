@@ -31,8 +31,11 @@ pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
         )]
     });
 
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
 pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
-    once_cell::sync::Lazy::new(Vec::new);
+    once_cell::sync::Lazy::new(|| vec![]);
 
 impl crate::validation::ValidatableResource for Base {
     fn resource_type(&self) -> &'static str {

@@ -184,6 +184,54 @@ pub struct CodeSystem {
     /// Concepts in the code system
     pub concept: Option<Vec<CodeSystemConcept>>,
 }
+/// CodeSystem nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies the filter
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// How or why the filter is used
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | child-of | descendent-leaf | exists
+    pub operator: Vec<FilterOperator>,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// What to use for the value
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// CodeSystem nested structure for the 'concept' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemConcept {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Property value for the concept
+    pub property: Option<Vec<CodeSystemConceptProperty>>,
+    /// Additional representations for the concept
+    pub designation: Option<Vec<CodeSystemConceptDesignation>>,
+    /// Code that identifies concept
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Text to display to the user
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Formal definition
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Child Concepts (is-a/contains/categorizes)
+    pub concept: Option<Vec<StringType>>,
+}
 /// CodeSystemConcept nested structure for the 'designation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeSystemConceptDesignation {
@@ -217,6 +265,30 @@ pub struct CodeSystemConceptDesignation {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
 }
+/// CodeSystem nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies the property on the concepts, and when referred to in operations
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Formal identifier for the property
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// Why the property is defined, and/or what it conveys
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// code | Coding | string | integer | boolean | dateTime | decimal
+    #[serde(rename = "type")]
+    pub type_: ConceptPropertyType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
 /// CodeSystemConcept nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeSystemConceptProperty {
@@ -248,78 +320,6 @@ pub struct CodeSystemConceptProperty {
     /// Value of the property for this concept (decimal)
     #[serde(rename = "valueDecimal")]
     pub value_decimal: DecimalType,
-}
-/// CodeSystem nested structure for the 'filter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that identifies the filter
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// How or why the filter is used
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | child-of | descendent-leaf | exists
-    pub operator: Vec<FilterOperator>,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// What to use for the value
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// CodeSystem nested structure for the 'concept' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConcept {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additional representations for the concept
-    pub designation: Option<Vec<CodeSystemConceptDesignation>>,
-    /// Property value for the concept
-    pub property: Option<Vec<CodeSystemConceptProperty>>,
-    /// Code that identifies concept
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Text to display to the user
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Formal definition
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Child Concepts (is-a/contains/categorizes)
-    pub concept: Option<Vec<StringType>>,
-}
-/// CodeSystem nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies the property on the concepts, and when referred to in operations
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Formal identifier for the property
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// Why the property is defined, and/or what it conveys
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// code | Coding | string | integer | boolean | dateTime | decimal
-    #[serde(rename = "type")]
-    pub type_: ConceptPropertyType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
 }
 
 impl Default for CodeSystem {
@@ -390,37 +390,6 @@ impl Default for CodeSystem {
     }
 }
 
-impl Default for CodeSystemConceptDesignation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            use_: Default::default(),
-            additional_use: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for CodeSystemConceptProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            value_code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_integer: Default::default(),
-            value_boolean: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-        }
-    }
-}
-
 impl Default for CodeSystemFilter {
     fn default() -> Self {
         Self {
@@ -441,8 +410,8 @@ impl Default for CodeSystemConcept {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            designation: Default::default(),
             property: Default::default(),
+            designation: Default::default(),
             code: StringType::default(),
             _code: Default::default(),
             display: Default::default(),
@@ -450,6 +419,20 @@ impl Default for CodeSystemConcept {
             definition: Default::default(),
             _definition: Default::default(),
             concept: Default::default(),
+        }
+    }
+}
+
+impl Default for CodeSystemConceptDesignation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            use_: Default::default(),
+            additional_use: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
         }
     }
 }
@@ -466,6 +449,23 @@ impl Default for CodeSystemProperty {
             _description: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
+        }
+    }
+}
+
+impl Default for CodeSystemConceptProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value_code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_integer: Default::default(),
+            value_boolean: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
         }
     }
 }
@@ -761,18 +761,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for CodeSystem {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for CodeSystem {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1159,33 +1147,6 @@ impl crate::traits::code_system::CodeSystemMutators for CodeSystem {
 }
 
 impl crate::traits::code_system::CodeSystemExistence for CodeSystem {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }

@@ -89,33 +89,6 @@ pub struct Patient {
     /// Link to a Patient or RelatedPerson resource that concerns the same actual individual
     pub link: Option<Vec<PatientLink>>,
 }
-/// Patient nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The other patient or related person resource that the link refers to
-    pub other: Reference,
-    /// replaced-by | replaces | refer | seealso
-    #[serde(rename = "type")]
-    pub type_: LinkType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// Patient nested structure for the 'communication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCommunication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The language which can be used to communicate with the patient about his or her health
-    pub language: StringType,
-    /// Language preference indicator
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
-}
 /// Patient nested structure for the 'contact' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatientContact {
@@ -142,6 +115,33 @@ pub struct PatientContact {
     pub organization: Option<Reference>,
     /// The period during which this contact person or organization is valid to be contacted relating to this patient
     pub period: Option<Period>,
+}
+/// Patient nested structure for the 'communication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCommunication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language which can be used to communicate with the patient about his or her health
+    pub language: StringType,
+    /// Language preference indicator
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+}
+/// Patient nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The other patient or related person resource that the link refers to
+    pub other: Reference,
+    /// replaced-by | replaces | refer | seealso
+    #[serde(rename = "type")]
+    pub type_: LinkType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
 }
 
 impl Default for Patient {
@@ -173,13 +173,18 @@ impl Default for Patient {
     }
 }
 
-impl Default for PatientLink {
+impl Default for PatientContact {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            other: Reference::default(),
-            type_: Default::default(),
-            _type: Default::default(),
+            relationship: Default::default(),
+            name: Default::default(),
+            telecom: Default::default(),
+            address: Default::default(),
+            gender: Default::default(),
+            _gender: Default::default(),
+            organization: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -195,18 +200,13 @@ impl Default for PatientCommunication {
     }
 }
 
-impl Default for PatientContact {
+impl Default for PatientLink {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            relationship: Default::default(),
-            name: Default::default(),
-            telecom: Default::default(),
-            address: Default::default(),
-            gender: Default::default(),
-            _gender: Default::default(),
-            organization: Default::default(),
-            period: Default::default(),
+            other: Reference::default(),
+            type_: Default::default(),
+            _type: Default::default(),
         }
     }
 }
@@ -427,18 +427,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Patient {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Patient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -629,38 +617,11 @@ impl crate::traits::patient::PatientMutators for Patient {
 }
 
 impl crate::traits::patient::PatientExistence for Patient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_multiple_birth(&self) -> bool {
+        self.multiple_birth_boolean.is_some() || self.multiple_birth_integer.is_some()
     }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some() || self.deceased_date_time.is_some()
-    }
-    fn has_multiple_birth(&self) -> bool {
-        self.multiple_birth_boolean.is_some() || self.multiple_birth_integer.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
