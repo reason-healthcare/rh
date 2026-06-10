@@ -142,14 +142,27 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
     // Create generator with ValueSet directory
     let mut generator = CodeGenerator::new_with_value_set_directory(config, effective_package_dir);
 
-    // Remove existing output directory if --force was specified and directory was non-empty
+    // Remove existing output directory if --force was specified and directory was non-empty.
+    // Preserve hand-authored directories (tests/, examples/) that codegen doesn't touch.
     if args.force && is_directory_non_empty(output_path)? {
         info!(
             "Removing existing contents of output directory: {}",
             output_path.display()
         );
         if output_path.exists() {
-            fs::remove_dir_all(output_path)?;
+            let preserved = ["tests", "examples", "benches"];
+            for entry in fs::read_dir(output_path)? {
+                let entry = entry?;
+                let name = entry.file_name();
+                if preserved.contains(&name.to_str().unwrap_or("")) {
+                    continue; // keep hand-authored directories
+                }
+                if entry.path().is_dir() {
+                    fs::remove_dir_all(entry.path())?;
+                } else {
+                    fs::remove_file(entry.path())?;
+                }
+            }
         }
     }
 
