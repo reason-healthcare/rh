@@ -66,21 +66,6 @@ pub struct DetectedIssue {
     /// Step taken to address
     pub mitigation: Option<Vec<DetectedIssueMitigation>>,
 }
-/// DetectedIssue nested structure for the 'evidence' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DetectedIssueEvidence {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation
-    ///
-    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Supporting information
-    pub detail: Option<Vec<Reference>>,
-}
 /// DetectedIssue nested structure for the 'mitigation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectedIssueMitigation {
@@ -99,6 +84,21 @@ pub struct DetectedIssueMitigation {
     pub _date: Option<Element>,
     /// Who is committing?
     pub author: Option<Reference>,
+}
+/// DetectedIssue nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedIssueEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation
+    ///
+    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    pub code: Option<Vec<CodeableConcept>>,
+    /// Supporting information
+    pub detail: Option<Vec<Reference>>,
 }
 
 impl Default for DetectedIssue {
@@ -126,16 +126,6 @@ impl Default for DetectedIssue {
     }
 }
 
-impl Default for DetectedIssueEvidence {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
 impl Default for DetectedIssueMitigation {
     fn default() -> Self {
         Self {
@@ -144,6 +134,16 @@ impl Default for DetectedIssueMitigation {
             date: Default::default(),
             _date: Default::default(),
             author: Default::default(),
+        }
+    }
+}
+
+impl Default for DetectedIssueEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
         }
     }
 }
@@ -363,18 +363,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for DetectedIssue {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for DetectedIssue {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -510,33 +498,6 @@ impl crate::traits::detected_issue::DetectedIssueMutators for DetectedIssue {
 }
 
 impl crate::traits::detected_issue::DetectedIssueExistence for DetectedIssue {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identified(&self) -> bool {
         self.identified_date_time.is_some() || self.identified_period.is_some()
     }

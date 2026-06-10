@@ -104,6 +104,22 @@ pub struct Goal {
     #[serde(rename = "outcomeReference")]
     pub outcome_reference: Option<Vec<Reference>>,
 }
+/// reason rejected
+///
+/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalReasonRejected {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Goal nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalTarget {
@@ -144,22 +160,6 @@ pub struct GoalTarget {
     #[serde(rename = "dueDuration")]
     pub due_duration: Option<Duration>,
 }
-/// related goal
-///
-/// Establishes a relationship between this goal and other goals.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Goal acceptance
 ///
 /// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
@@ -176,18 +176,18 @@ pub struct GoalAcceptance {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// reason rejected
+/// related goal
 ///
-/// The reason the goal was not accepted. Applies only if the status of the goal is rejected.
+/// Establishes a relationship between this goal and other goals.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-reasonRejected
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalReasonRejected {
+pub struct GoalRelationship {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -221,6 +221,14 @@ impl Default for Goal {
     }
 }
 
+impl Default for GoalReasonRejected {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for GoalTarget {
     fn default() -> Self {
         Self {
@@ -239,14 +247,6 @@ impl Default for GoalTarget {
     }
 }
 
-impl Default for GoalRelationship {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for GoalAcceptance {
     fn default() -> Self {
         Self {
@@ -255,7 +255,7 @@ impl Default for GoalAcceptance {
     }
 }
 
-impl Default for GoalReasonRejected {
+impl Default for GoalRelationship {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -457,18 +457,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Goal {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Goal {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -657,33 +645,6 @@ impl crate::traits::goal::GoalMutators for Goal {
 }
 
 impl crate::traits::goal::GoalExistence for Goal {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_start(&self) -> bool {
         self.start_date.is_some() || self.start_codeable_concept.is_some()
     }

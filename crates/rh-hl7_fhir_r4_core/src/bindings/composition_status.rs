@@ -7,7 +7,7 @@ pub enum CompositionStatus {
     Preliminary,
     /// Final
     #[serde(rename = "final")]
-    Final,
+    FinalValue,
     /// Amended
     #[serde(rename = "amended")]
     Amended,

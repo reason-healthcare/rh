@@ -19,7 +19,7 @@ pub enum FilterOperator {
     Regex,
     /// In Set
     #[serde(rename = "in")]
-    In,
+    InValue,
     /// Not in Set
     #[serde(rename = "not-in")]
     NotIn,

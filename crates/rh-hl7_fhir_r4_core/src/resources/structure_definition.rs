@@ -143,38 +143,6 @@ pub struct StructureDefinition {
     /// Differential view of the structure
     pub differential: Option<StructureDefinitionDifferential>,
 }
-/// StructureDefinition nested structure for the 'mapping' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionMapping {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Internal id when this mapping is used
-    pub identity: StringType,
-    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
-    pub _identity: Option<Element>,
-    /// Identifies what this mapping refers to
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// Names what this mapping refers to
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Versions, Issues, Scope limitations etc.
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-}
-/// StructureDefinition nested structure for the 'snapshot' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionSnapshot {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Definition of elements in the resource (if no StructureDefinition)
-    pub element: Vec<ElementDefinition>,
-}
 /// StructureDefinition nested structure for the 'differential' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinitionDifferential {
@@ -199,6 +167,38 @@ pub struct StructureDefinitionContext {
     pub expression: StringType,
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
     pub _expression: Option<Element>,
+}
+/// StructureDefinition nested structure for the 'snapshot' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionSnapshot {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Definition of elements in the resource (if no StructureDefinition)
+    pub element: Vec<ElementDefinition>,
+}
+/// StructureDefinition nested structure for the 'mapping' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureDefinitionMapping {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Internal id when this mapping is used
+    pub identity: StringType,
+    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
+    pub _identity: Option<Element>,
+    /// Identifies what this mapping refers to
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// Names what this mapping refers to
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Versions, Issues, Scope limitations etc.
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
 }
 
 impl Default for StructureDefinition {
@@ -254,31 +254,6 @@ impl Default for StructureDefinition {
     }
 }
 
-impl Default for StructureDefinitionMapping {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identity: StringType::default(),
-            _identity: Default::default(),
-            uri: Default::default(),
-            _uri: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-        }
-    }
-}
-
-impl Default for StructureDefinitionSnapshot {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            element: Vec::new(),
-        }
-    }
-}
-
 impl Default for StructureDefinitionDifferential {
     fn default() -> Self {
         Self {
@@ -296,6 +271,31 @@ impl Default for StructureDefinitionContext {
             _type: Default::default(),
             expression: StringType::default(),
             _expression: Default::default(),
+        }
+    }
+}
+
+impl Default for StructureDefinitionSnapshot {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            element: Vec::new(),
+        }
+    }
+}
+
+impl Default for StructureDefinitionMapping {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identity: StringType::default(),
+            _identity: Default::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
         }
     }
 }
@@ -631,18 +631,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for StructureDefinit
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for StructureDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -932,33 +920,6 @@ impl crate::traits::structure_definition::StructureDefinitionMutators for Struct
 }
 
 impl crate::traits::structure_definition::StructureDefinitionExistence for StructureDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_url(&self) -> bool {
         true
     }

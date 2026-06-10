@@ -78,25 +78,16 @@ pub struct Invoice {
     /// Comments made about the invoice
     pub note: Option<Vec<Annotation>>,
 }
-/// Invoice nested structure for the 'lineItem' field
+/// Invoice nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceLineitem {
+pub struct InvoiceParticipant {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    pub price_component: Option<Vec<InvoiceLineitemPricecomponent>>,
-    /// Sequence number of line item
-    pub sequence: Option<PositiveIntType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
-    #[serde(rename = "chargeItemReference")]
-    pub charge_item_reference: Reference,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
-    #[serde(rename = "chargeItemCodeableConcept")]
-    pub charge_item_codeable_concept: CodeableConcept,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
 }
 /// InvoiceLineitem nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,16 +109,25 @@ pub struct InvoiceLineitemPricecomponent {
     /// Monetary amount associated with this component
     pub amount: Option<Money>,
 }
-/// Invoice nested structure for the 'participant' field
+/// Invoice nested structure for the 'lineItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
+pub struct InvoiceLineitem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    pub price_component: Option<Vec<InvoiceLineitemPricecomponent>>,
+    /// Sequence number of line item
+    pub sequence: Option<PositiveIntType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
+    #[serde(rename = "chargeItemReference")]
+    pub charge_item_reference: Reference,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
+    #[serde(rename = "chargeItemCodeableConcept")]
+    pub charge_item_codeable_concept: CodeableConcept,
 }
 
 impl Default for Invoice {
@@ -158,15 +158,12 @@ impl Default for Invoice {
     }
 }
 
-impl Default for InvoiceLineitem {
+impl Default for InvoiceParticipant {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            price_component: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            charge_item_reference: Default::default(),
-            charge_item_codeable_concept: Default::default(),
+            role: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -185,12 +182,15 @@ impl Default for InvoiceLineitemPricecomponent {
     }
 }
 
-impl Default for InvoiceParticipant {
+impl Default for InvoiceLineitem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
+            price_component: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            charge_item_reference: Default::default(),
+            charge_item_codeable_concept: Default::default(),
         }
     }
 }
@@ -443,18 +443,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Invoice {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Invoice {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -635,33 +623,6 @@ impl crate::traits::invoice::InvoiceMutators for Invoice {
 }
 
 impl crate::traits::invoice::InvoiceExistence for Invoice {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

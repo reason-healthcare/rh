@@ -176,22 +176,6 @@ pub struct Procedure {
     #[serde(rename = "usedCode")]
     pub used_code: Option<Vec<CodeableConcept>>,
 }
-/// incisionDateTime
-///
-/// The time of the first incision.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureIncisionDateTime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// schedule
 ///
 /// The schedule that was followed.
@@ -204,6 +188,22 @@ pub struct ProcedureIncisionDateTime {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcedureSchedule {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// incisionDateTime
+///
+/// The time of the first incision.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-incisionDateTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureIncisionDateTime {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -239,38 +239,6 @@ pub struct ProcedureFocaldevice {
     /// Device that was changed
     pub manipulated: Reference,
 }
-/// directedBy
-///
-/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureDirectedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// causedBy
-///
-/// This procedure is because of the related item.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureCausedBy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// progressStatus
 ///
 /// A code to track a detailed progress of  a procedure (e.g. In Recovery, Prepared for Surgery).
@@ -305,18 +273,18 @@ pub struct ProcedurePerformer {
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
 }
-/// targetBodyStructure
+/// causedBy
 ///
-/// The target body site used for this procedure.  Multiple locations are allowed.
+/// This procedure is because of the related item.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-causedBy
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureTargetBodyStructure {
+pub struct ProcedureCausedBy {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -333,6 +301,38 @@ pub struct ProcedureTargetBodyStructure {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcedureApproachBodyStructure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// directedBy
+///
+/// The target of the extension is a distinct actor from the requester and has decision-making authority over the service and takes direct responsibility to manage the service.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-directedBy
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureDirectedBy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// targetBodyStructure
+///
+/// The target body site used for this procedure.  Multiple locations are allowed.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/procedure-targetBodyStructure
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureTargetBodyStructure {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -381,7 +381,7 @@ impl Default for Procedure {
     }
 }
 
-impl Default for ProcedureIncisionDateTime {
+impl Default for ProcedureSchedule {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -389,7 +389,7 @@ impl Default for ProcedureIncisionDateTime {
     }
 }
 
-impl Default for ProcedureSchedule {
+impl Default for ProcedureIncisionDateTime {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -415,22 +415,6 @@ impl Default for ProcedureFocaldevice {
     }
 }
 
-impl Default for ProcedureDirectedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ProcedureCausedBy {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for ProcedureProgressStatus {
     fn default() -> Self {
         Self {
@@ -450,7 +434,7 @@ impl Default for ProcedurePerformer {
     }
 }
 
-impl Default for ProcedureTargetBodyStructure {
+impl Default for ProcedureCausedBy {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -459,6 +443,22 @@ impl Default for ProcedureTargetBodyStructure {
 }
 
 impl Default for ProcedureApproachBodyStructure {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureDirectedBy {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ProcedureTargetBodyStructure {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -687,18 +687,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Procedure {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Procedure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1048,33 +1036,6 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
 }
 
 impl crate::traits::procedure::ProcedureExistence for Procedure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_performed(&self) -> bool {
         self.performed_date_time.is_some()
             || self.performed_period.is_some()

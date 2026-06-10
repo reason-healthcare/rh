@@ -11,6 +11,7 @@ use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
 use crate::primitives::date::DateType;
+use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
 use serde::{Deserialize, Serialize};
 /// RelatedPerson
@@ -87,7 +88,7 @@ pub struct RelatedPersonCommunication {
     /// - `el`: Greek
     /// - `en`: English
     /// - ... and 46 more values
-    pub language: CodeableConcept,
+    pub language: StringType,
     /// Language preference indicator
     pub preferred: Option<BooleanType>,
     /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
@@ -121,7 +122,7 @@ impl Default for RelatedPersonCommunication {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            language: CodeableConcept::default(),
+            language: StringType::default(),
             preferred: Default::default(),
             _preferred: Default::default(),
         }
@@ -335,18 +336,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for RelatedPerson {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for RelatedPerson {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -511,33 +500,6 @@ impl crate::traits::related_person::RelatedPersonMutators for RelatedPerson {
 }
 
 impl crate::traits::related_person::RelatedPersonExistence for RelatedPerson {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

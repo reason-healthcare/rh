@@ -114,6 +114,21 @@ pub struct Condition {
     /// Additional information about the Condition
     pub note: Option<Vec<Annotation>>,
 }
+/// Condition nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation/symptom
+    ///
+    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    pub code: Option<Vec<CodeableConcept>>,
+    /// Supporting information found elsewhere
+    pub detail: Option<Vec<Reference>>,
+}
 /// Condition nested structure for the 'stage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionStage {
@@ -137,21 +152,6 @@ pub struct ConditionStage {
     /// - `260998006`: Clinical staging (qualifier value)
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-}
-/// Condition nested structure for the 'evidence' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionEvidence {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation/symptom
-    ///
-    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Supporting information found elsewhere
-    pub detail: Option<Vec<Reference>>,
 }
 
 impl Default for Condition {
@@ -188,6 +188,16 @@ impl Default for Condition {
     }
 }
 
+impl Default for ConditionEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
 impl Default for ConditionStage {
     fn default() -> Self {
         Self {
@@ -195,16 +205,6 @@ impl Default for ConditionStage {
             summary: Default::default(),
             assessment: Default::default(),
             type_: Default::default(),
-        }
-    }
-}
-
-impl Default for ConditionEvidence {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
         }
     }
 }
@@ -414,18 +414,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Condition {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Condition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -603,33 +591,6 @@ impl crate::traits::condition::ConditionMutators for Condition {
 }
 
 impl crate::traits::condition::ConditionExistence for Condition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_onset(&self) -> bool {
         self.onset_date_time.is_some()
             || self.onset_age.is_some()

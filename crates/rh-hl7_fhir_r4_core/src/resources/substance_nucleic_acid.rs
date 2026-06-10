@@ -43,29 +43,6 @@ pub struct SubstanceNucleicAcid {
     /// Subunits are listed in order of decreasing length; sequences of the same length will be ordered by molecular weight; subunits that have identical sequences will be repeated multiple times
     pub subunit: Option<Vec<SubstanceNucleicAcidSubunit>>,
 }
-/// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunitLinkage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The entity that links the sugar residues together should also be captured for nearly all naturally occurring nucleic acid the linkage is a phosphate group. For many synthetic oligonucleotides phosphorothioate linkages are often seen. Linkage connectivity is assumed to be 3’-5’. If the linkage is either 3’-3’ or 5’-5’ this should be specified
-    pub connectivity: Option<StringType>,
-    /// Extension element for the 'connectivity' primitive field. Contains metadata and extensions.
-    pub _connectivity: Option<Element>,
-    /// Each linkage will be registered as a fragment and have an ID
-    pub identifier: Option<Identifier>,
-    /// Each linkage will be registered as a fragment and have at least one name. A single name shall be assigned to each linkage
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Residues shall be captured as described in 5.3.6.8.3
-    #[serde(rename = "residueSite")]
-    pub residue_site: Option<StringType>,
-    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_residueSite")]
-    pub _residue_site: Option<Element>,
-}
 /// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceNucleicAcidSubunitSugar {
@@ -117,6 +94,29 @@ pub struct SubstanceNucleicAcidSubunit {
     #[serde(rename = "threePrime")]
     pub three_prime: Option<CodeableConcept>,
 }
+/// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunitLinkage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The entity that links the sugar residues together should also be captured for nearly all naturally occurring nucleic acid the linkage is a phosphate group. For many synthetic oligonucleotides phosphorothioate linkages are often seen. Linkage connectivity is assumed to be 3’-5’. If the linkage is either 3’-3’ or 5’-5’ this should be specified
+    pub connectivity: Option<StringType>,
+    /// Extension element for the 'connectivity' primitive field. Contains metadata and extensions.
+    pub _connectivity: Option<Element>,
+    /// Each linkage will be registered as a fragment and have an ID
+    pub identifier: Option<Identifier>,
+    /// Each linkage will be registered as a fragment and have at least one name. A single name shall be assigned to each linkage
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Residues shall be captured as described in 5.3.6.8.3
+    #[serde(rename = "residueSite")]
+    pub residue_site: Option<StringType>,
+    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_residueSite")]
+    pub _residue_site: Option<Element>,
+}
 
 impl Default for SubstanceNucleicAcid {
     fn default() -> Self {
@@ -129,21 +129,6 @@ impl Default for SubstanceNucleicAcid {
             _area_of_hybridisation: Default::default(),
             oligo_nucleotide_type: Default::default(),
             subunit: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceNucleicAcidSubunitLinkage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            connectivity: Default::default(),
-            _connectivity: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            residue_site: Default::default(),
-            _residue_site: Default::default(),
         }
     }
 }
@@ -176,6 +161,21 @@ impl Default for SubstanceNucleicAcidSubunit {
             sequence_attachment: Default::default(),
             five_prime: Default::default(),
             three_prime: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceNucleicAcidSubunitLinkage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            connectivity: Default::default(),
+            _connectivity: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            residue_site: Default::default(),
+            _residue_site: Default::default(),
         }
     }
 }
@@ -473,18 +473,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceNucleic
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SubstanceNucleicAcid {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -557,33 +545,6 @@ impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidMutators for Sub
 }
 
 impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidExistence for SubstanceNucleicAcid {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_sequence_type(&self) -> bool {
         self.sequence_type.is_some()
     }

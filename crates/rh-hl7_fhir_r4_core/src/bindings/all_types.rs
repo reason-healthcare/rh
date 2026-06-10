@@ -637,7 +637,7 @@ pub enum AllTypes {
     VisionPrescription,
     /// Type
     #[serde(rename = "Type")]
-    Type,
+    TypeValue,
     /// Any
     #[serde(rename = "Any")]
     Any,

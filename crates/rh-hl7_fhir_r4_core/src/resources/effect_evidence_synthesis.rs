@@ -150,6 +150,77 @@ pub struct EffectEvidenceSynthesis {
     /// How certain is the effect
     pub certainty: Option<Vec<EffectEvidenceSynthesisCertainty>>,
 }
+/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
+}
+/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of subcomponent of certainty rating
+    ///
+    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Subcomponent certainty rating
+    ///
+    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
+}
+/// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisEffectestimatePrecisionestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of precision estimate
+    ///
+    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Level of confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower bound
+    pub from: Option<DecimalType>,
+    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
+    pub _from: Option<Element>,
+    /// Upper bound
+    pub to: Option<DecimalType>,
+    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
+    pub _to: Option<Element>,
+}
 /// EffectEvidenceSynthesis nested structure for the 'resultsByExposure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectEvidenceSynthesisResultsbyexposure {
@@ -176,6 +247,24 @@ pub struct EffectEvidenceSynthesisResultsbyexposure {
     /// Risk evidence synthesis
     #[serde(rename = "riskEvidenceSynthesis")]
     pub risk_evidence_synthesis: Reference,
+}
+/// EffectEvidenceSynthesis nested structure for the 'certainty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisCertainty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    pub certainty_subcomponent: Option<Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    pub rating: Option<Vec<CodeableConcept>>,
+    /// Used for footnotes or explanatory notes
+    pub note: Option<Vec<Annotation>>,
 }
 /// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,95 +300,6 @@ pub struct EffectEvidenceSynthesisEffectestimate {
     /// What unit is the outcome described in?
     #[serde(rename = "unitOfMeasure")]
     pub unit_of_measure: Option<CodeableConcept>,
-}
-/// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of subcomponent of certainty rating
-    ///
-    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Subcomponent certainty rating
-    ///
-    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-}
-/// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisEffectestimatePrecisionestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of precision estimate
-    ///
-    /// Binding: extensible (Method of reporting variability of estimates, such as confidence intervals, interquartile range or standard deviation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/precision-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Level of confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower bound
-    pub from: Option<DecimalType>,
-    /// Extension element for the 'from' primitive field. Contains metadata and extensions.
-    pub _from: Option<Element>,
-    /// Upper bound
-    pub to: Option<DecimalType>,
-    /// Extension element for the 'to' primitive field. Contains metadata and extensions.
-    pub _to: Option<Element>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'certainty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertainty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    pub certainty_subcomponent: Option<Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
 }
 
 impl Default for EffectEvidenceSynthesis {
@@ -354,32 +354,16 @@ impl Default for EffectEvidenceSynthesis {
     }
 }
 
-impl Default for EffectEvidenceSynthesisResultsbyexposure {
+impl Default for EffectEvidenceSynthesisSamplesize {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             description: Default::default(),
             _description: Default::default(),
-            exposure_state: Default::default(),
-            _exposure_state: Default::default(),
-            variant_state: Default::default(),
-            risk_evidence_synthesis: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisEffectestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            precision_estimate: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            variant_state: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            unit_of_measure: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }
@@ -391,20 +375,6 @@ impl Default for EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
             type_: Default::default(),
             rating: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
         }
     }
 }
@@ -424,6 +394,20 @@ impl Default for EffectEvidenceSynthesisEffectestimatePrecisionestimate {
     }
 }
 
+impl Default for EffectEvidenceSynthesisResultsbyexposure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            exposure_state: Default::default(),
+            _exposure_state: Default::default(),
+            variant_state: Default::default(),
+            risk_evidence_synthesis: Default::default(),
+        }
+    }
+}
+
 impl Default for EffectEvidenceSynthesisCertainty {
     fn default() -> Self {
         Self {
@@ -431,6 +415,22 @@ impl Default for EffectEvidenceSynthesisCertainty {
             certainty_subcomponent: Default::default(),
             rating: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for EffectEvidenceSynthesisEffectestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            precision_estimate: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            variant_state: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            unit_of_measure: Default::default(),
         }
     }
 }
@@ -899,18 +899,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for EffectEvidenceSy
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for EffectEvidenceSynthesis {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1290,33 +1278,6 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
 impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisExistence
     for EffectEvidenceSynthesis
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }

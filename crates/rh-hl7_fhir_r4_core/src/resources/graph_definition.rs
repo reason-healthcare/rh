@@ -87,37 +87,6 @@ pub struct GraphDefinition {
     /// Links this graph makes rules about
     pub link: Option<Vec<GraphDefinitionLink>>,
 }
-/// GraphDefinition nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Potential target for the link
-    pub target: Option<Vec<GraphDefinitionLinkTarget>>,
-    /// Path in the resource that contains the link
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Which slice (if profiled)
-    #[serde(rename = "sliceName")]
-    pub slice_name: Option<StringType>,
-    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sliceName")]
-    pub _slice_name: Option<Element>,
-    /// Minimum occurrences for this link
-    pub min: Option<IntegerType>,
-    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
-    pub _min: Option<Element>,
-    /// Maximum occurrences for this link
-    pub max: Option<StringType>,
-    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
-    pub _max: Option<Element>,
-    /// Why this link is specified
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 /// GraphDefinitionLinkTarget nested structure for the 'compartment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLinkTargetCompartment {
@@ -168,6 +137,37 @@ pub struct GraphDefinitionLinkTarget {
     /// Additional links from target resource
     pub link: Option<Vec<StringType>>,
 }
+/// GraphDefinition nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Potential target for the link
+    pub target: Option<Vec<GraphDefinitionLinkTarget>>,
+    /// Path in the resource that contains the link
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Which slice (if profiled)
+    #[serde(rename = "sliceName")]
+    pub slice_name: Option<StringType>,
+    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sliceName")]
+    pub _slice_name: Option<Element>,
+    /// Minimum occurrences for this link
+    pub min: Option<IntegerType>,
+    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
+    pub _min: Option<Element>,
+    /// Maximum occurrences for this link
+    pub max: Option<StringType>,
+    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
+    pub _max: Option<Element>,
+    /// Why this link is specified
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -203,25 +203,6 @@ impl Default for GraphDefinition {
     }
 }
 
-impl Default for GraphDefinitionLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            slice_name: Default::default(),
-            _slice_name: Default::default(),
-            min: Default::default(),
-            _min: Default::default(),
-            max: Default::default(),
-            _max: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
 impl Default for GraphDefinitionLinkTargetCompartment {
     fn default() -> Self {
         Self {
@@ -251,6 +232,25 @@ impl Default for GraphDefinitionLinkTarget {
             profile: Default::default(),
             _profile: Default::default(),
             link: Default::default(),
+        }
+    }
+}
+
+impl Default for GraphDefinitionLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            slice_name: Default::default(),
+            _slice_name: Default::default(),
+            min: Default::default(),
+            _min: Default::default(),
+            max: Default::default(),
+            _max: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
         }
     }
 }
@@ -558,18 +558,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for GraphDefinition 
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for GraphDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -740,33 +728,6 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
 }
 
 impl crate::traits::graph_definition::GraphDefinitionExistence for GraphDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }

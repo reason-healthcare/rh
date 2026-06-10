@@ -105,6 +105,41 @@ pub struct Encounter {
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
 }
+/// Encounter nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The diagnosis or procedure relevant to the encounter
+    pub condition: Reference,
+    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
+    ///
+    /// Binding: preferred (The type of diagnosis this condition represents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
+    #[serde(rename = "use")]
+    pub use_: Option<CodeableConcept>,
+    /// Ranking of the diagnosis (for each role type)
+    pub rank: Option<PositiveIntType>,
+    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
+    pub _rank: Option<Element>,
+}
+/// Encounter nested structure for the 'classHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterClasshistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// inpatient | outpatient | ambulatory | emergency +
+    ///
+    /// Binding: extensible (Classification of the encounter.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActEncounterCode
+    pub class: Coding,
+    /// The time that the episode was in the specified class
+    pub period: Period,
+}
 /// Encounter nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterParticipant {
@@ -125,26 +160,6 @@ pub struct EncounterParticipant {
     pub period: Option<Period>,
     /// Persons involved in the encounter other than the patient
     pub individual: Option<Reference>,
-}
-/// Encounter nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The diagnosis or procedure relevant to the encounter
-    pub condition: Reference,
-    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
-    ///
-    /// Binding: preferred (The type of diagnosis this condition represents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
-    #[serde(rename = "use")]
-    pub use_: Option<CodeableConcept>,
-    /// Ranking of the diagnosis (for each role type)
-    pub rank: Option<PositiveIntType>,
-    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
-    pub _rank: Option<Element>,
 }
 /// Encounter nested structure for the 'hospitalization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,34 +223,6 @@ pub struct EncounterHospitalization {
     #[serde(rename = "dischargeDisposition")]
     pub discharge_disposition: Option<CodeableConcept>,
 }
-/// Encounter nested structure for the 'classHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterClasshistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// inpatient | outpatient | ambulatory | emergency +
-    ///
-    /// Binding: extensible (Classification of the encounter.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActEncounterCode
-    pub class: Coding,
-    /// The time that the episode was in the specified class
-    pub period: Period,
-}
-/// Encounter nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
-    pub status: EncounterStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The time that the episode was in the specified status
-    pub period: Period,
-}
 /// Encounter nested structure for the 'location' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterLocation {
@@ -257,6 +244,19 @@ pub struct EncounterLocation {
     pub physical_type: Option<CodeableConcept>,
     /// Time period during which the patient was present at the location
     pub period: Option<Period>,
+}
+/// Encounter nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
+    pub status: EncounterStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The time that the episode was in the specified status
+    pub period: Period,
 }
 
 impl Default for Encounter {
@@ -291,17 +291,6 @@ impl Default for Encounter {
     }
 }
 
-impl Default for EncounterParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-            individual: Default::default(),
-        }
-    }
-}
-
 impl Default for EncounterDiagnosis {
     fn default() -> Self {
         Self {
@@ -310,6 +299,27 @@ impl Default for EncounterDiagnosis {
             use_: Default::default(),
             rank: Default::default(),
             _rank: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterClasshistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            class: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+            individual: Default::default(),
         }
     }
 }
@@ -331,11 +341,14 @@ impl Default for EncounterHospitalization {
     }
 }
 
-impl Default for EncounterClasshistory {
+impl Default for EncounterLocation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            class: Default::default(),
+            location: Reference::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            physical_type: Default::default(),
             period: Default::default(),
         }
     }
@@ -347,19 +360,6 @@ impl Default for EncounterStatushistory {
             base: BackboneElement::default(),
             status: Default::default(),
             _status: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for EncounterLocation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            location: Reference::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            physical_type: Default::default(),
             period: Default::default(),
         }
     }
@@ -669,18 +669,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Encounter {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Encounter {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -969,33 +957,6 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
 }
 
 impl crate::traits::encounter::EncounterExistence for Encounter {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

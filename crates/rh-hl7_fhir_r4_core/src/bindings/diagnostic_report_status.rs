@@ -10,7 +10,7 @@ pub enum DiagnosticReportStatus {
     Partial,
     /// Final
     #[serde(rename = "final")]
-    Final,
+    FinalValue,
     /// Amended
     #[serde(rename = "amended")]
     Amended,

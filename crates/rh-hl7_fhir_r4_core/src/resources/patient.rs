@@ -15,6 +15,7 @@ use crate::primitives::boolean::BooleanType;
 use crate::primitives::date::DateType;
 use crate::primitives::date_time::DateTimeType;
 use crate::primitives::integer::IntegerType;
+use crate::primitives::string::StringType;
 use crate::resources::domain_resource::DomainResource;
 use serde::{Deserialize, Serialize};
 /// Patient
@@ -89,18 +90,18 @@ pub struct Patient {
     /// Link to another patient resource that concerns the same actual person
     pub link: Option<Vec<PatientLink>>,
 }
-/// congregation
+/// disability
 ///
-/// A group or place of religious practice that may provide services to the patient.
+/// Value(s) identifying physical or mental condition(s) that limits a person's movements, senses, or activities.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-congregation
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-disability
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCongregation {
+pub struct PatientDisability {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -121,97 +122,32 @@ pub struct PatientCitizenship {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Patient nested structure for the 'communication' field
+/// Patient nested structure for the 'contact' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCommunication {
+pub struct PatientContact {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The language which can be used to communicate with the patient about his or her health
+    /// The kind of relationship
     ///
-    /// Binding: preferred (A human language.)
+    /// Binding: extensible (The nature of the relationship between a patient and a contact person for that patient.)
     ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `da`: Danish
-    /// - `de`: German
-    /// - `de-AT`: German (Austria)
-    /// - `de-CH`: German (Switzerland)
-    /// - `de-DE`: German (Germany)
-    /// - `el`: Greek
-    /// - `en`: English
-    /// - ... and 46 more values
-    pub language: CodeableConcept,
-    /// Language preference indicator
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
-}
-/// disability
-///
-/// Value(s) identifying physical or mental condition(s) that limits a person's movements, senses, or activities.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-disability
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientDisability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// animal
-///
-/// This patient is known to be an animal.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-animal
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientAnimal {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// genderIdentity
-///
-/// The gender the patient identifies with. The Patient's gender identity is used as guidance (e.g. for staff) about how to interact with the patient.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-genderIdentity
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientGenderIdentity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// preferenceType
-///
-/// Indicates what mode of communication the patient prefers to use for the indicated language.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-preferenceType
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientPreferenceType {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/patient-contactrelationship
+    pub relationship: Option<Vec<CodeableConcept>>,
+    /// A name associated with the contact person
+    pub name: Option<HumanName>,
+    /// A contact detail for the person
+    pub telecom: Option<Vec<ContactPoint>>,
+    /// Address for the contact person
+    pub address: Option<Address>,
+    /// male | female | other | unknown
+    pub gender: Option<AdministrativeGender>,
+    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
+    pub _gender: Option<Element>,
+    /// Organization that is associated with the contact
+    pub organization: Option<Reference>,
+    /// The period during which this contact person or organization is valid to be contacted relating to this patient
+    pub period: Option<Period>,
 }
 /// importance
 ///
@@ -245,20 +181,6 @@ pub struct PatientAdoptionInfo {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Patient nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The other patient or related person resource that the link refers to
-    pub other: Reference,
-    /// replaced-by | replaces | refer | seealso
-    #[serde(rename = "type")]
-    pub type_: LinkType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
 /// proficiency
 ///
 /// Proficiency level of the communication.
@@ -271,6 +193,22 @@ pub struct PatientLink {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatientProficiency {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// relatedPerson
+///
+/// In some cases a Patient.contact will also be populated as a RelatedPerson resource. This linkage permits the linkage between the 2 resources to be able to accurately indicate a representation of the same individual, and updating details between could be appropriate.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-relatedPerson
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientRelatedPerson {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -291,45 +229,108 @@ pub struct PatientCadavericDonor {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Patient nested structure for the 'contact' field
+/// Patient nested structure for the 'link' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientContact {
+pub struct PatientLink {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The kind of relationship
-    ///
-    /// Binding: extensible (The nature of the relationship between a patient and a contact person for that patient.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/patient-contactrelationship
-    pub relationship: Option<Vec<CodeableConcept>>,
-    /// A name associated with the contact person
-    pub name: Option<HumanName>,
-    /// A contact detail for the person
-    pub telecom: Option<Vec<ContactPoint>>,
-    /// Address for the contact person
-    pub address: Option<Address>,
-    /// male | female | other | unknown
-    pub gender: Option<AdministrativeGender>,
-    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
-    pub _gender: Option<Element>,
-    /// Organization that is associated with the contact
-    pub organization: Option<Reference>,
-    /// The period during which this contact person or organization is valid to be contacted relating to this patient
-    pub period: Option<Period>,
+    /// The other patient or related person resource that the link refers to
+    pub other: Reference,
+    /// replaced-by | replaces | refer | seealso
+    #[serde(rename = "type")]
+    pub type_: LinkType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
 }
-/// relatedPerson
+/// genderIdentity
 ///
-/// In some cases a Patient.contact will also be populated as a RelatedPerson resource. This linkage permits the linkage between the 2 resources to be able to accurately indicate a representation of the same individual, and updating details between could be appropriate.
+/// The gender the patient identifies with. The Patient's gender identity is used as guidance (e.g. for staff) about how to interact with the patient.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-relatedPerson
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-genderIdentity
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientRelatedPerson {
+pub struct PatientGenderIdentity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Patient nested structure for the 'communication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCommunication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language which can be used to communicate with the patient about his or her health
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `da`: Danish
+    /// - `de`: German
+    /// - `de-AT`: German (Austria)
+    /// - `de-CH`: German (Switzerland)
+    /// - `de-DE`: German (Germany)
+    /// - `el`: Greek
+    /// - `en`: English
+    /// - ... and 46 more values
+    pub language: StringType,
+    /// Language preference indicator
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+}
+/// animal
+///
+/// This patient is known to be an animal.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-animal
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientAnimal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// preferenceType
+///
+/// Indicates what mode of communication the patient prefers to use for the indicated language.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-preferenceType
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientPreferenceType {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// congregation
+///
+/// A group or place of religious practice that may provide services to the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-congregation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCongregation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -364,33 +365,6 @@ impl Default for Patient {
     }
 }
 
-impl Default for PatientCongregation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientCitizenship {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientCommunication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: CodeableConcept::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
-        }
-    }
-}
-
 impl Default for PatientDisability {
     fn default() -> Self {
         Self {
@@ -399,66 +373,7 @@ impl Default for PatientDisability {
     }
 }
 
-impl Default for PatientAnimal {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientGenderIdentity {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientPreferenceType {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientImportance {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientAdoptionInfo {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            other: Reference::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for PatientProficiency {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientCadavericDonor {
+impl Default for PatientCitizenship {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -482,7 +397,93 @@ impl Default for PatientContact {
     }
 }
 
+impl Default for PatientImportance {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientAdoptionInfo {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientProficiency {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for PatientRelatedPerson {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCadavericDonor {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            other: Reference::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
+impl Default for PatientGenderIdentity {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCommunication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: StringType::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
+        }
+    }
+}
+
+impl Default for PatientAnimal {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientPreferenceType {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCongregation {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -721,18 +722,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Patient {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Patient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -923,33 +912,6 @@ impl crate::traits::patient::PatientMutators for Patient {
 }
 
 impl crate::traits::patient::PatientExistence for Patient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some() || self.deceased_date_time.is_some()
     }

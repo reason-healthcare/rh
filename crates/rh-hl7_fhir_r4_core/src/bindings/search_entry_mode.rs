@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum SearchEntryMode {
     /// Match
     #[serde(rename = "match")]
-    Match,
+    MatchValue,
     /// Include
     #[serde(rename = "include")]
     Include,
@@ -14,6 +14,6 @@ pub enum SearchEntryMode {
 }
 impl Default for SearchEntryMode {
     fn default() -> Self {
-        Self::Match
+        Self::MatchValue
     }
 }

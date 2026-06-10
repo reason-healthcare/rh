@@ -41,32 +41,6 @@ pub struct MedicinalProductIngredient {
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
 }
-/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
-    /// The specified substance
-    pub code: CodeableConcept,
-    /// The group of specified substance, e.g. group 1 to 4
-    pub group: CodeableConcept,
-    /// Confidentiality level of the specified substance as the ingredient
-    pub confidentiality: Option<CodeableConcept>,
-}
-/// MedicinalProductIngredient nested structure for the 'substance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The ingredient substance
-    pub code: CodeableConcept,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<StringType>>,
-}
 /// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
@@ -88,6 +62,21 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength
     pub _measurement_point: Option<Element>,
     /// The country or countries for which the strength range applies
     pub country: Option<Vec<CodeableConcept>>,
+}
+/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
+    /// The specified substance
+    pub code: CodeableConcept,
+    /// The group of specified substance, e.g. group 1 to 4
+    pub group: CodeableConcept,
+    /// Confidentiality level of the specified substance as the ingredient
+    pub confidentiality: Option<CodeableConcept>,
 }
 /// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +103,17 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     /// The country or countries for which the strength range applies
     pub country: Option<Vec<CodeableConcept>>,
 }
+/// MedicinalProductIngredient nested structure for the 'substance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The ingredient substance
+    pub code: CodeableConcept,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    pub strength: Option<Vec<StringType>>,
+}
 
 impl Default for MedicinalProductIngredient {
     fn default() -> Self {
@@ -126,28 +126,6 @@ impl Default for MedicinalProductIngredient {
             manufacturer: Default::default(),
             specified_substance: Default::default(),
             substance: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSpecifiedsubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: Default::default(),
-            group: Default::default(),
-            confidentiality: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            strength: Default::default(),
         }
     }
 }
@@ -166,6 +144,18 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencest
     }
 }
 
+impl Default for MedicinalProductIngredientSpecifiedsubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: Default::default(),
+            group: Default::default(),
+            confidentiality: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
     fn default() -> Self {
         Self {
@@ -177,6 +167,16 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductIngredientSubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            strength: Default::default(),
         }
     }
 }
@@ -377,18 +377,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProductIngredient {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -489,33 +477,6 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientMuta
 impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientExistence
     for MedicinalProductIngredient
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.is_some()
     }

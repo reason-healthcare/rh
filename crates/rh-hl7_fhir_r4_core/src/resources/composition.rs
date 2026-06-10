@@ -89,6 +89,40 @@ pub struct Composition {
     /// Composition is broken into sections
     pub section: Option<Vec<CompositionSection>>,
 }
+/// Composition nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship (Identifier)
+    #[serde(rename = "targetIdentifier")]
+    pub target_identifier: Identifier,
+    /// Target of the relationship (Reference)
+    #[serde(rename = "targetReference")]
+    pub target_reference: Reference,
+}
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code(s) that apply to the event being documented
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    pub code: Option<Vec<CodeableConcept>>,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented
+    pub detail: Option<Vec<Reference>>,
+}
 /// Composition nested structure for the 'attester' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionAttester {
@@ -162,40 +196,6 @@ pub struct CompositionSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
-/// Composition nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code(s) that apply to the event being documented
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub code: Option<Vec<CodeableConcept>>,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented
-    pub detail: Option<Vec<Reference>>,
-}
-/// Composition nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship (Identifier)
-    #[serde(rename = "targetIdentifier")]
-    pub target_identifier: Identifier,
-    /// Target of the relationship (Reference)
-    #[serde(rename = "targetReference")]
-    pub target_reference: Reference,
-}
 
 impl Default for Composition {
     fn default() -> Self {
@@ -220,6 +220,29 @@ impl Default for Composition {
             relates_to: Default::default(),
             event: Default::default(),
             section: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target_identifier: Default::default(),
+            target_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionEvent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            period: Default::default(),
+            detail: Default::default(),
         }
     }
 }
@@ -253,29 +276,6 @@ impl Default for CompositionSection {
             entry: Default::default(),
             empty_reason: Default::default(),
             section: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionEvent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            period: Default::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target_identifier: Default::default(),
-            target_reference: Default::default(),
         }
     }
 }
@@ -539,18 +539,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Composition {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Composition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -728,33 +716,6 @@ impl crate::traits::composition::CompositionMutators for Composition {
 }
 
 impl crate::traits::composition::CompositionExistence for Composition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.is_some()
     }

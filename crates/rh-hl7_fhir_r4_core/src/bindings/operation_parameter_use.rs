@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 pub enum OperationParameterUse {
     /// In
     #[serde(rename = "in")]
-    In,
+    InValue,
     /// Out
     #[serde(rename = "out")]
     Out,
 }
 impl Default for OperationParameterUse {
     fn default() -> Self {
-        Self::In
+        Self::InValue
     }
 }

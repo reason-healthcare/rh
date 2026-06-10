@@ -223,29 +223,6 @@ pub struct RiskEvidenceSynthesisRiskestimate {
     #[serde(rename = "_numeratorCount")]
     pub _numerator_count: Option<Element>,
 }
-/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-}
 /// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
@@ -271,6 +248,29 @@ pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     pub to: Option<DecimalType>,
     /// Extension element for the 'to' primitive field. Contains metadata and extensions.
     pub _to: Option<Element>,
+}
+/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
 }
 
 impl Default for RiskEvidenceSynthesis {
@@ -364,20 +364,6 @@ impl Default for RiskEvidenceSynthesisRiskestimate {
     }
 }
 
-impl Default for RiskEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
-        }
-    }
-}
-
 impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     fn default() -> Self {
         Self {
@@ -389,6 +375,20 @@ impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
             _from: Default::default(),
             to: Default::default(),
             _to: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisSamplesize {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }
@@ -810,18 +810,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for RiskEvidenceSynt
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for RiskEvidenceSynthesis {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1169,33 +1157,6 @@ impl crate::traits::risk_evidence_synthesis::RiskEvidenceSynthesisMutators
 impl crate::traits::risk_evidence_synthesis::RiskEvidenceSynthesisExistence
     for RiskEvidenceSynthesis
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }

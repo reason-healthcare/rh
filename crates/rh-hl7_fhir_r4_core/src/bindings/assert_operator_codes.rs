@@ -10,7 +10,7 @@ pub enum AssertOperatorCodes {
     NotEquals,
     /// in
     #[serde(rename = "in")]
-    In,
+    InValue,
     /// notIn
     #[serde(rename = "notIn")]
     NotIn,

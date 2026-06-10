@@ -61,19 +61,6 @@ pub struct Account {
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
 }
-/// Account nested structure for the 'coverage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountCoverage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The party(s), such as insurances, that may contribute to the payment of this account
-    pub coverage: Reference,
-    /// The priority of the coverage in the context of this account
-    pub priority: Option<PositiveIntType>,
-    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
-    pub _priority: Option<Element>,
-}
 /// Account nested structure for the 'guarantor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountGuarantor {
@@ -90,6 +77,19 @@ pub struct AccountGuarantor {
     pub _on_hold: Option<Element>,
     /// Guarantee account during
     pub period: Option<Period>,
+}
+/// Account nested structure for the 'coverage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountCoverage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The party(s), such as insurances, that may contribute to the payment of this account
+    pub coverage: Reference,
+    /// The priority of the coverage in the context of this account
+    pub priority: Option<PositiveIntType>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
 }
 
 impl Default for Account {
@@ -114,17 +114,6 @@ impl Default for Account {
     }
 }
 
-impl Default for AccountCoverage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            coverage: Reference::default(),
-            priority: Default::default(),
-            _priority: Default::default(),
-        }
-    }
-}
-
 impl Default for AccountGuarantor {
     fn default() -> Self {
         Self {
@@ -133,6 +122,17 @@ impl Default for AccountGuarantor {
             on_hold: Default::default(),
             _on_hold: Default::default(),
             period: Default::default(),
+        }
+    }
+}
+
+impl Default for AccountCoverage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            coverage: Reference::default(),
+            priority: Default::default(),
+            _priority: Default::default(),
         }
     }
 }
@@ -333,18 +333,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Account {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Account {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -480,33 +468,6 @@ impl crate::traits::account::AccountMutators for Account {
 }
 
 impl crate::traits::account::AccountExistence for Account {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

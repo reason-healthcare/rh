@@ -19,7 +19,7 @@ pub enum SearchModifierCode {
     Text,
     /// In
     #[serde(rename = "in")]
-    In,
+    InValue,
     /// Not In
     #[serde(rename = "not-in")]
     NotIn,
@@ -31,7 +31,7 @@ pub enum SearchModifierCode {
     Above,
     /// Type
     #[serde(rename = "type")]
-    Type,
+    TypeValue,
     /// Identifier
     #[serde(rename = "identifier")]
     Identifier,

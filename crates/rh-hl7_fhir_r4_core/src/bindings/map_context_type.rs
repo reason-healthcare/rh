@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 pub enum MapContextType {
     /// Type
     #[serde(rename = "type")]
-    Type,
+    TypeValue,
     /// Variable
     #[serde(rename = "variable")]
     Variable,
 }
 impl Default for MapContextType {
     fn default() -> Self {
-        Self::Type
+        Self::TypeValue
     }
 }

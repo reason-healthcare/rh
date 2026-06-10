@@ -73,6 +73,21 @@ pub struct Provenance {
     /// Signature on target
     pub signature: Option<Vec<Signature>>,
 }
+/// Provenance nested structure for the 'entity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEntity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// derivation | revision | quotation | source | removal
+    pub role: ProvenanceEntityRole,
+    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
+    pub _role: Option<Element>,
+    /// Identity of entity
+    pub what: Reference,
+    /// Entity is attributed to this agent
+    pub agent: Option<Vec<StringType>>,
+}
 /// Provenance nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProvenanceAgent {
@@ -109,21 +124,6 @@ pub struct ProvenanceAgent {
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
 }
-/// Provenance nested structure for the 'entity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProvenanceEntity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// derivation | revision | quotation | source | removal
-    pub role: ProvenanceEntityRole,
-    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
-    pub _role: Option<Element>,
-    /// Identity of entity
-    pub what: Reference,
-    /// Entity is attributed to this agent
-    pub agent: Option<Vec<StringType>>,
-}
 
 impl Default for Provenance {
     fn default() -> Self {
@@ -146,18 +146,6 @@ impl Default for Provenance {
     }
 }
 
-impl Default for ProvenanceAgent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            role: Default::default(),
-            who: Reference::default(),
-            on_behalf_of: Default::default(),
-        }
-    }
-}
-
 impl Default for ProvenanceEntity {
     fn default() -> Self {
         Self {
@@ -166,6 +154,18 @@ impl Default for ProvenanceEntity {
             _role: Default::default(),
             what: Reference::default(),
             agent: Default::default(),
+        }
+    }
+}
+
+impl Default for ProvenanceAgent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            role: Default::default(),
+            who: Reference::default(),
+            on_behalf_of: Default::default(),
         }
     }
 }
@@ -367,18 +367,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Provenance {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Provenance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -508,33 +496,6 @@ impl crate::traits::provenance::ProvenanceMutators for Provenance {
 }
 
 impl crate::traits::provenance::ProvenanceExistence for Provenance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_occurred(&self) -> bool {
         self.occurred_period.is_some() || self.occurred_date_time.is_some()
     }

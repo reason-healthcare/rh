@@ -62,21 +62,6 @@ pub struct Group {
     /// Who or what is in group
     pub member: Option<Vec<GroupMember>>,
 }
-/// Group nested structure for the 'member' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GroupMember {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the group member
-    pub entity: Reference,
-    /// Period member belonged to the group
-    pub period: Option<Period>,
-    /// If member is no longer in group
-    pub inactive: Option<BooleanType>,
-    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
-    pub _inactive: Option<Element>,
-}
 /// Group nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupCharacteristic {
@@ -109,6 +94,21 @@ pub struct GroupCharacteristic {
     /// Period over which characteristic is tested
     pub period: Option<Period>,
 }
+/// Group nested structure for the 'member' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupMember {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the group member
+    pub entity: Reference,
+    /// Period member belonged to the group
+    pub period: Option<Period>,
+    /// If member is no longer in group
+    pub inactive: Option<BooleanType>,
+    /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
+    pub _inactive: Option<Element>,
+}
 
 impl Default for Group {
     fn default() -> Self {
@@ -133,18 +133,6 @@ impl Default for Group {
     }
 }
 
-impl Default for GroupMember {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            entity: Reference::default(),
-            period: Default::default(),
-            inactive: Default::default(),
-            _inactive: Default::default(),
-        }
-    }
-}
-
 impl Default for GroupCharacteristic {
     fn default() -> Self {
         Self {
@@ -158,6 +146,18 @@ impl Default for GroupCharacteristic {
             exclude: BooleanType::default(),
             _exclude: Default::default(),
             period: Default::default(),
+        }
+    }
+}
+
+impl Default for GroupMember {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            entity: Reference::default(),
+            period: Default::default(),
+            inactive: Default::default(),
+            _inactive: Default::default(),
         }
     }
 }
@@ -364,18 +364,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Group {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Group {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -501,33 +489,6 @@ impl crate::traits::group::GroupMutators for Group {
 }
 
 impl crate::traits::group::GroupExistence for Group {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

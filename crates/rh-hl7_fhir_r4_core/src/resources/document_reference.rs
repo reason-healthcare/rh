@@ -109,6 +109,34 @@ pub struct DocumentReference {
     /// Clinical context of document
     pub context: Option<DocumentReferenceContext>,
 }
+/// DocumentReference nested structure for the 'content' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Where to access the document
+    pub attachment: Attachment,
+    /// Format/content rules for the document
+    ///
+    /// Binding: preferred (Document Format Codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
+    pub format: Option<Coding>,
+}
+/// DocumentReference nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship
+    pub target: Reference,
+}
 /// DocumentReference nested structure for the 'context' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReferenceContext {
@@ -167,34 +195,6 @@ pub struct DocumentReferenceContext {
     /// Related identifiers or resources
     pub related: Option<Vec<Reference>>,
 }
-/// DocumentReference nested structure for the 'content' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Where to access the document
-    pub attachment: Attachment,
-    /// Format/content rules for the document
-    ///
-    /// Binding: preferred (Document Format Codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/formatcodes
-    pub format: Option<Coding>,
-}
-/// DocumentReference nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship
-    pub target: Reference,
-}
 
 impl Default for DocumentReference {
     fn default() -> Self {
@@ -224,21 +224,6 @@ impl Default for DocumentReference {
     }
 }
 
-impl Default for DocumentReferenceContext {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            encounter: Default::default(),
-            event: Default::default(),
-            period: Default::default(),
-            facility_type: Default::default(),
-            practice_setting: Default::default(),
-            source_patient_info: Default::default(),
-            related: Default::default(),
-        }
-    }
-}
-
 impl Default for DocumentReferenceContent {
     fn default() -> Self {
         Self {
@@ -256,6 +241,21 @@ impl Default for DocumentReferenceRelatesto {
             code: Default::default(),
             _code: Default::default(),
             target: Default::default(),
+        }
+    }
+}
+
+impl Default for DocumentReferenceContext {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            encounter: Default::default(),
+            event: Default::default(),
+            period: Default::default(),
+            facility_type: Default::default(),
+            practice_setting: Default::default(),
+            source_patient_info: Default::default(),
+            related: Default::default(),
         }
     }
 }
@@ -524,18 +524,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for DocumentReferenc
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for DocumentReference {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -724,33 +712,6 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
 }
 
 impl crate::traits::document_reference::DocumentReferenceExistence for DocumentReference {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_master_identifier(&self) -> bool {
         self.master_identifier.is_some()
     }

@@ -99,6 +99,42 @@ pub struct RequestGroup {
     /// Proposed actions, if any
     pub action: Option<Vec<RequestGroupAction>>,
 }
+/// RequestGroupAction nested structure for the 'condition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestGroupActionCondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// applicability | start | stop
+    pub kind: ActionConditionKind,
+    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
+    pub _kind: Option<Element>,
+    /// Boolean-valued expression
+    pub expression: Option<Expression>,
+}
+/// RequestGroupAction nested structure for the 'relatedAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestGroupActionRelatedaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What action this is related to
+    #[serde(rename = "actionId")]
+    pub action_id: StringType,
+    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actionId")]
+    pub _action_id: Option<Element>,
+    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
+}
 /// RequestGroup nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestGroupAction {
@@ -198,42 +234,6 @@ pub struct RequestGroupAction {
     /// Sub action
     pub action: Option<Vec<StringType>>,
 }
-/// RequestGroupAction nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestGroupActionCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// applicability | start | stop
-    pub kind: ActionConditionKind,
-    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
-    pub _kind: Option<Element>,
-    /// Boolean-valued expression
-    pub expression: Option<Expression>,
-}
-/// RequestGroupAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestGroupActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action this is related to
-    #[serde(rename = "actionId")]
-    pub action_id: StringType,
-    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actionId")]
-    pub _action_id: Option<Element>,
-    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
-}
 
 impl Default for RequestGroup {
     fn default() -> Self {
@@ -263,6 +263,31 @@ impl Default for RequestGroup {
             reason_reference: Default::default(),
             note: Default::default(),
             action: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestGroupActionCondition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            kind: Default::default(),
+            _kind: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestGroupActionRelatedaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action_id: Default::default(),
+            _action_id: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            offset_duration: Default::default(),
+            offset_range: Default::default(),
         }
     }
 }
@@ -305,31 +330,6 @@ impl Default for RequestGroupAction {
             _cardinality_behavior: Default::default(),
             resource: Default::default(),
             action: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestGroupActionCondition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            kind: Default::default(),
-            _kind: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestGroupActionRelatedaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action_id: Default::default(),
-            _action_id: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            offset_duration: Default::default(),
-            offset_range: Default::default(),
         }
     }
 }
@@ -635,18 +635,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for RequestGroup {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for RequestGroup {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -872,33 +860,6 @@ impl crate::traits::request_group::RequestGroupMutators for RequestGroup {
 }
 
 impl crate::traits::request_group::RequestGroupExistence for RequestGroup {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

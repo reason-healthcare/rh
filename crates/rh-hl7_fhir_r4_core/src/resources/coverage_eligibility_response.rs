@@ -101,6 +101,19 @@ pub struct CoverageEligibilityResponseInsurance {
     #[serde(rename = "benefitPeriod")]
     pub benefit_period: Option<Period>,
 }
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -210,19 +223,6 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
 
 impl Default for CoverageEligibilityResponse {
     fn default() -> Self {
@@ -267,6 +267,15 @@ impl Default for CoverageEligibilityResponseInsurance {
     }
 }
 
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
@@ -304,15 +313,6 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
             authorization_supporting: Default::default(),
             authorization_url: Default::default(),
             _authorization_url: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
         }
     }
 }
@@ -759,18 +759,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for CoverageEligibil
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for CoverageEligibilityResponse {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -936,33 +924,6 @@ impl crate::traits::coverage_eligibility_response::CoverageEligibilityResponseMu
 impl crate::traits::coverage_eligibility_response::CoverageEligibilityResponseExistence
     for CoverageEligibilityResponse
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_serviced(&self) -> bool {
         self.serviced_date.is_some() || self.serviced_period.is_some()
     }

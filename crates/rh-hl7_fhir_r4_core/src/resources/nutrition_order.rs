@@ -94,23 +94,40 @@ pub struct NutritionOrder {
     /// Comments
     pub note: Option<Vec<Annotation>>,
 }
-/// NutritionOrderOraldiet nested structure for the 'nutrient' field
+/// NutritionOrder nested structure for the 'oralDiet' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldietNutrient {
+pub struct NutritionOrderOraldiet {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of nutrient that is being modified
+    /// Required  texture modifications
+    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
+    /// Required  nutrient modifications
+    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
+    /// Type of oral diet or diet restrictions that describe what can be consumed orally
     ///
-    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
+    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Scheduled frequency of diet
+    pub schedule: Option<Vec<Timing>>,
+    /// The required consistency of fluids and liquids provided to the patient
+    ///
+    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
     ///
     /// Available values:
-    /// - `33463005`: Fluid
-    /// - `39972003`: Sodium
-    /// - `88480006`: Potassium
-    pub modifier: Option<CodeableConcept>,
-    /// Quantity of the specified nutrient
-    pub amount: Option<Quantity>,
+    /// - `439031000124108`: honey thick liquid
+    /// - `439021000124105`: nectar thick liquid
+    /// - `439041000124103`: spoon thick liquid
+    /// - `439081000124109`: thin liquid
+    #[serde(rename = "fluidConsistencyType")]
+    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
+    /// Instructions or additional information about the oral diet
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
 }
 /// NutritionOrder nested structure for the 'supplement' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,6 +167,83 @@ pub struct NutritionOrderSupplement {
     pub instruction: Option<StringType>,
     /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
     pub _instruction: Option<Element>,
+}
+/// NutritionOrderEnteralformula nested structure for the 'administration' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderEnteralformulaAdministration {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Scheduled frequency of enteral feeding
+    pub schedule: Option<Timing>,
+    /// The volume of formula to provide
+    pub quantity: Option<Quantity>,
+    /// Speed with which the formula is provided per period of time (Quantity)
+    #[serde(rename = "rateQuantity")]
+    pub rate_quantity: Option<Quantity>,
+    /// Speed with which the formula is provided per period of time (Ratio)
+    #[serde(rename = "rateRatio")]
+    pub rate_ratio: Option<Ratio>,
+}
+/// NutritionOrderOraldiet nested structure for the 'nutrient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldietNutrient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of nutrient that is being modified
+    ///
+    /// Binding: example (Codes for types of nutrients that are being modified such as carbohydrate or sodium.)
+    ///
+    /// Available values:
+    /// - `33463005`: Fluid
+    /// - `39972003`: Sodium
+    /// - `88480006`: Potassium
+    pub modifier: Option<CodeableConcept>,
+    /// Quantity of the specified nutrient
+    pub amount: Option<Quantity>,
+}
+/// NutritionOrderOraldiet nested structure for the 'texture' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionOrderOraldietTexture {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code to indicate how to alter the texture of the foods, e.g. pureed
+    ///
+    /// Binding: example (Codes for food consistency types or texture modifications to apply to foods.)
+    ///
+    /// Available values:
+    /// - `228053002`: Cut-up food
+    /// - `439091000124107`: Easy to chew food
+    /// - `228049004`: Chopped food
+    /// - `441881000124103`: Ground food
+    /// - `441761000124103`: Minced food
+    /// - `441751000124100`: Mashed food
+    /// - `228059003`: Soft food
+    /// - `441791000124106`: Strained food
+    /// - `228055009`: Liquidized food
+    /// - `228056005`: Lumpy food
+    /// - ... and 4 more values
+    pub modifier: Option<CodeableConcept>,
+    /// Concepts that are used to identify an entity that is ingested for nutritional purposes
+    ///
+    /// Binding: example (Codes for types of foods that are texture-modified.)
+    ///
+    /// Available values:
+    /// - `255620007`: Foods
+    /// - `28647000`: Meat
+    /// - `22836000`: Vegetables
+    /// - `72511004`: Fruit
+    /// - `226760005`: Dairy foods
+    /// - `226887002`: Dietary Fats and Oils
+    /// - `102263004`: Eggs
+    /// - `74242007`: Food Starch
+    /// - `227415002`: Fruit Nuts and Seeds
+    /// - `264331002`: Grain
+    /// - ... and 4 more values
+    #[serde(rename = "foodType")]
+    pub food_type: Option<CodeableConcept>,
 }
 /// NutritionOrder nested structure for the 'enteralFormula' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,100 +319,6 @@ pub struct NutritionOrderEnteralformula {
     #[serde(rename = "_administrationInstruction")]
     pub _administration_instruction: Option<Element>,
 }
-/// NutritionOrder nested structure for the 'oralDiet' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldiet {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Required  nutrient modifications
-    pub nutrient: Option<Vec<NutritionOrderOraldietNutrient>>,
-    /// Required  texture modifications
-    pub texture: Option<Vec<NutritionOrderOraldietTexture>>,
-    /// Type of oral diet or diet restrictions that describe what can be consumed orally
-    ///
-    /// Binding: example (Codes used to indicate the type of diet being ordered for a patient.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diet-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Scheduled frequency of diet
-    pub schedule: Option<Vec<Timing>>,
-    /// The required consistency of fluids and liquids provided to the patient
-    ///
-    /// Binding: example (Codes used to represent the consistency of fluids and liquids provided to the patient.)
-    ///
-    /// Available values:
-    /// - `439031000124108`: honey thick liquid
-    /// - `439021000124105`: nectar thick liquid
-    /// - `439041000124103`: spoon thick liquid
-    /// - `439081000124109`: thin liquid
-    #[serde(rename = "fluidConsistencyType")]
-    pub fluid_consistency_type: Option<Vec<CodeableConcept>>,
-    /// Instructions or additional information about the oral diet
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// NutritionOrderOraldiet nested structure for the 'texture' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderOraldietTexture {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code to indicate how to alter the texture of the foods, e.g. pureed
-    ///
-    /// Binding: example (Codes for food consistency types or texture modifications to apply to foods.)
-    ///
-    /// Available values:
-    /// - `228053002`: Cut-up food
-    /// - `439091000124107`: Easy to chew food
-    /// - `228049004`: Chopped food
-    /// - `441881000124103`: Ground food
-    /// - `441761000124103`: Minced food
-    /// - `441751000124100`: Mashed food
-    /// - `228059003`: Soft food
-    /// - `441791000124106`: Strained food
-    /// - `228055009`: Liquidized food
-    /// - `228056005`: Lumpy food
-    /// - ... and 4 more values
-    pub modifier: Option<CodeableConcept>,
-    /// Concepts that are used to identify an entity that is ingested for nutritional purposes
-    ///
-    /// Binding: example (Codes for types of foods that are texture-modified.)
-    ///
-    /// Available values:
-    /// - `255620007`: Foods
-    /// - `28647000`: Meat
-    /// - `22836000`: Vegetables
-    /// - `72511004`: Fruit
-    /// - `226760005`: Dairy foods
-    /// - `226887002`: Dietary Fats and Oils
-    /// - `102263004`: Eggs
-    /// - `74242007`: Food Starch
-    /// - `227415002`: Fruit Nuts and Seeds
-    /// - `264331002`: Grain
-    /// - ... and 4 more values
-    #[serde(rename = "foodType")]
-    pub food_type: Option<CodeableConcept>,
-}
-/// NutritionOrderEnteralformula nested structure for the 'administration' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionOrderEnteralformulaAdministration {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Scheduled frequency of enteral feeding
-    pub schedule: Option<Timing>,
-    /// The volume of formula to provide
-    pub quantity: Option<Quantity>,
-    /// Speed with which the formula is provided per period of time (Quantity)
-    #[serde(rename = "rateQuantity")]
-    pub rate_quantity: Option<Quantity>,
-    /// Speed with which the formula is provided per period of time (Ratio)
-    #[serde(rename = "rateRatio")]
-    pub rate_ratio: Option<Ratio>,
-}
 
 impl Default for NutritionOrder {
     fn default() -> Self {
@@ -351,12 +351,17 @@ impl Default for NutritionOrder {
     }
 }
 
-impl Default for NutritionOrderOraldietNutrient {
+impl Default for NutritionOrderOraldiet {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            modifier: Default::default(),
-            amount: Default::default(),
+            texture: Default::default(),
+            nutrient: Default::default(),
+            type_: Default::default(),
+            schedule: Default::default(),
+            fluid_consistency_type: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
         }
     }
 }
@@ -372,6 +377,38 @@ impl Default for NutritionOrderSupplement {
             quantity: Default::default(),
             instruction: Default::default(),
             _instruction: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionOrderEnteralformulaAdministration {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            schedule: Default::default(),
+            quantity: Default::default(),
+            rate_quantity: Default::default(),
+            rate_ratio: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionOrderOraldietNutrient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            modifier: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionOrderOraldietTexture {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            modifier: Default::default(),
+            food_type: Default::default(),
         }
     }
 }
@@ -392,43 +429,6 @@ impl Default for NutritionOrderEnteralformula {
             max_volume_to_deliver: Default::default(),
             administration_instruction: Default::default(),
             _administration_instruction: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionOrderOraldiet {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            nutrient: Default::default(),
-            texture: Default::default(),
-            type_: Default::default(),
-            schedule: Default::default(),
-            fluid_consistency_type: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionOrderOraldietTexture {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            modifier: Default::default(),
-            food_type: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionOrderEnteralformulaAdministration {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            schedule: Default::default(),
-            quantity: Default::default(),
-            rate_quantity: Default::default(),
-            rate_ratio: Default::default(),
         }
     }
 }
@@ -808,18 +808,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for NutritionOrder {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for NutritionOrder {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1046,33 +1034,6 @@ impl crate::traits::nutrition_order::NutritionOrderMutators for NutritionOrder {
 }
 
 impl crate::traits::nutrition_order::NutritionOrderExistence for NutritionOrder {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

@@ -110,6 +110,37 @@ pub struct DeviceDefinition {
     /// A substance used to create the material(s) of which the device is made
     pub material: Option<Vec<DeviceDefinitionMaterial>>,
 }
+/// DeviceDefinition nested structure for the 'material' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionMaterial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The substance
+    pub substance: CodeableConcept,
+    /// Indicates an alternative material of the device
+    pub alternate: Option<BooleanType>,
+    /// Extension element for the 'alternate' primitive field. Contains metadata and extensions.
+    pub _alternate: Option<Element>,
+    /// Whether the substance is a known or suspected allergen
+    #[serde(rename = "allergenicIndicator")]
+    pub allergenic_indicator: Option<BooleanType>,
+    /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_allergenicIndicator")]
+    pub _allergenic_indicator: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'capability' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionCapability {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of capability
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Description of capability
+    pub description: Option<Vec<CodeableConcept>>,
+}
 /// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionUdideviceidentifier {
@@ -180,37 +211,6 @@ pub struct DeviceDefinitionDevicename {
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
 }
-/// DeviceDefinition nested structure for the 'capability' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionCapability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of capability
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Description of capability
-    pub description: Option<Vec<CodeableConcept>>,
-}
-/// DeviceDefinition nested structure for the 'material' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionMaterial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The substance
-    pub substance: CodeableConcept,
-    /// Indicates an alternative material of the device
-    pub alternate: Option<BooleanType>,
-    /// Extension element for the 'alternate' primitive field. Contains metadata and extensions.
-    pub _alternate: Option<Element>,
-    /// Whether the substance is a known or suspected allergen
-    #[serde(rename = "allergenicIndicator")]
-    pub allergenic_indicator: Option<BooleanType>,
-    /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_allergenicIndicator")]
-    pub _allergenic_indicator: Option<Element>,
-}
 
 impl Default for DeviceDefinition {
     fn default() -> Self {
@@ -243,6 +243,29 @@ impl Default for DeviceDefinition {
             quantity: Default::default(),
             parent_device: Default::default(),
             material: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionMaterial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substance: CodeableConcept::default(),
+            alternate: Default::default(),
+            _alternate: Default::default(),
+            allergenic_indicator: Default::default(),
+            _allergenic_indicator: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionCapability {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            description: Default::default(),
         }
     }
 }
@@ -292,29 +315,6 @@ impl Default for DeviceDefinitionDevicename {
             _name: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionCapability {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            description: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionMaterial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance: CodeableConcept::default(),
-            alternate: Default::default(),
-            _alternate: Default::default(),
-            allergenic_indicator: Default::default(),
-            _allergenic_indicator: Default::default(),
         }
     }
 }
@@ -644,18 +644,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for DeviceDefinition
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for DeviceDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -928,33 +916,6 @@ impl crate::traits::device_definition::DeviceDefinitionMutators for DeviceDefini
 }
 
 impl crate::traits::device_definition::DeviceDefinitionExistence for DeviceDefinition {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_manufacturer(&self) -> bool {
         self.manufacturer_string.is_some() || self.manufacturer_reference.is_some()
     }

@@ -40,6 +40,37 @@ pub struct SubstancePolymer {
     /// Todo
     pub repeat: Option<Vec<SubstancePolymerRepeat>>,
 }
+/// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub degree: Option<CodeableConcept>,
+    /// Todo
+    pub amount: Option<SubstanceAmount>,
+}
+/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomersetStartingmaterial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub material: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "isDefining")]
+    pub is_defining: Option<BooleanType>,
+    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDefining")]
+    pub _is_defining: Option<Element>,
+    /// Todo
+    pub amount: Option<SubstanceAmount>,
+}
 /// SubstancePolymerRepeatRepeatunit nested structure for the 'structuralRepresentation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
@@ -55,6 +86,24 @@ pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
     pub _representation: Option<Element>,
     /// Todo
     pub attachment: Option<Attachment>,
+}
+/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "orientationOfPolymerisation")]
+    pub orientation_of_polymerisation: Option<CodeableConcept>,
+    /// Todo
+    #[serde(rename = "repeatUnit")]
+    pub repeat_unit: Option<StringType>,
+    /// Extension element for the 'repeatUnit' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_repeatUnit")]
+    pub _repeat_unit: Option<Element>,
+    /// Todo
+    pub amount: Option<SubstanceAmount>,
 }
 /// SubstancePolymer nested structure for the 'monomerSet' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,55 +143,6 @@ pub struct SubstancePolymerRepeat {
     #[serde(rename = "repeatUnitAmountType")]
     pub repeat_unit_amount_type: Option<CodeableConcept>,
 }
-/// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub degree: Option<CodeableConcept>,
-    /// Todo
-    pub amount: Option<SubstanceAmount>,
-}
-/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "orientationOfPolymerisation")]
-    pub orientation_of_polymerisation: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "repeatUnit")]
-    pub repeat_unit: Option<StringType>,
-    /// Extension element for the 'repeatUnit' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_repeatUnit")]
-    pub _repeat_unit: Option<Element>,
-    /// Todo
-    pub amount: Option<SubstanceAmount>,
-}
-/// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomersetStartingmaterial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub material: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    #[serde(rename = "isDefining")]
-    pub is_defining: Option<BooleanType>,
-    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDefining")]
-    pub _is_defining: Option<Element>,
-    /// Todo
-    pub amount: Option<SubstanceAmount>,
-}
 
 impl Default for SubstancePolymer {
     fn default() -> Self {
@@ -159,6 +159,29 @@ impl Default for SubstancePolymer {
     }
 }
 
+impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            degree: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerMonomersetStartingmaterial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            material: Default::default(),
+            type_: Default::default(),
+            is_defining: Default::default(),
+            _is_defining: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
     fn default() -> Self {
         Self {
@@ -167,6 +190,18 @@ impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
             representation: Default::default(),
             _representation: Default::default(),
             attachment: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerRepeatRepeatunit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            orientation_of_polymerisation: Default::default(),
+            repeat_unit: Default::default(),
+            _repeat_unit: Default::default(),
+            amount: Default::default(),
         }
     }
 }
@@ -191,41 +226,6 @@ impl Default for SubstancePolymerRepeat {
             average_molecular_formula: Default::default(),
             _average_molecular_formula: Default::default(),
             repeat_unit_amount_type: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            degree: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerRepeatRepeatunit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            orientation_of_polymerisation: Default::default(),
-            repeat_unit: Default::default(),
-            _repeat_unit: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerMonomersetStartingmaterial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            material: Default::default(),
-            type_: Default::default(),
-            is_defining: Default::default(),
-            _is_defining: Default::default(),
-            amount: Default::default(),
         }
     }
 }
@@ -574,18 +574,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstancePolymer
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SubstancePolymer {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -687,33 +675,6 @@ impl crate::traits::substance_polymer::SubstancePolymerMutators for SubstancePol
 }
 
 impl crate::traits::substance_polymer::SubstancePolymerExistence for SubstancePolymer {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_class(&self) -> bool {
         self.class.is_some()
     }

@@ -42,34 +42,6 @@ pub struct MedicinalProductPharmaceutical {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<MedicinalProductPharmaceuticalRouteofadministration>,
 }
-/// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the type of tissue for which the withdrawal period applues, e.g. meat, milk
-    pub tissue: CodeableConcept,
-    /// A value for the time
-    pub value: Quantity,
-    /// Extra information about the withdrawal period
-    #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<StringType>,
-    /// Extension element for the 'supportingInformation' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_supportingInformation")]
-    pub _supporting_information: Option<Element>,
-}
-/// MedicinalProductPharmaceutical nested structure for the 'characteristics' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalCharacteristics {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A coded characteristic
-    pub code: CodeableConcept,
-    /// The status of characteristic e.g. assigned or pending
-    pub status: Option<CodeableConcept>,
-}
 /// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
@@ -107,6 +79,34 @@ pub struct MedicinalProductPharmaceuticalRouteofadministration {
     #[serde(rename = "maxTreatmentPeriod")]
     pub max_treatment_period: Option<Duration>,
 }
+/// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the type of tissue for which the withdrawal period applues, e.g. meat, milk
+    pub tissue: CodeableConcept,
+    /// A value for the time
+    pub value: Quantity,
+    /// Extra information about the withdrawal period
+    #[serde(rename = "supportingInformation")]
+    pub supporting_information: Option<StringType>,
+    /// Extension element for the 'supportingInformation' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_supportingInformation")]
+    pub _supporting_information: Option<Element>,
+}
+/// MedicinalProductPharmaceutical nested structure for the 'characteristics' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalCharacteristics {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A coded characteristic
+    pub code: CodeableConcept,
+    /// The status of characteristic e.g. assigned or pending
+    pub status: Option<CodeableConcept>,
+}
 
 impl Default for MedicinalProductPharmaceutical {
     fn default() -> Self {
@@ -119,28 +119,6 @@ impl Default for MedicinalProductPharmaceutical {
             device: Default::default(),
             characteristics: Default::default(),
             route_of_administration: Vec::new(),
-        }
-    }
-}
-
-impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            tissue: Default::default(),
-            value: Default::default(),
-            supporting_information: Default::default(),
-            _supporting_information: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductPharmaceuticalCharacteristics {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            status: Default::default(),
         }
     }
 }
@@ -165,6 +143,28 @@ impl Default for MedicinalProductPharmaceuticalRouteofadministration {
             max_dose_per_day: Default::default(),
             max_dose_per_treatment_period: Default::default(),
             max_treatment_period: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            tissue: Default::default(),
+            value: Default::default(),
+            supporting_information: Default::default(),
+            _supporting_information: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductPharmaceuticalCharacteristics {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            status: Default::default(),
         }
     }
 }
@@ -362,18 +362,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProductPharmaceutical {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -500,33 +488,6 @@ impl crate::traits::medicinal_product_pharmaceutical::MedicinalProductPharmaceut
 impl crate::traits::medicinal_product_pharmaceutical::MedicinalProductPharmaceuticalExistence
     for MedicinalProductPharmaceutical
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

@@ -74,25 +74,6 @@ pub struct CoverageEligibilityRequest {
     /// Item to be evaluated for eligibiity
     pub item: Option<Vec<CoverageEligibilityRequestItem>>,
 }
-/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestSupportinginfo {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Data to be provided
-    pub information: Reference,
-    /// Applies to all items
-    #[serde(rename = "appliesToAll")]
-    pub applies_to_all: Option<BooleanType>,
-    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_appliesToAll")]
-    pub _applies_to_all: Option<Element>,
-}
 /// CoverageEligibilityRequest nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityRequestItem {
@@ -138,19 +119,6 @@ pub struct CoverageEligibilityRequestItem {
     /// Product or service details
     pub detail: Option<Vec<Reference>>,
 }
-/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestItemDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Nature of illness or problem (CodeableConcept)
-    #[serde(rename = "diagnosisCodeableConcept")]
-    pub diagnosis_codeable_concept: Option<CodeableConcept>,
-    /// Nature of illness or problem (Reference)
-    #[serde(rename = "diagnosisReference")]
-    pub diagnosis_reference: Option<Reference>,
-}
 /// CoverageEligibilityRequest nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityRequestInsurance {
@@ -169,6 +137,38 @@ pub struct CoverageEligibilityRequestInsurance {
     /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
     #[serde(rename = "_businessArrangement")]
     pub _business_arrangement: Option<Element>,
+}
+/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestSupportinginfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Data to be provided
+    pub information: Reference,
+    /// Applies to all items
+    #[serde(rename = "appliesToAll")]
+    pub applies_to_all: Option<BooleanType>,
+    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_appliesToAll")]
+    pub _applies_to_all: Option<Element>,
+}
+/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestItemDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Nature of illness or problem (CodeableConcept)
+    #[serde(rename = "diagnosisCodeableConcept")]
+    pub diagnosis_codeable_concept: Option<CodeableConcept>,
+    /// Nature of illness or problem (Reference)
+    #[serde(rename = "diagnosisReference")]
+    pub diagnosis_reference: Option<Reference>,
 }
 
 impl Default for CoverageEligibilityRequest {
@@ -197,19 +197,6 @@ impl Default for CoverageEligibilityRequest {
     }
 }
 
-impl Default for CoverageEligibilityRequestSupportinginfo {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            information: Default::default(),
-            applies_to_all: Default::default(),
-            _applies_to_all: Default::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityRequestItem {
     fn default() -> Self {
         Self {
@@ -229,16 +216,6 @@ impl Default for CoverageEligibilityRequestItem {
     }
 }
 
-impl Default for CoverageEligibilityRequestItemDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            diagnosis_codeable_concept: Default::default(),
-            diagnosis_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityRequestInsurance {
     fn default() -> Self {
         Self {
@@ -248,6 +225,29 @@ impl Default for CoverageEligibilityRequestInsurance {
             coverage: Reference::default(),
             business_arrangement: Default::default(),
             _business_arrangement: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityRequestSupportinginfo {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            information: Default::default(),
+            applies_to_all: Default::default(),
+            _applies_to_all: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityRequestItemDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            diagnosis_codeable_concept: Default::default(),
+            diagnosis_reference: Default::default(),
         }
     }
 }
@@ -645,18 +645,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for CoverageEligibil
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for CoverageEligibilityRequest {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -822,33 +810,6 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestMuta
 impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestExistence
     for CoverageEligibilityRequest
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_serviced(&self) -> bool {
         self.serviced_date.is_some() || self.serviced_period.is_some()
     }

@@ -153,6 +153,21 @@ pub struct HealthcareService {
     /// Technical endpoints providing access to electronic services operated for the healthcare service
     pub endpoint: Option<Vec<Reference>>,
 }
+/// HealthcareService nested structure for the 'eligibility' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthcareServiceEligibility {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded value for the eligibility
+    ///
+    /// Binding: example (Coded values underwhich a specific service is made available.)
+    pub code: Option<CodeableConcept>,
+    /// Describes the eligibility conditions for the service
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+}
 /// HealthcareService nested structure for the 'notAvailable' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthcareServiceNotavailable {
@@ -197,21 +212,6 @@ pub struct HealthcareServiceAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
-/// HealthcareService nested structure for the 'eligibility' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthcareServiceEligibility {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded value for the eligibility
-    ///
-    /// Binding: example (Coded values underwhich a specific service is made available.)
-    pub code: Option<CodeableConcept>,
-    /// Describes the eligibility conditions for the service
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-}
 
 impl Default for HealthcareService {
     fn default() -> Self {
@@ -251,6 +251,17 @@ impl Default for HealthcareService {
     }
 }
 
+impl Default for HealthcareServiceEligibility {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+        }
+    }
+}
+
 impl Default for HealthcareServiceNotavailable {
     fn default() -> Self {
         Self {
@@ -274,17 +285,6 @@ impl Default for HealthcareServiceAvailabletime {
             _available_start_time: Default::default(),
             available_end_time: Default::default(),
             _available_end_time: Default::default(),
-        }
-    }
-}
-
-impl Default for HealthcareServiceEligibility {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
         }
     }
 }
@@ -576,18 +576,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for HealthcareServic
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for HealthcareService {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -908,33 +896,6 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
 }
 
 impl crate::traits::healthcare_service::HealthcareServiceExistence for HealthcareService {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

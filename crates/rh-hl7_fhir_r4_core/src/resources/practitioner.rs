@@ -73,6 +73,22 @@ pub struct Practitioner {
     /// - ... and 46 more values
     pub communication: Option<Vec<CodeableConcept>>,
 }
+/// animalSpecies
+///
+/// This extension should be used to specifiy that a practioner or RelatedPerson resource is a service animal.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/practitioner-animalSpecies
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerAnimalSpecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Practitioner nested structure for the 'qualification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerQualification {
@@ -91,22 +107,6 @@ pub struct PractitionerQualification {
     pub period: Option<Period>,
     /// Organization that regulates and issues the qualification
     pub issuer: Option<Reference>,
-}
-/// animalSpecies
-///
-/// This extension should be used to specifiy that a practioner or RelatedPerson resource is a service animal.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/practitioner-animalSpecies
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerAnimalSpecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
 }
 
 impl Default for Practitioner {
@@ -130,6 +130,14 @@ impl Default for Practitioner {
     }
 }
 
+impl Default for PractitionerAnimalSpecies {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for PractitionerQualification {
     fn default() -> Self {
         Self {
@@ -138,14 +146,6 @@ impl Default for PractitionerQualification {
             code: CodeableConcept::default(),
             period: Default::default(),
             issuer: Default::default(),
-        }
-    }
-}
-
-impl Default for PractitionerAnimalSpecies {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -349,18 +349,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Practitioner {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Practitioner {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -509,33 +497,6 @@ impl crate::traits::practitioner::PractitionerMutators for Practitioner {
 }
 
 impl crate::traits::practitioner::PractitionerExistence for Practitioner {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

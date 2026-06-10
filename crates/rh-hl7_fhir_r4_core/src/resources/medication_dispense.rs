@@ -109,21 +109,6 @@ pub struct MedicationDispense {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
-/// MedicationDispense nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationDispensePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who performed the dispense and what they did
-    ///
-    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
-    pub function: Option<CodeableConcept>,
-    /// Individual who was performing
-    pub actor: Reference,
-}
 /// MedicationDispense nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationDispenseSubstitution {
@@ -152,6 +137,21 @@ pub struct MedicationDispenseSubstitution {
     /// Who is responsible for the substitution
     #[serde(rename = "responsibleParty")]
     pub responsible_party: Option<Vec<Reference>>,
+}
+/// MedicationDispense nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationDispensePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who performed the dispense and what they did
+    ///
+    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
+    pub function: Option<CodeableConcept>,
+    /// Individual who was performing
+    pub actor: Reference,
 }
 
 impl Default for MedicationDispense {
@@ -191,16 +191,6 @@ impl Default for MedicationDispense {
     }
 }
 
-impl Default for MedicationDispensePerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for MedicationDispenseSubstitution {
     fn default() -> Self {
         Self {
@@ -210,6 +200,16 @@ impl Default for MedicationDispenseSubstitution {
             type_: Default::default(),
             reason: Default::default(),
             responsible_party: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationDispensePerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -481,18 +481,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicationDispen
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicationDispense {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -761,38 +749,11 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
 }
 
 impl crate::traits::medication_dispense::MedicationDispenseExistence for MedicationDispense {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_medication(&self) -> bool {
+        true
     }
     fn has_status_reason(&self) -> bool {
         self.status_reason_codeable_concept.is_some() || self.status_reason_reference.is_some()
-    }
-    fn has_medication(&self) -> bool {
-        true
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

@@ -72,6 +72,59 @@ pub struct InsurancePlan {
     /// Plan details
     pub plan: Option<Vec<InsurancePlanPlan>>,
 }
+/// InsurancePlanCoverage nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanCoverageBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of benefit
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Referral requirements
+    pub requirement: Option<StringType>,
+    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
+    pub _requirement: Option<Element>,
+}
+/// InsurancePlanCoverageBenefit nested structure for the 'limit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanCoverageBenefitLimit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Maximum value allowed
+    pub value: Option<Quantity>,
+    /// Benefit limit details
+    pub code: Option<CodeableConcept>,
+}
+/// InsurancePlanPlan nested structure for the 'specificCost' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcost {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// General category of benefit
+    pub category: CodeableConcept,
+}
+/// InsurancePlan nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of contact
+    ///
+    /// Binding: extensible (The purpose for which you would contact a contact party.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
+    pub purpose: Option<CodeableConcept>,
+    /// A name associated with the contact
+    pub name: Option<HumanName>,
+    /// Contact details (telephone, email, etc.)  for a contact
+    pub telecom: Option<Vec<ContactPoint>>,
+    /// Visiting or postal addresses for the contact
+    pub address: Option<Address>,
+}
 /// InsurancePlan nested structure for the 'coverage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePlanCoverage {
@@ -102,15 +155,27 @@ pub struct InsurancePlanPlanSpecificcostBenefitCost {
     /// The actual cost value
     pub value: Option<Quantity>,
 }
-/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
+/// InsurancePlanPlan nested structure for the 'generalCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcostBenefit {
+pub struct InsurancePlanPlanGeneralcost {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of specific benefit
+    /// Type of cost
     #[serde(rename = "type")]
-    pub type_: CodeableConcept,
+    pub type_: Option<CodeableConcept>,
+    /// Number of enrollees
+    #[serde(rename = "groupSize")]
+    pub group_size: Option<PositiveIntType>,
+    /// Extension element for the 'groupSize' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_groupSize")]
+    pub _group_size: Option<Element>,
+    /// Cost value
+    pub cost: Option<Money>,
+    /// Additional cost information
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
 }
 /// InsurancePlan nested structure for the 'plan' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,80 +200,15 @@ pub struct InsurancePlanPlan {
     /// What networks provide coverage
     pub network: Option<Vec<Reference>>,
 }
-/// InsurancePlanPlan nested structure for the 'specificCost' field
+/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcost {
+pub struct InsurancePlanPlanSpecificcostBenefit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// General category of benefit
-    pub category: CodeableConcept,
-}
-/// InsurancePlan nested structure for the 'contact' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanContact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of contact
-    ///
-    /// Binding: extensible (The purpose for which you would contact a contact party.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/contactentity-type
-    pub purpose: Option<CodeableConcept>,
-    /// A name associated with the contact
-    pub name: Option<HumanName>,
-    /// Contact details (telephone, email, etc.)  for a contact
-    pub telecom: Option<Vec<ContactPoint>>,
-    /// Visiting or postal addresses for the contact
-    pub address: Option<Address>,
-}
-/// InsurancePlanPlan nested structure for the 'generalCost' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanGeneralcost {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of cost
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Number of enrollees
-    #[serde(rename = "groupSize")]
-    pub group_size: Option<PositiveIntType>,
-    /// Extension element for the 'groupSize' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_groupSize")]
-    pub _group_size: Option<Element>,
-    /// Cost value
-    pub cost: Option<Money>,
-    /// Additional cost information
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-}
-/// InsurancePlanCoverage nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverageBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of benefit
+    /// Type of specific benefit
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// Referral requirements
-    pub requirement: Option<StringType>,
-    /// Extension element for the 'requirement' primitive field. Contains metadata and extensions.
-    pub _requirement: Option<Element>,
-}
-/// InsurancePlanCoverageBenefit nested structure for the 'limit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverageBenefitLimit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Maximum value allowed
-    pub value: Option<Quantity>,
-    /// Benefit limit details
-    pub code: Option<CodeableConcept>,
 }
 
 impl Default for InsurancePlan {
@@ -236,48 +236,23 @@ impl Default for InsurancePlan {
     }
 }
 
-impl Default for InsurancePlanCoverage {
+impl Default for InsurancePlanCoverageBenefit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            benefit: Vec::new(),
             type_: Default::default(),
-            network: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
         }
     }
 }
 
-impl Default for InsurancePlanPlanSpecificcostBenefitCost {
+impl Default for InsurancePlanCoverageBenefitLimit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            applicability: Default::default(),
-            qualifiers: Default::default(),
             value: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlanSpecificcostBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlan {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            general_cost: Default::default(),
-            specific_cost: Default::default(),
-            identifier: Default::default(),
-            type_: Default::default(),
-            coverage_area: Default::default(),
-            network: Default::default(),
+            code: Default::default(),
         }
     }
 }
@@ -303,6 +278,29 @@ impl Default for InsurancePlanContact {
     }
 }
 
+impl Default for InsurancePlanCoverage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            benefit: Vec::new(),
+            type_: Default::default(),
+            network: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanPlanSpecificcostBenefitCost {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            applicability: Default::default(),
+            qualifiers: Default::default(),
+            value: Default::default(),
+        }
+    }
+}
+
 impl Default for InsurancePlanPlanGeneralcost {
     fn default() -> Self {
         Self {
@@ -317,23 +315,25 @@ impl Default for InsurancePlanPlanGeneralcost {
     }
 }
 
-impl Default for InsurancePlanCoverageBenefit {
+impl Default for InsurancePlanPlan {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            general_cost: Default::default(),
+            specific_cost: Default::default(),
+            identifier: Default::default(),
             type_: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
+            coverage_area: Default::default(),
+            network: Default::default(),
         }
     }
 }
 
-impl Default for InsurancePlanCoverageBenefitLimit {
+impl Default for InsurancePlanPlanSpecificcostBenefit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            value: Default::default(),
-            code: Default::default(),
+            type_: Default::default(),
         }
     }
 }
@@ -730,18 +730,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for InsurancePlan {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for InsurancePlan {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -929,33 +917,6 @@ impl crate::traits::insurance_plan::InsurancePlanMutators for InsurancePlan {
 }
 
 impl crate::traits::insurance_plan::InsurancePlanExistence for InsurancePlan {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

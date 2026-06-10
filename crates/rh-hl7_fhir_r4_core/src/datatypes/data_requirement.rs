@@ -60,21 +60,6 @@ pub struct DataRequirement {
     /// Order of the results
     pub sort: Option<Vec<Element>>,
 }
-/// DataRequirement nested structure for the 'sort' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataRequirementSort {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the attribute to perform the sort
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// ascending | descending
-    pub direction: SortDirection,
-    /// Extension element for the 'direction' primitive field. Contains metadata and extensions.
-    pub _direction: Option<Element>,
-}
 /// DataRequirement nested structure for the 'codeFilter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataRequirementCodefilter {
@@ -126,6 +111,21 @@ pub struct DataRequirementDatefilter {
     #[serde(rename = "valueDuration")]
     pub value_duration: Option<Duration>,
 }
+/// DataRequirement nested structure for the 'sort' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataRequirementSort {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the attribute to perform the sort
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// ascending | descending
+    pub direction: SortDirection,
+    /// Extension element for the 'direction' primitive field. Contains metadata and extensions.
+    pub _direction: Option<Element>,
+}
 
 impl Default for DataRequirement {
     fn default() -> Self {
@@ -144,18 +144,6 @@ impl Default for DataRequirement {
             limit: Default::default(),
             _limit: Default::default(),
             sort: Default::default(),
-        }
-    }
-}
-
-impl Default for DataRequirementSort {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: StringType::default(),
-            _path: Default::default(),
-            direction: SortDirection::default(),
-            _direction: Default::default(),
         }
     }
 }
@@ -186,6 +174,18 @@ impl Default for DataRequirementDatefilter {
             value_date_time: Default::default(),
             value_period: Default::default(),
             value_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for DataRequirementSort {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: StringType::default(),
+            _path: Default::default(),
+            direction: SortDirection::default(),
+            _direction: Default::default(),
         }
     }
 }

@@ -219,21 +219,6 @@ pub struct MeasureGroupPopulation {
     /// The criteria that defines this population
     pub criteria: Expression,
 }
-/// MeasureGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Meaning of the stratifier
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this stratifier
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How the measure should be stratified
-    pub criteria: Option<Expression>,
-}
 /// Measure nested structure for the 'supplementalData' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureSupplementaldata {
@@ -255,23 +240,6 @@ pub struct MeasureSupplementaldata {
     /// Expression describing additional data to be reported
     pub criteria: Expression,
 }
-/// Measure nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Stratifier criteria for the measure
-    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
-    /// Population criteria
-    pub population: Option<Vec<MeasureGroupPopulation>>,
-    /// Meaning of the group
-    pub code: Option<CodeableConcept>,
-    /// Summary description
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 /// MeasureGroupStratifier nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroupStratifierComponent {
@@ -286,6 +254,38 @@ pub struct MeasureGroupStratifierComponent {
     pub _description: Option<Element>,
     /// Component of how the measure should be stratified
     pub criteria: Expression,
+}
+/// MeasureGroup nested structure for the 'stratifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Meaning of the stratifier
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How the measure should be stratified
+    pub criteria: Option<Expression>,
+}
+/// Measure nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
+    /// Stratifier criteria for the measure
+    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Meaning of the group
+    pub code: Option<CodeableConcept>,
+    /// Summary description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
 }
 
 impl Default for Measure {
@@ -373,18 +373,6 @@ impl Default for MeasureGroupPopulation {
     }
 }
 
-impl Default for MeasureGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureSupplementaldata {
     fn default() -> Self {
         Self {
@@ -398,19 +386,6 @@ impl Default for MeasureSupplementaldata {
     }
 }
 
-impl Default for MeasureGroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            stratifier: Default::default(),
-            population: Default::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureGroupStratifierComponent {
     fn default() -> Self {
         Self {
@@ -419,6 +394,31 @@ impl Default for MeasureGroupStratifierComponent {
             description: Default::default(),
             _description: Default::default(),
             criteria: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupStratifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            population: Default::default(),
+            stratifier: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
         }
     }
 }
@@ -723,18 +723,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Measure {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Measure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1166,33 +1154,6 @@ impl crate::traits::measure::MeasureMutators for Measure {
 }
 
 impl crate::traits::measure::MeasureExistence for Measure {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_subject(&self) -> bool {
         self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
     }

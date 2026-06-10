@@ -130,6 +130,31 @@ pub struct ConceptMapGroup {
     #[serde(rename = "_targetVersion")]
     pub _target_version: Option<Element>,
 }
+/// ConceptMapGroupElement nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies the target element
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// relatedto | equivalent | equal | wider | subsumes | narrower | specializes | inexact | unmatched | disjoint
+    pub equivalence: ConceptMapEquivalence,
+    /// Extension element for the 'equivalence' primitive field. Contains metadata and extensions.
+    pub _equivalence: Option<Element>,
+    /// Description of status/issues in mapping
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Other concepts that this mapping also produces
+    pub product: Option<Vec<StringType>>,
+}
 /// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapGroupElementTargetDependson {
@@ -149,21 +174,6 @@ pub struct ConceptMapGroupElementTargetDependson {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
     /// Display for the code (if value is a code)
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
-/// ConceptMapGroup nested structure for the 'element' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies element being mapped
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
     pub display: Option<StringType>,
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
@@ -191,13 +201,13 @@ pub struct ConceptMapGroupUnmapped {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
 }
-/// ConceptMapGroupElement nested structure for the 'target' field
+/// ConceptMapGroup nested structure for the 'element' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTarget {
+pub struct ConceptMapGroupElement {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Code that identifies the target element
+    /// Identifies element being mapped
     pub code: Option<StringType>,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
@@ -205,16 +215,6 @@ pub struct ConceptMapGroupElementTarget {
     pub display: Option<StringType>,
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
-    /// relatedto | equivalent | equal | wider | subsumes | narrower | specializes | inexact | unmatched | disjoint
-    pub equivalence: ConceptMapEquivalence,
-    /// Extension element for the 'equivalence' primitive field. Contains metadata and extensions.
-    pub _equivalence: Option<Element>,
-    /// Description of status/issues in mapping
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Other concepts that this mapping also produces
-    pub product: Option<Vec<StringType>>,
 }
 
 impl Default for ConceptMap {
@@ -274,6 +274,23 @@ impl Default for ConceptMapGroup {
     }
 }
 
+impl Default for ConceptMapGroupElementTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            equivalence: Default::default(),
+            _equivalence: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+            product: Default::default(),
+        }
+    }
+}
+
 impl Default for ConceptMapGroupElementTargetDependson {
     fn default() -> Self {
         Self {
@@ -284,18 +301,6 @@ impl Default for ConceptMapGroupElementTargetDependson {
             _system: Default::default(),
             value: Default::default(),
             _value: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
             display: Default::default(),
             _display: Default::default(),
         }
@@ -318,7 +323,7 @@ impl Default for ConceptMapGroupUnmapped {
     }
 }
 
-impl Default for ConceptMapGroupElementTarget {
+impl Default for ConceptMapGroupElement {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -326,11 +331,6 @@ impl Default for ConceptMapGroupElementTarget {
             _code: Default::default(),
             display: Default::default(),
             _display: Default::default(),
-            equivalence: Default::default(),
-            _equivalence: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-            product: Default::default(),
         }
     }
 }
@@ -655,18 +655,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for ConceptMap {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for ConceptMap {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -845,38 +833,11 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
 }
 
 impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+    fn has_target(&self) -> bool {
+        self.target_uri.is_some() || self.target_canonical.is_some()
     }
     fn has_source(&self) -> bool {
         self.source_uri.is_some() || self.source_canonical.is_some()
-    }
-    fn has_target(&self) -> bool {
-        self.target_uri.is_some() || self.target_canonical.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

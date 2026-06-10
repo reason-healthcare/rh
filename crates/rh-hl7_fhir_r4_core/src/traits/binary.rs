@@ -72,14 +72,6 @@ pub trait BinaryMutators: ResourceMutators {
 /// - Type: Binary
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Resource
 pub trait BinaryExistence: ResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
     /// Returns true if the content_type field is present (Some).
     fn has_content_type(&self) -> bool;
     /// Returns true if the security_context field is present (Some).

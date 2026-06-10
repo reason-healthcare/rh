@@ -52,21 +52,6 @@ pub struct Substance {
     /// Composition information about the substance
     pub ingredient: Option<Vec<SubstanceIngredient>>,
 }
-/// Substance nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier of the package/container
-    pub identifier: Option<Identifier>,
-    /// When no longer valid to use
-    pub expiry: Option<DateTimeType>,
-    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
-    pub _expiry: Option<Element>,
-    /// Amount of substance in the package
-    pub quantity: Option<Quantity>,
-}
 /// Substance nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceIngredient {
@@ -81,6 +66,21 @@ pub struct SubstanceIngredient {
     /// A component of the substance (Reference)
     #[serde(rename = "substanceReference")]
     pub substance_reference: Reference,
+}
+/// Substance nested structure for the 'instance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceInstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier of the package/container
+    pub identifier: Option<Identifier>,
+    /// When no longer valid to use
+    pub expiry: Option<DateTimeType>,
+    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
+    pub _expiry: Option<Element>,
+    /// Amount of substance in the package
+    pub quantity: Option<Quantity>,
 }
 
 impl Default for Substance {
@@ -100,6 +100,17 @@ impl Default for Substance {
     }
 }
 
+impl Default for SubstanceIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            substance_codeable_concept: Default::default(),
+            substance_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceInstance {
     fn default() -> Self {
         Self {
@@ -108,17 +119,6 @@ impl Default for SubstanceInstance {
             expiry: Default::default(),
             _expiry: Default::default(),
             quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            substance_codeable_concept: Default::default(),
-            substance_reference: Default::default(),
         }
     }
 }
@@ -319,18 +319,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Substance {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Substance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -434,33 +422,6 @@ impl crate::traits::substance::SubstanceMutators for Substance {
 }
 
 impl crate::traits::substance::SubstanceExistence for Substance {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

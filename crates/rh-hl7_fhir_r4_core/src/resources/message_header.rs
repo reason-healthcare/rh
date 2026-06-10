@@ -56,6 +56,42 @@ pub struct MessageHeader {
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
 }
+/// MessageHeader nested structure for the 'response' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderResponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Id of original message
+    pub identifier: StringType,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// ok | transient-error | fatal-error
+    pub code: ResponseCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Specific list of hints/warnings/errors
+    pub details: Option<Reference>,
+}
+/// MessageHeader nested structure for the 'destination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderDestination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of system
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Particular delivery destination within the destination
+    pub target: Option<Reference>,
+    /// Actual destination address or id
+    pub endpoint: StringType,
+    /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
+    pub _endpoint: Option<Element>,
+    /// Intended "real-world" recipient for the data
+    pub receiver: Option<Reference>,
+}
 /// MessageHeader nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageHeaderSource {
@@ -81,42 +117,6 @@ pub struct MessageHeaderSource {
     /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
     pub _endpoint: Option<Element>,
 }
-/// MessageHeader nested structure for the 'destination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderDestination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of system
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Particular delivery destination within the destination
-    pub target: Option<Reference>,
-    /// Actual destination address or id
-    pub endpoint: StringType,
-    /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
-    pub _endpoint: Option<Element>,
-    /// Intended "real-world" recipient for the data
-    pub receiver: Option<Reference>,
-}
-/// MessageHeader nested structure for the 'response' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderResponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Id of original message
-    pub identifier: StringType,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// ok | transient-error | fatal-error
-    pub code: ResponseCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Specific list of hints/warnings/errors
-    pub details: Option<Reference>,
-}
 
 impl Default for MessageHeader {
     fn default() -> Self {
@@ -139,19 +139,15 @@ impl Default for MessageHeader {
     }
 }
 
-impl Default for MessageHeaderSource {
+impl Default for MessageHeaderResponse {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            software: Default::default(),
-            _software: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            contact: Default::default(),
-            endpoint: StringType::default(),
-            _endpoint: Default::default(),
+            identifier: StringType::default(),
+            _identifier: Default::default(),
+            code: ResponseCode::default(),
+            _code: Default::default(),
+            details: Default::default(),
         }
     }
 }
@@ -170,15 +166,19 @@ impl Default for MessageHeaderDestination {
     }
 }
 
-impl Default for MessageHeaderResponse {
+impl Default for MessageHeaderSource {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            identifier: StringType::default(),
-            _identifier: Default::default(),
-            code: ResponseCode::default(),
-            _code: Default::default(),
-            details: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            software: Default::default(),
+            _software: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            contact: Default::default(),
+            endpoint: StringType::default(),
+            _endpoint: Default::default(),
         }
     }
 }
@@ -409,18 +409,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MessageHeader {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MessageHeader {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -538,33 +526,6 @@ impl crate::traits::message_header::MessageHeaderMutators for MessageHeader {
 }
 
 impl crate::traits::message_header::MessageHeaderExistence for MessageHeader {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_event(&self) -> bool {
         true
     }

@@ -10,7 +10,7 @@ pub enum VisionBaseCodes {
     Down,
     /// In
     #[serde(rename = "in")]
-    In,
+    InValue,
     /// Out
     #[serde(rename = "out")]
     Out,

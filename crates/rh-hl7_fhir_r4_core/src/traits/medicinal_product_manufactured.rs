@@ -95,22 +95,6 @@ pub trait MedicinalProductManufacturedMutators: DomainResourceMutators {
 /// - Type: MedicinalProductManufactured
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
 pub trait MedicinalProductManufacturedExistence: DomainResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
-    /// Returns true if the text field is present (Some).
-    fn has_text(&self) -> bool;
-    /// Returns true if the contained field is not empty.
-    fn has_contained(&self) -> bool;
-    /// Returns true if the extension field is not empty.
-    fn has_extension(&self) -> bool;
-    /// Returns true if the modifier_extension field is not empty.
-    fn has_modifier_extension(&self) -> bool;
     /// Returns true if the manufactured_dose_form field is present (Some).
     fn has_manufactured_dose_form(&self) -> bool;
     /// Returns true if the unit_of_presentation field is present (Some).

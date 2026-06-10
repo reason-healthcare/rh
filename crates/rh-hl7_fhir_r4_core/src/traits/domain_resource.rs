@@ -82,14 +82,6 @@ pub trait DomainResourceMutators: ResourceMutators {
 /// - Type: DomainResource
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Resource
 pub trait DomainResourceExistence: ResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
     /// Returns true if the text field is present (Some).
     fn has_text(&self) -> bool;
     /// Returns true if the contained field is not empty.

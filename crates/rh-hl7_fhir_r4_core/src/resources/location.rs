@@ -98,6 +98,25 @@ pub struct Location {
     /// Technical endpoints providing access to services operated for the location
     pub endpoint: Option<Vec<Reference>>,
 }
+/// Location nested structure for the 'position' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationPosition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Longitude with WGS84 datum
+    pub longitude: DecimalType,
+    /// Extension element for the 'longitude' primitive field. Contains metadata and extensions.
+    pub _longitude: Option<Element>,
+    /// Latitude with WGS84 datum
+    pub latitude: DecimalType,
+    /// Extension element for the 'latitude' primitive field. Contains metadata and extensions.
+    pub _latitude: Option<Element>,
+    /// Altitude with WGS84 datum
+    pub altitude: Option<DecimalType>,
+    /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
+    pub _altitude: Option<Element>,
+}
 /// Location nested structure for the 'hoursOfOperation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocationHoursofoperation {
@@ -128,25 +147,6 @@ pub struct LocationHoursofoperation {
     /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
     #[serde(rename = "_closingTime")]
     pub _closing_time: Option<Element>,
-}
-/// Location nested structure for the 'position' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationPosition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Longitude with WGS84 datum
-    pub longitude: DecimalType,
-    /// Extension element for the 'longitude' primitive field. Contains metadata and extensions.
-    pub _longitude: Option<Element>,
-    /// Latitude with WGS84 datum
-    pub latitude: DecimalType,
-    /// Extension element for the 'latitude' primitive field. Contains metadata and extensions.
-    pub _latitude: Option<Element>,
-    /// Altitude with WGS84 datum
-    pub altitude: Option<DecimalType>,
-    /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
-    pub _altitude: Option<Element>,
 }
 /// Distance
 ///
@@ -196,6 +196,20 @@ impl Default for Location {
     }
 }
 
+impl Default for LocationPosition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            longitude: DecimalType::default(),
+            _longitude: Default::default(),
+            latitude: DecimalType::default(),
+            _latitude: Default::default(),
+            altitude: Default::default(),
+            _altitude: Default::default(),
+        }
+    }
+}
+
 impl Default for LocationHoursofoperation {
     fn default() -> Self {
         Self {
@@ -208,20 +222,6 @@ impl Default for LocationHoursofoperation {
             _opening_time: Default::default(),
             closing_time: Default::default(),
             _closing_time: Default::default(),
-        }
-    }
-}
-
-impl Default for LocationPosition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            longitude: DecimalType::default(),
-            _longitude: Default::default(),
-            latitude: DecimalType::default(),
-            _latitude: Default::default(),
-            altitude: Default::default(),
-            _altitude: Default::default(),
         }
     }
 }
@@ -449,18 +449,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for Location {
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for Location {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -657,33 +645,6 @@ impl crate::traits::location::LocationMutators for Location {
 }
 
 impl crate::traits::location::LocationExistence for Location {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

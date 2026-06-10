@@ -107,6 +107,35 @@ pub struct DiagnosticReportSummaryOf {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// DiagnosticReport nested structure for the 'media' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportMedia {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Comment about the image (e.g. explanation)
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Reference to the image source
+    pub link: Reference,
+}
+/// Addendum Of
+///
+/// The supplements or provides additional information for the target report.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-addendumOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportAddendumOf {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// FamilyMemberHistory
 ///
 /// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
@@ -135,35 +164,6 @@ pub struct DiagnosticReportGeneticsFamilyMemberHistory {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnosticReportGeneticsReferences {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// DiagnosticReport nested structure for the 'media' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportMedia {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Comment about the image (e.g. explanation)
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Reference to the image source
-    pub link: Reference,
-}
-/// Addendum Of
-///
-/// The supplements or provides additional information for the target report.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-addendumOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportAddendumOf {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -207,22 +207,6 @@ impl Default for DiagnosticReportSummaryOf {
     }
 }
 
-impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for DiagnosticReportGeneticsReferences {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for DiagnosticReportMedia {
     fn default() -> Self {
         Self {
@@ -235,6 +219,22 @@ impl Default for DiagnosticReportMedia {
 }
 
 impl Default for DiagnosticReportAddendumOf {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsReferences {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -443,18 +443,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for DiagnosticReport
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for DiagnosticReport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -685,33 +673,6 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
 }
 
 impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticReport {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_effective(&self) -> bool {
         self.effective_date_time.is_some() || self.effective_period.is_some()
     }

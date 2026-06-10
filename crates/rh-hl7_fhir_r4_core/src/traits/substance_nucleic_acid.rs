@@ -83,22 +83,6 @@ pub trait SubstanceNucleicAcidMutators: DomainResourceMutators {
 /// - Type: SubstanceNucleicAcid
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
 pub trait SubstanceNucleicAcidExistence: DomainResourceExistence {
-    /// Returns true if the id field is present (Some).
-    fn has_id(&self) -> bool;
-    /// Returns true if the meta field is present (Some).
-    fn has_meta(&self) -> bool;
-    /// Returns true if the implicit_rules field is present (Some).
-    fn has_implicit_rules(&self) -> bool;
-    /// Returns true if the language field is present (Some).
-    fn has_language(&self) -> bool;
-    /// Returns true if the text field is present (Some).
-    fn has_text(&self) -> bool;
-    /// Returns true if the contained field is not empty.
-    fn has_contained(&self) -> bool;
-    /// Returns true if the extension field is not empty.
-    fn has_extension(&self) -> bool;
-    /// Returns true if the modifier_extension field is not empty.
-    fn has_modifier_extension(&self) -> bool;
     /// Returns true if the sequence_type field is present (Some).
     fn has_sequence_type(&self) -> bool;
     /// Returns true if the number_of_subunits field is present (Some).

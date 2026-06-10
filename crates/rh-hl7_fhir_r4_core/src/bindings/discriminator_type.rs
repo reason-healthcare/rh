@@ -13,7 +13,7 @@ pub enum DiscriminatorType {
     Pattern,
     /// Type
     #[serde(rename = "type")]
-    Type,
+    TypeValue,
     /// Profile
     #[serde(rename = "profile")]
     Profile,

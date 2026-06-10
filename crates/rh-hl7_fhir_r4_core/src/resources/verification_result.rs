@@ -92,56 +92,6 @@ pub struct VerificationResult {
     /// Information about the entity validating information
     pub validator: Option<Vec<VerificationResultValidator>>,
 }
-/// VerificationResult nested structure for the 'primarySource' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerificationResultPrimarysource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the primary source
-    pub who: Option<Reference>,
-    /// Type of primary source (License Board; Primary Education; Continuing Education; Postal Service; Relationship owner; Registration Authority; legal source; issuing source; authoritative source)
-    ///
-    /// Binding: example (Type of the validation primary source.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-primary-source-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Method for exchanging information with the primary source
-    ///
-    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
-    #[serde(rename = "communicationMethod")]
-    pub communication_method: Option<Vec<CodeableConcept>>,
-    /// successful | failed | unknown
-    ///
-    /// Binding: preferred (Status of the validation of the target against the primary source.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-validation-status
-    #[serde(rename = "validationStatus")]
-    pub validation_status: Option<CodeableConcept>,
-    /// When the target was validated against the primary source
-    #[serde(rename = "validationDate")]
-    pub validation_date: Option<DateTimeType>,
-    /// Extension element for the 'validationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_validationDate")]
-    pub _validation_date: Option<Element>,
-    /// yes | no | undetermined
-    ///
-    /// Binding: preferred (Ability of the primary source to push updates/alerts.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-can-push-updates
-    #[serde(rename = "canPushUpdates")]
-    pub can_push_updates: Option<CodeableConcept>,
-    /// specific | any | source
-    ///
-    /// Binding: preferred (Type of alerts/updates the primary source can send.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-push-type-available
-    #[serde(rename = "pushTypeAvailable")]
-    pub push_type_available: Option<Vec<CodeableConcept>>,
-}
 /// VerificationResult nested structure for the 'attestation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResultAttestation {
@@ -201,6 +151,56 @@ pub struct VerificationResultValidator {
     #[serde(rename = "attestationSignature")]
     pub attestation_signature: Option<Signature>,
 }
+/// VerificationResult nested structure for the 'primarySource' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResultPrimarysource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the primary source
+    pub who: Option<Reference>,
+    /// Type of primary source (License Board; Primary Education; Continuing Education; Postal Service; Relationship owner; Registration Authority; legal source; issuing source; authoritative source)
+    ///
+    /// Binding: example (Type of the validation primary source.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-primary-source-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// Method for exchanging information with the primary source
+    ///
+    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
+    #[serde(rename = "communicationMethod")]
+    pub communication_method: Option<Vec<CodeableConcept>>,
+    /// successful | failed | unknown
+    ///
+    /// Binding: preferred (Status of the validation of the target against the primary source.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-validation-status
+    #[serde(rename = "validationStatus")]
+    pub validation_status: Option<CodeableConcept>,
+    /// When the target was validated against the primary source
+    #[serde(rename = "validationDate")]
+    pub validation_date: Option<DateTimeType>,
+    /// Extension element for the 'validationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_validationDate")]
+    pub _validation_date: Option<Element>,
+    /// yes | no | undetermined
+    ///
+    /// Binding: preferred (Ability of the primary source to push updates/alerts.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-can-push-updates
+    #[serde(rename = "canPushUpdates")]
+    pub can_push_updates: Option<CodeableConcept>,
+    /// specific | any | source
+    ///
+    /// Binding: preferred (Type of alerts/updates the primary source can send.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-push-type-available
+    #[serde(rename = "pushTypeAvailable")]
+    pub push_type_available: Option<Vec<CodeableConcept>>,
+}
 
 impl Default for VerificationResult {
     fn default() -> Self {
@@ -225,22 +225,6 @@ impl Default for VerificationResult {
             primary_source: Default::default(),
             attestation: Default::default(),
             validator: Default::default(),
-        }
-    }
-}
-
-impl Default for VerificationResultPrimarysource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            who: Default::default(),
-            type_: Default::default(),
-            communication_method: Default::default(),
-            validation_status: Default::default(),
-            validation_date: Default::default(),
-            _validation_date: Default::default(),
-            can_push_updates: Default::default(),
-            push_type_available: Default::default(),
         }
     }
 }
@@ -272,6 +256,22 @@ impl Default for VerificationResultValidator {
             identity_certificate: Default::default(),
             _identity_certificate: Default::default(),
             attestation_signature: Default::default(),
+        }
+    }
+}
+
+impl Default for VerificationResultPrimarysource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            who: Default::default(),
+            type_: Default::default(),
+            communication_method: Default::default(),
+            validation_status: Default::default(),
+            validation_date: Default::default(),
+            _validation_date: Default::default(),
+            can_push_updates: Default::default(),
+            push_type_available: Default::default(),
         }
     }
 }
@@ -591,18 +591,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for VerificationResu
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for VerificationResult {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -776,33 +764,6 @@ impl crate::traits::verification_result::VerificationResultMutators for Verifica
 }
 
 impl crate::traits::verification_result::VerificationResultExistence for VerificationResult {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_target(&self) -> bool {
         self.target.as_ref().is_some_and(|v| !v.is_empty())
     }

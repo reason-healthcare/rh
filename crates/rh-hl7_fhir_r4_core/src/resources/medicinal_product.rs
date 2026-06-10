@@ -85,6 +85,33 @@ pub struct MedicinalProduct {
     #[serde(rename = "specialDesignation")]
     pub special_designation: Option<Vec<MedicinalProductSpecialdesignation>>,
 }
+/// MedicinalProductName nested structure for the 'countryLanguage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameCountrylanguage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Country code for where this name applies
+    pub country: CodeableConcept,
+    /// Jurisdiction code for where this name applies
+    pub jurisdiction: Option<CodeableConcept>,
+    /// Language code for this name
+    pub language: StringType,
+}
+/// MedicinalProductName nested structure for the 'namePart' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameNamepart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Idenifying type for this part of the name (e.g. strength part)
+    #[serde(rename = "type")]
+    pub type_: Coding,
+}
 /// MedicinalProduct nested structure for the 'specialDesignation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductSpecialdesignation {
@@ -159,33 +186,6 @@ pub struct MedicinalProductName {
     #[serde(rename = "_productName")]
     pub _product_name: Option<Element>,
 }
-/// MedicinalProductName nested structure for the 'countryLanguage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameCountrylanguage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Country code for where this name applies
-    pub country: CodeableConcept,
-    /// Jurisdiction code for where this name applies
-    pub jurisdiction: Option<CodeableConcept>,
-    /// Language code for this name
-    pub language: CodeableConcept,
-}
-/// MedicinalProductName nested structure for the 'namePart' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameNamepart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Idenifying type for this part of the name (e.g. strength part)
-    #[serde(rename = "type")]
-    pub type_: Coding,
-}
 
 impl Default for MedicinalProduct {
     fn default() -> Self {
@@ -212,6 +212,28 @@ impl Default for MedicinalProduct {
             cross_reference: Default::default(),
             manufacturing_business_operation: Default::default(),
             special_designation: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameCountrylanguage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            country: Default::default(),
+            jurisdiction: Default::default(),
+            language: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameNamepart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            _part: Default::default(),
+            type_: Default::default(),
         }
     }
 }
@@ -256,28 +278,6 @@ impl Default for MedicinalProductName {
             name_part: Default::default(),
             product_name: StringType::default(),
             _product_name: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductNameCountrylanguage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            country: Default::default(),
-            jurisdiction: Default::default(),
-            language: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductNameNamepart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
         }
     }
 }
@@ -654,18 +654,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduct {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -963,33 +951,6 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
 }
 
 impl crate::traits::medicinal_product::MedicinalProductExistence for MedicinalProduct {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())
     }

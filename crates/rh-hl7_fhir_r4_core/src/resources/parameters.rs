@@ -442,18 +442,6 @@ impl crate::traits::parameters::ParametersMutators for Parameters {
 }
 
 impl crate::traits::parameters::ParametersExistence for Parameters {
-    fn has_id(&self) -> bool {
-        self.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.language.is_some()
-    }
     fn has_parameter(&self) -> bool {
         self.parameter.as_ref().is_some_and(|v| !v.is_empty())
     }

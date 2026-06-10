@@ -131,6 +131,22 @@ pub struct FamilyMemberHistory {
     /// Condition that the related person had
     pub condition: Option<Vec<FamilyMemberHistoryCondition>>,
 }
+/// parent
+///
+/// Identifies a parent of the relative.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-parent
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilyMemberHistoryGeneticsParent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// FamilyMemberHistory nested structure for the 'condition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FamilyMemberHistoryCondition {
@@ -170,22 +186,6 @@ pub struct FamilyMemberHistoryCondition {
     pub onset_string: Option<StringType>,
     /// Extra information about condition
     pub note: Option<Vec<Annotation>>,
-}
-/// parent
-///
-/// Identifies a parent of the relative.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-parent
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FamilyMemberHistoryGeneticsParent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
 }
 
 impl Default for FamilyMemberHistory {
@@ -228,6 +228,14 @@ impl Default for FamilyMemberHistory {
     }
 }
 
+impl Default for FamilyMemberHistoryGeneticsParent {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for FamilyMemberHistoryCondition {
     fn default() -> Self {
         Self {
@@ -241,14 +249,6 @@ impl Default for FamilyMemberHistoryCondition {
             onset_period: Default::default(),
             onset_string: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for FamilyMemberHistoryGeneticsParent {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -491,18 +491,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for FamilyMemberHist
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for FamilyMemberHistory {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -694,36 +682,6 @@ impl crate::traits::family_member_history::FamilyMemberHistoryMutators for Famil
 }
 
 impl crate::traits::family_member_history::FamilyMemberHistoryExistence for FamilyMemberHistory {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
-    fn has_born(&self) -> bool {
-        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
-    }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some()
             || self.deceased_age.is_some()
@@ -733,6 +691,9 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
     }
     fn has_age(&self) -> bool {
         self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
+    }
+    fn has_born(&self) -> bool {
+        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

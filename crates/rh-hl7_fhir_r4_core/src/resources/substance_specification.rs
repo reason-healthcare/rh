@@ -75,34 +75,21 @@ pub struct SubstanceSpecification {
     #[serde(rename = "sourceMaterial")]
     pub source_material: Option<Reference>,
 }
-/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
+/// SubstanceSpecificationStructure nested structure for the 'isotope' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
+pub struct SubstanceSpecificationStructureIsotope {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The method by which the molecular weight was determined
-    pub method: Option<CodeableConcept>,
-    /// Type of molecular weight such as exact, average (also known as. number average), weight average
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
-    pub amount: Option<Quantity>,
-}
-/// SubstanceSpecificationName nested structure for the 'official' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationNameOfficial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Which authority uses this official name
-    pub authority: Option<CodeableConcept>,
-    /// The status of the official name
-    pub status: Option<CodeableConcept>,
-    /// Date of official name change
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
+    /// Substance identifier for each non-natural or radioisotope
+    pub identifier: Option<Identifier>,
+    /// Substance name for each non-natural or radioisotope
+    pub name: Option<CodeableConcept>,
+    /// The type of isotopic substitution present in a single substance
+    pub substitution: Option<CodeableConcept>,
+    /// Half life - for a non-natural nuclide
+    #[serde(rename = "halfLife")]
+    pub half_life: Option<Quantity>,
 }
 /// SubstanceSpecification nested structure for the 'relationship' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,37 +155,55 @@ pub struct SubstanceSpecificationCode {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceSpecification nested structure for the 'moiety' field
+/// SubstanceSpecificationStructure nested structure for the 'representation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationMoiety {
+pub struct SubstanceSpecificationStructureRepresentation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Role that the moiety is playing
-    pub role: Option<CodeableConcept>,
-    /// Identifier by which this moiety substance is known
-    pub identifier: Option<Identifier>,
-    /// Textual name for this moiety substance
-    pub name: Option<StringType>,
+    /// The type of structure (e.g. Full, Partial, Representative)
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The structural representation as text string in a format e.g. InChI, SMILES, MOLFILE, CDX
+    pub representation: Option<StringType>,
+    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
+    pub _representation: Option<Element>,
+    /// An attached file with the structural representation
+    pub attachment: Option<Attachment>,
+}
+/// SubstanceSpecification nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Details of the official nature of this name
+    pub official: Option<Vec<SubstanceSpecificationNameOfficial>>,
+    /// The actual name
+    pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Stereochemistry type
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Quantitative value for this moiety (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this moiety (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
+    /// Name type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The status of the name
+    pub status: Option<CodeableConcept>,
+    /// If this is the preferred name for this substance
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+    /// Language of the name
+    pub language: Option<Vec<StringType>>,
+    /// The use context of this name for example if there is a different name a drug active ingredient as opposed to a food colour additive
+    pub domain: Option<Vec<CodeableConcept>>,
+    /// The jurisdiction where this name applies
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// A synonym of this name
+    pub synonym: Option<Vec<StringType>>,
+    /// A translation for this name
+    pub translation: Option<Vec<StringType>>,
+    /// Supporting literature
+    pub source: Option<Vec<Reference>>,
 }
 /// SubstanceSpecification nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -227,21 +232,34 @@ pub struct SubstanceSpecificationProperty {
     #[serde(rename = "amountString")]
     pub amount_string: Option<StringType>,
 }
-/// SubstanceSpecificationStructure nested structure for the 'representation' field
+/// SubstanceSpecificationName nested structure for the 'official' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureRepresentation {
+pub struct SubstanceSpecificationNameOfficial {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of structure (e.g. Full, Partial, Representative)
+    /// Which authority uses this official name
+    pub authority: Option<CodeableConcept>,
+    /// The status of the official name
+    pub status: Option<CodeableConcept>,
+    /// Date of official name change
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+}
+/// SubstanceSpecificationStructureIsotope nested structure for the 'molecularWeight' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSpecificationStructureIsotopeMolecularweight {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The method by which the molecular weight was determined
+    pub method: Option<CodeableConcept>,
+    /// Type of molecular weight such as exact, average (also known as. number average), weight average
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-    /// The structural representation as text string in a format e.g. InChI, SMILES, MOLFILE, CDX
-    pub representation: Option<StringType>,
-    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
-    pub _representation: Option<Element>,
-    /// An attached file with the structural representation
-    pub attachment: Option<Attachment>,
+    /// Used to capture quantitative values for a variety of elements. If only limits are given, the arithmetic mean would be the average. If only a single definite value for a given element is given, it would be captured in this field
+    pub amount: Option<Quantity>,
 }
 /// SubstanceSpecification nested structure for the 'structure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,55 +294,37 @@ pub struct SubstanceSpecificationStructure {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceSpecification nested structure for the 'name' field
+/// SubstanceSpecification nested structure for the 'moiety' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationName {
+pub struct SubstanceSpecificationMoiety {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Details of the official nature of this name
-    pub official: Option<Vec<SubstanceSpecificationNameOfficial>>,
-    /// The actual name
-    pub name: StringType,
+    /// Role that the moiety is playing
+    pub role: Option<CodeableConcept>,
+    /// Identifier by which this moiety substance is known
+    pub identifier: Option<Identifier>,
+    /// Textual name for this moiety substance
+    pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Name type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The status of the name
-    pub status: Option<CodeableConcept>,
-    /// If this is the preferred name for this substance
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
-    /// Language of the name
-    pub language: Option<Vec<CodeableConcept>>,
-    /// The use context of this name for example if there is a different name a drug active ingredient as opposed to a food colour additive
-    pub domain: Option<Vec<CodeableConcept>>,
-    /// The jurisdiction where this name applies
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
-    /// A synonym of this name
-    pub synonym: Option<Vec<StringType>>,
-    /// A translation for this name
-    pub translation: Option<Vec<StringType>>,
-    /// Supporting literature
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceSpecificationStructure nested structure for the 'isotope' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSpecificationStructureIsotope {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Substance identifier for each non-natural or radioisotope
-    pub identifier: Option<Identifier>,
-    /// Substance name for each non-natural or radioisotope
-    pub name: Option<CodeableConcept>,
-    /// The type of isotopic substitution present in a single substance
-    pub substitution: Option<CodeableConcept>,
-    /// Half life - for a non-natural nuclide
-    #[serde(rename = "halfLife")]
-    pub half_life: Option<Quantity>,
+    /// Stereochemistry type
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Quantitative value for this moiety (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this moiety (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
 }
 
 impl Default for SubstanceSpecification {
@@ -356,25 +356,14 @@ impl Default for SubstanceSpecification {
     }
 }
 
-impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
+impl Default for SubstanceSpecificationStructureIsotope {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            method: Default::default(),
-            type_: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationNameOfficial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            authority: Default::default(),
-            status: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            substitution: Default::default(),
+            half_life: Default::default(),
         }
     }
 }
@@ -414,40 +403,6 @@ impl Default for SubstanceSpecificationCode {
     }
 }
 
-impl Default for SubstanceSpecificationMoiety {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            code: Default::default(),
-            parameters: Default::default(),
-            _parameters: Default::default(),
-            defining_substance_reference: Default::default(),
-            defining_substance_codeable_concept: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSpecificationStructureRepresentation {
     fn default() -> Self {
         Self {
@@ -456,24 +411,6 @@ impl Default for SubstanceSpecificationStructureRepresentation {
             representation: Default::default(),
             _representation: Default::default(),
             attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSpecificationStructure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            isotope: Default::default(),
-            representation: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            molecular_formula_by_moiety: Default::default(),
-            _molecular_formula_by_moiety: Default::default(),
-            molecular_weight: Default::default(),
-            source: Default::default(),
         }
     }
 }
@@ -499,14 +436,77 @@ impl Default for SubstanceSpecificationName {
     }
 }
 
-impl Default for SubstanceSpecificationStructureIsotope {
+impl Default for SubstanceSpecificationProperty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            category: Default::default(),
+            code: Default::default(),
+            parameters: Default::default(),
+            _parameters: Default::default(),
+            defining_substance_reference: Default::default(),
+            defining_substance_codeable_concept: Default::default(),
+            amount_quantity: Default::default(),
+            amount_string: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationNameOfficial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            authority: Default::default(),
+            status: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationStructureIsotopeMolecularweight {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            method: Default::default(),
+            type_: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationStructure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            isotope: Default::default(),
+            representation: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            molecular_formula_by_moiety: Default::default(),
+            _molecular_formula_by_moiety: Default::default(),
+            molecular_weight: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSpecificationMoiety {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
             identifier: Default::default(),
             name: Default::default(),
-            substitution: Default::default(),
-            half_life: Default::default(),
+            _name: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            amount_quantity: Default::default(),
+            amount_string: Default::default(),
         }
     }
 }
@@ -1105,18 +1105,6 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceSpecifi
 }
 
 impl crate::traits::domain_resource::DomainResourceExistence for SubstanceSpecification {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
     fn has_text(&self) -> bool {
         self.base.text.is_some()
     }
@@ -1340,33 +1328,6 @@ impl crate::traits::substance_specification::SubstanceSpecificationMutators
 impl crate::traits::substance_specification::SubstanceSpecificationExistence
     for SubstanceSpecification
 {
-    fn has_id(&self) -> bool {
-        self.base.base.id.is_some()
-    }
-    fn has_meta(&self) -> bool {
-        self.base.base.meta.is_some()
-    }
-    fn has_implicit_rules(&self) -> bool {
-        self.base.base.implicit_rules.is_some()
-    }
-    fn has_language(&self) -> bool {
-        self.base.base.language.is_some()
-    }
-    fn has_text(&self) -> bool {
-        self.base.text.is_some()
-    }
-    fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
-    }
-    fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
-    }
-    fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
-    }
     fn has_identifier(&self) -> bool {
         self.identifier.is_some()
     }
