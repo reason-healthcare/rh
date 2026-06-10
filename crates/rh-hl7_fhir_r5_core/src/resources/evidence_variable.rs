@@ -147,23 +147,6 @@ pub struct EvidenceVariable {
     /// A grouping for ordinal or polychotomous variables
     pub category: Option<Vec<EvidenceVariableCategory>>,
 }
-/// EvidenceVariableCharacteristic nested structure for the 'definitionByCombination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariableCharacteristicDefinitionbycombination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// all-of | any-of | at-least | at-most | statistical | net-effect | dataset
-    pub code: CharacteristicCombination,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Provides the value of "n" when "at-least" or "at-most" codes are used
-    pub threshold: Option<PositiveIntType>,
-    /// Extension element for the 'threshold' primitive field. Contains metadata and extensions.
-    pub _threshold: Option<Element>,
-    /// A defining factor of the characteristic
-    pub characteristic: Vec<StringType>,
-}
 /// EvidenceVariable nested structure for the 'category' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariableCategory {
@@ -213,68 +196,22 @@ pub struct EvidenceVariableCharacteristicTimefromevent {
     /// Used to express the observation within a period before and/or after the event
     pub range: Option<Range>,
 }
-/// EvidenceVariableCharacteristic nested structure for the 'definitionByTypeAndValue' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Expresses the type of characteristic
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/usage-context-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Method for how the characteristic value was determined
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/definition-method
-    pub method: Option<Vec<CodeableConcept>>,
-    /// Device used for determining characteristic
-    pub device: Option<Reference>,
-    /// Defines the characteristic when coupled with characteristic.type (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Defines the characteristic when coupled with characteristic.type (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Defines the characteristic when coupled with characteristic.type (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Defines the characteristic when coupled with characteristic.type (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Defines the characteristic when coupled with characteristic.type (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Defines the characteristic when coupled with characteristic.type (id)
-    #[serde(rename = "valueId")]
-    pub value_id: StringType,
-    /// Reference point for valueQuantity or valueRange
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/characteristic-offset
-    pub offset: Option<CodeableConcept>,
-}
 /// EvidenceVariable nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariableCharacteristic {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Timing in which the characteristic is determined
-    #[serde(rename = "timeFromEvent")]
-    pub time_from_event: Option<Vec<EvidenceVariableCharacteristicTimefromevent>>,
-    /// Used to specify how two or more characteristics are combined
-    #[serde(rename = "definitionByCombination")]
-    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
     /// Defines the characteristic using type and value
     #[serde(rename = "definitionByTypeAndValue")]
     pub definition_by_type_and_value:
         Option<EvidenceVariableCharacteristicDefinitionbytypeandvalue>,
+    /// Used to specify how two or more characteristics are combined
+    #[serde(rename = "definitionByCombination")]
+    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
+    /// Timing in which the characteristic is determined
+    #[serde(rename = "timeFromEvent")]
+    pub time_from_event: Option<Vec<EvidenceVariableCharacteristicTimefromevent>>,
     /// Label for internal linking
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -324,6 +261,69 @@ pub struct EvidenceVariableCharacteristic {
     /// Length of time in which the characteristic is met (Range)
     #[serde(rename = "durationRange")]
     pub duration_range: Option<Range>,
+}
+/// EvidenceVariableCharacteristic nested structure for the 'definitionByCombination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariableCharacteristicDefinitionbycombination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// all-of | any-of | at-least | at-most | statistical | net-effect | dataset
+    pub code: CharacteristicCombination,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Provides the value of "n" when "at-least" or "at-most" codes are used
+    pub threshold: Option<PositiveIntType>,
+    /// Extension element for the 'threshold' primitive field. Contains metadata and extensions.
+    pub _threshold: Option<Element>,
+    /// A defining factor of the characteristic
+    pub characteristic: Vec<StringType>,
+}
+/// EvidenceVariableCharacteristic nested structure for the 'definitionByTypeAndValue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Expresses the type of characteristic
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/usage-context-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Method for how the characteristic value was determined
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/definition-method
+    pub method: Option<Vec<CodeableConcept>>,
+    /// Device used for determining characteristic
+    pub device: Option<Reference>,
+    /// Defines the characteristic when coupled with characteristic.type (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Defines the characteristic when coupled with characteristic.type (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Defines the characteristic when coupled with characteristic.type (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Defines the characteristic when coupled with characteristic.type (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Defines the characteristic when coupled with characteristic.type (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Defines the characteristic when coupled with characteristic.type (id)
+    #[serde(rename = "valueId")]
+    pub value_id: StringType,
+    /// Reference point for valueQuantity or valueRange
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/characteristic-offset
+    pub offset: Option<CodeableConcept>,
 }
 
 impl Default for EvidenceVariable {
@@ -382,19 +382,6 @@ impl Default for EvidenceVariable {
     }
 }
 
-impl Default for EvidenceVariableCharacteristicDefinitionbycombination {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            threshold: Default::default(),
-            _threshold: Default::default(),
-            characteristic: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceVariableCategory {
     fn default() -> Self {
         Self {
@@ -425,31 +412,13 @@ impl Default for EvidenceVariableCharacteristicTimefromevent {
     }
 }
 
-impl Default for EvidenceVariableCharacteristicDefinitionbytypeandvalue {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            method: Default::default(),
-            device: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            value_reference: Default::default(),
-            value_id: Default::default(),
-            offset: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceVariableCharacteristic {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            time_from_event: Default::default(),
-            definition_by_combination: Default::default(),
             definition_by_type_and_value: Default::default(),
+            definition_by_combination: Default::default(),
+            time_from_event: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             description: Default::default(),
@@ -468,6 +437,37 @@ impl Default for EvidenceVariableCharacteristic {
             instances_range: Default::default(),
             duration_quantity: Default::default(),
             duration_range: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceVariableCharacteristicDefinitionbycombination {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            threshold: Default::default(),
+            _threshold: Default::default(),
+            characteristic: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceVariableCharacteristicDefinitionbytypeandvalue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            method: Default::default(),
+            device: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_reference: Default::default(),
+            value_id: Default::default(),
+            offset: Default::default(),
         }
     }
 }

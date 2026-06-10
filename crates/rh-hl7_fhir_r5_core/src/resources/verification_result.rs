@@ -92,47 +92,6 @@ pub struct VerificationResult {
     /// Information about the entity validating information
     pub validator: Option<Vec<VerificationResultValidator>>,
 }
-/// VerificationResult nested structure for the 'attestation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerificationResultAttestation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The individual or organization attesting to information
-    pub who: Option<Reference>,
-    /// When the who is asserting on behalf of another (organization or individual)
-    #[serde(rename = "onBehalfOf")]
-    pub on_behalf_of: Option<Reference>,
-    /// The method by which attested information was submitted/retrieved
-    ///
-    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
-    #[serde(rename = "communicationMethod")]
-    pub communication_method: Option<CodeableConcept>,
-    /// The date the information was attested to
-    pub date: Option<DateType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// A digital identity certificate associated with the attestation source
-    #[serde(rename = "sourceIdentityCertificate")]
-    pub source_identity_certificate: Option<StringType>,
-    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceIdentityCertificate")]
-    pub _source_identity_certificate: Option<Element>,
-    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
-    #[serde(rename = "proxyIdentityCertificate")]
-    pub proxy_identity_certificate: Option<StringType>,
-    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_proxyIdentityCertificate")]
-    pub _proxy_identity_certificate: Option<Element>,
-    /// Proxy signature (digital or image)
-    #[serde(rename = "proxySignature")]
-    pub proxy_signature: Option<Signature>,
-    /// Attester signature (digital or image)
-    #[serde(rename = "sourceSignature")]
-    pub source_signature: Option<Signature>,
-}
 /// VerificationResult nested structure for the 'primarySource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResultPrimarysource {
@@ -201,6 +160,47 @@ pub struct VerificationResultValidator {
     #[serde(rename = "attestationSignature")]
     pub attestation_signature: Option<Signature>,
 }
+/// VerificationResult nested structure for the 'attestation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResultAttestation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The individual or organization attesting to information
+    pub who: Option<Reference>,
+    /// When the who is asserting on behalf of another (organization or individual)
+    #[serde(rename = "onBehalfOf")]
+    pub on_behalf_of: Option<Reference>,
+    /// The method by which attested information was submitted/retrieved
+    ///
+    /// Binding: example (Method for communicating with the data source (manual; API; Push).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
+    #[serde(rename = "communicationMethod")]
+    pub communication_method: Option<CodeableConcept>,
+    /// The date the information was attested to
+    pub date: Option<DateType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// A digital identity certificate associated with the attestation source
+    #[serde(rename = "sourceIdentityCertificate")]
+    pub source_identity_certificate: Option<StringType>,
+    /// Extension element for the 'sourceIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceIdentityCertificate")]
+    pub _source_identity_certificate: Option<Element>,
+    /// A digital identity certificate associated with the proxy entity submitting attested information on behalf of the attestation source
+    #[serde(rename = "proxyIdentityCertificate")]
+    pub proxy_identity_certificate: Option<StringType>,
+    /// Extension element for the 'proxyIdentityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_proxyIdentityCertificate")]
+    pub _proxy_identity_certificate: Option<Element>,
+    /// Proxy signature (digital or image)
+    #[serde(rename = "proxySignature")]
+    pub proxy_signature: Option<Signature>,
+    /// Attester signature (digital or image)
+    #[serde(rename = "sourceSignature")]
+    pub source_signature: Option<Signature>,
+}
 
 impl Default for VerificationResult {
     fn default() -> Self {
@@ -229,25 +229,6 @@ impl Default for VerificationResult {
     }
 }
 
-impl Default for VerificationResultAttestation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            who: Default::default(),
-            on_behalf_of: Default::default(),
-            communication_method: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            source_identity_certificate: Default::default(),
-            _source_identity_certificate: Default::default(),
-            proxy_identity_certificate: Default::default(),
-            _proxy_identity_certificate: Default::default(),
-            proxy_signature: Default::default(),
-            source_signature: Default::default(),
-        }
-    }
-}
-
 impl Default for VerificationResultPrimarysource {
     fn default() -> Self {
         Self {
@@ -272,6 +253,25 @@ impl Default for VerificationResultValidator {
             identity_certificate: Default::default(),
             _identity_certificate: Default::default(),
             attestation_signature: Default::default(),
+        }
+    }
+}
+
+impl Default for VerificationResultAttestation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            who: Default::default(),
+            on_behalf_of: Default::default(),
+            communication_method: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            source_identity_certificate: Default::default(),
+            _source_identity_certificate: Default::default(),
+            proxy_identity_certificate: Default::default(),
+            _proxy_identity_certificate: Default::default(),
+            proxy_signature: Default::default(),
+            source_signature: Default::default(),
         }
     }
 }

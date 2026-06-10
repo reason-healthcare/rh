@@ -156,6 +156,24 @@ pub struct ResearchStudy {
     /// Link to results generated during the study
     pub result: Option<Vec<Reference>>,
 }
+/// ResearchStudy nested structure for the 'label' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyLabel {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// primary | official | scientific | plain-language | subtitle | short-title | acronym | earlier-title | language | auto-translated | human-use | machine-use | duplicate-uid
+    ///
+    /// Binding: extensible (desc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The name
+    pub value: Option<StringType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 /// ResearchStudy nested structure for the 'outcomeMeasure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchStudyOutcomemeasure {
@@ -179,89 +197,6 @@ pub struct ResearchStudyOutcomemeasure {
     pub _description: Option<Element>,
     /// Structured outcome definition
     pub reference: Option<Reference>,
-}
-/// ResearchStudy nested structure for the 'recruitment' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyRecruitment {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Estimated total number of participants to be enrolled
-    #[serde(rename = "targetNumber")]
-    pub target_number: Option<UnsignedIntType>,
-    /// Extension element for the 'targetNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetNumber")]
-    pub _target_number: Option<Element>,
-    /// Actual total number of participants enrolled in study
-    #[serde(rename = "actualNumber")]
-    pub actual_number: Option<UnsignedIntType>,
-    /// Extension element for the 'actualNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actualNumber")]
-    pub _actual_number: Option<Element>,
-    /// Inclusion and exclusion criteria
-    pub eligibility: Option<Reference>,
-    /// Group of participants who were enrolled in study
-    #[serde(rename = "actualGroup")]
-    pub actual_group: Option<Reference>,
-}
-/// ResearchStudy nested structure for the 'progressStatus' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyProgressstatus {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for status or state (e.g. recruitment status)
-    ///
-    /// Binding: extensible (defn.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-status
-    pub state: CodeableConcept,
-    /// Actual if true else anticipated
-    pub actual: Option<BooleanType>,
-    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
-    pub _actual: Option<Element>,
-    /// Date range
-    pub period: Option<Period>,
-}
-/// ResearchStudy nested structure for the 'objective' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyObjective {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for the objective
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// primary | secondary | exploratory
-    ///
-    /// Binding: preferred (Codes for the kind of study objective.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Description of the objective
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// ResearchStudy nested structure for the 'label' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyLabel {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// primary | official | scientific | plain-language | subtitle | short-title | acronym | earlier-title | language | auto-translated | human-use | machine-use | duplicate-uid
-    ///
-    /// Binding: extensible (desc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The name
-    pub value: Option<StringType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
 }
 /// ResearchStudy nested structure for the 'comparisonGroup' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -297,6 +232,52 @@ pub struct ResearchStudyComparisongroup {
     #[serde(rename = "observedGroup")]
     pub observed_group: Option<Reference>,
 }
+/// ResearchStudy nested structure for the 'recruitment' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyRecruitment {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Estimated total number of participants to be enrolled
+    #[serde(rename = "targetNumber")]
+    pub target_number: Option<UnsignedIntType>,
+    /// Extension element for the 'targetNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetNumber")]
+    pub _target_number: Option<Element>,
+    /// Actual total number of participants enrolled in study
+    #[serde(rename = "actualNumber")]
+    pub actual_number: Option<UnsignedIntType>,
+    /// Extension element for the 'actualNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actualNumber")]
+    pub _actual_number: Option<Element>,
+    /// Inclusion and exclusion criteria
+    pub eligibility: Option<Reference>,
+    /// Group of participants who were enrolled in study
+    #[serde(rename = "actualGroup")]
+    pub actual_group: Option<Reference>,
+}
+/// ResearchStudy nested structure for the 'objective' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyObjective {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for the objective
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// primary | secondary | exploratory
+    ///
+    /// Binding: preferred (Codes for the kind of study objective.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Description of the objective
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// ResearchStudy nested structure for the 'associatedParty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchStudyAssociatedparty {
@@ -323,6 +304,25 @@ pub struct ResearchStudyAssociatedparty {
     pub classifier: Option<Vec<CodeableConcept>>,
     /// Individual or organization associated with study (use practitionerRole to specify their organisation)
     pub party: Option<Reference>,
+}
+/// ResearchStudy nested structure for the 'progressStatus' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyProgressstatus {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for status or state (e.g. recruitment status)
+    ///
+    /// Binding: extensible (defn.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-status
+    pub state: CodeableConcept,
+    /// Actual if true else anticipated
+    pub actual: Option<BooleanType>,
+    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
+    pub _actual: Option<Element>,
+    /// Date range
+    pub period: Option<Period>,
 }
 
 impl Default for ResearchStudy {
@@ -373,6 +373,17 @@ impl Default for ResearchStudy {
     }
 }
 
+impl Default for ResearchStudyLabel {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
 impl Default for ResearchStudyOutcomemeasure {
     fn default() -> Self {
         Self {
@@ -383,56 +394,6 @@ impl Default for ResearchStudyOutcomemeasure {
             description: Default::default(),
             _description: Default::default(),
             reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ResearchStudyRecruitment {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target_number: Default::default(),
-            _target_number: Default::default(),
-            actual_number: Default::default(),
-            _actual_number: Default::default(),
-            eligibility: Default::default(),
-            actual_group: Default::default(),
-        }
-    }
-}
-
-impl Default for ResearchStudyProgressstatus {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            state: Default::default(),
-            actual: Default::default(),
-            _actual: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for ResearchStudyObjective {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            type_: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for ResearchStudyLabel {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -454,6 +415,33 @@ impl Default for ResearchStudyComparisongroup {
     }
 }
 
+impl Default for ResearchStudyRecruitment {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target_number: Default::default(),
+            _target_number: Default::default(),
+            actual_number: Default::default(),
+            _actual_number: Default::default(),
+            eligibility: Default::default(),
+            actual_group: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyObjective {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for ResearchStudyAssociatedparty {
     fn default() -> Self {
         Self {
@@ -464,6 +452,18 @@ impl Default for ResearchStudyAssociatedparty {
             period: Default::default(),
             classifier: Default::default(),
             party: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyProgressstatus {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            state: Default::default(),
+            actual: Default::default(),
+            _actual: Default::default(),
+            period: Default::default(),
         }
     }
 }

@@ -114,20 +114,20 @@ pub struct RequestOrchestrationAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// Who should perform the action
+    pub participant: Option<Vec<RequestOrchestrationActionParticipant>>,
     /// Dynamic aspects of the definition
     #[serde(rename = "dynamicValue")]
     pub dynamic_value: Option<Vec<RequestOrchestrationActionDynamicvalue>>,
-    /// Output data definition
-    pub output: Option<Vec<RequestOrchestrationActionOutput>>,
-    /// Input data requirements
-    pub input: Option<Vec<RequestOrchestrationActionInput>>,
     /// Relationship to another action
     #[serde(rename = "relatedAction")]
     pub related_action: Option<Vec<RequestOrchestrationActionRelatedaction>>,
+    /// Input data requirements
+    pub input: Option<Vec<RequestOrchestrationActionInput>>,
     /// Whether or not the action is applicable
     pub condition: Option<Vec<RequestOrchestrationActionCondition>>,
-    /// Who should perform the action
-    pub participant: Option<Vec<RequestOrchestrationActionParticipant>>,
+    /// Output data definition
+    pub output: Option<Vec<RequestOrchestrationActionOutput>>,
     /// Pointer to specific item from the PlanDefinition
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -237,6 +237,25 @@ pub struct RequestOrchestrationAction {
     pub _transform: Option<Element>,
     /// Sub action
     pub action: Option<Vec<StringType>>,
+}
+/// RequestOrchestrationAction nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestOrchestrationActionInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
 }
 /// RequestOrchestrationAction nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -351,25 +370,6 @@ pub struct RequestOrchestrationActionRelatedaction {
     #[serde(rename = "offsetRange")]
     pub offset_range: Option<Range>,
 }
-/// RequestOrchestrationAction nested structure for the 'input' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionInput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
-}
 
 impl Default for RequestOrchestration {
     fn default() -> Self {
@@ -407,12 +407,12 @@ impl Default for RequestOrchestrationAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            dynamic_value: Default::default(),
-            output: Default::default(),
-            input: Default::default(),
-            related_action: Default::default(),
-            condition: Default::default(),
             participant: Default::default(),
+            dynamic_value: Default::default(),
+            related_action: Default::default(),
+            input: Default::default(),
+            condition: Default::default(),
+            output: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             prefix: Default::default(),
@@ -452,6 +452,19 @@ impl Default for RequestOrchestrationAction {
             transform: Default::default(),
             _transform: Default::default(),
             action: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestOrchestrationActionInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
         }
     }
 }
@@ -520,19 +533,6 @@ impl Default for RequestOrchestrationActionRelatedaction {
             _end_relationship: Default::default(),
             offset_duration: Default::default(),
             offset_range: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestOrchestrationActionInput {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
         }
     }
 }

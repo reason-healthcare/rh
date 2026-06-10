@@ -767,11 +767,11 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
 }
 
 impl crate::traits::message_definition::MessageDefinitionExistence for MessageDefinition {
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
     fn has_event(&self) -> bool {
         true
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

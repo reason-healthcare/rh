@@ -100,21 +100,6 @@ pub struct Subscription {
     #[serde(rename = "_maxCount")]
     pub _max_count: Option<Element>,
 }
-/// Subscription nested structure for the 'parameter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionParameter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name (key) of the parameter
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Value of the parameter to use or pass through
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// Subscription nested structure for the 'filterBy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionFilterby {
@@ -147,6 +132,21 @@ pub struct SubscriptionFilterby {
     /// Extension element for the 'modifier' primitive field. Contains metadata and extensions.
     pub _modifier: Option<Element>,
     /// Literal value or resource path
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// Subscription nested structure for the 'parameter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionParameter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name (key) of the parameter
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Value of the parameter to use or pass through
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
@@ -188,18 +188,6 @@ impl Default for Subscription {
     }
 }
 
-impl Default for SubscriptionParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: StringType::default(),
-            _name: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
 impl Default for SubscriptionFilterby {
     fn default() -> Self {
         Self {
@@ -213,6 +201,18 @@ impl Default for SubscriptionFilterby {
             modifier: Default::default(),
             _modifier: Default::default(),
             value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for SubscriptionParameter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            value: StringType::default(),
             _value: Default::default(),
         }
     }

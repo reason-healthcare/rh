@@ -157,38 +157,6 @@ pub struct EvidenceReportSection {
     /// Nested Section
     pub section: Option<Vec<StringType>>,
 }
-/// EvidenceReport nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship
-    pub target: EvidenceReportRelatestoTarget,
-    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
-    pub code: ReportRelationType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-}
-/// EvidenceReportRelatesto nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatestoTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship URL
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Target of the relationship Identifier
-    pub identifier: Option<Identifier>,
-    /// Target of the relationship Display
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Target of the relationship Resource reference
-    pub resource: Option<Reference>,
-}
 /// EvidenceReportSubject nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceReportSubjectCharacteristic {
@@ -222,6 +190,38 @@ pub struct EvidenceReportSubjectCharacteristic {
     pub _exclude: Option<Element>,
     /// Timeframe for the characteristic
     pub period: Option<Period>,
+}
+/// EvidenceReport nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship
+    pub target: EvidenceReportRelatestoTarget,
+    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
+    pub code: ReportRelationType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+}
+/// EvidenceReportRelatesto nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatestoTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship URL
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Target of the relationship Identifier
+    pub identifier: Option<Identifier>,
+    /// Target of the relationship Display
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Target of the relationship Resource reference
+    pub resource: Option<Reference>,
 }
 
 impl Default for EvidenceReport {
@@ -286,6 +286,23 @@ impl Default for EvidenceReportSection {
     }
 }
 
+impl Default for EvidenceReportSubjectCharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value_reference: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            exclude: Default::default(),
+            _exclude: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for EvidenceReportRelatesto {
     fn default() -> Self {
         Self {
@@ -307,23 +324,6 @@ impl Default for EvidenceReportRelatestoTarget {
             display: Default::default(),
             _display: Default::default(),
             resource: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportSubjectCharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value_reference: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            exclude: Default::default(),
-            _exclude: Default::default(),
-            period: Default::default(),
         }
     }
 }

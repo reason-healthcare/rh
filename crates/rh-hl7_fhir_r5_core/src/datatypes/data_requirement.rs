@@ -65,46 +65,6 @@ pub struct DataRequirement {
     /// Order of the results
     pub sort: Option<Vec<Element>>,
 }
-/// DataRequirement nested structure for the 'sort' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataRequirementSort {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The name of the attribute to perform the sort
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// ascending | descending
-    pub direction: SortDirection,
-    /// Extension element for the 'direction' primitive field. Contains metadata and extensions.
-    pub _direction: Option<Element>,
-}
-/// DataRequirement nested structure for the 'codeFilter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataRequirementCodefilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A code-valued attribute to filter on
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// A coded (token) parameter to search on
-    #[serde(rename = "searchParam")]
-    pub search_param: Option<StringType>,
-    /// Extension element for the 'searchParam' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_searchParam")]
-    pub _search_param: Option<Element>,
-    /// ValueSet for the filter
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-    /// What code is expected
-    pub code: Option<Vec<Coding>>,
-}
 /// DataRequirement nested structure for the 'valueFilter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataRequirementValuefilter {
@@ -135,6 +95,21 @@ pub struct DataRequirementValuefilter {
     #[serde(rename = "valueDuration")]
     pub value_duration: Option<Duration>,
 }
+/// DataRequirement nested structure for the 'sort' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataRequirementSort {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the attribute to perform the sort
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// ascending | descending
+    pub direction: SortDirection,
+    /// Extension element for the 'direction' primitive field. Contains metadata and extensions.
+    pub _direction: Option<Element>,
+}
 /// DataRequirement nested structure for the 'dateFilter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataRequirementDatefilter {
@@ -161,6 +136,31 @@ pub struct DataRequirementDatefilter {
     #[serde(rename = "valueDuration")]
     pub value_duration: Option<Duration>,
 }
+/// DataRequirement nested structure for the 'codeFilter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataRequirementCodefilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A code-valued attribute to filter on
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// A coded (token) parameter to search on
+    #[serde(rename = "searchParam")]
+    pub search_param: Option<StringType>,
+    /// Extension element for the 'searchParam' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_searchParam")]
+    pub _search_param: Option<Element>,
+    /// ValueSet for the filter
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+    /// What code is expected
+    pub code: Option<Vec<Coding>>,
+}
 
 impl Default for DataRequirement {
     fn default() -> Self {
@@ -184,33 +184,6 @@ impl Default for DataRequirement {
     }
 }
 
-impl Default for DataRequirementSort {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: StringType::default(),
-            _path: Default::default(),
-            direction: SortDirection::default(),
-            _direction: Default::default(),
-        }
-    }
-}
-
-impl Default for DataRequirementCodefilter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            search_param: Default::default(),
-            _search_param: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-            code: Default::default(),
-        }
-    }
-}
-
 impl Default for DataRequirementValuefilter {
     fn default() -> Self {
         Self {
@@ -228,6 +201,18 @@ impl Default for DataRequirementValuefilter {
     }
 }
 
+impl Default for DataRequirementSort {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: StringType::default(),
+            _path: Default::default(),
+            direction: SortDirection::default(),
+            _direction: Default::default(),
+        }
+    }
+}
+
 impl Default for DataRequirementDatefilter {
     fn default() -> Self {
         Self {
@@ -239,6 +224,21 @@ impl Default for DataRequirementDatefilter {
             value_date_time: Default::default(),
             value_period: Default::default(),
             value_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for DataRequirementCodefilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            search_param: Default::default(),
+            _search_param: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+            code: Default::default(),
         }
     }
 }

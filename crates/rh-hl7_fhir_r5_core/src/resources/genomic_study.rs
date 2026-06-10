@@ -78,6 +78,44 @@ pub struct GenomicStudy {
     /// Genomic Analysis Event
     pub analysis: Option<Vec<GenomicStudyAnalysis>>,
 }
+/// GenomicStudyAnalysis nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// File containing input data
+    pub file: Option<Reference>,
+    /// Type of input data (e.g., BAM, CRAM, or FASTA)
+    ///
+    /// Binding: example (The data format of the data file.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The analysis event or other GenomicStudy that generated this input file (Identifier)
+    #[serde(rename = "generatedByIdentifier")]
+    pub generated_by_identifier: Option<Identifier>,
+    /// The analysis event or other GenomicStudy that generated this input file (Reference)
+    #[serde(rename = "generatedByReference")]
+    pub generated_by_reference: Option<Reference>,
+}
+/// GenomicStudyAnalysis nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// File containing output data
+    pub file: Option<Reference>,
+    /// Type of output data (e.g., VCF, MAF, or BAM)
+    ///
+    /// Binding: example (The data format of the data file.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+}
 /// GenomicStudyAnalysis nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomicStudyAnalysisPerformer {
@@ -89,20 +127,31 @@ pub struct GenomicStudyAnalysisPerformer {
     /// Role of the actor for this analysis
     pub role: Option<CodeableConcept>,
 }
+/// GenomicStudyAnalysis nested structure for the 'device' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisDevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Device used for the analysis
+    pub device: Option<Reference>,
+    /// Specific function for the device used for the analysis
+    pub function: Option<CodeableConcept>,
+}
 /// GenomicStudy nested structure for the 'analysis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomicStudyAnalysis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Inputs for the analysis event
-    pub input: Option<Vec<GenomicStudyAnalysisInput>>,
-    /// Performer for the analysis event
-    pub performer: Option<Vec<GenomicStudyAnalysisPerformer>>,
     /// Devices used for the analysis (e.g., instruments, software), with settings and parameters
     pub device: Option<Vec<GenomicStudyAnalysisDevice>>,
     /// Outputs for the analysis event
     pub output: Option<Vec<GenomicStudyAnalysisOutput>>,
+    /// Inputs for the analysis event
+    pub input: Option<Vec<GenomicStudyAnalysisInput>>,
+    /// Performer for the analysis event
+    pub performer: Option<Vec<GenomicStudyAnalysisPerformer>>,
     /// Identifiers for the analysis event
     pub identifier: Option<Vec<Identifier>>,
     /// Type of the methods used in the analysis (e.g., FISH, Karyotyping, MSI)
@@ -162,55 +211,6 @@ pub struct GenomicStudyAnalysis {
     #[serde(rename = "regionsCalled")]
     pub regions_called: Option<Vec<Reference>>,
 }
-/// GenomicStudyAnalysis nested structure for the 'input' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisInput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// File containing input data
-    pub file: Option<Reference>,
-    /// Type of input data (e.g., BAM, CRAM, or FASTA)
-    ///
-    /// Binding: example (The data format of the data file.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The analysis event or other GenomicStudy that generated this input file (Identifier)
-    #[serde(rename = "generatedByIdentifier")]
-    pub generated_by_identifier: Option<Identifier>,
-    /// The analysis event or other GenomicStudy that generated this input file (Reference)
-    #[serde(rename = "generatedByReference")]
-    pub generated_by_reference: Option<Reference>,
-}
-/// GenomicStudyAnalysis nested structure for the 'output' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisOutput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// File containing output data
-    pub file: Option<Reference>,
-    /// Type of output data (e.g., VCF, MAF, or BAM)
-    ///
-    /// Binding: example (The data format of the data file.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-}
-/// GenomicStudyAnalysis nested structure for the 'device' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisDevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Device used for the analysis
-    pub device: Option<Reference>,
-    /// Specific function for the device used for the analysis
-    pub function: Option<CodeableConcept>,
-}
 
 impl Default for GenomicStudy {
     fn default() -> Self {
@@ -240,46 +240,6 @@ impl Default for GenomicStudy {
     }
 }
 
-impl Default for GenomicStudyAnalysisPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            actor: Default::default(),
-            role: Default::default(),
-        }
-    }
-}
-
-impl Default for GenomicStudyAnalysis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            input: Default::default(),
-            performer: Default::default(),
-            device: Default::default(),
-            output: Default::default(),
-            identifier: Default::default(),
-            method_type: Default::default(),
-            change_type: Default::default(),
-            genome_build: Default::default(),
-            instantiates_canonical: Default::default(),
-            _instantiates_canonical: Default::default(),
-            instantiates_uri: Default::default(),
-            _instantiates_uri: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            focus: Default::default(),
-            specimen: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            note: Default::default(),
-            protocol_performed: Default::default(),
-            regions_studied: Default::default(),
-            regions_called: Default::default(),
-        }
-    }
-}
-
 impl Default for GenomicStudyAnalysisInput {
     fn default() -> Self {
         Self {
@@ -302,12 +262,52 @@ impl Default for GenomicStudyAnalysisOutput {
     }
 }
 
+impl Default for GenomicStudyAnalysisPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            actor: Default::default(),
+            role: Default::default(),
+        }
+    }
+}
+
 impl Default for GenomicStudyAnalysisDevice {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             device: Default::default(),
             function: Default::default(),
+        }
+    }
+}
+
+impl Default for GenomicStudyAnalysis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device: Default::default(),
+            output: Default::default(),
+            input: Default::default(),
+            performer: Default::default(),
+            identifier: Default::default(),
+            method_type: Default::default(),
+            change_type: Default::default(),
+            genome_build: Default::default(),
+            instantiates_canonical: Default::default(),
+            _instantiates_canonical: Default::default(),
+            instantiates_uri: Default::default(),
+            _instantiates_uri: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            focus: Default::default(),
+            specimen: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            note: Default::default(),
+            protocol_performed: Default::default(),
+            regions_studied: Default::default(),
+            regions_called: Default::default(),
         }
     }
 }

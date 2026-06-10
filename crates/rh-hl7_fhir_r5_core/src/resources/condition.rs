@@ -128,21 +128,6 @@ pub struct Condition {
     /// Additional information about the Condition
     pub note: Option<Vec<Annotation>>,
 }
-/// Condition nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub function: Option<CodeableConcept>,
-    /// Who or what participated in the activities related to the condition
-    pub actor: Reference,
-}
 /// Condition nested structure for the 'stage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionStage {
@@ -168,6 +153,21 @@ pub struct ConditionStage {
     /// - `260998006`: Clinical staging (qualifier value)
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
+}
+/// Condition nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the condition
+    pub actor: Reference,
 }
 
 impl Default for Condition {
@@ -203,16 +203,6 @@ impl Default for Condition {
     }
 }
 
-impl Default for ConditionParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for ConditionStage {
     fn default() -> Self {
         Self {
@@ -220,6 +210,16 @@ impl Default for ConditionStage {
             summary: Default::default(),
             assessment: Default::default(),
             type_: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -605,19 +605,19 @@ impl crate::traits::condition::ConditionMutators for Condition {
 }
 
 impl crate::traits::condition::ConditionExistence for Condition {
-    fn has_abatement(&self) -> bool {
-        self.abatement_date_time.is_some()
-            || self.abatement_age.is_some()
-            || self.abatement_period.is_some()
-            || self.abatement_range.is_some()
-            || self.abatement_string.is_some()
-    }
     fn has_onset(&self) -> bool {
         self.onset_date_time.is_some()
             || self.onset_age.is_some()
             || self.onset_period.is_some()
             || self.onset_range.is_some()
             || self.onset_string.is_some()
+    }
+    fn has_abatement(&self) -> bool {
+        self.abatement_date_time.is_some()
+            || self.abatement_age.is_some()
+            || self.abatement_period.is_some()
+            || self.abatement_range.is_some()
+            || self.abatement_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         self.identifier.as_ref().is_some_and(|v| !v.is_empty())

@@ -65,19 +65,6 @@ pub struct Practitioner {
     /// A language which may be used to communicate with the practitioner
     pub communication: Option<Vec<PractitionerCommunication>>,
 }
-/// Practitioner nested structure for the 'communication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerCommunication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The language code used to communicate with the practitioner
-    pub language: StringType,
-    /// Language preference indicator
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
-}
 /// Practitioner nested structure for the 'qualification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerQualification {
@@ -96,6 +83,19 @@ pub struct PractitionerQualification {
     pub period: Option<Period>,
     /// Organization that regulates and issues the qualification
     pub issuer: Option<Reference>,
+}
+/// Practitioner nested structure for the 'communication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerCommunication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language code used to communicate with the practitioner
+    pub language: StringType,
+    /// Language preference indicator
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
 }
 
 impl Default for Practitioner {
@@ -121,17 +121,6 @@ impl Default for Practitioner {
     }
 }
 
-impl Default for PractitionerCommunication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: StringType::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
-        }
-    }
-}
-
 impl Default for PractitionerQualification {
     fn default() -> Self {
         Self {
@@ -140,6 +129,17 @@ impl Default for PractitionerQualification {
             code: CodeableConcept::default(),
             period: Default::default(),
             issuer: Default::default(),
+        }
+    }
+}
+
+impl Default for PractitionerCommunication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: StringType::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
         }
     }
 }

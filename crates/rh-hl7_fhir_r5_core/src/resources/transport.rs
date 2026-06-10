@@ -182,21 +182,6 @@ pub struct Transport {
     /// Parent (or preceding) transport
     pub history: Option<Reference>,
 }
-/// Transport nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransportRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
-}
 /// Transport nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransportInput {
@@ -370,6 +355,21 @@ pub struct TransportInput {
     /// Content to use in performing the transport (Meta)
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
+}
+/// Transport nested structure for the 'restriction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransportRestriction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
 }
 /// Transport nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -595,18 +595,6 @@ impl Default for Transport {
     }
 }
 
-impl Default for TransportRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
-        }
-    }
-}
-
 impl Default for TransportInput {
     fn default() -> Self {
         Self {
@@ -666,6 +654,18 @@ impl Default for TransportInput {
             value_extended_contact_detail: Default::default(),
             value_dosage: Default::default(),
             value_meta: Default::default(),
+        }
+    }
+}
+
+impl Default for TransportRestriction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }

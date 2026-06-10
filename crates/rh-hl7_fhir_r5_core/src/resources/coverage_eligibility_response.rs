@@ -85,6 +85,26 @@ pub struct CoverageEligibilityResponse {
     /// Processing errors
     pub error: Option<Vec<CoverageEligibilityResponseError>>,
 }
+/// CoverageEligibilityResponse nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specific event
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/datestype
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Occurance date or period (dateTime)
+    #[serde(rename = "whenDateTime")]
+    pub when_date_time: DateTimeType,
+    /// Occurance date or period (Period)
+    #[serde(rename = "whenPeriod")]
+    pub when_period: Period,
+}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -117,6 +137,23 @@ pub struct CoverageEligibilityResponseInsuranceItemBenefit {
     #[serde(rename = "usedMoney")]
     pub used_money: Option<Money>,
 }
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+    /// FHIRPath of element(s) related to issue
+    pub expression: Option<Vec<StringType>>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+}
 /// CoverageEligibilityResponse nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsurance {
@@ -134,23 +171,6 @@ pub struct CoverageEligibilityResponseInsurance {
     /// When the benefits are applicable
     #[serde(rename = "benefitPeriod")]
     pub benefit_period: Option<Period>,
-}
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-    /// FHIRPath of element(s) related to issue
-    pub expression: Option<Vec<StringType>>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
 }
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,26 +249,6 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
-/// CoverageEligibilityResponse nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specific event
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/datestype
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Occurance date or period (dateTime)
-    #[serde(rename = "whenDateTime")]
-    pub when_date_time: DateTimeType,
-    /// Occurance date or period (Period)
-    #[serde(rename = "whenPeriod")]
-    pub when_period: Period,
-}
 
 impl Default for CoverageEligibilityResponse {
     fn default() -> Self {
@@ -281,6 +281,17 @@ impl Default for CoverageEligibilityResponse {
     }
 }
 
+impl Default for CoverageEligibilityResponseEvent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            when_date_time: Default::default(),
+            when_period: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
@@ -296,6 +307,17 @@ impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     }
 }
 
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityResponseInsurance {
     fn default() -> Self {
         Self {
@@ -305,17 +327,6 @@ impl Default for CoverageEligibilityResponseInsurance {
             inforce: Default::default(),
             _inforce: Default::default(),
             benefit_period: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
         }
     }
 }
@@ -342,17 +353,6 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
             authorization_supporting: Default::default(),
             authorization_url: Default::default(),
             _authorization_url: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseEvent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            when_date_time: Default::default(),
-            when_period: Default::default(),
         }
     }
 }

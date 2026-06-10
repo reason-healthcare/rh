@@ -66,6 +66,34 @@ pub struct Ingredient {
     /// The substance that comprises this ingredient
     pub substance: IngredientSubstance,
 }
+/// Ingredient nested structure for the 'manufacturer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngredientManufacturer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// allowed | possible | actual
+    pub role: Option<IngredientManufacturerRole>,
+    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
+    pub _role: Option<Element>,
+    /// An organization that manufactures this ingredient
+    pub manufacturer: Reference,
+}
+/// Ingredient nested structure for the 'substance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngredientSubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The quantity of substance, per presentation, or per volume or mass, and type of quantity
+    pub strength: Option<Vec<IngredientSubstanceStrength>>,
+    /// A code or full resource that represents the ingredient substance
+    ///
+    /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
+    pub code: CodeableReference,
+}
 /// IngredientSubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngredientSubstanceStrength {
@@ -123,34 +151,6 @@ pub struct IngredientSubstanceStrength {
     /// ValueSet: http://hl7.org/fhir/ValueSet/country
     pub country: Option<Vec<CodeableConcept>>,
 }
-/// Ingredient nested structure for the 'substance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IngredientSubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The quantity of substance, per presentation, or per volume or mass, and type of quantity
-    pub strength: Option<Vec<IngredientSubstanceStrength>>,
-    /// A code or full resource that represents the ingredient substance
-    ///
-    /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
-    pub code: CodeableReference,
-}
-/// Ingredient nested structure for the 'manufacturer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IngredientManufacturer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// allowed | possible | actual
-    pub role: Option<IngredientManufacturerRole>,
-    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
-    pub _role: Option<Element>,
-    /// An organization that manufactures this ingredient
-    pub manufacturer: Reference,
-}
 
 impl Default for Ingredient {
     fn default() -> Self {
@@ -169,6 +169,27 @@ impl Default for Ingredient {
             _comment: Default::default(),
             manufacturer: Default::default(),
             substance: IngredientSubstance::default(),
+        }
+    }
+}
+
+impl Default for IngredientManufacturer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            _role: Default::default(),
+            manufacturer: Reference::default(),
+        }
+    }
+}
+
+impl Default for IngredientSubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: CodeableReference::default(),
         }
     }
 }
@@ -193,27 +214,6 @@ impl Default for IngredientSubstanceStrength {
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
-        }
-    }
-}
-
-impl Default for IngredientSubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: CodeableReference::default(),
-        }
-    }
-}
-
-impl Default for IngredientManufacturer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            _role: Default::default(),
-            manufacturer: Reference::default(),
         }
     }
 }

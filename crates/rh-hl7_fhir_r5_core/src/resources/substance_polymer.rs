@@ -43,6 +43,23 @@ pub struct SubstancePolymer {
     /// Specifies and quantifies the repeated units and their configuration
     pub repeat: Option<Vec<SubstancePolymerRepeat>>,
 }
+/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerRepeatRepeatunit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Structural repeat units are essential elements for defining polymers
+    pub unit: Option<StringType>,
+    /// Extension element for the 'unit' primitive field. Contains metadata and extensions.
+    pub _unit: Option<Element>,
+    /// The orientation of the polymerisation, e.g. head-tail, head-head, random
+    pub orientation: Option<CodeableConcept>,
+    /// Number of repeats of this unit
+    pub amount: Option<IntegerType>,
+    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
+    pub _amount: Option<Element>,
+}
 /// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerMonomersetStartingmaterial {
@@ -61,19 +78,6 @@ pub struct SubstancePolymerMonomersetStartingmaterial {
     pub _is_defining: Option<Element>,
     /// A percentage
     pub amount: Option<Quantity>,
-}
-/// SubstancePolymer nested structure for the 'monomerSet' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomerset {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The starting materials - monomer(s) used in the synthesis of the polymer
-    #[serde(rename = "startingMaterial")]
-    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
-    /// Captures the type of ratio to the entire polymer, e.g. Monomer/Polymer ratio, SRU/Polymer Ratio
-    #[serde(rename = "ratioType")]
-    pub ratio_type: Option<CodeableConcept>,
 }
 /// SubstancePolymer nested structure for the 'repeat' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,23 +116,6 @@ pub struct SubstancePolymerRepeatRepeatunitStructuralrepresentation {
     /// An attached file with the structural representation
     pub attachment: Option<Attachment>,
 }
-/// SubstancePolymerRepeat nested structure for the 'repeatUnit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerRepeatRepeatunit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Structural repeat units are essential elements for defining polymers
-    pub unit: Option<StringType>,
-    /// Extension element for the 'unit' primitive field. Contains metadata and extensions.
-    pub _unit: Option<Element>,
-    /// The orientation of the polymerisation, e.g. head-tail, head-head, random
-    pub orientation: Option<CodeableConcept>,
-    /// Number of repeats of this unit
-    pub amount: Option<IntegerType>,
-    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
-    pub _amount: Option<Element>,
-}
 /// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
@@ -151,6 +138,19 @@ pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     /// Extension element for the 'high' primitive field. Contains metadata and extensions.
     pub _high: Option<Element>,
 }
+/// SubstancePolymer nested structure for the 'monomerSet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomerset {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The starting materials - monomer(s) used in the synthesis of the polymer
+    #[serde(rename = "startingMaterial")]
+    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
+    /// Captures the type of ratio to the entire polymer, e.g. Monomer/Polymer ratio, SRU/Polymer Ratio
+    #[serde(rename = "ratioType")]
+    pub ratio_type: Option<CodeableConcept>,
+}
 
 impl Default for SubstancePolymer {
     fn default() -> Self {
@@ -168,6 +168,19 @@ impl Default for SubstancePolymer {
     }
 }
 
+impl Default for SubstancePolymerRepeatRepeatunit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            unit: Default::default(),
+            _unit: Default::default(),
+            orientation: Default::default(),
+            amount: Default::default(),
+            _amount: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstancePolymerMonomersetStartingmaterial {
     fn default() -> Self {
         Self {
@@ -177,16 +190,6 @@ impl Default for SubstancePolymerMonomersetStartingmaterial {
             is_defining: Default::default(),
             _is_defining: Default::default(),
             amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerMonomerset {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            starting_material: Default::default(),
-            ratio_type: Default::default(),
         }
     }
 }
@@ -216,19 +219,6 @@ impl Default for SubstancePolymerRepeatRepeatunitStructuralrepresentation {
     }
 }
 
-impl Default for SubstancePolymerRepeatRepeatunit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            unit: Default::default(),
-            _unit: Default::default(),
-            orientation: Default::default(),
-            amount: Default::default(),
-            _amount: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     fn default() -> Self {
         Self {
@@ -240,6 +230,16 @@ impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
             _low: Default::default(),
             high: Default::default(),
             _high: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstancePolymerMonomerset {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            starting_material: Default::default(),
+            ratio_type: Default::default(),
         }
     }
 }

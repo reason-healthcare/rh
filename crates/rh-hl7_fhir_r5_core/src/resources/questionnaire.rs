@@ -145,96 +145,20 @@ pub struct Questionnaire {
     /// Questions and sections within the Questionnaire
     pub item: Option<Vec<QuestionnaireItem>>,
 }
-/// QuestionnaireItem nested structure for the 'enableWhen' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemEnablewhen {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The linkId of question that determines whether item is enabled/disabled
-    pub question: StringType,
-    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
-    pub _question: Option<Element>,
-    /// exists | = | != | > | < | >= | <=
-    pub operator: QuestionnaireEnableOperator,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// Value for question comparison based on operator (boolean)
-    #[serde(rename = "answerBoolean")]
-    pub answer_boolean: BooleanType,
-    /// Value for question comparison based on operator (decimal)
-    #[serde(rename = "answerDecimal")]
-    pub answer_decimal: DecimalType,
-    /// Value for question comparison based on operator (integer)
-    #[serde(rename = "answerInteger")]
-    pub answer_integer: IntegerType,
-    /// Value for question comparison based on operator (date)
-    #[serde(rename = "answerDate")]
-    pub answer_date: DateType,
-    /// Value for question comparison based on operator (dateTime)
-    #[serde(rename = "answerDateTime")]
-    pub answer_date_time: DateTimeType,
-    /// Value for question comparison based on operator (time)
-    #[serde(rename = "answerTime")]
-    pub answer_time: TimeType,
-    /// Value for question comparison based on operator (string)
-    #[serde(rename = "answerString")]
-    pub answer_string: StringType,
-    /// Value for question comparison based on operator (Coding)
-    #[serde(rename = "answerCoding")]
-    pub answer_coding: Coding,
-    /// Value for question comparison based on operator (Quantity)
-    #[serde(rename = "answerQuantity")]
-    pub answer_quantity: Quantity,
-    /// Value for question comparison based on operator (Reference)
-    #[serde(rename = "answerReference")]
-    pub answer_reference: Reference,
-}
-/// QuestionnaireItem nested structure for the 'answerOption' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemAnsweroption {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Answer value (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Answer value (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Answer value (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Answer value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Answer value (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Answer value (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Whether option is selected by default
-    #[serde(rename = "initialSelected")]
-    pub initial_selected: Option<BooleanType>,
-    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_initialSelected")]
-    pub _initial_selected: Option<Element>,
-}
 /// Questionnaire nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Only allow data when
-    #[serde(rename = "enableWhen")]
-    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
     /// Permitted answer
     #[serde(rename = "answerOption")]
     pub answer_option: Option<Vec<QuestionnaireItemAnsweroption>>,
     /// Initial value(s) when item is first rendered
     pub initial: Option<Vec<QuestionnaireItemInitial>>,
+    /// Only allow data when
+    #[serde(rename = "enableWhen")]
+    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -311,6 +235,37 @@ pub struct QuestionnaireItem {
     /// Nested questionnaire items
     pub item: Option<Vec<StringType>>,
 }
+/// QuestionnaireItem nested structure for the 'answerOption' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemAnsweroption {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Answer value (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Answer value (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Answer value (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Answer value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Answer value (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Answer value (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Whether option is selected by default
+    #[serde(rename = "initialSelected")]
+    pub initial_selected: Option<BooleanType>,
+    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_initialSelected")]
+    pub _initial_selected: Option<Element>,
+}
 /// QuestionnaireItem nested structure for the 'initial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItemInitial {
@@ -353,6 +308,51 @@ pub struct QuestionnaireItemInitial {
     /// Actual value for initializing the question (Reference)
     #[serde(rename = "valueReference")]
     pub value_reference: Reference,
+}
+/// QuestionnaireItem nested structure for the 'enableWhen' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemEnablewhen {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The linkId of question that determines whether item is enabled/disabled
+    pub question: StringType,
+    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
+    pub _question: Option<Element>,
+    /// exists | = | != | > | < | >= | <=
+    pub operator: QuestionnaireEnableOperator,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// Value for question comparison based on operator (boolean)
+    #[serde(rename = "answerBoolean")]
+    pub answer_boolean: BooleanType,
+    /// Value for question comparison based on operator (decimal)
+    #[serde(rename = "answerDecimal")]
+    pub answer_decimal: DecimalType,
+    /// Value for question comparison based on operator (integer)
+    #[serde(rename = "answerInteger")]
+    pub answer_integer: IntegerType,
+    /// Value for question comparison based on operator (date)
+    #[serde(rename = "answerDate")]
+    pub answer_date: DateType,
+    /// Value for question comparison based on operator (dateTime)
+    #[serde(rename = "answerDateTime")]
+    pub answer_date_time: DateTimeType,
+    /// Value for question comparison based on operator (time)
+    #[serde(rename = "answerTime")]
+    pub answer_time: TimeType,
+    /// Value for question comparison based on operator (string)
+    #[serde(rename = "answerString")]
+    pub answer_string: StringType,
+    /// Value for question comparison based on operator (Coding)
+    #[serde(rename = "answerCoding")]
+    pub answer_coding: Coding,
+    /// Value for question comparison based on operator (Quantity)
+    #[serde(rename = "answerQuantity")]
+    pub answer_quantity: Quantity,
+    /// Value for question comparison based on operator (Reference)
+    #[serde(rename = "answerReference")]
+    pub answer_reference: Reference,
 }
 
 impl Default for Questionnaire {
@@ -404,51 +404,13 @@ impl Default for Questionnaire {
     }
 }
 
-impl Default for QuestionnaireItemEnablewhen {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            question: Default::default(),
-            _question: Default::default(),
-            operator: Default::default(),
-            _operator: Default::default(),
-            answer_boolean: Default::default(),
-            answer_decimal: Default::default(),
-            answer_integer: Default::default(),
-            answer_date: Default::default(),
-            answer_date_time: Default::default(),
-            answer_time: Default::default(),
-            answer_string: Default::default(),
-            answer_coding: Default::default(),
-            answer_quantity: Default::default(),
-            answer_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItemAnsweroption {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_coding: Default::default(),
-            value_reference: Default::default(),
-            initial_selected: Default::default(),
-            _initial_selected: Default::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireItem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            enable_when: Default::default(),
             answer_option: Default::default(),
             initial: Default::default(),
+            enable_when: Default::default(),
             link_id: StringType::default(),
             _link_id: Default::default(),
             definition: Default::default(),
@@ -481,6 +443,22 @@ impl Default for QuestionnaireItem {
     }
 }
 
+impl Default for QuestionnaireItemAnsweroption {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_coding: Default::default(),
+            value_reference: Default::default(),
+            initial_selected: Default::default(),
+            _initial_selected: Default::default(),
+        }
+    }
+}
+
 impl Default for QuestionnaireItemInitial {
     fn default() -> Self {
         Self {
@@ -497,6 +475,28 @@ impl Default for QuestionnaireItemInitial {
             value_coding: Default::default(),
             value_quantity: Default::default(),
             value_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireItemEnablewhen {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            question: Default::default(),
+            _question: Default::default(),
+            operator: Default::default(),
+            _operator: Default::default(),
+            answer_boolean: Default::default(),
+            answer_decimal: Default::default(),
+            answer_integer: Default::default(),
+            answer_date: Default::default(),
+            answer_date_time: Default::default(),
+            answer_time: Default::default(),
+            answer_string: Default::default(),
+            answer_coding: Default::default(),
+            answer_quantity: Default::default(),
+            answer_reference: Default::default(),
         }
     }
 }

@@ -47,34 +47,6 @@ pub struct Permission {
     /// Constraints to the Permission
     pub rule: Option<Vec<PermissionRule>>,
 }
-/// Permission nested structure for the 'justification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PermissionJustification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The regulatory grounds upon which this Permission builds
-    ///
-    /// Binding: example (Regulatory policy examples)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-policy
-    pub basis: Option<Vec<CodeableConcept>>,
-    /// Justifing rational
-    pub evidence: Option<Vec<Reference>>,
-}
-/// PermissionRule nested structure for the 'data' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PermissionRuleData {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Security tag code on .meta.security
-    pub security: Option<Vec<Coding>>,
-    /// Timeframe encompasing data create/update
-    pub period: Option<Vec<Period>>,
-    /// Expression identifying the data
-    pub expression: Option<Expression>,
-}
 /// Permission nested structure for the 'rule' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PermissionRule {
@@ -102,6 +74,34 @@ pub struct PermissionRule {
     /// - `DELAU`
     /// - `NORDSCLCD`
     pub limit: Option<Vec<CodeableConcept>>,
+}
+/// Permission nested structure for the 'justification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionJustification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The regulatory grounds upon which this Permission builds
+    ///
+    /// Binding: example (Regulatory policy examples)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-policy
+    pub basis: Option<Vec<CodeableConcept>>,
+    /// Justifing rational
+    pub evidence: Option<Vec<Reference>>,
+}
+/// PermissionRule nested structure for the 'data' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRuleData {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Security tag code on .meta.security
+    pub security: Option<Vec<Coding>>,
+    /// Timeframe encompasing data create/update
+    pub period: Option<Vec<Period>>,
+    /// Expression identifying the data
+    pub expression: Option<Expression>,
 }
 /// PermissionRule nested structure for the 'activity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,6 +143,19 @@ impl Default for Permission {
     }
 }
 
+impl Default for PermissionRule {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            data: Default::default(),
+            activity: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            limit: Default::default(),
+        }
+    }
+}
+
 impl Default for PermissionJustification {
     fn default() -> Self {
         Self {
@@ -160,19 +173,6 @@ impl Default for PermissionRuleData {
             security: Default::default(),
             period: Default::default(),
             expression: Default::default(),
-        }
-    }
-}
-
-impl Default for PermissionRule {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            data: Default::default(),
-            activity: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            limit: Default::default(),
         }
     }
 }

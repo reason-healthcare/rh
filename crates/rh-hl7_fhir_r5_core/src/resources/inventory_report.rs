@@ -62,6 +62,19 @@ pub struct InventoryReport {
     /// A note associated with the InventoryReport
     pub note: Option<Vec<Annotation>>,
 }
+/// InventoryReportInventorylisting nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryReportInventorylistingItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The inventory category or classification of the items being reported
+    pub category: Option<CodeableConcept>,
+    /// The quantity of the item or items being reported
+    pub quantity: Quantity,
+    /// The code or reference to the item type
+    pub item: CodeableReference,
+}
 /// InventoryReport nested structure for the 'inventoryListing' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InventoryReportInventorylisting {
@@ -81,19 +94,6 @@ pub struct InventoryReportInventorylisting {
     /// Extension element for the 'countingDateTime' primitive field. Contains metadata and extensions.
     #[serde(rename = "_countingDateTime")]
     pub _counting_date_time: Option<Element>,
-}
-/// InventoryReportInventorylisting nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryReportInventorylistingItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The inventory category or classification of the items being reported
-    pub category: Option<CodeableConcept>,
-    /// The quantity of the item or items being reported
-    pub quantity: Quantity,
-    /// The code or reference to the item type
-    pub item: CodeableReference,
 }
 
 impl Default for InventoryReport {
@@ -117,6 +117,17 @@ impl Default for InventoryReport {
     }
 }
 
+impl Default for InventoryReportInventorylistingItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            quantity: Default::default(),
+            item: Default::default(),
+        }
+    }
+}
+
 impl Default for InventoryReportInventorylisting {
     fn default() -> Self {
         Self {
@@ -126,17 +137,6 @@ impl Default for InventoryReportInventorylisting {
             item_status: Default::default(),
             counting_date_time: Default::default(),
             _counting_date_time: Default::default(),
-        }
-    }
-}
-
-impl Default for InventoryReportInventorylistingItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            quantity: Default::default(),
-            item: Default::default(),
         }
     }
 }

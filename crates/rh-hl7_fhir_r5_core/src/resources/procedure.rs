@@ -206,6 +206,21 @@ pub struct Procedure {
     #[serde(rename = "supportingInfo")]
     pub supporting_info: Option<Vec<Reference>>,
 }
+/// Procedure nested structure for the 'focalDevice' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcedureFocaldevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Kind of change to device
+    ///
+    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
+    pub action: Option<CodeableConcept>,
+    /// Device that was changed
+    pub manipulated: Reference,
+}
 /// Procedure nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcedurePerformer {
@@ -225,21 +240,6 @@ pub struct ProcedurePerformer {
     pub on_behalf_of: Option<Reference>,
     /// When the performer performed the procedure
     pub period: Option<Period>,
-}
-/// Procedure nested structure for the 'focalDevice' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcedureFocaldevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Kind of change to device
-    ///
-    /// Binding: preferred (A kind of change that happened to the device during the procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/device-action
-    pub action: Option<CodeableConcept>,
-    /// Device that was changed
-    pub manipulated: Reference,
 }
 
 impl Default for Procedure {
@@ -288,6 +288,16 @@ impl Default for Procedure {
     }
 }
 
+impl Default for ProcedureFocaldevice {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Default::default(),
+            manipulated: Default::default(),
+        }
+    }
+}
+
 impl Default for ProcedurePerformer {
     fn default() -> Self {
         Self {
@@ -296,16 +306,6 @@ impl Default for ProcedurePerformer {
             actor: Reference::default(),
             on_behalf_of: Default::default(),
             period: Default::default(),
-        }
-    }
-}
-
-impl Default for ProcedureFocaldevice {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Default::default(),
-            manipulated: Default::default(),
         }
     }
 }

@@ -361,34 +361,6 @@ pub struct TaskOutput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Task nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment is sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
-}
-/// Task nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performance
-    ///
-    /// Binding: example (Codes to identify types of task performers.)
-    pub function: Option<CodeableConcept>,
-    /// Who performed the task
-    pub actor: Reference,
-}
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskInput {
@@ -563,6 +535,34 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// Task nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performance
+    ///
+    /// Binding: example (Codes to identify types of task performers.)
+    pub function: Option<CodeableConcept>,
+    /// Who performed the task
+    pub actor: Reference,
+}
+/// Task nested structure for the 'restriction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskRestriction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment is sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    pub recipient: Option<Vec<Reference>>,
+}
 
 impl Default for Task {
     fn default() -> Self {
@@ -677,28 +677,6 @@ impl Default for TaskOutput {
     }
 }
 
-impl Default for TaskRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
-        }
-    }
-}
-
-impl Default for TaskPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for TaskInput {
     fn default() -> Self {
         Self {
@@ -758,6 +736,28 @@ impl Default for TaskInput {
             value_extended_contact_detail: Default::default(),
             value_dosage: Default::default(),
             value_meta: Default::default(),
+        }
+    }
+}
+
+impl Default for TaskPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
+impl Default for TaskRestriction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }

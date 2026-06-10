@@ -192,106 +192,6 @@ pub struct AppointmentRecurrencetemplateYearlytemplate {
     #[serde(rename = "_yearInterval")]
     pub _year_interval: Option<Element>,
 }
-/// Appointment nested structure for the 'recurrenceTemplate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppointmentRecurrencetemplate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information about weekly recurring appointments
-    #[serde(rename = "weeklyTemplate")]
-    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
-    /// Information about yearly recurring appointments
-    #[serde(rename = "yearlyTemplate")]
-    pub yearly_template: Option<AppointmentRecurrencetemplateYearlytemplate>,
-    /// Information about monthly recurring appointments
-    #[serde(rename = "monthlyTemplate")]
-    pub monthly_template: Option<AppointmentRecurrencetemplateMonthlytemplate>,
-    /// The timezone of the occurrences
-    pub timezone: Option<CodeableConcept>,
-    /// The frequency of the recurrence
-    ///
-    /// Binding: preferred (IANA Timezones (BCP 175))
-    ///
-    /// Available values:
-    /// - `d`: day
-    /// - `wk`: week
-    /// - `mo`: month
-    /// - `a`: year
-    #[serde(rename = "recurrenceType")]
-    pub recurrence_type: CodeableConcept,
-    /// The date when the recurrence should end
-    #[serde(rename = "lastOccurrenceDate")]
-    pub last_occurrence_date: Option<DateType>,
-    /// Extension element for the 'lastOccurrenceDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lastOccurrenceDate")]
-    pub _last_occurrence_date: Option<Element>,
-    /// The number of planned occurrences
-    #[serde(rename = "occurrenceCount")]
-    pub occurrence_count: Option<PositiveIntType>,
-    /// Extension element for the 'occurrenceCount' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_occurrenceCount")]
-    pub _occurrence_count: Option<Element>,
-    /// Specific dates for a recurring set of appointments (no template)
-    #[serde(rename = "occurrenceDate")]
-    pub occurrence_date: Option<Vec<DateType>>,
-    /// Extension element for the 'occurrenceDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_occurrenceDate")]
-    pub _occurrence_date: Option<Element>,
-    /// Any dates that should be excluded from the series
-    #[serde(rename = "excludingDate")]
-    pub excluding_date: Option<Vec<DateType>>,
-    /// Extension element for the 'excludingDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_excludingDate")]
-    pub _excluding_date: Option<Element>,
-    /// Any recurrence IDs that should be excluded from the recurrence
-    #[serde(rename = "excludingRecurrenceId")]
-    pub excluding_recurrence_id: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'excludingRecurrenceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_excludingRecurrenceId")]
-    pub _excluding_recurrence_id: Option<Element>,
-}
-/// AppointmentRecurrencetemplate nested structure for the 'weeklyTemplate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppointmentRecurrencetemplateWeeklytemplate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Recurs on Mondays
-    pub monday: Option<BooleanType>,
-    /// Extension element for the 'monday' primitive field. Contains metadata and extensions.
-    pub _monday: Option<Element>,
-    /// Recurs on Tuesday
-    pub tuesday: Option<BooleanType>,
-    /// Extension element for the 'tuesday' primitive field. Contains metadata and extensions.
-    pub _tuesday: Option<Element>,
-    /// Recurs on Wednesday
-    pub wednesday: Option<BooleanType>,
-    /// Extension element for the 'wednesday' primitive field. Contains metadata and extensions.
-    pub _wednesday: Option<Element>,
-    /// Recurs on Thursday
-    pub thursday: Option<BooleanType>,
-    /// Extension element for the 'thursday' primitive field. Contains metadata and extensions.
-    pub _thursday: Option<Element>,
-    /// Recurs on Friday
-    pub friday: Option<BooleanType>,
-    /// Extension element for the 'friday' primitive field. Contains metadata and extensions.
-    pub _friday: Option<Element>,
-    /// Recurs on Saturday
-    pub saturday: Option<BooleanType>,
-    /// Extension element for the 'saturday' primitive field. Contains metadata and extensions.
-    pub _saturday: Option<Element>,
-    /// Recurs on Sunday
-    pub sunday: Option<BooleanType>,
-    /// Extension element for the 'sunday' primitive field. Contains metadata and extensions.
-    pub _sunday: Option<Element>,
-    /// Recurs every nth week
-    #[serde(rename = "weekInterval")]
-    pub week_interval: Option<PositiveIntType>,
-    /// Extension element for the 'weekInterval' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_weekInterval")]
-    pub _week_interval: Option<Element>,
-}
 /// AppointmentRecurrencetemplate nested structure for the 'monthlyTemplate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentRecurrencetemplateMonthlytemplate {
@@ -342,6 +242,106 @@ pub struct AppointmentParticipant {
     pub status: Participationstatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
+}
+/// AppointmentRecurrencetemplate nested structure for the 'weeklyTemplate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentRecurrencetemplateWeeklytemplate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Recurs on Mondays
+    pub monday: Option<BooleanType>,
+    /// Extension element for the 'monday' primitive field. Contains metadata and extensions.
+    pub _monday: Option<Element>,
+    /// Recurs on Tuesday
+    pub tuesday: Option<BooleanType>,
+    /// Extension element for the 'tuesday' primitive field. Contains metadata and extensions.
+    pub _tuesday: Option<Element>,
+    /// Recurs on Wednesday
+    pub wednesday: Option<BooleanType>,
+    /// Extension element for the 'wednesday' primitive field. Contains metadata and extensions.
+    pub _wednesday: Option<Element>,
+    /// Recurs on Thursday
+    pub thursday: Option<BooleanType>,
+    /// Extension element for the 'thursday' primitive field. Contains metadata and extensions.
+    pub _thursday: Option<Element>,
+    /// Recurs on Friday
+    pub friday: Option<BooleanType>,
+    /// Extension element for the 'friday' primitive field. Contains metadata and extensions.
+    pub _friday: Option<Element>,
+    /// Recurs on Saturday
+    pub saturday: Option<BooleanType>,
+    /// Extension element for the 'saturday' primitive field. Contains metadata and extensions.
+    pub _saturday: Option<Element>,
+    /// Recurs on Sunday
+    pub sunday: Option<BooleanType>,
+    /// Extension element for the 'sunday' primitive field. Contains metadata and extensions.
+    pub _sunday: Option<Element>,
+    /// Recurs every nth week
+    #[serde(rename = "weekInterval")]
+    pub week_interval: Option<PositiveIntType>,
+    /// Extension element for the 'weekInterval' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_weekInterval")]
+    pub _week_interval: Option<Element>,
+}
+/// Appointment nested structure for the 'recurrenceTemplate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentRecurrencetemplate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information about yearly recurring appointments
+    #[serde(rename = "yearlyTemplate")]
+    pub yearly_template: Option<AppointmentRecurrencetemplateYearlytemplate>,
+    /// Information about monthly recurring appointments
+    #[serde(rename = "monthlyTemplate")]
+    pub monthly_template: Option<AppointmentRecurrencetemplateMonthlytemplate>,
+    /// Information about weekly recurring appointments
+    #[serde(rename = "weeklyTemplate")]
+    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
+    /// The timezone of the occurrences
+    pub timezone: Option<CodeableConcept>,
+    /// The frequency of the recurrence
+    ///
+    /// Binding: preferred (IANA Timezones (BCP 175))
+    ///
+    /// Available values:
+    /// - `d`: day
+    /// - `wk`: week
+    /// - `mo`: month
+    /// - `a`: year
+    #[serde(rename = "recurrenceType")]
+    pub recurrence_type: CodeableConcept,
+    /// The date when the recurrence should end
+    #[serde(rename = "lastOccurrenceDate")]
+    pub last_occurrence_date: Option<DateType>,
+    /// Extension element for the 'lastOccurrenceDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lastOccurrenceDate")]
+    pub _last_occurrence_date: Option<Element>,
+    /// The number of planned occurrences
+    #[serde(rename = "occurrenceCount")]
+    pub occurrence_count: Option<PositiveIntType>,
+    /// Extension element for the 'occurrenceCount' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_occurrenceCount")]
+    pub _occurrence_count: Option<Element>,
+    /// Specific dates for a recurring set of appointments (no template)
+    #[serde(rename = "occurrenceDate")]
+    pub occurrence_date: Option<Vec<DateType>>,
+    /// Extension element for the 'occurrenceDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_occurrenceDate")]
+    pub _occurrence_date: Option<Element>,
+    /// Any dates that should be excluded from the series
+    #[serde(rename = "excludingDate")]
+    pub excluding_date: Option<Vec<DateType>>,
+    /// Extension element for the 'excludingDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_excludingDate")]
+    pub _excluding_date: Option<Element>,
+    /// Any recurrence IDs that should be excluded from the recurrence
+    #[serde(rename = "excludingRecurrenceId")]
+    pub excluding_recurrence_id: Option<Vec<PositiveIntType>>,
+    /// Extension element for the 'excludingRecurrenceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_excludingRecurrenceId")]
+    pub _excluding_recurrence_id: Option<Element>,
 }
 
 impl Default for Appointment {
@@ -403,25 +403,31 @@ impl Default for AppointmentRecurrencetemplateYearlytemplate {
     }
 }
 
-impl Default for AppointmentRecurrencetemplate {
+impl Default for AppointmentRecurrencetemplateMonthlytemplate {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            weekly_template: Default::default(),
-            yearly_template: Default::default(),
-            monthly_template: Default::default(),
-            timezone: Default::default(),
-            recurrence_type: Default::default(),
-            last_occurrence_date: Default::default(),
-            _last_occurrence_date: Default::default(),
-            occurrence_count: Default::default(),
-            _occurrence_count: Default::default(),
-            occurrence_date: Default::default(),
-            _occurrence_date: Default::default(),
-            excluding_date: Default::default(),
-            _excluding_date: Default::default(),
-            excluding_recurrence_id: Default::default(),
-            _excluding_recurrence_id: Default::default(),
+            day_of_month: Default::default(),
+            _day_of_month: Default::default(),
+            nth_week_of_month: Default::default(),
+            day_of_week: Default::default(),
+            month_interval: Default::default(),
+            _month_interval: Default::default(),
+        }
+    }
+}
+
+impl Default for AppointmentParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+            actor: Default::default(),
+            required: Default::default(),
+            _required: Default::default(),
+            status: Participationstatus::default(),
+            _status: Default::default(),
         }
     }
 }
@@ -450,31 +456,25 @@ impl Default for AppointmentRecurrencetemplateWeeklytemplate {
     }
 }
 
-impl Default for AppointmentRecurrencetemplateMonthlytemplate {
+impl Default for AppointmentRecurrencetemplate {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            day_of_month: Default::default(),
-            _day_of_month: Default::default(),
-            nth_week_of_month: Default::default(),
-            day_of_week: Default::default(),
-            month_interval: Default::default(),
-            _month_interval: Default::default(),
-        }
-    }
-}
-
-impl Default for AppointmentParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-            actor: Default::default(),
-            required: Default::default(),
-            _required: Default::default(),
-            status: Participationstatus::default(),
-            _status: Default::default(),
+            yearly_template: Default::default(),
+            monthly_template: Default::default(),
+            weekly_template: Default::default(),
+            timezone: Default::default(),
+            recurrence_type: Default::default(),
+            last_occurrence_date: Default::default(),
+            _last_occurrence_date: Default::default(),
+            occurrence_count: Default::default(),
+            _occurrence_count: Default::default(),
+            occurrence_date: Default::default(),
+            _occurrence_date: Default::default(),
+            excluding_date: Default::default(),
+            _excluding_date: Default::default(),
+            excluding_recurrence_id: Default::default(),
+            _excluding_recurrence_id: Default::default(),
         }
     }
 }

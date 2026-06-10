@@ -66,53 +66,6 @@ pub struct NutritionProduct {
     /// Comments made about the product
     pub note: Option<Vec<Annotation>>,
 }
-/// NutritionProduct nested structure for the 'nutrient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductNutrient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The (relevant) nutrients in the product
-    ///
-    /// Binding: example (Codes that identify nutrients that could be parts of nutrition products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-nutrient
-    pub item: Option<CodeableReference>,
-    /// The amount of nutrient expressed in one or more units: X per pack / per serving / per dose
-    pub amount: Option<Vec<Ratio>>,
-}
-/// NutritionProduct nested structure for the 'characteristic' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductCharacteristic {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code specifying the type of characteristic
-    ///
-    /// Binding: example (Codes that identify properties that can be measured.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measurement-property
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The value of the characteristic (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// The value of the characteristic (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// The value of the characteristic (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// The value of the characteristic (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-    /// The value of the characteristic (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// The value of the characteristic (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-}
 /// NutritionProduct nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionProductIngredient {
@@ -158,6 +111,53 @@ pub struct NutritionProductInstance {
     #[serde(rename = "biologicalSourceEvent")]
     pub biological_source_event: Option<Identifier>,
 }
+/// NutritionProduct nested structure for the 'characteristic' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductCharacteristic {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code specifying the type of characteristic
+    ///
+    /// Binding: example (Codes that identify properties that can be measured.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measurement-property
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The value of the characteristic (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// The value of the characteristic (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// The value of the characteristic (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// The value of the characteristic (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+    /// The value of the characteristic (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// The value of the characteristic (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+}
+/// NutritionProduct nested structure for the 'nutrient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductNutrient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The (relevant) nutrients in the product
+    ///
+    /// Binding: example (Codes that identify nutrients that could be parts of nutrition products.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-nutrient
+    pub item: Option<CodeableReference>,
+    /// The amount of nutrient expressed in one or more units: X per pack / per serving / per dose
+    pub amount: Option<Vec<Ratio>>,
+}
 
 impl Default for NutritionProduct {
     fn default() -> Self {
@@ -174,31 +174,6 @@ impl Default for NutritionProduct {
             characteristic: Default::default(),
             instance: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductNutrient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductCharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_string: Default::default(),
-            value_quantity: Default::default(),
-            value_base64_binary: Default::default(),
-            value_attachment: Default::default(),
-            value_boolean: Default::default(),
         }
     }
 }
@@ -228,6 +203,31 @@ impl Default for NutritionProductInstance {
             use_by: Default::default(),
             _use_by: Default::default(),
             biological_source_event: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionProductCharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_string: Default::default(),
+            value_quantity: Default::default(),
+            value_base64_binary: Default::default(),
+            value_attachment: Default::default(),
+            value_boolean: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionProductNutrient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            amount: Default::default(),
         }
     }
 }

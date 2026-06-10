@@ -98,104 +98,6 @@ pub struct SubstanceDefinition {
     #[serde(rename = "sourceMaterial")]
     pub source_material: Option<SubstanceDefinitionSourcematerial>,
 }
-/// SubstanceDefinition nested structure for the 'code' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionCode {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The specific code
-    pub code: Option<CodeableConcept>,
-    /// Status of the code assignment, for example 'provisional', 'approved'
-    ///
-    /// Binding: preferred (The lifecycle status of an artifact.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
-    pub status: Option<CodeableConcept>,
-    /// The date at which the code status was changed
-    #[serde(rename = "statusDate")]
-    pub status_date: Option<DateTimeType>,
-    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_statusDate")]
-    pub _status_date: Option<Element>,
-    /// Any comment can be provided in this field
-    pub note: Option<Vec<Annotation>>,
-    /// Supporting literature
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceDefinitionStructure nested structure for the 'representation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionStructureRepresentation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The kind of structural representation (e.g. full, partial)
-    ///
-    /// Binding: example (A format of a substance representation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-representation-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The structural representation as a text string in a standard format
-    pub representation: Option<StringType>,
-    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
-    pub _representation: Option<Element>,
-    /// The format of the representation e.g. InChI, SMILES, MOLFILE (note: not the physical file format)
-    ///
-    /// Binding: example (A format of a substance representation.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-representation-format
-    pub format: Option<CodeableConcept>,
-    /// An attachment with the structural representation e.g. a structure graphic or AnIML file
-    pub document: Option<Reference>,
-}
-/// SubstanceDefinition nested structure for the 'moiety' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionMoiety {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role that the moiety is playing
-    pub role: Option<CodeableConcept>,
-    /// Identifier by which this moiety substance is known
-    pub identifier: Option<Identifier>,
-    /// Textual name for this moiety substance
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Stereochemistry type
-    ///
-    /// Binding: example (The optical rotation type of a substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-stereochemistry
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    ///
-    /// Binding: example (The optical rotation type of a substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-optical-activity
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula for this moiety (e.g. with the Hill system)
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Quantitative value for this moiety (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this moiety (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
-    /// The measurement type of the quantitative value
-    ///
-    /// Binding: example (The relationship between two substance types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
-    #[serde(rename = "measurementType")]
-    pub measurement_type: Option<CodeableConcept>,
-}
 /// SubstanceDefinition nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceDefinitionName {
@@ -246,6 +148,53 @@ pub struct SubstanceDefinitionName {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
+/// SubstanceDefinition nested structure for the 'molecularWeight' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionMolecularweight {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The method by which the weight was determined
+    ///
+    /// Binding: example (The method by which the substance weight was measured.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-method
+    pub method: Option<CodeableConcept>,
+    /// Type of molecular weight e.g. exact, average, weight average
+    ///
+    /// Binding: example (The type of substance weight measurement.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Used to capture quantitative values for a variety of elements
+    pub amount: Quantity,
+}
+/// SubstanceDefinition nested structure for the 'code' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionCode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific code
+    pub code: Option<CodeableConcept>,
+    /// Status of the code assignment, for example 'provisional', 'approved'
+    ///
+    /// Binding: preferred (The lifecycle status of an artifact.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
+    pub status: Option<CodeableConcept>,
+    /// The date at which the code status was changed
+    #[serde(rename = "statusDate")]
+    pub status_date: Option<DateTimeType>,
+    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_statusDate")]
+    pub _status_date: Option<Element>,
+    /// Any comment can be provided in this field
+    pub note: Option<Vec<Annotation>>,
+    /// Supporting literature
+    pub source: Option<Vec<Reference>>,
+}
 /// SubstanceDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceDefinitionProperty {
@@ -275,27 +224,65 @@ pub struct SubstanceDefinitionProperty {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Option<Attachment>,
 }
-/// SubstanceDefinition nested structure for the 'molecularWeight' field
+/// SubstanceDefinition nested structure for the 'sourceMaterial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionMolecularweight {
+pub struct SubstanceDefinitionSourcematerial {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The method by which the weight was determined
+    /// Classification of the origin of the raw material. e.g. cat hair is an Animal source type
     ///
-    /// Binding: example (The method by which the substance weight was measured.)
+    /// Binding: example (A classification that provides the origin of the substance raw material.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-method
-    pub method: Option<CodeableConcept>,
-    /// Type of molecular weight e.g. exact, average, weight average
-    ///
-    /// Binding: example (The type of substance weight measurement.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-type
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-    /// Used to capture quantitative values for a variety of elements
-    pub amount: Quantity,
+    /// The genus of an organism e.g. the Latin epithet of the plant/animal scientific name
+    ///
+    /// Binding: example (The genus of an organism, typically referring to the Latin epithet of the genus element of the plant/animal scientific name.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-genus
+    pub genus: Option<CodeableConcept>,
+    /// The species of an organism e.g. the Latin epithet of the species of the plant/animal
+    ///
+    /// Binding: example (A species of origin a substance raw material.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-species
+    pub species: Option<CodeableConcept>,
+    /// An anatomical origin of the source material within an organism
+    ///
+    /// Binding: example (An anatomical origin of the source material within an organism.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-part
+    pub part: Option<CodeableConcept>,
+    /// The country or countries where the material is harvested
+    #[serde(rename = "countryOfOrigin")]
+    pub country_of_origin: Option<Vec<CodeableConcept>>,
+}
+/// SubstanceDefinition nested structure for the 'characterization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionCharacterization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The method used to find the characterization e.g. HPLC
+    ///
+    /// Binding: example (The method used to elucidate the characterization of the drug substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-structure-technique
+    pub technique: Option<CodeableConcept>,
+    /// Describes the nature of the chemical entity and explains, for instance, whether this is a base or a salt form
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-form
+    pub form: Option<CodeableConcept>,
+    /// The description or justification in support of the interpretation of the data file
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The data produced by the analytical instrument or a pictorial representation of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or spectrum analysis
+    pub file: Option<Vec<Attachment>>,
 }
 /// SubstanceDefinition nested structure for the 'relationship' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -343,89 +330,6 @@ pub struct SubstanceDefinitionRelationship {
     /// Supporting literature
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceDefinition nested structure for the 'characterization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionCharacterization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The method used to find the characterization e.g. HPLC
-    ///
-    /// Binding: example (The method used to elucidate the characterization of the drug substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-structure-technique
-    pub technique: Option<CodeableConcept>,
-    /// Describes the nature of the chemical entity and explains, for instance, whether this is a base or a salt form
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-form
-    pub form: Option<CodeableConcept>,
-    /// The description or justification in support of the interpretation of the data file
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// The data produced by the analytical instrument or a pictorial representation of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or spectrum analysis
-    pub file: Option<Vec<Attachment>>,
-}
-/// SubstanceDefinition nested structure for the 'sourceMaterial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionSourcematerial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Classification of the origin of the raw material. e.g. cat hair is an Animal source type
-    ///
-    /// Binding: example (A classification that provides the origin of the substance raw material.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The genus of an organism e.g. the Latin epithet of the plant/animal scientific name
-    ///
-    /// Binding: example (The genus of an organism, typically referring to the Latin epithet of the genus element of the plant/animal scientific name.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-genus
-    pub genus: Option<CodeableConcept>,
-    /// The species of an organism e.g. the Latin epithet of the species of the plant/animal
-    ///
-    /// Binding: example (A species of origin a substance raw material.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-species
-    pub species: Option<CodeableConcept>,
-    /// An anatomical origin of the source material within an organism
-    ///
-    /// Binding: example (An anatomical origin of the source material within an organism.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-part
-    pub part: Option<CodeableConcept>,
-    /// The country or countries where the material is harvested
-    #[serde(rename = "countryOfOrigin")]
-    pub country_of_origin: Option<Vec<CodeableConcept>>,
-}
-/// SubstanceDefinitionName nested structure for the 'official' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionNameOfficial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Which authority uses this official name
-    ///
-    /// Binding: preferred (An authority that officates substance names.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-name-authority
-    pub authority: Option<CodeableConcept>,
-    /// The status of the official name, for example 'draft', 'active'
-    ///
-    /// Binding: preferred (The lifecycle status of an artifact.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
-    pub status: Option<CodeableConcept>,
-    /// Date of official name change
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-}
 /// SubstanceDefinition nested structure for the 'structure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceDefinitionStructure {
@@ -472,6 +376,102 @@ pub struct SubstanceDefinitionStructure {
     #[serde(rename = "sourceDocument")]
     pub source_document: Option<Vec<Reference>>,
 }
+/// SubstanceDefinitionStructure nested structure for the 'representation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionStructureRepresentation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kind of structural representation (e.g. full, partial)
+    ///
+    /// Binding: example (A format of a substance representation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-representation-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The structural representation as a text string in a standard format
+    pub representation: Option<StringType>,
+    /// Extension element for the 'representation' primitive field. Contains metadata and extensions.
+    pub _representation: Option<Element>,
+    /// The format of the representation e.g. InChI, SMILES, MOLFILE (note: not the physical file format)
+    ///
+    /// Binding: example (A format of a substance representation.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-representation-format
+    pub format: Option<CodeableConcept>,
+    /// An attachment with the structural representation e.g. a structure graphic or AnIML file
+    pub document: Option<Reference>,
+}
+/// SubstanceDefinitionName nested structure for the 'official' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionNameOfficial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Which authority uses this official name
+    ///
+    /// Binding: preferred (An authority that officates substance names.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-name-authority
+    pub authority: Option<CodeableConcept>,
+    /// The status of the official name, for example 'draft', 'active'
+    ///
+    /// Binding: preferred (The lifecycle status of an artifact.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
+    pub status: Option<CodeableConcept>,
+    /// Date of official name change
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+}
+/// SubstanceDefinition nested structure for the 'moiety' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionMoiety {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role that the moiety is playing
+    pub role: Option<CodeableConcept>,
+    /// Identifier by which this moiety substance is known
+    pub identifier: Option<Identifier>,
+    /// Textual name for this moiety substance
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Stereochemistry type
+    ///
+    /// Binding: example (The optical rotation type of a substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-stereochemistry
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    ///
+    /// Binding: example (The optical rotation type of a substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-optical-activity
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula for this moiety (e.g. with the Hill system)
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Quantitative value for this moiety (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this moiety (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+    /// The measurement type of the quantitative value
+    ///
+    /// Binding: example (The relationship between two substance types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
+    #[serde(rename = "measurementType")]
+    pub measurement_type: Option<CodeableConcept>,
+}
 
 impl Default for SubstanceDefinition {
     fn default() -> Self {
@@ -507,52 +507,6 @@ impl Default for SubstanceDefinition {
     }
 }
 
-impl Default for SubstanceDefinitionCode {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            status: Default::default(),
-            status_date: Default::default(),
-            _status_date: Default::default(),
-            note: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceDefinitionStructureRepresentation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            representation: Default::default(),
-            _representation: Default::default(),
-            format: Default::default(),
-            document: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceDefinitionMoiety {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
-            measurement_type: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceDefinitionName {
     fn default() -> Self {
         Self {
@@ -574,6 +528,31 @@ impl Default for SubstanceDefinitionName {
     }
 }
 
+impl Default for SubstanceDefinitionMolecularweight {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            method: Default::default(),
+            type_: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionCode {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            status: Default::default(),
+            status_date: Default::default(),
+            _status_date: Default::default(),
+            note: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceDefinitionProperty {
     fn default() -> Self {
         Self {
@@ -588,13 +567,28 @@ impl Default for SubstanceDefinitionProperty {
     }
 }
 
-impl Default for SubstanceDefinitionMolecularweight {
+impl Default for SubstanceDefinitionSourcematerial {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            method: Default::default(),
             type_: Default::default(),
-            amount: Default::default(),
+            genus: Default::default(),
+            species: Default::default(),
+            part: Default::default(),
+            country_of_origin: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionCharacterization {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            technique: Default::default(),
+            form: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            file: Default::default(),
         }
     }
 }
@@ -618,28 +612,33 @@ impl Default for SubstanceDefinitionRelationship {
     }
 }
 
-impl Default for SubstanceDefinitionCharacterization {
+impl Default for SubstanceDefinitionStructure {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            representation: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            molecular_formula_by_moiety: Default::default(),
+            _molecular_formula_by_moiety: Default::default(),
+            molecular_weight: Default::default(),
             technique: Default::default(),
-            form: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            file: Default::default(),
+            source_document: Default::default(),
         }
     }
 }
 
-impl Default for SubstanceDefinitionSourcematerial {
+impl Default for SubstanceDefinitionStructureRepresentation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            genus: Default::default(),
-            species: Default::default(),
-            part: Default::default(),
-            country_of_origin: Default::default(),
+            representation: Default::default(),
+            _representation: Default::default(),
+            format: Default::default(),
+            document: Default::default(),
         }
     }
 }
@@ -656,20 +655,21 @@ impl Default for SubstanceDefinitionNameOfficial {
     }
 }
 
-impl Default for SubstanceDefinitionStructure {
+impl Default for SubstanceDefinitionMoiety {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            representation: Default::default(),
+            role: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
             stereochemistry: Default::default(),
             optical_activity: Default::default(),
             molecular_formula: Default::default(),
             _molecular_formula: Default::default(),
-            molecular_formula_by_moiety: Default::default(),
-            _molecular_formula_by_moiety: Default::default(),
-            molecular_weight: Default::default(),
-            technique: Default::default(),
-            source_document: Default::default(),
+            amount_quantity: Default::default(),
+            amount_string: Default::default(),
+            measurement_type: Default::default(),
         }
     }
 }

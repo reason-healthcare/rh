@@ -89,6 +89,17 @@ pub struct Invoice {
     /// Comments made about the invoice
     pub note: Option<Vec<Annotation>>,
 }
+/// Invoice nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvoiceParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
+}
 /// Invoice nested structure for the 'lineItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLineitem {
@@ -114,17 +125,6 @@ pub struct InvoiceLineitem {
     /// Components of total line item price
     #[serde(rename = "priceComponent")]
     pub price_component: Option<Vec<MonetaryComponent>>,
-}
-/// Invoice nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
 }
 
 impl Default for Invoice {
@@ -159,6 +159,16 @@ impl Default for Invoice {
     }
 }
 
+impl Default for InvoiceParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for InvoiceLineitem {
     fn default() -> Self {
         Self {
@@ -170,16 +180,6 @@ impl Default for InvoiceLineitem {
             charge_item_reference: Default::default(),
             charge_item_codeable_concept: Default::default(),
             price_component: Default::default(),
-        }
-    }
-}
-
-impl Default for InvoiceParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
         }
     }
 }

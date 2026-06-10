@@ -160,48 +160,6 @@ pub struct DocumentReference {
     /// Document referenced
     pub content: Vec<DocumentReferenceContent>,
 }
-/// DocumentReferenceContent nested structure for the 'profile' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContentProfile {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code|uri|canonical (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Code|uri|canonical (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Code|uri|canonical (canonical)
-    #[serde(rename = "valueCanonical")]
-    pub value_canonical: StringType,
-}
-/// DocumentReference nested structure for the 'content' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Content profile rules for the document
-    pub profile: Option<Vec<DocumentReferenceContentProfile>>,
-    /// Where to access the document
-    pub attachment: Attachment,
-}
-/// DocumentReference nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The relationship type with another document
-    ///
-    /// Binding: extensible (The type of relationship between the documents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/document-relationship-type
-    pub code: CodeableConcept,
-    /// Target of the relationship
-    pub target: Reference,
-}
 /// DocumentReference nested structure for the 'attester' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReferenceAttester {
@@ -220,6 +178,48 @@ pub struct DocumentReferenceAttester {
     pub _time: Option<Element>,
     /// Who attested the document
     pub party: Option<Reference>,
+}
+/// DocumentReference nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The relationship type with another document
+    ///
+    /// Binding: extensible (The type of relationship between the documents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/document-relationship-type
+    pub code: CodeableConcept,
+    /// Target of the relationship
+    pub target: Reference,
+}
+/// DocumentReference nested structure for the 'content' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Content profile rules for the document
+    pub profile: Option<Vec<DocumentReferenceContentProfile>>,
+    /// Where to access the document
+    pub attachment: Attachment,
+}
+/// DocumentReferenceContent nested structure for the 'profile' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContentProfile {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code|uri|canonical (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Code|uri|canonical (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Code|uri|canonical (canonical)
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: StringType,
 }
 
 impl Default for DocumentReference {
@@ -258,23 +258,14 @@ impl Default for DocumentReference {
     }
 }
 
-impl Default for DocumentReferenceContentProfile {
+impl Default for DocumentReferenceAttester {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            value_coding: Default::default(),
-            value_uri: Default::default(),
-            value_canonical: Default::default(),
-        }
-    }
-}
-
-impl Default for DocumentReferenceContent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            profile: Default::default(),
-            attachment: Attachment::default(),
+            mode: CodeableConcept::default(),
+            time: Default::default(),
+            _time: Default::default(),
+            party: Default::default(),
         }
     }
 }
@@ -289,14 +280,23 @@ impl Default for DocumentReferenceRelatesto {
     }
 }
 
-impl Default for DocumentReferenceAttester {
+impl Default for DocumentReferenceContent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            mode: CodeableConcept::default(),
-            time: Default::default(),
-            _time: Default::default(),
-            party: Default::default(),
+            profile: Default::default(),
+            attachment: Attachment::default(),
+        }
+    }
+}
+
+impl Default for DocumentReferenceContentProfile {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_coding: Default::default(),
+            value_uri: Default::default(),
+            value_canonical: Default::default(),
         }
     }
 }

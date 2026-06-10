@@ -177,6 +177,37 @@ pub struct Device {
     /// The higher level or encompassing device that this device is a logical part of
     pub parent: Option<Reference>,
 }
+/// Device nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of the device version, e.g. manufacturer, approved, internal
+    ///
+    /// Binding: example (The type of version indicated for the device.)
+    ///
+    /// Available values:
+    /// - `531974`: Hardware revision
+    /// - `531975`: Software revision
+    /// - `531976`: Firmware revision
+    /// - `531977`: Protocol revision
+    /// - `532352`: Continua version
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The hardware or software module of the device to which the version applies
+    pub component: Option<Identifier>,
+    /// The date the version was installed on the device
+    #[serde(rename = "installDate")]
+    pub install_date: Option<DateTimeType>,
+    /// Extension element for the 'installDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_installDate")]
+    pub _install_date: Option<Element>,
+    /// The version text
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 /// Device nested structure for the 'conformsTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceConformsto {
@@ -211,36 +242,25 @@ pub struct DeviceConformsto {
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
 }
-/// Device nested structure for the 'version' field
+/// Device nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceVersion {
+pub struct DeviceName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of the device version, e.g. manufacturer, approved, internal
-    ///
-    /// Binding: example (The type of version indicated for the device.)
-    ///
-    /// Available values:
-    /// - `531974`: Hardware revision
-    /// - `531975`: Software revision
-    /// - `531976`: Firmware revision
-    /// - `531977`: Protocol revision
-    /// - `532352`: Continua version
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The hardware or software module of the device to which the version applies
-    pub component: Option<Identifier>,
-    /// The date the version was installed on the device
-    #[serde(rename = "installDate")]
-    pub install_date: Option<DateTimeType>,
-    /// Extension element for the 'installDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_installDate")]
-    pub _install_date: Option<Element>,
-    /// The version text
+    /// The term that names the device
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
+    /// registered-name | user-friendly-name | patient-reported-name
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The preferred device name
+    pub display: Option<BooleanType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
 }
 /// Device nested structure for the 'udiCarrier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -280,26 +300,6 @@ pub struct DeviceUdicarrier {
     /// Extension element for the 'entryType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_entryType")]
     pub _entry_type: Option<Element>,
-}
-/// Device nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The term that names the device
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// registered-name | user-friendly-name | patient-reported-name
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The preferred device name
-    pub display: Option<BooleanType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
 }
 /// Device nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -398,6 +398,20 @@ impl Default for Device {
     }
 }
 
+impl Default for DeviceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            component: Default::default(),
+            install_date: Default::default(),
+            _install_date: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
 impl Default for DeviceConformsto {
     fn default() -> Self {
         Self {
@@ -410,16 +424,16 @@ impl Default for DeviceConformsto {
     }
 }
 
-impl Default for DeviceVersion {
+impl Default for DeviceName {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            component: Default::default(),
-            install_date: Default::default(),
-            _install_date: Default::default(),
             value: StringType::default(),
             _value: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
         }
     }
 }
@@ -440,20 +454,6 @@ impl Default for DeviceUdicarrier {
             _carrier_h_r_f: Default::default(),
             entry_type: Default::default(),
             _entry_type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceName {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
         }
     }
 }

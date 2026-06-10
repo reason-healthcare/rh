@@ -62,27 +62,6 @@ pub struct EpisodeOfCare {
     /// The set of accounts that may be used for billing for this EpisodeOfCare
     pub account: Option<Vec<Reference>>,
 }
-/// EpisodeOfCare nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EpisodeOfCareDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The medical condition that was addressed during the episode of care
-    ///
-    /// Binding: example (No description)
-    ///
-    /// Available values:
-    /// - `160245001`: No current problems or disability
-    pub condition: Option<Vec<CodeableReference>>,
-    /// Role that this diagnosis has within the episode of care (e.g. admission, billing, discharge …)
-    ///
-    /// Binding: preferred (The type of diagnosis this condition represents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diagnosis-use
-    #[serde(rename = "use")]
-    pub use_: Option<CodeableConcept>,
-}
 /// EpisodeOfCare nested structure for the 'reason' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EpisodeOfCareReason {
@@ -116,6 +95,27 @@ pub struct EpisodeOfCareStatushistory {
     /// Duration the EpisodeOfCare was in the specified status
     pub period: Period,
 }
+/// EpisodeOfCare nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpisodeOfCareDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The medical condition that was addressed during the episode of care
+    ///
+    /// Binding: example (No description)
+    ///
+    /// Available values:
+    /// - `160245001`: No current problems or disability
+    pub condition: Option<Vec<CodeableReference>>,
+    /// Role that this diagnosis has within the episode of care (e.g. admission, billing, discharge …)
+    ///
+    /// Binding: preferred (The type of diagnosis this condition represents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diagnosis-use
+    #[serde(rename = "use")]
+    pub use_: Option<CodeableConcept>,
+}
 
 impl Default for EpisodeOfCare {
     fn default() -> Self {
@@ -139,16 +139,6 @@ impl Default for EpisodeOfCare {
     }
 }
 
-impl Default for EpisodeOfCareDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            condition: Default::default(),
-            use_: Default::default(),
-        }
-    }
-}
-
 impl Default for EpisodeOfCareReason {
     fn default() -> Self {
         Self {
@@ -166,6 +156,16 @@ impl Default for EpisodeOfCareStatushistory {
             status: Default::default(),
             _status: Default::default(),
             period: Default::default(),
+        }
+    }
+}
+
+impl Default for EpisodeOfCareDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            condition: Default::default(),
+            use_: Default::default(),
         }
     }
 }

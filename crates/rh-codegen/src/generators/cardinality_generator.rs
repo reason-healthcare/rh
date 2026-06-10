@@ -32,6 +32,12 @@ impl CardinalityGenerator {
         code.push_str(
             "/// These define the minimum and maximum occurrences allowed for each element.\n",
         );
+        if cardinalities.is_empty() {
+            code.push_str("pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> = once_cell::sync::Lazy::new(Vec::new);");
+            code.push('\n');
+            return code;
+        }
+
         code.push_str("pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> = once_cell::sync::Lazy::new(|| vec![\n");
 
         for card in &cardinalities {

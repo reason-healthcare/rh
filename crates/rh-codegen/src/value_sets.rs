@@ -308,7 +308,8 @@ impl ValueSetManager {
             let mut variant = RustEnumVariant::new(variant_name);
 
             if let Some(display) = &concept.display {
-                variant.doc_comment = Some(format!(" {}", display.clone()));
+                let clean = display.replace('\t', "    ").replace(['\n', '\r'], " ");
+                variant.doc_comment = Some(format!(" {clean}"));
             }
 
             // Add serde annotation to map to the original code
@@ -335,7 +336,8 @@ impl ValueSetManager {
             let mut variant = RustEnumVariant::new(variant_name);
 
             if let Some(display) = &concept.display {
-                variant.doc_comment = Some(format!(" {}", display.clone()));
+                let clean = display.replace('\t', "    ").replace(['\n', '\r'], " ");
+                variant.doc_comment = Some(format!(" {clean}"));
             }
 
             // Add serde annotation to map to the original code
@@ -462,8 +464,8 @@ impl ValueSetConcept {
             match name.as_str() {
                 "Self" | "SelfType" => format!("{name}Value"),
                 "Type" | "Match" | "Use" | "Mod" | "Ref" | "Mut" | "Let" | "Fn" | "Impl"
-                | "Trait" | "Struct" | "Enum" | "Pub" | "Priv" | "Crate" | "Super" | "Return"
-                | "If" | "Else" | "While" | "For" | "In" | "Loop" | "Break" | "Continue" | "As"
+                | "Trait" | "Struct" | "Enum" | "Pub" | "Crate" | "Super" | "Return" | "If"
+                | "Else" | "While" | "For" | "In" | "Loop" | "Break" | "Continue" | "As"
                 | "Move" | "Static" | "Const" | "Unsafe" | "Extern" | "Where" | "Async"
                 | "Await" | "Dyn" | "Abstract" | "Become" | "Box" | "Do" | "Final" | "Override"
                 | "Priv" | "Typeof" | "Unsized" | "Virtual" | "Yield" => {

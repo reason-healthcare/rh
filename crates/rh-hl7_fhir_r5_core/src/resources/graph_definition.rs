@@ -109,6 +109,32 @@ pub struct GraphDefinition {
     /// Links this graph makes rules about
     pub link: Option<Vec<GraphDefinitionLink>>,
 }
+/// GraphDefinition nested structure for the 'node' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionNode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Internal ID - target for link references
+    #[serde(rename = "nodeId")]
+    pub node_id: StringType,
+    /// Extension element for the 'nodeId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_nodeId")]
+    pub _node_id: Option<Element>,
+    /// Why this node is specified
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Type of resource this link refers to
+    #[serde(rename = "type")]
+    pub type_: VersionIndependentAllResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Profile for the target resource
+    pub profile: Option<StringType>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
 /// GraphDefinitionLink nested structure for the 'compartment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLinkCompartment {
@@ -184,32 +210,6 @@ pub struct GraphDefinitionLink {
     /// Extension element for the 'params' primitive field. Contains metadata and extensions.
     pub _params: Option<Element>,
 }
-/// GraphDefinition nested structure for the 'node' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionNode {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Internal ID - target for link references
-    #[serde(rename = "nodeId")]
-    pub node_id: StringType,
-    /// Extension element for the 'nodeId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_nodeId")]
-    pub _node_id: Option<Element>,
-    /// Why this node is specified
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Type of resource this link refers to
-    #[serde(rename = "type")]
-    pub type_: VersionIndependentAllResourceTypes,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Profile for the target resource
-    pub profile: Option<StringType>,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -253,6 +253,22 @@ impl Default for GraphDefinition {
     }
 }
 
+impl Default for GraphDefinitionNode {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            node_id: StringType::default(),
+            _node_id: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+        }
+    }
+}
+
 impl Default for GraphDefinitionLinkCompartment {
     fn default() -> Self {
         Self {
@@ -292,22 +308,6 @@ impl Default for GraphDefinitionLink {
             _target_id: Default::default(),
             params: Default::default(),
             _params: Default::default(),
-        }
-    }
-}
-
-impl Default for GraphDefinitionNode {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            node_id: StringType::default(),
-            _node_id: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            profile: Default::default(),
-            _profile: Default::default(),
         }
     }
 }

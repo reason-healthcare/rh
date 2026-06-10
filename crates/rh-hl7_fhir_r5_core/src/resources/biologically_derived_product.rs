@@ -81,6 +81,23 @@ pub struct BiologicallyDerivedProduct {
     /// A property that is specific to this BiologicallyDerviedProduct instance
     pub property: Option<Vec<BiologicallyDerivedProductProperty>>,
 }
+/// BiologicallyDerivedProduct nested structure for the 'collection' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiologicallyDerivedProductCollection {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Individual performing collection
+    pub collector: Option<Reference>,
+    /// The patient who underwent the medical procedure to collect the product or the organization that facilitated the collection
+    pub source: Option<Reference>,
+    /// Time of product collection (dateTime)
+    #[serde(rename = "collectedDateTime")]
+    pub collected_date_time: Option<DateTimeType>,
+    /// Time of product collection (Period)
+    #[serde(rename = "collectedPeriod")]
+    pub collected_period: Option<Period>,
+}
 /// BiologicallyDerivedProduct nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BiologicallyDerivedProductProperty {
@@ -122,23 +139,6 @@ pub struct BiologicallyDerivedProductProperty {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Attachment,
 }
-/// BiologicallyDerivedProduct nested structure for the 'collection' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BiologicallyDerivedProductCollection {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Individual performing collection
-    pub collector: Option<Reference>,
-    /// The patient who underwent the medical procedure to collect the product or the organization that facilitated the collection
-    pub source: Option<Reference>,
-    /// Time of product collection (dateTime)
-    #[serde(rename = "collectedDateTime")]
-    pub collected_date_time: Option<DateTimeType>,
-    /// Time of product collection (Period)
-    #[serde(rename = "collectedPeriod")]
-    pub collected_period: Option<Period>,
-}
 
 impl Default for BiologicallyDerivedProduct {
     fn default() -> Self {
@@ -163,6 +163,18 @@ impl Default for BiologicallyDerivedProduct {
     }
 }
 
+impl Default for BiologicallyDerivedProductCollection {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            collector: Default::default(),
+            source: Default::default(),
+            collected_date_time: Default::default(),
+            collected_period: Default::default(),
+        }
+    }
+}
+
 impl Default for BiologicallyDerivedProductProperty {
     fn default() -> Self {
         Self {
@@ -177,18 +189,6 @@ impl Default for BiologicallyDerivedProductProperty {
             value_ratio: Default::default(),
             value_string: Default::default(),
             value_attachment: Default::default(),
-        }
-    }
-}
-
-impl Default for BiologicallyDerivedProductCollection {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            collector: Default::default(),
-            source: Default::default(),
-            collected_date_time: Default::default(),
-            collected_period: Default::default(),
         }
     }
 }

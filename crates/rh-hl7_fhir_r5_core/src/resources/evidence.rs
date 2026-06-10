@@ -155,6 +155,47 @@ pub struct Evidence {
     /// Certainty or quality of the evidence
     pub certainty: Option<Vec<EvidenceCertainty>>,
 }
+/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticModelcharacteristicVariable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the variable
+    #[serde(rename = "variableDefinition")]
+    pub variable_definition: Reference,
+    /// continuous | dichotomous | ordinal | polychotomous
+    pub handling: Option<VariableHandling>,
+    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
+    pub _handling: Option<Element>,
+    /// Description for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueCategory")]
+    pub value_category: Option<Vec<CodeableConcept>>,
+    /// Discrete value for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Vec<Quantity>>,
+    /// Range of values for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueRange")]
+    pub value_range: Option<Vec<Range>>,
+}
+/// EvidenceStatistic nested structure for the 'modelCharacteristic' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticModelcharacteristic {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Model specification
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/statistic-model-code
+    pub code: CodeableConcept,
+    /// Numerical value to complete model specification
+    pub value: Option<Quantity>,
+    /// An attribute of the statistic used as a model characteristic
+    #[serde(rename = "attributeEstimate")]
+    pub attribute_estimate: Option<Vec<StringType>>,
+}
 /// EvidenceStatistic nested structure for the 'sampleSize' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceStatisticSamplesize {
@@ -218,28 +259,36 @@ pub struct EvidenceCertainty {
     /// A domain or subdomain of certainty
     pub subcomponent: Option<Vec<StringType>>,
 }
-/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
+/// EvidenceStatistic nested structure for the 'attributeEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticModelcharacteristicVariable {
+pub struct EvidenceStatisticAttributeestimate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Description of the variable
-    #[serde(rename = "variableDefinition")]
-    pub variable_definition: Reference,
-    /// continuous | dichotomous | ordinal | polychotomous
-    pub handling: Option<VariableHandling>,
-    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
-    pub _handling: Option<Element>,
-    /// Description for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueCategory")]
-    pub value_category: Option<Vec<CodeableConcept>>,
-    /// Discrete value for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Vec<Quantity>>,
-    /// Range of values for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueRange")]
-    pub value_range: Option<Vec<Range>>,
+    /// Textual description of the attribute estimate
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Footnote or explanatory note about the estimate
+    pub note: Option<Vec<Annotation>>,
+    /// The type of attribute estimate, e.g., confidence interval or p value
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/attribute-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The singular quantity of the attribute estimate, for attribute estimates represented as single values; also used to report unit of measure
+    pub quantity: Option<Quantity>,
+    /// Level of confidence interval, e.g., 0.95 for 95% confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower and upper bound values of the attribute estimate
+    pub range: Option<Range>,
+    /// A nested attribute estimate; which is the attribute estimate of an attribute estimate
+    #[serde(rename = "attributeEstimate")]
+    pub attribute_estimate: Option<Vec<StringType>>,
 }
 /// Evidence nested structure for the 'statistic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -247,12 +296,12 @@ pub struct EvidenceStatistic {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// An attribute of the Statistic
-    #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<EvidenceStatisticAttributeestimate>>,
     /// An aspect of the statistical model
     #[serde(rename = "modelCharacteristic")]
     pub model_characteristic: Option<Vec<EvidenceStatisticModelcharacteristic>>,
+    /// An attribute of the Statistic
+    #[serde(rename = "attributeEstimate")]
+    pub attribute_estimate: Option<Vec<EvidenceStatisticAttributeestimate>>,
     /// Number of samples in the statistic
     #[serde(rename = "sampleSize")]
     pub sample_size: Option<EvidenceStatisticSamplesize>,
@@ -285,55 +334,6 @@ pub struct EvidenceStatistic {
     /// Extension element for the 'numberAffected' primitive field. Contains metadata and extensions.
     #[serde(rename = "_numberAffected")]
     pub _number_affected: Option<Element>,
-}
-/// EvidenceStatistic nested structure for the 'modelCharacteristic' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticModelcharacteristic {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Model specification
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/statistic-model-code
-    pub code: CodeableConcept,
-    /// Numerical value to complete model specification
-    pub value: Option<Quantity>,
-    /// An attribute of the statistic used as a model characteristic
-    #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<StringType>>,
-}
-/// EvidenceStatistic nested structure for the 'attributeEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticAttributeestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of the attribute estimate
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Footnote or explanatory note about the estimate
-    pub note: Option<Vec<Annotation>>,
-    /// The type of attribute estimate, e.g., confidence interval or p value
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/attribute-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The singular quantity of the attribute estimate, for attribute estimates represented as single values; also used to report unit of measure
-    pub quantity: Option<Quantity>,
-    /// Level of confidence interval, e.g., 0.95 for 95% confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower and upper bound values of the attribute estimate
-    pub range: Option<Range>,
-    /// A nested attribute estimate; which is the attribute estimate of an attribute estimate
-    #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<StringType>>,
 }
 /// Evidence nested structure for the 'variableDefinition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,6 +423,31 @@ impl Default for Evidence {
     }
 }
 
+impl Default for EvidenceStatisticModelcharacteristicVariable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            variable_definition: Default::default(),
+            handling: Default::default(),
+            _handling: Default::default(),
+            value_category: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatisticModelcharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value: Default::default(),
+            attribute_estimate: Default::default(),
+        }
+    }
+}
+
 impl Default for EvidenceStatisticSamplesize {
     fn default() -> Self {
         Self {
@@ -456,52 +481,6 @@ impl Default for EvidenceCertainty {
     }
 }
 
-impl Default for EvidenceStatisticModelcharacteristicVariable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            variable_definition: Default::default(),
-            handling: Default::default(),
-            _handling: Default::default(),
-            value_category: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceStatistic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            attribute_estimate: Default::default(),
-            model_characteristic: Default::default(),
-            sample_size: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            statistic_type: Default::default(),
-            category: Default::default(),
-            quantity: Default::default(),
-            number_of_events: Default::default(),
-            _number_of_events: Default::default(),
-            number_affected: Default::default(),
-            _number_affected: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceStatisticModelcharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value: Default::default(),
-            attribute_estimate: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceStatisticAttributeestimate {
     fn default() -> Self {
         Self {
@@ -515,6 +494,27 @@ impl Default for EvidenceStatisticAttributeestimate {
             _level: Default::default(),
             range: Default::default(),
             attribute_estimate: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatistic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            model_characteristic: Default::default(),
+            attribute_estimate: Default::default(),
+            sample_size: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            statistic_type: Default::default(),
+            category: Default::default(),
+            quantity: Default::default(),
+            number_of_events: Default::default(),
+            _number_of_events: Default::default(),
+            number_affected: Default::default(),
+            _number_affected: Default::default(),
         }
     }
 }
@@ -1299,11 +1299,11 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
 }
 
 impl crate::traits::evidence::EvidenceExistence for Evidence {
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
     fn has_cite_as(&self) -> bool {
         self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

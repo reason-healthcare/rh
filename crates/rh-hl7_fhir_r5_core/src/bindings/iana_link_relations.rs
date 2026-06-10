@@ -23,15 +23,13 @@ pub enum IanaLinkRelations {
     /// Refers to a launch screen for the context.
     #[serde(rename = "apple-touch-startup-image")]
     AppleTouchStartupImage,
-    /// Refers to a collection of records, documents, or other
-    ///      materials of historical interest.
+    /// Refers to a collection of records, documents, or other       materials of historical interest.
     #[serde(rename = "archives")]
     Archives,
     /// Refers to the context's author.
     #[serde(rename = "author")]
     Author,
-    /// Identifies the entity that blocks access to a resource
-    ///      following receipt of a legal demand.
+    /// Identifies the entity that blocks access to a resource       following receipt of a legal demand.
     #[serde(rename = "blocked-by")]
     BlockedBy,
     /// Gives a permanent link to use for bookmarking purposes.
@@ -52,68 +50,49 @@ pub enum IanaLinkRelations {
     /// Refers to a table of contents.
     #[serde(rename = "contents")]
     Contents,
-    /// The document linked to was later converted to the
-    ///      document that contains this link relation.  For example, an RFC can
-    ///      have a link to the Internet-Draft that became the RFC; in that case,
-    ///      the link relation would be "convertedFrom".
+    /// The document linked to was later converted to the       document that contains this link relation.  For example, an RFC can       have a link to the Internet-Draft that became the RFC; in that case,       the link relation would be "convertedFrom".
     #[serde(rename = "convertedFrom")]
     ConvertedFrom,
-    /// Refers to a copyright statement that applies to the
-    ///    link's context.
+    /// Refers to a copyright statement that applies to the     link's context.
     #[serde(rename = "copyright")]
     Copyright,
     /// The target IRI points to a resource where a submission form can be obtained.
     #[serde(rename = "create-form")]
     CreateForm,
-    /// Refers to a resource containing the most recent
-    ///      item(s) in a collection of resources.
+    /// Refers to a resource containing the most recent       item(s) in a collection of resources.
     #[serde(rename = "current")]
     Current,
-    /// Refers to a resource providing information about the
-    ///      link's context.
+    /// Refers to a resource providing information about the       link's context.
     #[serde(rename = "describedby")]
     Describedby,
-    /// The relationship A 'describes' B asserts that
-    ///      resource A provides a description of resource B. There are no
-    ///      constraints on the format or representation of either A or B,
-    ///      neither are there any further constraints on either resource.
+    /// The relationship A 'describes' B asserts that       resource A provides a description of resource B. There are no       constraints on the format or representation of either A or B,       neither are there any further constraints on either resource.
     #[serde(rename = "describes")]
     Describes,
-    /// Refers to a list of patent disclosures made with respect to
-    ///      material for which 'disclosure' relation is specified.
+    /// Refers to a list of patent disclosures made with respect to        material for which 'disclosure' relation is specified.
     #[serde(rename = "disclosure")]
     Disclosure,
-    /// Used to indicate an origin that will be used to fetch required
-    ///      resources for the link context, and that the user agent ought to resolve
-    ///      as early as possible.
+    /// Used to indicate an origin that will be used to fetch required        resources for the link context, and that the user agent ought to resolve        as early as possible.
     #[serde(rename = "dns-prefetch")]
     DnsPrefetch,
-    /// Refers to a resource whose available representations
-    ///      are byte-for-byte identical with the corresponding representations of
-    ///      the context IRI.
+    /// Refers to a resource whose available representations       are byte-for-byte identical with the corresponding representations of       the context IRI.
     #[serde(rename = "duplicate")]
     Duplicate,
-    /// Refers to a resource that can be used to edit the
-    ///      link's context.
+    /// Refers to a resource that can be used to edit the       link's context.
     #[serde(rename = "edit")]
     Edit,
-    /// The target IRI points to a resource where a submission form for
-    ///      editing associated resource can be obtained.
+    /// The target IRI points to a resource where a submission form for       editing associated resource can be obtained.
     #[serde(rename = "edit-form")]
     EditForm,
-    /// Refers to a resource that can be used to edit media
-    ///      associated with the link's context.
+    /// Refers to a resource that can be used to edit media       associated with the link's context.
     #[serde(rename = "edit-media")]
     EditMedia,
-    /// Identifies a related resource that is potentially
-    ///      large and might require special handling.
+    /// Identifies a related resource that is potentially       large and might require special handling.
     #[serde(rename = "enclosure")]
     Enclosure,
     /// Refers to a resource that is not part of the same site as the current context.
     #[serde(rename = "external")]
     External,
-    /// An IRI that refers to the furthest preceding resource
-    ///    in a series of resources.
+    /// An IRI that refers to the furthest preceding resource     in a series of resources.
     #[serde(rename = "first")]
     First,
     /// Refers to a glossary of terms.
@@ -122,12 +101,10 @@ pub enum IanaLinkRelations {
     /// Refers to context-sensitive help.
     #[serde(rename = "help")]
     Help,
-    /// Refers to a resource hosted by the server indicated by
-    ///      the link context.
+    /// Refers to a resource hosted by the server indicated by       the link context.
     #[serde(rename = "hosts")]
     Hosts,
-    /// Refers to a hub that enables registration for
-    ///    notification of updates to the context.
+    /// Refers to a hub that enables registration for     notification of updates to the context.
     #[serde(rename = "hub")]
     Hub,
     /// Refers to an icon representing the link's context.
@@ -184,31 +161,19 @@ pub enum IanaLinkRelations {
     /// The target IRI points to a resource that is a member of the collection represented by the context IRI.
     #[serde(rename = "item")]
     Item,
-    /// An IRI that refers to the furthest following resource
-    ///      in a series of resources.
+    /// An IRI that refers to the furthest following resource       in a series of resources.
     #[serde(rename = "last")]
     Last,
-    /// Points to a resource containing the latest (e.g.,
-    ///      current) version of the context.
+    /// Points to a resource containing the latest (e.g.,       current) version of the context.
     #[serde(rename = "latest-version")]
     LatestVersion,
     /// Refers to a license associated with this context.
     #[serde(rename = "license")]
     License,
-    /// The link target of a link with the "linkset" relation
-    ///      type provides a set of links, including links in which the link
-    ///      context of the link participates.
-    ///
+    /// The link target of a link with the "linkset" relation       type provides a set of links, including links in which the link       context of the link participates.
     #[serde(rename = "linkset")]
     Linkset,
-    /// Refers to further information about the link's context,
-    ///      expressed as a LRDD ("Link-based Resource Descriptor Document")
-    ///      resource.  See  for information about
-    ///      processing this relation type in host-meta documents. When used
-    ///      elsewhere, it refers to additional links and other metadata.
-    ///      Multiple instances indicate additional LRDD resources. LRDD
-    ///      resources MUST have an "application/xrd+xml" representation, and
-    ///      MAY have others.
+    /// Refers to further information about the link's context,       expressed as a LRDD ("Link-based Resource Descriptor Document")       resource.  See  for information about       processing this relation type in host-meta documents. When used       elsewhere, it refers to additional links and other metadata.       Multiple instances indicate additional LRDD resources. LRDD       resources MUST have an "application/xrd+xml" representation, and       MAY have others.
     #[serde(rename = "lrdd")]
     Lrdd,
     /// Links to a manifest file for the context.
@@ -230,16 +195,12 @@ pub enum IanaLinkRelations {
     #[serde(rename = "modulepreload")]
     Modulepreload,
     /// Refers to a resource that can be used to monitor changes in an HTTP resource.
-    ///
     #[serde(rename = "monitor")]
     Monitor,
     /// Refers to a resource that can be used to monitor changes in a specified group of HTTP resources.
-    ///
     #[serde(rename = "monitor-group")]
     MonitorGroup,
-    /// Indicates that the link's context is a part of a series, and
-    ///      that the next in the series is the link target.
-    ///
+    /// Indicates that the link's context is a part of a series, and       that the next in the series is the link target.
     #[serde(rename = "next")]
     Next,
     /// Refers to the immediately following archive resource.
@@ -275,44 +236,28 @@ pub enum IanaLinkRelations {
     /// Gives the address of the pingback resource for the link context.
     #[serde(rename = "pingback")]
     Pingback,
-    /// Used to indicate an origin that will be used to fetch required
-    ///      resources for the link context. Initiating an early connection, which
-    ///      includes the DNS lookup, TCP handshake, and optional TLS negotiation,
-    ///      allows the user agent to mask the high latency costs of establishing a
-    ///      connection.
+    /// Used to indicate an origin that will be used to fetch required        resources for the link context. Initiating an early connection, which        includes the DNS lookup, TCP handshake, and optional TLS negotiation,        allows the user agent to mask the high latency costs of establishing a        connection.
     #[serde(rename = "preconnect")]
     Preconnect,
-    /// Points to a resource containing the predecessor
-    ///      version in the version history.
-    ///
+    /// Points to a resource containing the predecessor       version in the version history.
     #[serde(rename = "predecessor-version")]
     PredecessorVersion,
-    /// The prefetch link relation type is used to identify a resource
-    ///      that might be required by the next navigation from the link context, and
-    ///      that the user agent ought to fetch, such that the user agent can deliver a
-    ///      faster response once the resource is requested in the future.
+    /// The prefetch link relation type is used to identify a resource        that might be required by the next navigation from the link context, and        that the user agent ought to fetch, such that the user agent can deliver a        faster response once the resource is requested in the future.
     #[serde(rename = "prefetch")]
     Prefetch,
-    /// Refers to a resource that should be loaded early in the
-    ///      processing of the link's context, without blocking rendering.
+    /// Refers to a resource that should be loaded early in the        processing of the link's context, without blocking rendering.
     #[serde(rename = "preload")]
     Preload,
-    /// Used to identify a resource that might be required by the next
-    ///      navigation from the link context, and that the user agent ought to fetch
-    ///      and execute, such that the user agent can deliver a faster response once
-    ///      the resource is requested in the future.
+    /// Used to identify a resource that might be required by the next        navigation from the link context, and that the user agent ought to fetch        and execute, such that the user agent can deliver a faster response once        the resource is requested in the future.
     #[serde(rename = "prerender")]
     Prerender,
-    /// Indicates that the link's context is a part of a series, and
-    ///      that the previous in the series is the link target.
-    ///
+    /// Indicates that the link's context is a part of a series, and       that the previous in the series is the link target.
     #[serde(rename = "prev")]
     Prev,
     /// Refers to a resource that provides a preview of the link's context.
     #[serde(rename = "preview")]
     Preview,
-    /// Refers to the previous resource in an ordered series
-    ///      of resources.  Synonym for "prev".
+    /// Refers to the previous resource in an ordered series       of resources.  Synonym for "prev".
     #[serde(rename = "previous")]
     Previous,
     /// Refers to the immediately preceding archive resource.
@@ -321,95 +266,67 @@ pub enum IanaLinkRelations {
     /// Refers to a privacy policy associated with the link's context.
     #[serde(rename = "privacy-policy")]
     PrivacyPolicy,
-    /// Identifying that a resource representation conforms
-    ///to a certain profile, without affecting the non-profile semantics
-    ///of the resource representation.
+    /// Identifying that a resource representation conforms to a certain profile, without affecting the non-profile semantics of the resource representation.
     #[serde(rename = "profile")]
     Profile,
-    /// Links to a publication manifest. A manifest represents
-    ///      structured information about a publication, such as informative metadata,
-    ///      a list of resources, and a default reading order.
+    /// Links to a publication manifest. A manifest represents        structured information about a publication, such as informative metadata,        a list of resources, and a default reading order.
     #[serde(rename = "publication")]
     Publication,
     /// Identifies a related resource.
     #[serde(rename = "related")]
     Related,
-    /// Identifies the root of RESTCONF API as configured on this HTTP server.
-    ///      The "restconf" relation defines the root of the API defined in RFC8040.
-    ///      Subsequent revisions of RESTCONF will use alternate relation values to support
-    ///      protocol versioning.
+    /// Identifies the root of RESTCONF API as configured on this HTTP server.       The "restconf" relation defines the root of the API defined in RFC8040.       Subsequent revisions of RESTCONF will use alternate relation values to support        protocol versioning.
     #[serde(rename = "restconf")]
     Restconf,
-    /// Identifies a resource that is a reply to the context
-    ///      of the link.
-    ///
+    /// Identifies a resource that is a reply to the context       of the link.
     #[serde(rename = "replies")]
     Replies,
-    /// The resource identified by the link target provides an input value to an
-    ///    instance of a rule, where the resource which represents the rule instance is
-    ///    identified by the link context.
-    ///
+    /// The resource identified by the link target provides an input value to an      instance of a rule, where the resource which represents the rule instance is      identified by the link context.
     #[serde(rename = "ruleinput")]
     Ruleinput,
-    /// Refers to a resource that can be used to search through
-    ///      the link's context and related resources.
+    /// Refers to a resource that can be used to search through       the link's context and related resources.
     #[serde(rename = "search")]
     Search,
     /// Refers to a section in a collection of resources.
     #[serde(rename = "section")]
     Section,
     /// Conveys an identifier for the link's context.
-    ///
     #[serde(rename = "self")]
     SelfValue,
-    /// Indicates a URI that can be used to retrieve a
-    ///      service document.
+    /// Indicates a URI that can be used to retrieve a       service document.
     #[serde(rename = "service")]
     Service,
-    /// Identifies service description for the context that
-    ///      is primarily intended for consumption by machines.
+    /// Identifies service description for the context that       is primarily intended for consumption by machines.
     #[serde(rename = "service-desc")]
     ServiceDesc,
-    /// Identifies service documentation for the context that
-    ///      is primarily intended for human consumption.
+    /// Identifies service documentation for the context that       is primarily intended for human consumption.
     #[serde(rename = "service-doc")]
     ServiceDoc,
-    /// Identifies general metadata for the context that is
-    ///      primarily intended for consumption by machines.
+    /// Identifies general metadata for the context that is       primarily intended for consumption by machines.
     #[serde(rename = "service-meta")]
     ServiceMeta,
-    /// Refers to a resource that is within a context that is
-    ///		sponsored (such as advertising or another compensation agreement).
+    /// Refers to a resource that is within a context that is          sponsored (such as advertising or another compensation agreement).
     #[serde(rename = "sponsored")]
     Sponsored,
-    /// Refers to the first resource in a collection of
-    ///      resources.
+    /// Refers to the first resource in a collection of       resources.
     #[serde(rename = "start")]
     Start,
-    /// Identifies a resource that represents the context's
-    ///      status.
+    /// Identifies a resource that represents the context's       status.
     #[serde(rename = "status")]
     Status,
     /// Refers to a stylesheet.
     #[serde(rename = "stylesheet")]
     Stylesheet,
-    /// Refers to a resource serving as a subsection in a
-    ///      collection of resources.
+    /// Refers to a resource serving as a subsection in a       collection of resources.
     #[serde(rename = "subsection")]
     Subsection,
-    /// Points to a resource containing the successor version
-    ///      in the version history.
-    ///
+    /// Points to a resource containing the successor version       in the version history.
     #[serde(rename = "successor-version")]
     SuccessorVersion,
-    /// Identifies a resource that provides information about
-    ///      the context's retirement policy.
-    ///
+    /// Identifies a resource that provides information about       the context's retirement policy.
     #[serde(rename = "sunset")]
     Sunset,
-    /// Gives a tag (identified by the given address) that applies to
-    ///      the current document.
-    ///
+    /// Gives a tag (identified by the given address) that applies to       the current document.
     #[serde(rename = "tag")]
     Tag,
     /// Refers to the terms of service associated with the link's context.
@@ -425,35 +342,24 @@ pub enum IanaLinkRelations {
     #[serde(rename = "type")]
     TypeValue,
     /// Refers to a resource that is within a context that is User Generated Content.
-    ///
     #[serde(rename = "ugc")]
     Ugc,
-    /// Refers to a parent document in a hierarchy of
-    ///      documents.
-    ///
+    /// Refers to a parent document in a hierarchy of       documents.
     #[serde(rename = "up")]
     Up,
-    /// Points to a resource containing the version history
-    ///      for the context.
-    ///
+    /// Points to a resource containing the version history       for the context.
     #[serde(rename = "version-history")]
     VersionHistory,
-    /// Identifies a resource that is the source of the
-    ///      information in the link's context.
-    ///
+    /// Identifies a resource that is the source of the       information in the link's context.
     #[serde(rename = "via")]
     Via,
-    /// Identifies a target URI that supports the Webmention protocol.
-    ///    This allows clients that mention a resource in some form of publishing process
-    ///    to contact that endpoint and inform it that this resource has been mentioned.
+    /// Identifies a target URI that supports the Webmention protocol.     This allows clients that mention a resource in some form of publishing process     to contact that endpoint and inform it that this resource has been mentioned.
     #[serde(rename = "webmention")]
     Webmention,
     /// Points to a working copy for this resource.
     #[serde(rename = "working-copy")]
     WorkingCopy,
-    /// Points to the versioned resource from which this
-    ///      working copy was obtained.
-    ///
+    /// Points to the versioned resource from which this       working copy was obtained.
     #[serde(rename = "working-copy-of")]
     WorkingCopyOf,
 }

@@ -135,6 +135,65 @@ pub struct SubscriptionTopic {
     #[serde(rename = "notificationShape")]
     pub notification_shape: Option<Vec<SubscriptionTopicNotificationshape>>,
 }
+/// SubscriptionTopic nested structure for the 'eventTrigger' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionTopicEventtrigger {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Text representation of the event trigger
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Event which can trigger a notification from the SubscriptionTopic
+    ///
+    /// Binding: example (FHIR Value set/code system definition for HL7 V2 table 0003 (EVENT TYPE CODE).)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0003
+    pub event: CodeableConcept,
+    /// Data Type or Resource (reference to definition) for this trigger definition
+    ///
+    /// Binding: extensible (A type of resource, or a Reference (from all versions))
+    ///
+    /// Available values:
+    /// - `Reference`
+    pub resource: StringType,
+    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
+    pub _resource: Option<Element>,
+}
+/// SubscriptionTopicResourcetrigger nested structure for the 'queryCriteria' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionTopicResourcetriggerQuerycriteria {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Rule applied to previous resource state
+    pub previous: Option<StringType>,
+    /// Extension element for the 'previous' primitive field. Contains metadata and extensions.
+    pub _previous: Option<Element>,
+    /// test-passes | test-fails
+    #[serde(rename = "resultForCreate")]
+    pub result_for_create: Option<SubscriptiontopicCrBehavior>,
+    /// Extension element for the 'resultForCreate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_resultForCreate")]
+    pub _result_for_create: Option<Element>,
+    /// Rule applied to current resource state
+    pub current: Option<StringType>,
+    /// Extension element for the 'current' primitive field. Contains metadata and extensions.
+    pub _current: Option<Element>,
+    /// test-passes | test-fails
+    #[serde(rename = "resultForDelete")]
+    pub result_for_delete: Option<SubscriptiontopicCrBehavior>,
+    /// Extension element for the 'resultForDelete' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_resultForDelete")]
+    pub _result_for_delete: Option<Element>,
+    /// Both must be true flag
+    #[serde(rename = "requireBoth")]
+    pub require_both: Option<BooleanType>,
+    /// Extension element for the 'requireBoth' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_requireBoth")]
+    pub _require_both: Option<Element>,
+}
 /// SubscriptionTopic nested structure for the 'canFilterBy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionTopicCanfilterby {
@@ -174,39 +233,6 @@ pub struct SubscriptionTopicCanfilterby {
     pub modifier: Option<Vec<SearchModifierCode>>,
     /// Extension element for the 'modifier' primitive field. Contains metadata and extensions.
     pub _modifier: Option<Element>,
-}
-/// SubscriptionTopicResourcetrigger nested structure for the 'queryCriteria' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionTopicResourcetriggerQuerycriteria {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Rule applied to previous resource state
-    pub previous: Option<StringType>,
-    /// Extension element for the 'previous' primitive field. Contains metadata and extensions.
-    pub _previous: Option<Element>,
-    /// test-passes | test-fails
-    #[serde(rename = "resultForCreate")]
-    pub result_for_create: Option<SubscriptiontopicCrBehavior>,
-    /// Extension element for the 'resultForCreate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_resultForCreate")]
-    pub _result_for_create: Option<Element>,
-    /// Rule applied to current resource state
-    pub current: Option<StringType>,
-    /// Extension element for the 'current' primitive field. Contains metadata and extensions.
-    pub _current: Option<Element>,
-    /// test-passes | test-fails
-    #[serde(rename = "resultForDelete")]
-    pub result_for_delete: Option<SubscriptiontopicCrBehavior>,
-    /// Extension element for the 'resultForDelete' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_resultForDelete")]
-    pub _result_for_delete: Option<Element>,
-    /// Both must be true flag
-    #[serde(rename = "requireBoth")]
-    pub require_both: Option<BooleanType>,
-    /// Extension element for the 'requireBoth' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_requireBoth")]
-    pub _require_both: Option<Element>,
 }
 /// SubscriptionTopic nested structure for the 'notificationShape' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,32 +295,6 @@ pub struct SubscriptionTopicResourcetrigger {
     #[serde(rename = "_fhirPathCriteria")]
     pub _fhir_path_criteria: Option<Element>,
 }
-/// SubscriptionTopic nested structure for the 'eventTrigger' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionTopicEventtrigger {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Text representation of the event trigger
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Event which can trigger a notification from the SubscriptionTopic
-    ///
-    /// Binding: example (FHIR Value set/code system definition for HL7 V2 table 0003 (EVENT TYPE CODE).)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0003
-    pub event: CodeableConcept,
-    /// Data Type or Resource (reference to definition) for this trigger definition
-    ///
-    /// Binding: extensible (A type of resource, or a Reference (from all versions))
-    ///
-    /// Available values:
-    /// - `Reference`
-    pub resource: StringType,
-    /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
-    pub _resource: Option<Element>,
-}
 
 impl Default for SubscriptionTopic {
     fn default() -> Self {
@@ -345,22 +345,15 @@ impl Default for SubscriptionTopic {
     }
 }
 
-impl Default for SubscriptionTopicCanfilterby {
+impl Default for SubscriptionTopicEventtrigger {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             description: Default::default(),
             _description: Default::default(),
+            event: Default::default(),
             resource: Default::default(),
             _resource: Default::default(),
-            filter_parameter: Default::default(),
-            _filter_parameter: Default::default(),
-            filter_definition: Default::default(),
-            _filter_definition: Default::default(),
-            comparator: Default::default(),
-            _comparator: Default::default(),
-            modifier: Default::default(),
-            _modifier: Default::default(),
         }
     }
 }
@@ -379,6 +372,26 @@ impl Default for SubscriptionTopicResourcetriggerQuerycriteria {
             _result_for_delete: Default::default(),
             require_both: Default::default(),
             _require_both: Default::default(),
+        }
+    }
+}
+
+impl Default for SubscriptionTopicCanfilterby {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            resource: Default::default(),
+            _resource: Default::default(),
+            filter_parameter: Default::default(),
+            _filter_parameter: Default::default(),
+            filter_definition: Default::default(),
+            _filter_definition: Default::default(),
+            comparator: Default::default(),
+            _comparator: Default::default(),
+            modifier: Default::default(),
+            _modifier: Default::default(),
         }
     }
 }
@@ -410,19 +423,6 @@ impl Default for SubscriptionTopicResourcetrigger {
             _supported_interaction: Default::default(),
             fhir_path_criteria: Default::default(),
             _fhir_path_criteria: Default::default(),
-        }
-    }
-}
-
-impl Default for SubscriptionTopicEventtrigger {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            event: Default::default(),
-            resource: Default::default(),
-            _resource: Default::default(),
         }
     }
 }

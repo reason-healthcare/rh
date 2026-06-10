@@ -120,39 +120,6 @@ pub struct NutritionIntake {
     /// Further information about the consumption
     pub note: Option<Vec<Annotation>>,
 }
-/// NutritionIntake nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionIntakePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performer
-    ///
-    /// Binding: example (Type of performance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
-    pub function: Option<CodeableConcept>,
-    /// Who performed the intake
-    pub actor: Reference,
-}
-/// NutritionIntake nested structure for the 'ingredientLabel' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionIntakeIngredientlabel {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Total nutrient consumed
-    ///
-    /// Binding: example (Types of nutrients that can be found in a nutrition product.)
-    ///
-    /// Available values:
-    /// - `33463005`: Fluid
-    /// - `39972003`: Sodium
-    /// - `88480006`: Potassium
-    pub nutrient: CodeableReference,
-    /// Total amount of nutrient consumed
-    pub amount: Quantity,
-}
 /// NutritionIntake nested structure for the 'consumedItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionIntakeConsumeditem {
@@ -193,6 +160,39 @@ pub struct NutritionIntakeConsumeditem {
     #[serde(rename = "notConsumedReason")]
     pub not_consumed_reason: Option<CodeableConcept>,
 }
+/// NutritionIntake nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionIntakePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performer
+    ///
+    /// Binding: example (Type of performance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
+    pub function: Option<CodeableConcept>,
+    /// Who performed the intake
+    pub actor: Reference,
+}
+/// NutritionIntake nested structure for the 'ingredientLabel' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionIntakeIngredientlabel {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Total nutrient consumed
+    ///
+    /// Binding: example (Types of nutrients that can be found in a nutrition product.)
+    ///
+    /// Available values:
+    /// - `33463005`: Fluid
+    /// - `39972003`: Sodium
+    /// - `88480006`: Potassium
+    pub nutrient: CodeableReference,
+    /// Total amount of nutrient consumed
+    pub amount: Quantity,
+}
 
 impl Default for NutritionIntake {
     fn default() -> Self {
@@ -228,6 +228,22 @@ impl Default for NutritionIntake {
     }
 }
 
+impl Default for NutritionIntakeConsumeditem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            nutrition_product: Default::default(),
+            schedule: Default::default(),
+            amount: Default::default(),
+            rate: Default::default(),
+            not_consumed: Default::default(),
+            _not_consumed: Default::default(),
+            not_consumed_reason: Default::default(),
+        }
+    }
+}
+
 impl Default for NutritionIntakePerformer {
     fn default() -> Self {
         Self {
@@ -244,22 +260,6 @@ impl Default for NutritionIntakeIngredientlabel {
             base: BackboneElement::default(),
             nutrient: Default::default(),
             amount: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionIntakeConsumeditem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            nutrition_product: Default::default(),
-            schedule: Default::default(),
-            amount: Default::default(),
-            rate: Default::default(),
-            not_consumed: Default::default(),
-            _not_consumed: Default::default(),
-            not_consumed_reason: Default::default(),
         }
     }
 }

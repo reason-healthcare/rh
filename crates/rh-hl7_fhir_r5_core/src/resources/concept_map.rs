@@ -157,6 +157,94 @@ pub struct ConceptMap {
     /// Same source and target systems
     pub group: Option<Vec<ConceptMapGroup>>,
 }
+/// ConceptMapGroupElementTarget nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTargetProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to ConceptMap.property.code
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value of the property for this concept (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Value of the property for this concept (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the property for this concept (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the property for this concept (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the property for this concept (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Value of the property for this concept (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Value of the property for this concept (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+}
+/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTargetDependson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A reference to a mapping attribute defined in ConceptMap.additionalAttribute
+    pub attribute: StringType,
+    /// Extension element for the 'attribute' primitive field. Contains metadata and extensions.
+    pub _attribute: Option<Element>,
+    /// Value of the referenced data element (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<StringType>,
+    /// Value of the referenced data element (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Option<Coding>,
+    /// Value of the referenced data element (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Value of the referenced data element (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Value of the referenced data element (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// The mapping depends on a data element with a value from this value set
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+}
+/// ConceptMap nested structure for the 'additionalAttribute' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapAdditionalattribute {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies this additional attribute through this resource
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Formal identifier for the data element referred to in this attribte
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// Why the additional attribute is defined, and/or what the data element it refers to is
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// code | Coding | string | boolean | Quantity
+    #[serde(rename = "type")]
+    pub type_: ConceptmapAttributeType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
 /// ConceptMap nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapProperty {
@@ -220,81 +308,6 @@ pub struct ConceptMapGroupUnmapped {
     #[serde(rename = "_otherMap")]
     pub _other_map: Option<Element>,
 }
-/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetDependson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A reference to a mapping attribute defined in ConceptMap.additionalAttribute
-    pub attribute: StringType,
-    /// Extension element for the 'attribute' primitive field. Contains metadata and extensions.
-    pub _attribute: Option<Element>,
-    /// Value of the referenced data element (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<StringType>,
-    /// Value of the referenced data element (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Option<Coding>,
-    /// Value of the referenced data element (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Value of the referenced data element (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Value of the referenced data element (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// The mapping depends on a data element with a value from this value set
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-}
-/// ConceptMap nested structure for the 'additionalAttribute' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapAdditionalattribute {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies this additional attribute through this resource
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Formal identifier for the data element referred to in this attribte
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// Why the additional attribute is defined, and/or what the data element it refers to is
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// code | Coding | string | boolean | Quantity
-    #[serde(rename = "type")]
-    pub type_: ConceptmapAttributeType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// ConceptMap nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Mappings for a concept from the source set
-    pub element: Vec<ConceptMapGroupElement>,
-    /// What to do when there is no mapping target for the source concept and ConceptMap.group.element.noMap is not true
-    pub unmapped: Option<ConceptMapGroupUnmapped>,
-    /// Source system where concepts to be mapped are defined
-    pub source: Option<StringType>,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// Target system that the concepts are to be mapped to
-    pub target: Option<StringType>,
-    /// Extension element for the 'target' primitive field. Contains metadata and extensions.
-    pub _target: Option<Element>,
-}
 /// ConceptMapGroupElement nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConceptMapGroupElementTarget {
@@ -326,37 +339,24 @@ pub struct ConceptMapGroupElementTarget {
     /// Other data elements that this mapping also produces
     pub product: Option<Vec<StringType>>,
 }
-/// ConceptMapGroupElementTarget nested structure for the 'property' field
+/// ConceptMap nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetProperty {
+pub struct ConceptMapGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference to ConceptMap.property.code
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Value of the property for this concept (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Value of the property for this concept (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the property for this concept (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the property for this concept (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the property for this concept (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Value of the property for this concept (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Value of the property for this concept (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
+    /// Mappings for a concept from the source set
+    pub element: Vec<ConceptMapGroupElement>,
+    /// What to do when there is no mapping target for the source concept and ConceptMap.group.element.noMap is not true
+    pub unmapped: Option<ConceptMapGroupUnmapped>,
+    /// Source system where concepts to be mapped are defined
+    pub source: Option<StringType>,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// Target system that the concepts are to be mapped to
+    pub target: Option<StringType>,
+    /// Extension element for the 'target' primitive field. Contains metadata and extensions.
+    pub _target: Option<Element>,
 }
 /// ConceptMapGroup nested structure for the 'element' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -442,6 +442,56 @@ impl Default for ConceptMap {
     }
 }
 
+impl Default for ConceptMapGroupElementTargetProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_integer: Default::default(),
+            value_boolean: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+            value_code: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElementTargetDependson {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            attribute: Default::default(),
+            _attribute: Default::default(),
+            value_code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapAdditionalattribute {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
 impl Default for ConceptMapProperty {
     fn default() -> Self {
         Self {
@@ -480,53 +530,6 @@ impl Default for ConceptMapGroupUnmapped {
     }
 }
 
-impl Default for ConceptMapGroupElementTargetDependson {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            attribute: Default::default(),
-            _attribute: Default::default(),
-            value_code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapAdditionalattribute {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            uri: Default::default(),
-            _uri: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            element: Vec::new(),
-            unmapped: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            target: Default::default(),
-            _target: Default::default(),
-        }
-    }
-}
-
 impl Default for ConceptMapGroupElementTarget {
     fn default() -> Self {
         Self {
@@ -546,19 +549,16 @@ impl Default for ConceptMapGroupElementTarget {
     }
 }
 
-impl Default for ConceptMapGroupElementTargetProperty {
+impl Default for ConceptMapGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_integer: Default::default(),
-            value_boolean: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-            value_code: Default::default(),
+            element: Vec::new(),
+            unmapped: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            target: Default::default(),
+            _target: Default::default(),
         }
     }
 }

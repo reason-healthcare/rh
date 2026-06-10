@@ -114,6 +114,21 @@ pub struct MedicationAdministration {
     #[serde(rename = "eventHistory")]
     pub event_history: Option<Vec<Reference>>,
 }
+/// MedicationAdministration nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationAdministrationPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performance
+    ///
+    /// Binding: example (A code describing the role an individual played in administering the medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/med-admin-perform-function
+    pub function: Option<CodeableConcept>,
+    /// Who or what performed the medication administration
+    pub actor: CodeableReference,
+}
 /// MedicationAdministration nested structure for the 'dosage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationAdministrationDosage {
@@ -151,21 +166,6 @@ pub struct MedicationAdministrationDosage {
     #[serde(rename = "rateQuantity")]
     pub rate_quantity: Option<Quantity>,
 }
-/// MedicationAdministration nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationAdministrationPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performance
-    ///
-    /// Binding: example (A code describing the role an individual played in administering the medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/med-admin-perform-function
-    pub function: Option<CodeableConcept>,
-    /// Who or what performed the medication administration
-    pub actor: CodeableReference,
-}
 
 impl Default for MedicationAdministration {
     fn default() -> Self {
@@ -201,6 +201,16 @@ impl Default for MedicationAdministration {
     }
 }
 
+impl Default for MedicationAdministrationPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: CodeableReference::default(),
+        }
+    }
+}
+
 impl Default for MedicationAdministrationDosage {
     fn default() -> Self {
         Self {
@@ -213,16 +223,6 @@ impl Default for MedicationAdministrationDosage {
             dose: Default::default(),
             rate_ratio: Default::default(),
             rate_quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationAdministrationPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: CodeableReference::default(),
         }
     }
 }

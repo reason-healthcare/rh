@@ -268,6 +268,19 @@ pub struct ActivityDefinition {
     #[serde(rename = "dynamicValue")]
     pub dynamic_value: Option<Vec<ActivityDefinitionDynamicvalue>>,
 }
+/// ActivityDefinition nested structure for the 'dynamicValue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityDefinitionDynamicvalue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The path to the element to be set dynamically
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// An expression that provides the dynamic value for the customization
+    pub expression: Expression,
+}
 /// ActivityDefinition nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityDefinitionParticipant {
@@ -300,19 +313,6 @@ pub struct ActivityDefinitionParticipant {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-function
     pub function: Option<CodeableConcept>,
-}
-/// ActivityDefinition nested structure for the 'dynamicValue' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActivityDefinitionDynamicvalue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The path to the element to be set dynamically
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// An expression that provides the dynamic value for the customization
-    pub expression: Expression,
 }
 
 impl Default for ActivityDefinition {
@@ -406,6 +406,17 @@ impl Default for ActivityDefinition {
     }
 }
 
+impl Default for ActivityDefinitionDynamicvalue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
 impl Default for ActivityDefinitionParticipant {
     fn default() -> Self {
         Self {
@@ -417,17 +428,6 @@ impl Default for ActivityDefinitionParticipant {
             type_reference: Default::default(),
             role: Default::default(),
             function: Default::default(),
-        }
-    }
-}
-
-impl Default for ActivityDefinitionDynamicvalue {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            expression: Default::default(),
         }
     }
 }
@@ -1229,8 +1229,11 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
             || self.subject_reference.is_some()
             || self.subject_canonical.is_some()
     }
-    fn has_as_needed(&self) -> bool {
-        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
+    }
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
     fn has_timing(&self) -> bool {
         self.timing_timing.is_some()
@@ -1238,11 +1241,8 @@ impl crate::traits::activity_definition::ActivityDefinitionExistence for Activit
             || self.timing_range.is_some()
             || self.timing_duration.is_some()
     }
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
+    fn has_as_needed(&self) -> bool {
+        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

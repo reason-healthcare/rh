@@ -43,25 +43,6 @@ pub struct SubstanceNucleicAcid {
     /// Subunits are listed in order of decreasing length; sequences of the same length will be ordered by molecular weight; subunits that have identical sequences will be repeated multiple times
     pub subunit: Option<Vec<SubstanceNucleicAcidSubunit>>,
 }
-/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunitSugar {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
-    pub identifier: Option<Identifier>,
-    /// The name of the sugar or sugar-like component that make up the nucleotide
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
-    #[serde(rename = "residueSite")]
-    pub residue_site: Option<StringType>,
-    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_residueSite")]
-    pub _residue_site: Option<Element>,
-}
 /// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceNucleicAcidSubunitLinkage {
@@ -91,10 +72,10 @@ pub struct SubstanceNucleicAcidSubunit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// 5.3.6.8.1 Sugar ID (Mandatory)
-    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
     /// The linkages between sugar residues will also be captured
     pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
+    /// 5.3.6.8.1 Sugar ID (Mandatory)
+    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
     /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
     pub subunit: Option<IntegerType>,
     /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
@@ -117,6 +98,25 @@ pub struct SubstanceNucleicAcidSubunit {
     #[serde(rename = "threePrime")]
     pub three_prime: Option<CodeableConcept>,
 }
+/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunitSugar {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
+    pub identifier: Option<Identifier>,
+    /// The name of the sugar or sugar-like component that make up the nucleotide
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
+    #[serde(rename = "residueSite")]
+    pub residue_site: Option<StringType>,
+    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_residueSite")]
+    pub _residue_site: Option<Element>,
+}
 
 impl Default for SubstanceNucleicAcid {
     fn default() -> Self {
@@ -129,19 +129,6 @@ impl Default for SubstanceNucleicAcid {
             _area_of_hybridisation: Default::default(),
             oligo_nucleotide_type: Default::default(),
             subunit: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceNucleicAcidSubunitSugar {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            residue_site: Default::default(),
-            _residue_site: Default::default(),
         }
     }
 }
@@ -165,8 +152,8 @@ impl Default for SubstanceNucleicAcidSubunit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sugar: Default::default(),
             linkage: Default::default(),
+            sugar: Default::default(),
             subunit: Default::default(),
             _subunit: Default::default(),
             sequence: Default::default(),
@@ -176,6 +163,19 @@ impl Default for SubstanceNucleicAcidSubunit {
             sequence_attachment: Default::default(),
             five_prime: Default::default(),
             three_prime: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceNucleicAcidSubunitSugar {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            residue_site: Default::default(),
+            _residue_site: Default::default(),
         }
     }
 }

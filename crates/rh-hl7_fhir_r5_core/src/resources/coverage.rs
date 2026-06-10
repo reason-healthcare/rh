@@ -141,21 +141,18 @@ pub struct CoverageCosttobeneficiary {
     #[serde(rename = "valueMoney")]
     pub value_money: Option<Money>,
 }
-/// CoverageCosttobeneficiary nested structure for the 'exception' field
+/// Coverage nested structure for the 'paymentBy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageCosttobeneficiaryException {
+pub struct CoveragePaymentby {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Exception category
-    ///
-    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The effective period of the exception
-    pub period: Option<Period>,
+    /// Parties performing self-payment
+    pub party: Reference,
+    /// Party's responsibility
+    pub responsibility: Option<StringType>,
+    /// Extension element for the 'responsibility' primitive field. Contains metadata and extensions.
+    pub _responsibility: Option<Element>,
 }
 /// Coverage nested structure for the 'class' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,18 +174,21 @@ pub struct CoverageClass {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
 }
-/// Coverage nested structure for the 'paymentBy' field
+/// CoverageCosttobeneficiary nested structure for the 'exception' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoveragePaymentby {
+pub struct CoverageCosttobeneficiaryException {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Parties performing self-payment
-    pub party: Reference,
-    /// Party's responsibility
-    pub responsibility: Option<StringType>,
-    /// Extension element for the 'responsibility' primitive field. Contains metadata and extensions.
-    pub _responsibility: Option<Element>,
+    /// Exception category
+    ///
+    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The effective period of the exception
+    pub period: Option<Period>,
 }
 
 impl Default for Coverage {
@@ -241,12 +241,13 @@ impl Default for CoverageCosttobeneficiary {
     }
 }
 
-impl Default for CoverageCosttobeneficiaryException {
+impl Default for CoveragePaymentby {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
+            party: Default::default(),
+            responsibility: Default::default(),
+            _responsibility: Default::default(),
         }
     }
 }
@@ -263,13 +264,12 @@ impl Default for CoverageClass {
     }
 }
 
-impl Default for CoveragePaymentby {
+impl Default for CoverageCosttobeneficiaryException {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            party: Default::default(),
-            responsibility: Default::default(),
-            _responsibility: Default::default(),
+            type_: Default::default(),
+            period: Default::default(),
         }
     }
 }

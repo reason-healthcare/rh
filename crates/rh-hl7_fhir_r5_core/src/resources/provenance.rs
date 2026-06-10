@@ -77,21 +77,6 @@ pub struct Provenance {
     /// Signature on target
     pub signature: Option<Vec<Signature>>,
 }
-/// Provenance nested structure for the 'entity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProvenanceEntity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// revision | quotation | source | instantiates | removal
-    pub role: ProvenanceEntityRole,
-    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
-    pub _role: Option<Element>,
-    /// Identity of entity
-    pub what: Reference,
-    /// Entity is attributed to this agent
-    pub agent: Option<Vec<StringType>>,
-}
 /// Provenance nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProvenanceAgent {
@@ -116,6 +101,21 @@ pub struct ProvenanceAgent {
     /// The agent that delegated
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
+}
+/// Provenance nested structure for the 'entity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEntity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// revision | quotation | source | instantiates | removal
+    pub role: ProvenanceEntityRole,
+    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
+    pub _role: Option<Element>,
+    /// Identity of entity
+    pub what: Reference,
+    /// Entity is attributed to this agent
+    pub agent: Option<Vec<StringType>>,
 }
 
 impl Default for Provenance {
@@ -142,18 +142,6 @@ impl Default for Provenance {
     }
 }
 
-impl Default for ProvenanceEntity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: ProvenanceEntityRole::default(),
-            _role: Default::default(),
-            what: Reference::default(),
-            agent: Default::default(),
-        }
-    }
-}
-
 impl Default for ProvenanceAgent {
     fn default() -> Self {
         Self {
@@ -162,6 +150,18 @@ impl Default for ProvenanceAgent {
             role: Default::default(),
             who: Reference::default(),
             on_behalf_of: Default::default(),
+        }
+    }
+}
+
+impl Default for ProvenanceEntity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: ProvenanceEntityRole::default(),
+            _role: Default::default(),
+            what: Reference::default(),
+            agent: Default::default(),
         }
     }
 }

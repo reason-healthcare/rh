@@ -232,23 +232,6 @@ pub struct ImmunizationProtocolapplied {
     #[serde(rename = "_seriesDoses")]
     pub _series_doses: Option<Element>,
 }
-/// Immunization nested structure for the 'reaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub manifestation: Option<CodeableReference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
-}
 /// Immunization nested structure for the 'programEligibility' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationProgrameligibility {
@@ -269,6 +252,23 @@ pub struct ImmunizationProgrameligibility {
     /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
     #[serde(rename = "programStatus")]
     pub program_status: CodeableConcept,
+}
+/// Immunization nested structure for the 'reaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationReaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub manifestation: Option<CodeableReference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
 }
 
 impl Default for Immunization {
@@ -339,6 +339,16 @@ impl Default for ImmunizationProtocolapplied {
     }
 }
 
+impl Default for ImmunizationProgrameligibility {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            program: Default::default(),
+            program_status: Default::default(),
+        }
+    }
+}
+
 impl Default for ImmunizationReaction {
     fn default() -> Self {
         Self {
@@ -348,16 +358,6 @@ impl Default for ImmunizationReaction {
             manifestation: Default::default(),
             reported: Default::default(),
             _reported: Default::default(),
-        }
-    }
-}
-
-impl Default for ImmunizationProgrameligibility {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            program: Default::default(),
-            program_status: Default::default(),
         }
     }
 }

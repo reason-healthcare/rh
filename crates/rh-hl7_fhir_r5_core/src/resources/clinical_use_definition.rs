@@ -64,59 +64,83 @@ pub struct ClinicalUseDefinition {
     /// Critical environmental, health or physical risks or hazards. For example 'Do not operate heavy machinery', 'May cause drowsiness'
     pub warning: Option<ClinicalUseDefinitionWarning>,
 }
-/// ClinicalUseDefinition nested structure for the 'contraindication' field
+/// ClinicalUseDefinition nested structure for the 'undesirableEffect' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionContraindication {
+pub struct ClinicalUseDefinitionUndesirableeffect {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Information about use of the product in relation to other therapies described as part of the contraindication
-    #[serde(rename = "otherTherapy")]
-    pub other_therapy: Option<Vec<ClinicalUseDefinitionContraindicationOthertherapy>>,
-    /// The situation that is being documented as contraindicating against this item
+    /// The situation in which the undesirable effect may manifest
     ///
-    /// Binding: example (A symptom, disease or procedure.)
+    /// Binding: example (An undesirable effect of clinical use.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    #[serde(rename = "diseaseSymptomProcedure")]
-    pub disease_symptom_procedure: Option<CodeableReference>,
-    /// The status of the disease or symptom for the contraindication
+    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-symptom
+    #[serde(rename = "symptomConditionEffect")]
+    pub symptom_condition_effect: Option<CodeableReference>,
+    /// High level classification of the effect
     ///
-    /// Binding: example (The status of a disease or symptom.)
+    /// Binding: example (A categorisation for an undesirable effect.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
-    #[serde(rename = "diseaseStatus")]
-    pub disease_status: Option<CodeableReference>,
-    /// A comorbidity (concurrent condition) or coinfection
+    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-classification
+    pub classification: Option<CodeableConcept>,
+    /// How often the effect is seen
     ///
-    /// Binding: example (A symptom, disease or procedure.)
+    /// Binding: example (A categorisation for a frequency of occurence of an undesirable effect.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    pub comorbidity: Option<Vec<CodeableReference>>,
-    /// The indication which this is a contraidication for
-    pub indication: Option<Vec<Reference>>,
-    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
-    pub applicability: Option<Expression>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-frequency
+    #[serde(rename = "frequencyOfOccurrence")]
+    pub frequency_of_occurrence: Option<CodeableConcept>,
 }
-/// ClinicalUseDefinitionContraindication nested structure for the 'otherTherapy' field
+/// ClinicalUseDefinition nested structure for the 'warning' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionContraindicationOthertherapy {
+pub struct ClinicalUseDefinitionWarning {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of relationship between the product indication/contraindication and another therapy
+    /// A textual definition of this warning, with formatting
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// A coded or unformatted textual definition of this warning
     ///
-    /// Binding: preferred (Classification of relationship between a therapy and a contraindication or an indication.)
+    /// Binding: example (Classification of warning type.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy-relationship-type
-    #[serde(rename = "relationshipType")]
-    pub relationship_type: CodeableConcept,
-    /// Reference to a specific medication, substance etc. as part of an indication or contraindication
+    /// ValueSet: http://hl7.org/fhir/ValueSet/warning-type
+    pub code: Option<CodeableConcept>,
+}
+/// ClinicalUseDefinition nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific medication, product, food etc. or laboratory test that interacts
+    pub interactant: Option<Vec<ClinicalUseDefinitionInteractionInteractant>>,
+    /// The type of the interaction e.g. drug-drug interaction, drug-lab test interaction
     ///
-    /// Binding: example (A therapy.)
+    /// Binding: example (A categorisation for an interaction between two substances.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy
-    pub treatment: CodeableReference,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The effect of the interaction, for example "reduced gastric absorption of primary medication"
+    ///
+    /// Binding: example (A interaction effect of clinical use of a medication or other substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-effect
+    pub effect: Option<CodeableReference>,
+    /// The incidence of the interaction, e.g. theoretical, observed
+    ///
+    /// Binding: example (A categorisation for incidence of occurence of an interaction.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-incidence
+    pub incidence: Option<CodeableConcept>,
+    /// Actions for managing the interaction
+    ///
+    /// Binding: example (A type of management for an interaction of a medication or other substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-management
+    pub management: Option<Vec<CodeableConcept>>,
 }
 /// ClinicalUseDefinition nested structure for the 'indication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,6 +190,60 @@ pub struct ClinicalUseDefinitionIndication {
     #[serde(rename = "otherTherapy")]
     pub other_therapy: Option<Vec<StringType>>,
 }
+/// ClinicalUseDefinitionContraindication nested structure for the 'otherTherapy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionContraindicationOthertherapy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of relationship between the product indication/contraindication and another therapy
+    ///
+    /// Binding: preferred (Classification of relationship between a therapy and a contraindication or an indication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy-relationship-type
+    #[serde(rename = "relationshipType")]
+    pub relationship_type: CodeableConcept,
+    /// Reference to a specific medication, substance etc. as part of an indication or contraindication
+    ///
+    /// Binding: example (A therapy.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy
+    pub treatment: CodeableReference,
+}
+/// ClinicalUseDefinition nested structure for the 'contraindication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionContraindication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information about use of the product in relation to other therapies described as part of the contraindication
+    #[serde(rename = "otherTherapy")]
+    pub other_therapy: Option<Vec<ClinicalUseDefinitionContraindicationOthertherapy>>,
+    /// The situation that is being documented as contraindicating against this item
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    #[serde(rename = "diseaseSymptomProcedure")]
+    pub disease_symptom_procedure: Option<CodeableReference>,
+    /// The status of the disease or symptom for the contraindication
+    ///
+    /// Binding: example (The status of a disease or symptom.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
+    #[serde(rename = "diseaseStatus")]
+    pub disease_status: Option<CodeableReference>,
+    /// A comorbidity (concurrent condition) or coinfection
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    pub comorbidity: Option<Vec<CodeableReference>>,
+    /// The indication which this is a contraidication for
+    pub indication: Option<Vec<Reference>>,
+    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
+    pub applicability: Option<Expression>,
+}
 /// ClinicalUseDefinitionInteraction nested structure for the 'interactant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClinicalUseDefinitionInteractionInteractant {
@@ -178,84 +256,6 @@ pub struct ClinicalUseDefinitionInteractionInteractant {
     /// The specific medication, product, food etc. or laboratory test that interacts (CodeableConcept)
     #[serde(rename = "itemCodeableConcept")]
     pub item_codeable_concept: CodeableConcept,
-}
-/// ClinicalUseDefinition nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The specific medication, product, food etc. or laboratory test that interacts
-    pub interactant: Option<Vec<ClinicalUseDefinitionInteractionInteractant>>,
-    /// The type of the interaction e.g. drug-drug interaction, drug-lab test interaction
-    ///
-    /// Binding: example (A categorisation for an interaction between two substances.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The effect of the interaction, for example "reduced gastric absorption of primary medication"
-    ///
-    /// Binding: example (A interaction effect of clinical use of a medication or other substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-effect
-    pub effect: Option<CodeableReference>,
-    /// The incidence of the interaction, e.g. theoretical, observed
-    ///
-    /// Binding: example (A categorisation for incidence of occurence of an interaction.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-incidence
-    pub incidence: Option<CodeableConcept>,
-    /// Actions for managing the interaction
-    ///
-    /// Binding: example (A type of management for an interaction of a medication or other substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-management
-    pub management: Option<Vec<CodeableConcept>>,
-}
-/// ClinicalUseDefinition nested structure for the 'warning' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionWarning {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A textual definition of this warning, with formatting
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// A coded or unformatted textual definition of this warning
-    ///
-    /// Binding: example (Classification of warning type.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/warning-type
-    pub code: Option<CodeableConcept>,
-}
-/// ClinicalUseDefinition nested structure for the 'undesirableEffect' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionUndesirableeffect {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The situation in which the undesirable effect may manifest
-    ///
-    /// Binding: example (An undesirable effect of clinical use.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-symptom
-    #[serde(rename = "symptomConditionEffect")]
-    pub symptom_condition_effect: Option<CodeableReference>,
-    /// High level classification of the effect
-    ///
-    /// Binding: example (A categorisation for an undesirable effect.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-classification
-    pub classification: Option<CodeableConcept>,
-    /// How often the effect is seen
-    ///
-    /// Binding: example (A categorisation for a frequency of occurence of an undesirable effect.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/undesirable-effect-frequency
-    #[serde(rename = "frequencyOfOccurrence")]
-    pub frequency_of_occurrence: Option<CodeableConcept>,
 }
 
 impl Default for ClinicalUseDefinition {
@@ -280,26 +280,37 @@ impl Default for ClinicalUseDefinition {
     }
 }
 
-impl Default for ClinicalUseDefinitionContraindication {
+impl Default for ClinicalUseDefinitionUndesirableeffect {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            other_therapy: Default::default(),
-            disease_symptom_procedure: Default::default(),
-            disease_status: Default::default(),
-            comorbidity: Default::default(),
-            indication: Default::default(),
-            applicability: Default::default(),
+            symptom_condition_effect: Default::default(),
+            classification: Default::default(),
+            frequency_of_occurrence: Default::default(),
         }
     }
 }
 
-impl Default for ClinicalUseDefinitionContraindicationOthertherapy {
+impl Default for ClinicalUseDefinitionWarning {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            relationship_type: Default::default(),
-            treatment: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            code: Default::default(),
+        }
+    }
+}
+
+impl Default for ClinicalUseDefinitionInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            interactant: Default::default(),
+            type_: Default::default(),
+            effect: Default::default(),
+            incidence: Default::default(),
+            management: Default::default(),
         }
     }
 }
@@ -321,47 +332,36 @@ impl Default for ClinicalUseDefinitionIndication {
     }
 }
 
+impl Default for ClinicalUseDefinitionContraindicationOthertherapy {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            relationship_type: Default::default(),
+            treatment: Default::default(),
+        }
+    }
+}
+
+impl Default for ClinicalUseDefinitionContraindication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            other_therapy: Default::default(),
+            disease_symptom_procedure: Default::default(),
+            disease_status: Default::default(),
+            comorbidity: Default::default(),
+            indication: Default::default(),
+            applicability: Default::default(),
+        }
+    }
+}
+
 impl Default for ClinicalUseDefinitionInteractionInteractant {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             item_reference: Default::default(),
             item_codeable_concept: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalUseDefinitionInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            interactant: Default::default(),
-            type_: Default::default(),
-            effect: Default::default(),
-            incidence: Default::default(),
-            management: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalUseDefinitionWarning {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            code: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalUseDefinitionUndesirableeffect {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            symptom_condition_effect: Default::default(),
-            classification: Default::default(),
-            frequency_of_occurrence: Default::default(),
         }
     }
 }

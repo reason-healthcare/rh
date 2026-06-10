@@ -68,20 +68,6 @@ pub struct SubstanceReferenceInformationTarget {
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
-/// SubstanceReferenceInformation nested structure for the 'gene' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGene {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "geneSequenceOrigin")]
-    pub gene_sequence_origin: Option<CodeableConcept>,
-    /// Todo
-    pub gene: Option<CodeableConcept>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
-}
 /// SubstanceReferenceInformation nested structure for the 'geneElement' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceReferenceInformationGeneelement {
@@ -93,6 +79,20 @@ pub struct SubstanceReferenceInformationGeneelement {
     pub type_: Option<CodeableConcept>,
     /// Todo
     pub element: Option<Identifier>,
+    /// Todo
+    pub source: Option<Vec<Reference>>,
+}
+/// SubstanceReferenceInformation nested structure for the 'gene' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGene {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "geneSequenceOrigin")]
+    pub gene_sequence_origin: Option<CodeableConcept>,
+    /// Todo
+    pub gene: Option<CodeableConcept>,
     /// Todo
     pub source: Option<Vec<Reference>>,
 }
@@ -128,23 +128,23 @@ impl Default for SubstanceReferenceInformationTarget {
     }
 }
 
-impl Default for SubstanceReferenceInformationGene {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            gene_sequence_origin: Default::default(),
-            gene: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceReferenceInformationGeneelement {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
             element: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceReferenceInformationGene {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            gene_sequence_origin: Default::default(),
+            gene: Default::default(),
             source: Default::default(),
         }
     }
