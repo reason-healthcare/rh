@@ -173,6 +173,7 @@ jobs:
             cargo publish -p rh-hl7-fhir-r4-core
             cargo publish -p rh-codegen
             cargo publish -p rh-cql
+            cargo publish -p rh-fsh
             sleep 30
 
             # Layer 3
@@ -185,6 +186,10 @@ jobs:
             sleep 30
 
             # Layer 5
+            cargo publish -p rh-packager
+            sleep 30
+
+            # Layer 6
             cargo publish -p rh-cli
             ```
 
@@ -215,11 +220,13 @@ jobs:
           echo "cargo publish -p rh-hl7-fhir-r4-core" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-codegen" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-cql" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-fsh" >> "$GITHUB_STEP_SUMMARY"
           echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-fhirpath" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-vcl" >> "$GITHUB_STEP_SUMMARY"
           echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-validator && sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-packager && sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-cli" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
