@@ -1,0 +1,240 @@
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::backbone_type::BackboneType;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::element::Element;
+use crate::datatypes::quantity::Quantity;
+use crate::datatypes::range::Range;
+use crate::datatypes::ratio::Ratio;
+use crate::datatypes::timing::Timing;
+use crate::primitives::boolean::BooleanType;
+use crate::primitives::integer::IntegerType;
+use crate::primitives::string::StringType;
+use serde::{Deserialize, Serialize};
+/// Dosage
+///
+/// Dosage Type: Indicates how the medication is/was taken or should be taken by the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/Dosage
+/// - Version: 5.0.0
+/// - Kind: complex-type
+/// - Type: Dosage
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/BackboneType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Dosage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneType,
+    /// The order of the dosage instructions
+    pub sequence: Option<IntegerType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Free text dosage instructions e.g. SIG
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Supplemental instruction or warnings to the patient - e.g. "with meals", "may cause drowsiness"
+    ///
+    /// Binding: example (A coded concept identifying additional instructions such as "take with water" or "avoid operating heavy machinery".)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/additional-instruction-codes
+    #[serde(rename = "additionalInstruction")]
+    pub additional_instruction: Option<Vec<CodeableConcept>>,
+    /// Patient or consumer oriented instructions
+    #[serde(rename = "patientInstruction")]
+    pub patient_instruction: Option<StringType>,
+    /// Extension element for the 'patientInstruction' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_patientInstruction")]
+    pub _patient_instruction: Option<Element>,
+    /// When medication should be administered
+    pub timing: Option<Timing>,
+    /// Take "as needed"
+    #[serde(rename = "asNeeded")]
+    pub as_needed: Option<BooleanType>,
+    /// Extension element for the 'asNeeded' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_asNeeded")]
+    pub _as_needed: Option<Element>,
+    /// Take "as needed" (for x)
+    ///
+    /// Binding: example (A coded concept identifying the precondition that should be met or evaluated prior to consuming or administering a medication dose.  For example "pain", "30 minutes prior to sexual intercourse", "on flare-up" etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medication-as-needed-reason
+    #[serde(rename = "asNeededFor")]
+    pub as_needed_for: Option<Vec<CodeableConcept>>,
+    /// Body site to administer to
+    ///
+    /// Binding: example (A coded concept describing the site location the medicine enters into or onto the body.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/approach-site-codes
+    pub site: Option<CodeableConcept>,
+    /// How drug should enter body
+    ///
+    /// Binding: example (A coded concept describing the route or physiological path of administration of a therapeutic agent into or onto the body of a subject.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/route-codes
+    pub route: Option<CodeableConcept>,
+    /// Technique for administering medication
+    ///
+    /// Binding: example (A coded concept describing the technique by which the medicine is administered.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/administration-method-codes
+    pub method: Option<CodeableConcept>,
+    /// Amount of medication administered, to be administered or typical amount to be administered
+    #[serde(rename = "doseAndRate")]
+    pub dose_and_rate: Option<Vec<Element>>,
+    /// Upper limit on medication per unit of time
+    #[serde(rename = "maxDosePerPeriod")]
+    pub max_dose_per_period: Option<Vec<Ratio>>,
+    /// Upper limit on medication per administration
+    #[serde(rename = "maxDosePerAdministration")]
+    pub max_dose_per_administration: Option<Quantity>,
+    /// Upper limit on medication per lifetime of the patient
+    #[serde(rename = "maxDosePerLifetime")]
+    pub max_dose_per_lifetime: Option<Quantity>,
+}
+/// Dosage nested structure for the 'doseAndRate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DosageDoseandrate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kind of dose or rate specified
+    ///
+    /// Binding: example (The kind of dose or rate specified.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/dose-rate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Amount of medication per dose (Range)
+    #[serde(rename = "doseRange")]
+    pub dose_range: Option<Range>,
+    /// Amount of medication per dose (Quantity)
+    #[serde(rename = "doseQuantity")]
+    pub dose_quantity: Option<Quantity>,
+    /// Amount of medication per unit of time (Ratio)
+    #[serde(rename = "rateRatio")]
+    pub rate_ratio: Option<Ratio>,
+    /// Amount of medication per unit of time (Range)
+    #[serde(rename = "rateRange")]
+    pub rate_range: Option<Range>,
+    /// Amount of medication per unit of time (Quantity)
+    #[serde(rename = "rateQuantity")]
+    pub rate_quantity: Option<Quantity>,
+}
+
+impl Default for Dosage {
+    fn default() -> Self {
+        Self {
+            base: BackboneType::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            additional_instruction: Default::default(),
+            patient_instruction: Default::default(),
+            _patient_instruction: Default::default(),
+            timing: Default::default(),
+            as_needed: Default::default(),
+            _as_needed: Default::default(),
+            as_needed_for: Default::default(),
+            site: Default::default(),
+            route: Default::default(),
+            method: Default::default(),
+            dose_and_rate: Default::default(),
+            max_dose_per_period: Default::default(),
+            max_dose_per_administration: Default::default(),
+            max_dose_per_lifetime: Default::default(),
+        }
+    }
+}
+
+impl Default for DosageDoseandrate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            dose_range: Default::default(),
+            dose_quantity: Default::default(),
+            rate_ratio: Default::default(),
+            rate_range: Default::default(),
+            rate_quantity: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::Invariant::new(
+                "dos-1",
+                rh_foundation::Severity::Error,
+                "AsNeededFor can only be set if AsNeeded is empty or true",
+                "asNeededFor.empty() or asNeeded.empty() or asNeeded",
+            ),
+            rh_foundation::Invariant::new(
+                "ele-1",
+                rh_foundation::Severity::Error,
+                "All FHIR elements must have a @value or children",
+                "hasValue() or (children().count() > id.count())",
+            ),
+            rh_foundation::Invariant::new(
+                "ext-1",
+                rh_foundation::Severity::Error,
+                "Must have either extensions or value[x], not both",
+                "extension.exists() != value.exists()",
+            ),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Dosage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.sequence", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.additionalInstruction", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.patientInstruction", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.timing", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.asNeeded", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.asNeededFor", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.site", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.route", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.method", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.dose[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.doseAndRate.rate[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerPeriod", 0, None),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerAdministration", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Dosage.maxDosePerLifetime", 0, Some(1)),
+        ]
+    });
+
+impl crate::validation::ValidatableResource for Dosage {
+    fn resource_type(&self) -> &'static str {
+        "Dosage"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Dosage")
+    }
+}

@@ -1,0 +1,338 @@
+use crate::datatypes::element_definition::ElementDefinition;
+use serde::{Deserialize, Serialize};
+/// DataElement constraint on ElementDefinition data type
+///
+/// Identifies how the ElementDefinition data type is used when it appears within a data element
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/elementdefinition-de
+/// - Version: 5.0.0
+/// - Kind: complex-type
+/// - Type: ElementDefinition
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/ElementDefinition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementdefinitionDe {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: ElementDefinition,
+}
+
+impl Default for ElementdefinitionDe {
+    fn default() -> Self {
+        Self {
+            base: ElementDefinition::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("eld-11", rh_foundation::Severity::Error, "Binding can only be present for coded elements, string, and uri if using FHIR-defined types", "binding.empty() or type.code.empty() or type.code.contains(\":\") or type.select((code = 'code') or (code = 'Coding') or (code='CodeableConcept') or (code = 'Quantity') or (code = 'string') or (code = 'uri') or (code = 'Duration')).exists()"),
+    rh_foundation::Invariant::new("eld-12", rh_foundation::Severity::Error, "ValueSet SHALL start with http:// or https:// or urn: or #", "valueSet.exists() implies (valueSet.startsWith('http:') or valueSet.startsWith('https') or valueSet.startsWith('urn:') or valueSet.startsWith('#'))"),
+    rh_foundation::Invariant::new("eld-13", rh_foundation::Severity::Error, "Types must be unique by code", "type.select(code).isDistinct()"),
+    rh_foundation::Invariant::new("eld-14", rh_foundation::Severity::Error, "Constraints must be unique by key", "constraint.select(key).isDistinct()"),
+    rh_foundation::Invariant::new("eld-15", rh_foundation::Severity::Error, "default value and meaningWhenMissing are mutually exclusive", "defaultValue.empty() or meaningWhenMissing.empty()"),
+    rh_foundation::Invariant::new("eld-16", rh_foundation::Severity::Error, "sliceName must be composed of proper tokens separated by \"/\"", "sliceName.empty() or sliceName.matches('^[a-zA-Z0-9\\\\/\\\\-_\\\\[\\\\]\\\\@]+$')"),
+    rh_foundation::Invariant::new("eld-17", rh_foundation::Severity::Error, "targetProfile is only allowed if the type is Reference or canonical", "(code='Reference' or code = 'canonical' or code = 'CodeableReference') or targetProfile.empty()"),
+    rh_foundation::Invariant::new("eld-18", rh_foundation::Severity::Error, "Must have a modifier reason if isModifier = true", "(isModifier.exists() and isModifier) implies isModifierReason.exists()"),
+    rh_foundation::Invariant::new("eld-19", rh_foundation::Severity::Error, "Element path SHALL be expressed as a set of '.'-separated components with each component restricted to a maximum of 64 characters and with some limits on the allowed choice of characters", "path.matches('^[^\\\\s\\\\.,:;\\\\\\'\"\\\\/|?!@#$%&*()\\\\[\\\\]{}]{1,64}(\\\\.[^\\\\s\\\\.,:;\\\\\\'\"\\\\/|?!@#$%&*()\\\\[\\\\]{}]{1,64}(\\\\[x\\\\])?(\\\\:[^\\\\s\\\\.]+)?)*$')"),
+    rh_foundation::Invariant::new("eld-2", rh_foundation::Severity::Error, "Min <= Max", "min.empty() or max.empty() or (max = '*') or iif(max != '*', min <= max.toInteger())"),
+    rh_foundation::Invariant::new("eld-20", rh_foundation::Severity::Warning, "The first component of the path should be UpperCamelCase.  Additional components (following a '.') should be lowerCamelCase.  If this syntax is not adhered to, code generation tools may be broken. Logical models may be less concerned about this implication.", "path.matches('^[A-Za-z][A-Za-z0-9]{0,63}(\\\\.[a-z][A-Za-z0-9]{0,63}(\\\\[x])?)*$')"),
+    rh_foundation::Invariant::new("eld-21", rh_foundation::Severity::Warning, "Constraints should have an expression or else validators will not be able to enforce them", "expression.exists()"),
+    rh_foundation::Invariant::new("eld-22", rh_foundation::Severity::Error, "sliceIsConstraining can only appear if slicename is present", "sliceIsConstraining.exists() implies sliceName.exists()"),
+    rh_foundation::Invariant::new("eld-23", rh_foundation::Severity::Error, "binding SHALL have either description or valueSet", "description.exists() or valueSet.exists()"),
+    rh_foundation::Invariant::new("eld-24", rh_foundation::Severity::Warning, "pattern[x] should be used rather than fixed[x]", "fixed.exists().not()"),
+    rh_foundation::Invariant::new("eld-25", rh_foundation::Severity::Warning, "Order has no meaning (and cannot be asserted to have meaning), so enforcing rules on order is improper", "orderMeaning.empty() implies slicing.where(rules='openAtEnd' or ordered).exists().not()"),
+    rh_foundation::Invariant::new("eld-26", rh_foundation::Severity::Error, "Errors cannot be suppressed", "(severity = 'error') implies suppress.empty()"),
+    rh_foundation::Invariant::new("eld-27", rh_foundation::Severity::Warning, "Mappings SHOULD be unique by key", "mapping.select(identity).isDistinct()"),
+    rh_foundation::Invariant::new("eld-28", rh_foundation::Severity::Error, "Can't have valueAlternatives if mustHaveValue is true", "mustHaveValue.value implies valueAlternatives.empty()"),
+    rh_foundation::Invariant::new("eld-3", rh_foundation::Severity::Error, "Max SHALL be a number or \"*\"", "empty() or ($this = '*') or (toInteger() >= 0)"),
+    rh_foundation::Invariant::new("eld-4", rh_foundation::Severity::Error, "Aggregation may only be specified if one of the allowed types for the element is a reference", "aggregation.empty() or (code = 'Reference') or (code = 'canonical') or (code = 'CodeableReference')"),
+    rh_foundation::Invariant::new("eld-5", rh_foundation::Severity::Error, "if the element definition has a contentReference, it cannot have type, defaultValue, fixed, pattern, example, minValue, maxValue, maxLength, or binding", "contentReference.empty() or (type.empty() and defaultValue.empty() and fixed.empty() and pattern.empty() and example.empty() and minValue.empty() and maxValue.empty() and maxLength.empty() and binding.empty())"),
+    rh_foundation::Invariant::new("eld-6", rh_foundation::Severity::Error, "Fixed value may only be specified if there is one type", "fixed.empty() or (type.count()  <= 1)"),
+    rh_foundation::Invariant::new("eld-7", rh_foundation::Severity::Error, "Pattern may only be specified if there is one type", "pattern.empty() or (type.count() <= 1)"),
+    rh_foundation::Invariant::new("eld-8", rh_foundation::Severity::Error, "Pattern and fixed are mutually exclusive", "pattern.empty() or fixed.empty()"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ElementDefinition.binding.additional.purpose", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/additional-binding-purpose|5.0.0").with_description("The use of an additional binding."),
+    rh_foundation::ElementBinding::new("ElementDefinition.binding.strength", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/binding-strength|5.0.0").with_description("Indication of the degree of conformance expectations associated with a binding."),
+    rh_foundation::ElementBinding::new("ElementDefinition.constraint.severity", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/constraint-severity|5.0.0").with_description("SHALL applications comply with this constraint?"),
+    rh_foundation::ElementBinding::new("ElementDefinition.mapping.language", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/mimetypes|5.0.0").with_description("BCP 13 (RFCs 2045, 2046, 2047, 4288, 4289 and 2049)"),
+    rh_foundation::ElementBinding::new("ElementDefinition.representation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/property-representation|5.0.0").with_description("How a property is represented when serialized."),
+    rh_foundation::ElementBinding::new("ElementDefinition.slicing.discriminator.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/discriminator-type|5.0.0").with_description("How an element value is interpreted when discrimination is evaluated."),
+    rh_foundation::ElementBinding::new("ElementDefinition.slicing.rules", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-slicing-rules|5.0.0").with_description("How slices are interpreted when evaluating an instance."),
+    rh_foundation::ElementBinding::new("ElementDefinition.type.aggregation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-aggregation-mode|5.0.0").with_description("How resource references can be aggregated."),
+    rh_foundation::ElementBinding::new("ElementDefinition.type.versioning", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/reference-version-rules|5.0.0").with_description("Whether a reference needs to be version specific or version independent, or whether either can be used."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ElementDefinition", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.extension", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.path", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.representation", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.sliceName", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.sliceIsConstraining",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.label", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.code", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.type",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.discriminator.path",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.slicing.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.ordered", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.slicing.rules", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.short", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.comment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.requirements", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.alias", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.min", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.max", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.path", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.min", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.base.max", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.contentReference",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.profile", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.targetProfile", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.type.aggregation",
+                0,
+                Some(0),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.type.versioning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.defaultValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.meaningWhenMissing",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.orderMeaning", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.fixed[x]", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.pattern[x]", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.extension", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.example.label", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.example.value[x]",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.minValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.maxValue[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.maxLength", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.condition", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.constraint.key", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.requirements",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.severity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.suppress",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.human",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.expression",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.constraint.source",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mustHaveValue", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.valueAlternatives", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mustSupport", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.isModifier", 0, Some(0)),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.isModifierReason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.isSummary", 0, Some(0)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.strength",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.valueSet",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.binding.additional", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.purpose",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.valueSet",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.documentation",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.shortDoco",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.usage",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.binding.additional.any",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping", 0, None),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.mapping.identity",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ElementDefinition.mapping.language",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.map", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ElementDefinition.mapping.comment", 0, Some(1)),
+        ]
+    });
+
+impl crate::validation::ValidatableResource for ElementdefinitionDe {
+    fn resource_type(&self) -> &'static str {
+        "ElementDefinition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/elementdefinition-de")
+    }
+}

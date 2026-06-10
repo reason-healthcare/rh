@@ -112,6 +112,15 @@ impl AccessorTraitGenerator {
         // Check if this is a BackboneElement that should use a specific nested type
         let rust_type = if self.is_backbone_element(element_types) {
             self.get_nested_type_for_backbone_element(element, is_array)
+        } else if field_name == "language" && element.path.ends_with(".language") {
+            // Always treat `language` as a plain string — R5 adds a required binding to
+            // all-languages but keeping it as StringType stays consistent with the
+            // hardcoded trait-impl generator and with R4 behaviour.
+            if is_array {
+                RustType::Vec(Box::new(RustType::Custom("StringType".to_string())))
+            } else {
+                RustType::Custom("StringType".to_string())
+            }
         } else {
             // Use TypeMapper to get the correct type including enum bindings
             type_mapper.map_fhir_type_with_binding(

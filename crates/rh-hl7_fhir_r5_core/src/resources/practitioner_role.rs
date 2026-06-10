@@ -1,0 +1,613 @@
+use crate::datatypes::availability::Availability;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::element::Element;
+use crate::datatypes::extended_contact_detail::ExtendedContactDetail;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::period::Period;
+use crate::datatypes::reference::Reference;
+use crate::primitives::boolean::BooleanType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// PractitionerRole
+///
+/// A specific set of Roles/Locations/specialties/services that a practitioner may perform, or has performed at an organization during a period of time.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/PractitionerRole
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: PractitionerRole
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerRole {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// Identifiers for a role/location
+    pub identifier: Option<Vec<Identifier>>,
+    /// Whether this practitioner role record is in active use
+    pub active: Option<BooleanType>,
+    /// Extension element for the 'active' primitive field. Contains metadata and extensions.
+    pub _active: Option<Element>,
+    /// The period during which the practitioner is authorized to perform in these role(s)
+    pub period: Option<Period>,
+    /// Practitioner that provides services for the organization
+    pub practitioner: Option<Reference>,
+    /// Organization where the roles are available
+    pub organization: Option<Reference>,
+    /// Roles which this practitioner may perform
+    ///
+    /// Binding: example (The role a person plays representing an organization.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/practitioner-role
+    pub code: Option<Vec<CodeableConcept>>,
+    /// Specific specialty of the practitioner
+    ///
+    /// Binding: preferred (Specific specialty associated with the agency.)
+    ///
+    /// Available values:
+    /// - `408467006`: Adult mental illness
+    /// - `394577000`: Anesthetics
+    /// - `394578005`: Audiological medicine
+    /// - `421661004`: Blood banking and transfusion medicine
+    /// - `408462000`: Burns care
+    /// - `394579002`: Cardiology
+    /// - `394804000`: Clinical cytogenetics and molecular genetics
+    /// - `394580004`: Clinical genetics
+    /// - `394803006`: Clinical hematology
+    /// - `408480009`: Clinical immunology
+    /// - ... and 107 more values
+    pub specialty: Option<Vec<CodeableConcept>>,
+    /// Location(s) where the practitioner provides care
+    pub location: Option<Vec<Reference>>,
+    /// Healthcare services provided for this role's Organization/Location(s)
+    #[serde(rename = "healthcareService")]
+    pub healthcare_service: Option<Vec<Reference>>,
+    /// Official contact details relating to this PractitionerRole
+    pub contact: Option<Vec<ExtendedContactDetail>>,
+    /// Collection of characteristics (attributes)
+    ///
+    /// Binding: example (A custom attribute that could be provided at a service (e.g. Wheelchair accessibility).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-mode
+    pub characteristic: Option<Vec<CodeableConcept>>,
+    /// A language the practitioner (in this role) can use in patient communication
+    pub communication: Option<Vec<CodeableConcept>>,
+    /// Times the Practitioner is available at this location and/or healthcare service (including exceptions)
+    pub availability: Option<Vec<Availability>>,
+    /// Endpoints for interacting with the practitioner in this role
+    pub endpoint: Option<Vec<Reference>>,
+}
+
+impl Default for PractitionerRole {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            identifier: Default::default(),
+            active: Default::default(),
+            _active: Default::default(),
+            period: Default::default(),
+            practitioner: Default::default(),
+            organization: Default::default(),
+            code: Default::default(),
+            specialty: Default::default(),
+            location: Default::default(),
+            healthcare_service: Default::default(),
+            contact: Default::default(),
+            characteristic: Default::default(),
+            communication: Default::default(),
+            availability: Default::default(),
+            endpoint: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().ofType(canonical) | %resource.descendants().ofType(uri) | %resource.descendants().ofType(url))) or descendants().where(reference = '#').exists() or descendants().where(ofType(canonical) = '#').exists() or descendants().where(ofType(canonical) = '#').exists()).not()).trace('unmatched', id).empty()"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "PractitionerRole.communication",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/all-languages|5.0.0",
+            )
+            .with_description("IETF language tag for a human language"),
+            rh_foundation::ElementBinding::new(
+                "PractitionerRole.language",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/all-languages|5.0.0",
+            )
+            .with_description("IETF language tag for a human language"),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("PractitionerRole.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.contained", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.extension", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.active", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.period", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.practitioner", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.organization", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("PractitionerRole.code", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.specialty", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.location", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.healthcareService", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.contact", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.characteristic", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.communication", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.availability", 0, None),
+            rh_foundation::ElementCardinality::new("PractitionerRole.endpoint", 0, None),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for PractitionerRole {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for PractitionerRole {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for PractitionerRole {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for PractitionerRole {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for PractitionerRole {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for PractitionerRole {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::practitioner_role::PractitionerRoleAccessors for PractitionerRole {
+    fn identifier(&self) -> &[Identifier] {
+        self.identifier.as_deref().unwrap_or(&[])
+    }
+    fn active(&self) -> Option<BooleanType> {
+        self.active
+    }
+    fn period(&self) -> Option<Period> {
+        self.period.clone()
+    }
+    fn practitioner(&self) -> Option<Reference> {
+        self.practitioner.clone()
+    }
+    fn organization(&self) -> Option<Reference> {
+        self.organization.clone()
+    }
+    fn code(&self) -> &[CodeableConcept] {
+        self.code.as_deref().unwrap_or(&[])
+    }
+    fn specialty(&self) -> &[CodeableConcept] {
+        self.specialty.as_deref().unwrap_or(&[])
+    }
+    fn location(&self) -> &[Reference] {
+        self.location.as_deref().unwrap_or(&[])
+    }
+    fn healthcare_service(&self) -> &[Reference] {
+        self.healthcare_service.as_deref().unwrap_or(&[])
+    }
+    fn contact(&self) -> &[ExtendedContactDetail] {
+        self.contact.as_deref().unwrap_or(&[])
+    }
+    fn characteristic(&self) -> &[CodeableConcept] {
+        self.characteristic.as_deref().unwrap_or(&[])
+    }
+    fn communication(&self) -> &[CodeableConcept] {
+        self.communication.as_deref().unwrap_or(&[])
+    }
+    fn availability(&self) -> &[Availability] {
+        self.availability.as_deref().unwrap_or(&[])
+    }
+    fn endpoint(&self) -> &[Reference] {
+        self.endpoint.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::practitioner_role::PractitionerRoleMutators for PractitionerRole {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_identifier(self, value: Vec<Identifier>) -> Self {
+        let mut resource = self.clone();
+        resource.identifier = Some(value);
+        resource
+    }
+    fn add_identifier(self, item: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_active(self, value: bool) -> Self {
+        let mut resource = self.clone();
+        resource.active = Some(value);
+        resource
+    }
+    fn set_period(self, value: Period) -> Self {
+        let mut resource = self.clone();
+        resource.period = Some(value);
+        resource
+    }
+    fn set_practitioner(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.practitioner = Some(value);
+        resource
+    }
+    fn set_organization(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.organization = Some(value);
+        resource
+    }
+    fn set_code(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.code = Some(value);
+        resource
+    }
+    fn add_code(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.code.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.specialty = Some(value);
+        resource
+    }
+    fn add_specialty(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_location(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.location = Some(value);
+        resource
+    }
+    fn add_location(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_healthcare_service(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.healthcare_service = Some(value);
+        resource
+    }
+    fn add_healthcare_service(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource
+            .healthcare_service
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_contact(self, value: Vec<ExtendedContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.contact = Some(value);
+        resource
+    }
+    fn add_contact(self, item: ExtendedContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_characteristic(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.characteristic = Some(value);
+        resource
+    }
+    fn add_characteristic(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource
+            .characteristic
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_communication(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.communication = Some(value);
+        resource
+    }
+    fn add_communication(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource
+            .communication
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_availability(self, value: Vec<Availability>) -> Self {
+        let mut resource = self.clone();
+        resource.availability = Some(value);
+        resource
+    }
+    fn add_availability(self, item: Availability) -> Self {
+        let mut resource = self.clone();
+        resource
+            .availability
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_endpoint(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.endpoint = Some(value);
+        resource
+    }
+    fn add_endpoint(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+}
+
+impl crate::traits::practitioner_role::PractitionerRoleExistence for PractitionerRole {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_identifier(&self) -> bool {
+        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_active(&self) -> bool {
+        self.active.is_some()
+    }
+    fn has_period(&self) -> bool {
+        self.period.is_some()
+    }
+    fn has_practitioner(&self) -> bool {
+        self.practitioner.is_some()
+    }
+    fn has_organization(&self) -> bool {
+        self.organization.is_some()
+    }
+    fn has_code(&self) -> bool {
+        self.code.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_specialty(&self) -> bool {
+        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_location(&self) -> bool {
+        self.location.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_healthcare_service(&self) -> bool {
+        self.healthcare_service
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+    fn has_contact(&self) -> bool {
+        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_characteristic(&self) -> bool {
+        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_communication(&self) -> bool {
+        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_availability(&self) -> bool {
+        self.availability.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_endpoint(&self) -> bool {
+        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for PractitionerRole {
+    fn resource_type(&self) -> &'static str {
+        "PractitionerRole"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/PractitionerRole")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::practitioner_role::{
+    PractitionerRoleAccessors, PractitionerRoleExistence, PractitionerRoleMutators,
+};

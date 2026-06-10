@@ -1,0 +1,729 @@
+use crate::datatypes::age::Age;
+use crate::datatypes::annotation::Annotation;
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::codeable_reference::CodeableReference;
+use crate::datatypes::element::Element;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::period::Period;
+use crate::datatypes::range::Range;
+use crate::datatypes::reference::Reference;
+use crate::primitives::date_time::DateTimeType;
+use crate::primitives::string::StringType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// Condition
+///
+/// A clinical condition, problem, diagnosis, or other event, situation, issue, or clinical concept that has risen to a level of concern.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/Condition
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: Condition
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Condition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// External Ids for this condition
+    pub identifier: Option<Vec<Identifier>>,
+    /// active | recurrence | relapse | inactive | remission | resolved | unknown
+    #[serde(rename = "clinicalStatus")]
+    pub clinical_status: CodeableConcept,
+    /// unconfirmed | provisional | differential | confirmed | refuted | entered-in-error
+    #[serde(rename = "verificationStatus")]
+    pub verification_status: Option<CodeableConcept>,
+    /// problem-list-item | encounter-diagnosis
+    ///
+    /// Binding: preferred (A category assigned to the condition.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/condition-category
+    pub category: Option<Vec<CodeableConcept>>,
+    /// Subjective severity of condition
+    ///
+    /// Binding: preferred (A subjective assessment of the severity of the condition as evaluated by the clinician.)
+    ///
+    /// Available values:
+    /// - `24484000`
+    /// - `6736007`
+    /// - `255604002`
+    pub severity: Option<CodeableConcept>,
+    /// Identification of the condition, problem or diagnosis
+    ///
+    /// Binding: example (Identification of the condition or diagnosis.)
+    ///
+    /// Available values:
+    /// - `160245001`: No current problems or disability
+    pub code: Option<CodeableConcept>,
+    /// Anatomical location, if relevant
+    ///
+    /// Binding: example (SNOMED CT Body site concepts)
+    ///
+    /// Available values:
+    /// - `53075003`: Distal phalanx of hallux
+    /// - `76986006`: Distal phalanx of second toe
+    /// - `65258003`: Distal phalanx of third toe
+    /// - `54333003`: Distal phalanx of fourth toe
+    /// - `10770001`: Distal phalanx of fifth toe
+    /// - `363670009`: Interphalangeal joint structure of great toe
+    /// - `371216008`: Distal interphalangeal joint of second toe
+    /// - `371219001`: Distal interphalangeal joint of third toe
+    /// - `371205001`: Distal interphalangeal joint of fourth toe
+    /// - `371203008`: Distal interphalangeal joint of fifth toe
+    /// - ... and 30 more values
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<Vec<CodeableConcept>>,
+    /// Who has the condition?
+    pub subject: Reference,
+    /// The Encounter during which this Condition was created
+    pub encounter: Option<Reference>,
+    /// Estimated or actual date,  date-time, or age (dateTime)
+    #[serde(rename = "onsetDateTime")]
+    pub onset_date_time: Option<DateTimeType>,
+    /// Estimated or actual date,  date-time, or age (Age)
+    #[serde(rename = "onsetAge")]
+    pub onset_age: Option<Age>,
+    /// Estimated or actual date,  date-time, or age (Period)
+    #[serde(rename = "onsetPeriod")]
+    pub onset_period: Option<Period>,
+    /// Estimated or actual date,  date-time, or age (Range)
+    #[serde(rename = "onsetRange")]
+    pub onset_range: Option<Range>,
+    /// Estimated or actual date,  date-time, or age (string)
+    #[serde(rename = "onsetString")]
+    pub onset_string: Option<StringType>,
+    /// When in resolution/remission (dateTime)
+    #[serde(rename = "abatementDateTime")]
+    pub abatement_date_time: Option<DateTimeType>,
+    /// When in resolution/remission (Age)
+    #[serde(rename = "abatementAge")]
+    pub abatement_age: Option<Age>,
+    /// When in resolution/remission (Period)
+    #[serde(rename = "abatementPeriod")]
+    pub abatement_period: Option<Period>,
+    /// When in resolution/remission (Range)
+    #[serde(rename = "abatementRange")]
+    pub abatement_range: Option<Range>,
+    /// When in resolution/remission (string)
+    #[serde(rename = "abatementString")]
+    pub abatement_string: Option<StringType>,
+    /// Date condition was first recorded
+    #[serde(rename = "recordedDate")]
+    pub recorded_date: Option<DateTimeType>,
+    /// Extension element for the 'recordedDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_recordedDate")]
+    pub _recorded_date: Option<Element>,
+    /// Who or what participated in the activities related to the condition and how they were involved
+    pub participant: Option<Vec<ConditionParticipant>>,
+    /// Stage/grade, usually assessed formally
+    pub stage: Option<Vec<ConditionStage>>,
+    /// Supporting evidence for the verification status
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
+    pub evidence: Option<Vec<CodeableReference>>,
+    /// Additional information about the Condition
+    pub note: Option<Vec<Annotation>>,
+}
+/// Condition nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the condition
+    pub actor: Reference,
+}
+/// Condition nested structure for the 'stage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionStage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Simple summary (disease specific)
+    ///
+    /// Binding: example (Codes describing condition stages (e.g. Cancer stages).)
+    ///
+    /// Available values:
+    /// - `416780008`
+    /// - `715345007`
+    pub summary: Option<CodeableConcept>,
+    /// Formal record of assessment
+    pub assessment: Option<Vec<Reference>>,
+    /// Kind of staging
+    ///
+    /// Binding: example (Codes describing the kind of condition staging (e.g. clinical or pathological).)
+    ///
+    /// Available values:
+    /// - `261023001`: Pathological staging (qualifier value)
+    /// - `260998006`: Clinical staging (qualifier value)
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+}
+
+impl Default for Condition {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            identifier: Default::default(),
+            clinical_status: CodeableConcept::default(),
+            verification_status: Default::default(),
+            category: Default::default(),
+            severity: Default::default(),
+            code: Default::default(),
+            body_site: Default::default(),
+            subject: Reference::default(),
+            encounter: Default::default(),
+            onset_date_time: Default::default(),
+            onset_age: Default::default(),
+            onset_period: Default::default(),
+            onset_range: Default::default(),
+            onset_string: Default::default(),
+            abatement_date_time: Default::default(),
+            abatement_age: Default::default(),
+            abatement_period: Default::default(),
+            abatement_range: Default::default(),
+            abatement_string: Default::default(),
+            recorded_date: Default::default(),
+            _recorded_date: Default::default(),
+            participant: Default::default(),
+            stage: Default::default(),
+            evidence: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
+impl Default for ConditionStage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            summary: Default::default(),
+            assessment: Default::default(),
+            type_: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("con-1", rh_foundation::Severity::Error, "Stage SHALL have summary or assessment", "summary.exists() or assessment.exists()"),
+    rh_foundation::Invariant::new("con-2", rh_foundation::Severity::Warning, "If category is problems list item, the clinicalStatus should not be unknown", "category.coding.where(system='http://terminology.hl7.org/CodeSystem/condition-category' and code='problem-list-item').exists() implies clinicalStatus.coding.where(system='http://terminology.hl7.org/CodeSystem/condition-clinical' and code='unknown').exists().not()"),
+    rh_foundation::Invariant::new("con-3", rh_foundation::Severity::Error, "If condition is abated, then clinicalStatus must be either inactive, resolved, or remission.", "abatement.exists() implies (clinicalStatus.coding.where(system='http://terminology.hl7.org/CodeSystem/condition-clinical' and (code='inactive' or code='resolved' or code='remission')).exists())"),
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().ofType(canonical) | %resource.descendants().ofType(uri) | %resource.descendants().ofType(url))) or descendants().where(reference = '#').exists() or descendants().where(ofType(canonical) = '#').exists() or descendants().where(ofType(canonical) = '#').exists()).not()).trace('unmatched', id).empty()"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Condition.clinicalStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/condition-clinical|5.0.0").with_description("The clinical status of the condition or diagnosis."),
+    rh_foundation::ElementBinding::new("Condition.language", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/all-languages|5.0.0").with_description("IETF language tag for a human language"),
+    rh_foundation::ElementBinding::new("Condition.verificationStatus", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/condition-ver-status|5.0.0").with_description("The verification status to support or decline the clinical status of the condition or diagnosis."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Condition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.clinicalStatus", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.verificationStatus", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.category", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.severity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.bodySite", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.onset[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.abatement[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.recordedDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.participant", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.participant.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.participant.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Condition.participant.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Condition.participant.function", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.participant.actor", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.summary", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.stage.assessment", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.stage.type", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Condition.evidence", 0, None),
+            rh_foundation::ElementCardinality::new("Condition.note", 0, None),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for Condition {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for Condition {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for Condition {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for Condition {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for Condition {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for Condition {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::condition::ConditionAccessors for Condition {
+    fn identifier(&self) -> &[Identifier] {
+        self.identifier.as_deref().unwrap_or(&[])
+    }
+    fn clinical_status(&self) -> CodeableConcept {
+        self.clinical_status.clone()
+    }
+    fn verification_status(&self) -> Option<CodeableConcept> {
+        self.verification_status.clone()
+    }
+    fn category(&self) -> &[CodeableConcept] {
+        self.category.as_deref().unwrap_or(&[])
+    }
+    fn severity(&self) -> Option<CodeableConcept> {
+        self.severity.clone()
+    }
+    fn code(&self) -> Option<CodeableConcept> {
+        self.code.clone()
+    }
+    fn body_site(&self) -> &[CodeableConcept] {
+        self.body_site.as_deref().unwrap_or(&[])
+    }
+    fn subject(&self) -> Reference {
+        self.subject.clone()
+    }
+    fn encounter(&self) -> Option<Reference> {
+        self.encounter.clone()
+    }
+    fn recorded_date(&self) -> Option<DateTimeType> {
+        self.recorded_date.clone()
+    }
+    fn participant(&self) -> &[ConditionParticipant] {
+        self.participant.as_deref().unwrap_or(&[])
+    }
+    fn stage(&self) -> &[ConditionStage] {
+        self.stage.as_deref().unwrap_or(&[])
+    }
+    fn evidence(&self) -> &[CodeableReference] {
+        self.evidence.as_deref().unwrap_or(&[])
+    }
+    fn note(&self) -> &[Annotation] {
+        self.note.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::condition::ConditionMutators for Condition {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_identifier(self, value: Vec<Identifier>) -> Self {
+        let mut resource = self.clone();
+        resource.identifier = Some(value);
+        resource
+    }
+    fn add_identifier(self, item: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_clinical_status(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.clinical_status = value;
+        resource
+    }
+    fn set_verification_status(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.verification_status = Some(value);
+        resource
+    }
+    fn set_category(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.category = Some(value);
+        resource
+    }
+    fn add_category(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_severity(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.severity = Some(value);
+        resource
+    }
+    fn set_code(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.code = Some(value);
+        resource
+    }
+    fn set_body_site(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.body_site = Some(value);
+        resource
+    }
+    fn add_body_site(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.body_site.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_subject(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.subject = value;
+        resource
+    }
+    fn set_encounter(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.encounter = Some(value);
+        resource
+    }
+    fn set_recorded_date(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.recorded_date = Some(value);
+        resource
+    }
+    fn set_participant(self, value: Vec<ConditionParticipant>) -> Self {
+        let mut resource = self.clone();
+        resource.participant = Some(value);
+        resource
+    }
+    fn add_participant(self, item: ConditionParticipant) -> Self {
+        let mut resource = self.clone();
+        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_stage(self, value: Vec<ConditionStage>) -> Self {
+        let mut resource = self.clone();
+        resource.stage = Some(value);
+        resource
+    }
+    fn add_stage(self, item: ConditionStage) -> Self {
+        let mut resource = self.clone();
+        resource.stage.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_evidence(self, value: Vec<CodeableReference>) -> Self {
+        let mut resource = self.clone();
+        resource.evidence = Some(value);
+        resource
+    }
+    fn add_evidence(self, item: CodeableReference) -> Self {
+        let mut resource = self.clone();
+        resource.evidence.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_note(self, value: Vec<Annotation>) -> Self {
+        let mut resource = self.clone();
+        resource.note = Some(value);
+        resource
+    }
+    fn add_note(self, item: Annotation) -> Self {
+        let mut resource = self.clone();
+        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+}
+
+impl crate::traits::condition::ConditionExistence for Condition {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_abatement(&self) -> bool {
+        self.abatement_date_time.is_some()
+            || self.abatement_age.is_some()
+            || self.abatement_period.is_some()
+            || self.abatement_range.is_some()
+            || self.abatement_string.is_some()
+    }
+    fn has_onset(&self) -> bool {
+        self.onset_date_time.is_some()
+            || self.onset_age.is_some()
+            || self.onset_period.is_some()
+            || self.onset_range.is_some()
+            || self.onset_string.is_some()
+    }
+    fn has_identifier(&self) -> bool {
+        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_clinical_status(&self) -> bool {
+        true
+    }
+    fn has_verification_status(&self) -> bool {
+        self.verification_status.is_some()
+    }
+    fn has_category(&self) -> bool {
+        self.category.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_severity(&self) -> bool {
+        self.severity.is_some()
+    }
+    fn has_code(&self) -> bool {
+        self.code.is_some()
+    }
+    fn has_body_site(&self) -> bool {
+        self.body_site.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_subject(&self) -> bool {
+        true
+    }
+    fn has_encounter(&self) -> bool {
+        self.encounter.is_some()
+    }
+    fn has_recorded_date(&self) -> bool {
+        self.recorded_date.is_some()
+    }
+    fn has_participant(&self) -> bool {
+        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_stage(&self) -> bool {
+        self.stage.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_evidence(&self) -> bool {
+        self.evidence.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_note(&self) -> bool {
+        self.note.as_ref().is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Condition {
+    fn resource_type(&self) -> &'static str {
+        "Condition"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Condition")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::condition::{ConditionAccessors, ConditionExistence, ConditionMutators};

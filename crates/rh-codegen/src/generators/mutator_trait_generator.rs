@@ -244,6 +244,14 @@ impl MutatorTraitGenerator {
 
         // Check if this is a code type with a required binding - if so, use enum type
         if code == "code" {
+            // `language` is always a plain string regardless of binding (BCP-47 code)
+            if field_name == "language" && element.path.ends_with(".language") {
+                return TypeUtilities::map_fhir_type_to_rust(
+                    element_type,
+                    field_name,
+                    &element.path,
+                );
+            }
             if let Some(binding) = &element.binding {
                 if binding.strength == "required" {
                     if let Some(value_set_url) = &binding.value_set {

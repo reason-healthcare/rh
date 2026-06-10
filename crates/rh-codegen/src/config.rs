@@ -48,6 +48,7 @@ impl Default for CodegenConfig {
         type_mappings.insert("date".to_string(), "DateType".to_string());
         type_mappings.insert("dateTime".to_string(), "DateTimeType".to_string());
         type_mappings.insert("time".to_string(), "TimeType".to_string());
+        type_mappings.insert("integer64".to_string(), "Integer64Type".to_string());
 
         Self {
             output_dir: "generated".to_string(),

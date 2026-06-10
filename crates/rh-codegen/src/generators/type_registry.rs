@@ -271,7 +271,7 @@ impl TypeRegistry {
                 // For resources, if they have a base_definition that's not a core resource,
                 // they're likely a profile (unless they're the base types like DomainResource)
                 match resource_type.as_str() {
-                    "DomainResource" | "Resource" | "Element" | "BackboneElement" => false,
+                    "DomainResource" | "Resource" | "Element" | "BackboneElement" | "Base" => false,
                     _ => true, // Any other base_definition for a resource is likely a profile
                 }
             } else {
@@ -304,156 +304,70 @@ impl TypeRegistry {
 
     /// Check if a resource type is a core FHIR resource
     fn is_core_fhir_resource(resource_type: &str) -> bool {
-        // Use the same list we have for parent resource detection
-        let core_resources = vec![
-            "Account",
-            "ActivityDefinition",
-            "AdverseEvent",
-            "AllergyIntolerance",
-            "Appointment",
-            "AppointmentResponse",
-            "AuditEvent",
-            "Basic",
-            "Binary",
-            "BiologicallyDerivedProduct",
-            "BodyStructure",
-            "Bundle",
-            "CapabilityStatement",
-            "CarePlan",
-            "CareTeam",
-            "CatalogEntry",
-            "ChargeItem",
-            "ChargeItemDefinition",
-            "Claim",
-            "ClaimResponse",
-            "ClinicalImpression",
-            "CodeSystem",
-            "Communication",
-            "CommunicationRequest",
-            "CompartmentDefinition",
-            "Composition",
-            "ConceptMap",
-            "Condition",
-            "Consent",
-            "Contract",
-            "Coverage",
-            "CoverageEligibilityRequest",
-            "CoverageEligibilityResponse",
-            "DetectedIssue",
-            "Device",
-            "DeviceDefinition",
-            "DeviceMetric",
-            "DeviceRequest",
-            "DeviceUseStatement",
-            "DiagnosticReport",
-            "DocumentManifest",
-            "DocumentReference",
-            "EffectEvidenceSynthesis",
-            "Encounter",
-            "Endpoint",
-            "EnrollmentRequest",
-            "EnrollmentResponse",
-            "EpisodeOfCare",
-            "EventDefinition",
-            "Evidence",
-            "EvidenceVariable",
-            "ExampleScenario",
-            "ExplanationOfBenefit",
-            "FamilyMemberHistory",
-            "Flag",
-            "Goal",
-            "GraphDefinition",
-            "Group",
-            "GuidanceResponse",
-            "HealthcareService",
-            "ImagingStudy",
-            "Immunization",
-            "ImmunizationEvaluation",
-            "ImmunizationRecommendation",
-            "ImplementationGuide",
-            "InsurancePlan",
-            "Invoice",
-            "Library",
-            "Linkage",
-            "List",
-            "Location",
-            "Measure",
-            "MeasureReport",
-            "Media",
-            "Medication",
-            "MedicationAdministration",
-            "MedicationDispense",
-            "MedicationKnowledge",
-            "MedicationRequest",
-            "MedicationStatement",
-            "MedicinalProduct",
-            "MedicinalProductAuthorization",
-            "MedicinalProductContraindication",
-            "MedicinalProductIndication",
-            "MedicinalProductIngredient",
-            "MedicinalProductInteraction",
-            "MedicinalProductManufactured",
-            "MedicinalProductPackaged",
-            "MedicinalProductPharmaceutical",
-            "MedicinalProductUndesirableEffect",
-            "MessageDefinition",
-            "MessageHeader",
-            "MolecularSequence",
-            "NamingSystem",
-            "NutritionOrder",
-            "Observation",
-            "ObservationDefinition",
-            "OperationDefinition",
-            "OperationOutcome",
-            "Organization",
-            "OrganizationAffiliation",
-            "Patient",
-            "PaymentNotice",
-            "PaymentReconciliation",
-            "Person",
-            "PlanDefinition",
-            "Practitioner",
-            "PractitionerRole",
-            "Procedure",
-            "Provenance",
-            "Questionnaire",
-            "QuestionnaireResponse",
-            "RelatedPerson",
-            "RequestGroup",
-            "ResearchDefinition",
-            "ResearchElementDefinition",
-            "ResearchStudy",
-            "ResearchSubject",
-            "RiskAssessment",
-            "RiskEvidenceSynthesis",
-            "Schedule",
-            "SearchParameter",
-            "ServiceRequest",
-            "Slot",
-            "Specimen",
-            "SpecimenDefinition",
-            "StructureDefinition",
-            "StructureMap",
-            "Subscription",
-            "Substance",
-            "SubstanceNucleicAcid",
-            "SubstancePolymer",
-            "SubstanceProtein",
-            "SubstanceReferenceInformation",
-            "SubstanceSourceMaterial",
-            "SubstanceSpecification",
-            "SupplyDelivery",
-            "SupplyRequest",
-            "Task",
-            "TerminologyCapabilities",
-            "TestReport",
-            "TestScript",
-            "ValueSet",
-            "VerificationResult",
-            "VisionPrescription",
-        ];
-
-        core_resources.contains(&resource_type)
+        // R4 and R5 core FHIR resource types
+        matches!(
+            resource_type,
+            // R4 resources
+            "Account" | "ActivityDefinition" | "AdverseEvent" | "AllergyIntolerance" |
+            "Appointment" | "AppointmentResponse" | "AuditEvent" | "Basic" | "Binary" |
+            "BiologicallyDerivedProduct" | "BodyStructure" | "Bundle" |
+            "CapabilityStatement" | "CarePlan" | "CareTeam" | "CatalogEntry" |
+            "ChargeItem" | "ChargeItemDefinition" | "Claim" | "ClaimResponse" |
+            "ClinicalImpression" | "CodeSystem" | "Communication" |
+            "CommunicationRequest" | "CompartmentDefinition" | "Composition" |
+            "ConceptMap" | "Condition" | "Consent" | "Contract" | "Coverage" |
+            "CoverageEligibilityRequest" | "CoverageEligibilityResponse" |
+            "DetectedIssue" | "Device" | "DeviceDefinition" | "DeviceMetric" |
+            "DeviceRequest" | "DeviceUseStatement" | "DiagnosticReport" |
+            "DocumentManifest" | "DocumentReference" | "EffectEvidenceSynthesis" |
+            "Encounter" | "Endpoint" | "EnrollmentRequest" | "EnrollmentResponse" |
+            "EpisodeOfCare" | "EventDefinition" | "Evidence" | "EvidenceVariable" |
+            "ExampleScenario" | "ExplanationOfBenefit" | "FamilyMemberHistory" |
+            "Flag" | "Goal" | "GraphDefinition" | "Group" | "GuidanceResponse" |
+            "HealthcareService" | "ImagingStudy" | "Immunization" |
+            "ImmunizationEvaluation" | "ImmunizationRecommendation" |
+            "ImplementationGuide" | "InsurancePlan" | "Invoice" | "Library" |
+            "Linkage" | "List" | "Location" | "Measure" | "MeasureReport" |
+            "Media" | "Medication" | "MedicationAdministration" |
+            "MedicationDispense" | "MedicationKnowledge" | "MedicationRequest" |
+            "MedicationStatement" | "MedicinalProduct" | "MedicinalProductAuthorization" |
+            "MedicinalProductContraindication" | "MedicinalProductIndication" |
+            "MedicinalProductIngredient" | "MedicinalProductInteraction" |
+            "MedicinalProductManufactured" | "MedicinalProductPackaged" |
+            "MedicinalProductPharmaceutical" | "MedicinalProductUndesirableEffect" |
+            "MessageDefinition" | "MessageHeader" | "MolecularSequence" |
+            "NamingSystem" | "NutritionOrder" | "Observation" |
+            "ObservationDefinition" | "OperationDefinition" | "OperationOutcome" |
+            "Organization" | "OrganizationAffiliation" | "Patient" |
+            "PaymentNotice" | "PaymentReconciliation" | "Person" |
+            "PlanDefinition" | "Practitioner" | "PractitionerRole" | "Procedure" |
+            "Provenance" | "Questionnaire" | "QuestionnaireResponse" |
+            "RelatedPerson" | "RequestGroup" | "ResearchDefinition" |
+            "ResearchElementDefinition" | "ResearchStudy" | "ResearchSubject" |
+            "RiskAssessment" | "RiskEvidenceSynthesis" | "Schedule" |
+            "SearchParameter" | "ServiceRequest" | "Slot" | "Specimen" |
+            "SpecimenDefinition" | "StructureDefinition" | "StructureMap" |
+            "Subscription" | "Substance" | "SubstanceNucleicAcid" |
+            "SubstancePolymer" | "SubstanceProtein" | "SubstanceReferenceInformation" |
+            "SubstanceSourceMaterial" | "SubstanceSpecification" |
+            "SupplyDelivery" | "SupplyRequest" | "Task" |
+            "TerminologyCapabilities" | "TestReport" | "TestScript" |
+            "ValueSet" | "VerificationResult" | "VisionPrescription" |
+            // R5 new resources
+            "ActorDefinition" | "AdministrableProductDefinition" |
+            "ArtifactAssessment" | "BiologicallyDerivedProductDispense" |
+            "CanonicalResource" | "Citation" | "ClinicalUseDefinition" |
+            "ConditionDefinition" | "DeviceAssociation" | "DeviceDispense" |
+            "DeviceUsage" | "DomainResource" | "EncounterHistory" |
+            "EvidenceReport" | "FormularyItem" | "GenomicStudy" |
+            "ImagingSelection" | "Ingredient" | "InventoryItem" |
+            "InventoryReport" | "ManufacturedItemDefinition" | "MedicinalProductDefinition" |
+            "MetadataResource" | "NutritionIntake" | "NutritionProduct" |
+            "PackagedProductDefinition" | "Parameters" | "Permission" |
+            "RegulatedAuthorization" | "RequestOrchestration" | "Requirements" |
+            "SubstanceDefinition" | "SubscriptionStatus" | "SubscriptionTopic" |
+            "TestPlan" | "Transport"
+        )
     }
 
     /// Check if a StructureDefinition represents a ValueSet-based enum
@@ -479,13 +393,13 @@ impl TypeRegistry {
             "UriType" | "UrlType" | "CanonicalType" | "OidType" | "UuidType" |
             "InstantType" | "DateType" | "DateTimeType" | "TimeType" |
             "CodeType" | "IdType" | "MarkdownType" | "Base64BinaryType" |
-            "UnsignedIntType" | "PositiveIntType" | "XhtmlType" |
+            "UnsignedIntType" | "PositiveIntType" | "Integer64Type" | "XhtmlType" |
             // Without "Type" suffix  
             "Boolean" | "String" | "Integer" | "Decimal" |
             "Uri" | "Url" | "Canonical" | "Oid" | "Uuid" |
             "Instant" | "Date" | "DateTime" | "Time" |
             "Code" | "Id" | "Markdown" | "Base64Binary" |
-            "UnsignedInt" | "PositiveInt" | "Xhtml"
+            "UnsignedInt" | "PositiveInt" | "Integer64" | "Xhtml"
         )
     }
 
@@ -823,6 +737,7 @@ impl TypeRegistry {
             "Base64BinaryType" | "Base64Binary" => "base64binary",
             "UnsignedIntType" | "UnsignedInt" => "unsigned_int",
             "PositiveIntType" | "PositiveInt" => "positive_int",
+            "Integer64Type" | "Integer64" => "integer64",
             "XhtmlType" | "Xhtml" => "xhtml",
             _ => return None,
         };
@@ -847,6 +762,7 @@ impl TypeRegistry {
             "Base64Binary" => "Base64BinaryType",
             "UnsignedInt" => "UnsignedIntType",
             "PositiveInt" => "PositiveIntType",
+            "Integer64" => "Integer64Type",
             "Xhtml" => "XhtmlType",
             _ => type_name,
         };

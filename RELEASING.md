@@ -14,7 +14,8 @@ This document describes the end-to-end process for versioning, validating, and p
 | Crate | Version field | Notes |
 |---|---|---|
 | `rh-foundation` | `version.workspace` | Base layer |
-| `rh-hl7-fhir-r4-core` | `version.workspace` | Generated FHIR types |
+| `rh-hl7-fhir-r4-core` | `version.workspace` | Generated FHIR R4 types |
+| `rh-hl7-fhir-r5-core` | `version.workspace` | Generated FHIR R5 types |
 | `rh-codegen` | `version.workspace` | Code generation |
 | `rh-cql` | `version.workspace` | CQL library |
 | `rh-fsh` | `version.workspace` | FSH compiler |
@@ -31,7 +32,7 @@ Crates must be published in dependency order. Crates on the same line have no de
 ```
 rh-foundation
     ↓
-rh-hl7-fhir-r4-core  rh-codegen  rh-cql  rh-fsh
+rh-hl7-fhir-r4-core  rh-hl7-fhir-r5-core  rh-codegen  rh-cql  rh-fsh
     ↓
 rh-fhirpath  rh-vcl
     ↓
@@ -93,6 +94,7 @@ Dry-run catches missing fields, broken path deps without versions, and packaging
 ```bash
 cargo publish --dry-run -p rh-foundation
 cargo publish --dry-run -p rh-hl7-fhir-r4-core
+cargo publish --dry-run -p rh-hl7-fhir-r5-core
 cargo publish --dry-run -p rh-codegen
 cargo publish --dry-run -p rh-cql
 cargo publish --dry-run -p rh-fsh
@@ -128,6 +130,7 @@ cargo publish -p rh-foundation
 sleep 30
 
 cargo publish -p rh-hl7-fhir-r4-core
+cargo publish -p rh-hl7-fhir-r5-core
 cargo publish -p rh-codegen
 cargo publish -p rh-cql
 cargo publish -p rh-fsh
@@ -155,6 +158,7 @@ Confirm each crate is visible on crates.io:
 ```
 https://crates.io/crates/rh-foundation
 https://crates.io/crates/rh-hl7-fhir-r4-core
+https://crates.io/crates/rh-hl7-fhir-r5-core
 https://crates.io/crates/rh-codegen
 https://crates.io/crates/rh-cql
 https://crates.io/crates/rh-fsh

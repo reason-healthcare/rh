@@ -156,12 +156,25 @@ impl<'a> FieldGenerator<'a> {
             if self.should_use_nested_struct_type(element, element_types) {
                 self.build_nested_struct_type(element, is_array)
             } else {
-                let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
-                type_mapper.map_fhir_type_with_binding(
-                    element_types,
-                    element.binding.as_ref(),
-                    is_array,
-                )
+                // The `language` field is always a plain code string across all FHIR versions.
+                // R5 adds a `required` binding to all-languages, but we keep it as StringType
+                // so the hardcoded trait-impl generator stays consistent with R4.
+                let is_language_field =
+                    field_name == "language" && element.path.ends_with(".language");
+                if is_language_field {
+                    if is_array {
+                        RustType::Vec(Box::new(RustType::Custom("StringType".to_string())))
+                    } else {
+                        RustType::Custom("StringType".to_string())
+                    }
+                } else {
+                    let mut type_mapper = TypeMapper::new(self.config, self.value_set_manager);
+                    type_mapper.map_fhir_type_with_binding(
+                        element_types,
+                        element.binding.as_ref(),
+                        is_array,
+                    )
+                }
             }
         } else {
             // No type specified, default to StringType

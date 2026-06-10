@@ -252,6 +252,7 @@ impl ImportManager {
                 | "Base64BinaryType"
                 | "UnsignedIntType"
                 | "PositiveIntType"
+                | "Integer64Type"
                 | "XhtmlType"
                 // Also handle the non-Type variants that appear in trait methods
                 | "String"
@@ -299,6 +300,7 @@ impl ImportManager {
             "Base64BinaryType" => "base64binary",
             "UnsignedIntType" => "unsigned_int",
             "PositiveIntType" => "positive_int",
+            "Integer64Type" => "integer64",
             "XhtmlType" => "xhtml",
             _ => "unknown",
         };

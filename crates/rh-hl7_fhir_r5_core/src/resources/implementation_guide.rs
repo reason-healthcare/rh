@@ -1,0 +1,1521 @@
+use crate::bindings::fhir_version::FHIRVersion;
+use crate::bindings::guide_page_generation::GuidePageGeneration;
+use crate::bindings::publication_status::PublicationStatus;
+use crate::bindings::resource_types::ResourceTypes;
+use crate::bindings::spdx_license::SpdxLicense;
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::coding::Coding;
+use crate::datatypes::contact_detail::ContactDetail;
+use crate::datatypes::element::Element;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::reference::Reference;
+use crate::datatypes::usage_context::UsageContext;
+use crate::primitives::boolean::BooleanType;
+use crate::primitives::date_time::DateTimeType;
+use crate::primitives::string::StringType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// ImplementationGuide
+///
+/// A set of rules of how a particular interoperability or standards problem is solved - typically through the use of FHIR resources. This resource is used to gather all the parts of an implementation guide into a logical whole and to publish a computable definition of all the parts.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/ImplementationGuide
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: ImplementationGuide
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuide {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// Canonical identifier for this implementation guide, represented as a URI (globally unique)
+    pub url: StringType,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Additional identifier for the implementation guide (business identifier)
+    pub identifier: Option<Vec<Identifier>>,
+    /// Business version of the implementation guide
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// How to compare versions (string)
+    #[serde(rename = "versionAlgorithmString")]
+    pub version_algorithm_string: Option<StringType>,
+    /// How to compare versions (Coding)
+    #[serde(rename = "versionAlgorithmCoding")]
+    pub version_algorithm_coding: Option<Coding>,
+    /// Name for this implementation guide (computer friendly)
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Name for this implementation guide (human friendly)
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// draft | active | retired | unknown
+    pub status: PublicationStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// For testing purposes, not real usage
+    pub experimental: Option<BooleanType>,
+    /// Extension element for the 'experimental' primitive field. Contains metadata and extensions.
+    pub _experimental: Option<Element>,
+    /// Date last changed
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Name of the publisher/steward (organization or individual)
+    pub publisher: Option<StringType>,
+    /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
+    pub _publisher: Option<Element>,
+    /// Contact details for the publisher
+    pub contact: Option<Vec<ContactDetail>>,
+    /// Natural language description of the implementation guide
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The context that the content is intended to support
+    #[serde(rename = "useContext")]
+    pub use_context: Option<Vec<UsageContext>>,
+    /// Intended jurisdiction for implementation guide (if applicable)
+    ///
+    /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// Why this implementation guide is defined
+    pub purpose: Option<StringType>,
+    /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
+    pub _purpose: Option<Element>,
+    /// Use and/or publishing restrictions
+    pub copyright: Option<StringType>,
+    /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
+    pub _copyright: Option<Element>,
+    /// Copyright holder and year(s)
+    #[serde(rename = "copyrightLabel")]
+    pub copyright_label: Option<StringType>,
+    /// Extension element for the 'copyrightLabel' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_copyrightLabel")]
+    pub _copyright_label: Option<Element>,
+    /// NPM Package name for IG
+    #[serde(rename = "packageId")]
+    pub package_id: StringType,
+    /// Extension element for the 'packageId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_packageId")]
+    pub _package_id: Option<Element>,
+    /// SPDX license code for this IG (or not-open-source)
+    pub license: Option<SpdxLicense>,
+    /// Extension element for the 'license' primitive field. Contains metadata and extensions.
+    pub _license: Option<Element>,
+    /// FHIR Version(s) this Implementation Guide targets
+    #[serde(rename = "fhirVersion")]
+    pub fhir_version: Vec<FHIRVersion>,
+    /// Extension element for the 'fhirVersion' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_fhirVersion")]
+    pub _fhir_version: Option<Element>,
+    /// Another Implementation guide this depends on
+    #[serde(rename = "dependsOn")]
+    pub depends_on: Option<Vec<ImplementationGuideDependson>>,
+    /// Profiles that apply globally
+    pub global: Option<Vec<ImplementationGuideGlobal>>,
+    /// Information needed to build the IG
+    pub definition: Option<ImplementationGuideDefinition>,
+    /// Information about an assembled IG
+    pub manifest: Option<ImplementationGuideManifest>,
+}
+/// ImplementationGuide nested structure for the 'dependsOn' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDependson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identity of the IG that this depends on
+    pub uri: StringType,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// NPM Package name for IG this depends on
+    #[serde(rename = "packageId")]
+    pub package_id: Option<StringType>,
+    /// Extension element for the 'packageId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_packageId")]
+    pub _package_id: Option<Element>,
+    /// Version of the IG
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// Why dependency exists
+    pub reason: Option<StringType>,
+    /// Extension element for the 'reason' primitive field. Contains metadata and extensions.
+    pub _reason: Option<Element>,
+}
+/// ImplementationGuideManifest nested structure for the 'page' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifestPage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// HTML page name
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Title of the page, for references
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// Anchor available on the page
+    pub anchor: Option<Vec<StringType>>,
+    /// Extension element for the 'anchor' primitive field. Contains metadata and extensions.
+    pub _anchor: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'template' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionTemplate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of template specified
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// The source location for the template
+    pub source: StringType,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// The scope in which the template applies
+    pub scope: Option<StringType>,
+    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
+    pub _scope: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'grouping' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionGrouping {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Descriptive name for the package
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Human readable text describing the package
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'resource' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionResource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Location of the resource
+    pub reference: Reference,
+    /// Versions this applies to (if different to IG)
+    #[serde(rename = "fhirVersion")]
+    pub fhir_version: Option<Vec<FHIRVersion>>,
+    /// Extension element for the 'fhirVersion' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_fhirVersion")]
+    pub _fhir_version: Option<Element>,
+    /// Human readable name for the resource
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Reason why included in guide
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Is this an example
+    #[serde(rename = "isExample")]
+    pub is_example: Option<BooleanType>,
+    /// Extension element for the 'isExample' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isExample")]
+    pub _is_example: Option<Element>,
+    /// Profile(s) this is an example of
+    pub profile: Option<Vec<StringType>>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+    /// Grouping this is part of
+    #[serde(rename = "groupingId")]
+    pub grouping_id: Option<StringType>,
+    /// Extension element for the 'groupingId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_groupingId")]
+    pub _grouping_id: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'definition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Grouping used to present related resources in the IG
+    pub grouping: Option<Vec<ImplementationGuideDefinitionGrouping>>,
+    /// Resource in the implementation guide
+    pub resource: Option<Vec<ImplementationGuideDefinitionResource>>,
+    /// Page/Section in the Guide
+    pub page: Option<ImplementationGuideDefinitionPage>,
+    /// A template for building resources
+    pub template: Option<Vec<ImplementationGuideDefinitionTemplate>>,
+    /// Defines how IG is built by tools
+    pub parameter: Option<Vec<ImplementationGuideDefinitionParameter>>,
+}
+/// ImplementationGuideDefinition nested structure for the 'page' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionPage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Source for page (url)
+    #[serde(rename = "sourceUrl")]
+    pub source_url: Option<StringType>,
+    /// Source for page (string)
+    #[serde(rename = "sourceString")]
+    pub source_string: Option<StringType>,
+    /// Source for page (markdown)
+    #[serde(rename = "sourceMarkdown")]
+    pub source_markdown: Option<StringType>,
+    /// Name of the page when published
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Short title shown for navigational assistance
+    pub title: StringType,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// html | markdown | xml | generated
+    pub generation: GuidePageGeneration,
+    /// Extension element for the 'generation' primitive field. Contains metadata and extensions.
+    pub _generation: Option<Element>,
+    /// Nested Pages / Sections
+    pub page: Option<Vec<StringType>>,
+}
+/// ImplementationGuide nested structure for the 'manifest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Resource in the implementation guide
+    pub resource: Vec<ImplementationGuideManifestResource>,
+    /// HTML page within the parent IG
+    pub page: Option<Vec<ImplementationGuideManifestPage>>,
+    /// Location of rendered implementation guide
+    pub rendering: Option<StringType>,
+    /// Extension element for the 'rendering' primitive field. Contains metadata and extensions.
+    pub _rendering: Option<Element>,
+    /// Image within the IG
+    pub image: Option<Vec<StringType>>,
+    /// Extension element for the 'image' primitive field. Contains metadata and extensions.
+    pub _image: Option<Element>,
+    /// Additional linkable file in IG
+    pub other: Option<Vec<StringType>>,
+    /// Extension element for the 'other' primitive field. Contains metadata and extensions.
+    pub _other: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'global' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideGlobal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type this profile applies to
+    #[serde(rename = "type")]
+    pub type_: ResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Profile that all resources must conform to
+    pub profile: StringType,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
+/// ImplementationGuideManifest nested structure for the 'resource' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifestResource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Location of the resource
+    pub reference: Reference,
+    /// Is this an example
+    #[serde(rename = "isExample")]
+    pub is_example: Option<BooleanType>,
+    /// Extension element for the 'isExample' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isExample")]
+    pub _is_example: Option<Element>,
+    /// Profile(s) this is an example of
+    pub profile: Option<Vec<StringType>>,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+    /// Relative path for page in IG
+    #[serde(rename = "relativePath")]
+    pub relative_path: Option<StringType>,
+    /// Extension element for the 'relativePath' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relativePath")]
+    pub _relative_path: Option<Element>,
+}
+/// ImplementationGuideDefinition nested structure for the 'parameter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinitionParameter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies parameter
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/guide-parameter-code
+    pub code: Coding,
+    /// Value for named type
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+
+impl Default for ImplementationGuide {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            url: StringType::default(),
+            _url: Default::default(),
+            identifier: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            version_algorithm_string: Default::default(),
+            version_algorithm_coding: Default::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            status: PublicationStatus::default(),
+            _status: Default::default(),
+            experimental: Default::default(),
+            _experimental: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            publisher: Default::default(),
+            _publisher: Default::default(),
+            contact: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            use_context: Default::default(),
+            jurisdiction: Default::default(),
+            purpose: Default::default(),
+            _purpose: Default::default(),
+            copyright: Default::default(),
+            _copyright: Default::default(),
+            copyright_label: Default::default(),
+            _copyright_label: Default::default(),
+            package_id: StringType::default(),
+            _package_id: Default::default(),
+            license: Default::default(),
+            _license: Default::default(),
+            fhir_version: Vec::new(),
+            _fhir_version: Default::default(),
+            depends_on: Default::default(),
+            global: Default::default(),
+            definition: Default::default(),
+            manifest: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDependson {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            package_id: Default::default(),
+            _package_id: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            reason: Default::default(),
+            _reason: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideManifestPage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            anchor: Default::default(),
+            _anchor: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionTemplate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            scope: Default::default(),
+            _scope: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionGrouping {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionResource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            fhir_version: Default::default(),
+            _fhir_version: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            is_example: Default::default(),
+            _is_example: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            grouping_id: Default::default(),
+            _grouping_id: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            grouping: Default::default(),
+            resource: Default::default(),
+            page: Default::default(),
+            template: Default::default(),
+            parameter: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionPage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            source_url: Default::default(),
+            source_string: Default::default(),
+            source_markdown: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            generation: Default::default(),
+            _generation: Default::default(),
+            page: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideManifest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            resource: Vec::new(),
+            page: Default::default(),
+            rendering: Default::default(),
+            _rendering: Default::default(),
+            image: Default::default(),
+            _image: Default::default(),
+            other: Default::default(),
+            _other: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideGlobal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            profile: StringType::default(),
+            _profile: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideManifestResource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            is_example: Default::default(),
+            _is_example: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            relative_path: Default::default(),
+            _relative_path: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionParameter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("cnl-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.exists() implies name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')"),
+    rh_foundation::Invariant::new("cnl-1", rh_foundation::Severity::Warning, "URL should not contain | or # - these characters make processing canonical references problematic", "exists() implies matches('^[^|# ]+$')"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+    rh_foundation::Invariant::new("ig-1", rh_foundation::Severity::Error, "If a resource has a groupingId, it must refer to a grouping defined in the Implementation Guide", "resource.groupingId.all(%context.grouping.id contains $this)"),
+    rh_foundation::Invariant::new("ig-2", rh_foundation::Severity::Error, "If a resource has a fhirVersion, it must be one of the versions defined for the Implementation Guide", "definition.resource.fhirVersion.all(%context.fhirVersion contains $this)"),
+    rh_foundation::Invariant::new("ig-3", rh_foundation::Severity::Error, "Source must be absent if 'generated' is generated", "generation='generated' implies source.empty()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("ImplementationGuide.definition.page.generation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/guide-page-generation|5.0.0").with_description("A code that indicates how the page is generated."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.definition.resource.fhirVersion", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/FHIR-version|5.0.0").with_description("All published FHIR Versions."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.fhirVersion", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/FHIR-version|5.0.0").with_description("All published FHIR Versions."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.global.type", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/resource-types|5.0.0").with_description("One of the resource types defined as part of this version of FHIR."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.language", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/all-languages|5.0.0").with_description("IETF language tag for a human language"),
+    rh_foundation::ElementBinding::new("ImplementationGuide.license", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/spdx-license|5.0.0").with_description("The license that applies to an Implementation Guide (using an SPDX license Identifiers, or 'not-open-source'). The binding is required but new SPDX license Identifiers are allowed to be used (https://spdx.org/licenses/)."),
+    rh_foundation::ElementBinding::new("ImplementationGuide.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|5.0.0").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("ImplementationGuide.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.contained", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.url", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.versionAlgorithm[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.name", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.contact", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.copyrightLabel",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.packageId", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.license", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.fhirVersion", 1, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.dependsOn.uri", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.packageId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.version",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.dependsOn.reason",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.global.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.global.type", 1, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.global.profile",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.definition.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.grouping.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.reference",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.fhirVersion",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.name",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.isExample",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.profile",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.resource.groupingId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.source[x]",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.title",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.generation",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.page.page",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.parameter.value",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.code",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.source",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.definition.template.scope",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.rendering",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource",
+                1,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.reference",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.isExample",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.profile",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.resource.relativePath",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.page", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.name",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.title",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "ImplementationGuide.manifest.page.anchor",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.image", 0, None),
+            rh_foundation::ElementCardinality::new("ImplementationGuide.manifest.other", 0, None),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for ImplementationGuide {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for ImplementationGuide {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for ImplementationGuide {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for ImplementationGuide {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for ImplementationGuide {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for ImplementationGuide {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::implementation_guide::ImplementationGuideAccessors for ImplementationGuide {
+    fn url(&self) -> StringType {
+        self.url.clone()
+    }
+    fn identifier(&self) -> &[Identifier] {
+        self.identifier.as_deref().unwrap_or(&[])
+    }
+    fn version(&self) -> Option<StringType> {
+        self.version.clone()
+    }
+    fn name(&self) -> StringType {
+        self.name.clone()
+    }
+    fn title(&self) -> Option<StringType> {
+        self.title.clone()
+    }
+    fn status(&self) -> PublicationStatus {
+        self.status.clone()
+    }
+    fn experimental(&self) -> Option<BooleanType> {
+        self.experimental
+    }
+    fn date(&self) -> Option<DateTimeType> {
+        self.date.clone()
+    }
+    fn publisher(&self) -> Option<StringType> {
+        self.publisher.clone()
+    }
+    fn contact(&self) -> &[ContactDetail] {
+        self.contact.as_deref().unwrap_or(&[])
+    }
+    fn description(&self) -> Option<StringType> {
+        self.description.clone()
+    }
+    fn use_context(&self) -> &[UsageContext] {
+        self.use_context.as_deref().unwrap_or(&[])
+    }
+    fn jurisdiction(&self) -> &[CodeableConcept] {
+        self.jurisdiction.as_deref().unwrap_or(&[])
+    }
+    fn purpose(&self) -> Option<StringType> {
+        self.purpose.clone()
+    }
+    fn copyright(&self) -> Option<StringType> {
+        self.copyright.clone()
+    }
+    fn copyright_label(&self) -> Option<StringType> {
+        self.copyright_label.clone()
+    }
+    fn package_id(&self) -> StringType {
+        self.package_id.clone()
+    }
+    fn license(&self) -> Option<SpdxLicense> {
+        self.license.clone()
+    }
+    fn fhir_version(&self) -> &[FHIRVersion] {
+        &self.fhir_version
+    }
+    fn depends_on(&self) -> &[ImplementationGuideDependson] {
+        self.depends_on.as_deref().unwrap_or(&[])
+    }
+    fn global(&self) -> &[ImplementationGuideGlobal] {
+        self.global.as_deref().unwrap_or(&[])
+    }
+    fn definition(&self) -> Option<ImplementationGuideDefinition> {
+        self.definition.clone()
+    }
+    fn manifest(&self) -> Option<ImplementationGuideManifest> {
+        self.manifest.clone()
+    }
+}
+
+impl crate::traits::implementation_guide::ImplementationGuideMutators for ImplementationGuide {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_url(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.url = value;
+        resource
+    }
+    fn set_identifier(self, value: Vec<Identifier>) -> Self {
+        let mut resource = self.clone();
+        resource.identifier = Some(value);
+        resource
+    }
+    fn add_identifier(self, item: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_version(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.version = Some(value);
+        resource
+    }
+    fn set_name(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.name = value;
+        resource
+    }
+    fn set_title(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.title = Some(value);
+        resource
+    }
+    fn set_status(self, value: PublicationStatus) -> Self {
+        let mut resource = self.clone();
+        resource.status = value;
+        resource
+    }
+    fn set_experimental(self, value: bool) -> Self {
+        let mut resource = self.clone();
+        resource.experimental = Some(value);
+        resource
+    }
+    fn set_date(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.date = Some(value);
+        resource
+    }
+    fn set_publisher(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.publisher = Some(value);
+        resource
+    }
+    fn set_contact(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.contact = Some(value);
+        resource
+    }
+    fn add_contact(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_description(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.description = Some(value);
+        resource
+    }
+    fn set_use_context(self, value: Vec<UsageContext>) -> Self {
+        let mut resource = self.clone();
+        resource.use_context = Some(value);
+        resource
+    }
+    fn add_use_context(self, item: UsageContext) -> Self {
+        let mut resource = self.clone();
+        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.jurisdiction = Some(value);
+        resource
+    }
+    fn add_jurisdiction(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource
+            .jurisdiction
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_purpose(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.purpose = Some(value);
+        resource
+    }
+    fn set_copyright(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.copyright = Some(value);
+        resource
+    }
+    fn set_copyright_label(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.copyright_label = Some(value);
+        resource
+    }
+    fn set_package_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.package_id = value;
+        resource
+    }
+    fn set_license(self, value: SpdxLicense) -> Self {
+        let mut resource = self.clone();
+        resource.license = Some(value);
+        resource
+    }
+    fn set_fhir_version(self, value: Vec<FHIRVersion>) -> Self {
+        let mut resource = self.clone();
+        resource.fhir_version = value;
+        resource
+    }
+    fn add_fhir_version(self, item: FHIRVersion) -> Self {
+        let mut resource = self.clone();
+        resource.fhir_version.push(item);
+        resource
+    }
+    fn set_depends_on(self, value: Vec<ImplementationGuideDependson>) -> Self {
+        let mut resource = self.clone();
+        resource.depends_on = Some(value);
+        resource
+    }
+    fn add_depends_on(self, item: ImplementationGuideDependson) -> Self {
+        let mut resource = self.clone();
+        resource.depends_on.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_global(self, value: Vec<ImplementationGuideGlobal>) -> Self {
+        let mut resource = self.clone();
+        resource.global = Some(value);
+        resource
+    }
+    fn add_global(self, item: ImplementationGuideGlobal) -> Self {
+        let mut resource = self.clone();
+        resource.global.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_definition(self, value: ImplementationGuideDefinition) -> Self {
+        let mut resource = self.clone();
+        resource.definition = Some(value);
+        resource
+    }
+    fn set_manifest(self, value: ImplementationGuideManifest) -> Self {
+        let mut resource = self.clone();
+        resource.manifest = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::implementation_guide::ImplementationGuideExistence for ImplementationGuide {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
+    }
+    fn has_url(&self) -> bool {
+        true
+    }
+    fn has_identifier(&self) -> bool {
+        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_version(&self) -> bool {
+        self.version.is_some()
+    }
+    fn has_name(&self) -> bool {
+        true
+    }
+    fn has_title(&self) -> bool {
+        self.title.is_some()
+    }
+    fn has_status(&self) -> bool {
+        true
+    }
+    fn has_experimental(&self) -> bool {
+        self.experimental.is_some()
+    }
+    fn has_date(&self) -> bool {
+        self.date.is_some()
+    }
+    fn has_publisher(&self) -> bool {
+        self.publisher.is_some()
+    }
+    fn has_contact(&self) -> bool {
+        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_description(&self) -> bool {
+        self.description.is_some()
+    }
+    fn has_use_context(&self) -> bool {
+        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_jurisdiction(&self) -> bool {
+        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_purpose(&self) -> bool {
+        self.purpose.is_some()
+    }
+    fn has_copyright(&self) -> bool {
+        self.copyright.is_some()
+    }
+    fn has_copyright_label(&self) -> bool {
+        self.copyright_label.is_some()
+    }
+    fn has_package_id(&self) -> bool {
+        true
+    }
+    fn has_license(&self) -> bool {
+        self.license.is_some()
+    }
+    fn has_fhir_version(&self) -> bool {
+        !self.fhir_version.is_empty()
+    }
+    fn has_depends_on(&self) -> bool {
+        self.depends_on.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_global(&self) -> bool {
+        self.global.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_definition(&self) -> bool {
+        self.definition.is_some()
+    }
+    fn has_manifest(&self) -> bool {
+        self.manifest.is_some()
+    }
+}
+
+impl crate::validation::ValidatableResource for ImplementationGuide {
+    fn resource_type(&self) -> &'static str {
+        "ImplementationGuide"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/ImplementationGuide")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::implementation_guide::{
+    ImplementationGuideAccessors, ImplementationGuideExistence, ImplementationGuideMutators,
+};

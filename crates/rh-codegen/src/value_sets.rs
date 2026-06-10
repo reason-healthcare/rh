@@ -458,7 +458,19 @@ impl ValueSetConcept {
         } else if name.chars().next().unwrap_or('0').is_ascii_digit() {
             format!("Code{name}")
         } else {
-            name
+            // Escape Rust keywords that are valid identifiers but reserved
+            match name.as_str() {
+                "Self" | "SelfType" => format!("{name}Value"),
+                "Type" | "Match" | "Use" | "Mod" | "Ref" | "Mut" | "Let" | "Fn" | "Impl"
+                | "Trait" | "Struct" | "Enum" | "Pub" | "Priv" | "Crate" | "Super" | "Return"
+                | "If" | "Else" | "While" | "For" | "In" | "Loop" | "Break" | "Continue" | "As"
+                | "Move" | "Static" | "Const" | "Unsafe" | "Extern" | "Where" | "Async"
+                | "Await" | "Dyn" | "Abstract" | "Become" | "Box" | "Do" | "Final" | "Override"
+                | "Priv" | "Typeof" | "Unsized" | "Virtual" | "Yield" => {
+                    format!("{name}Value")
+                }
+                _ => name,
+            }
         }
     }
 }

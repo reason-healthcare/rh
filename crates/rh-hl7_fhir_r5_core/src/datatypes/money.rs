@@ -1,0 +1,112 @@
+use crate::bindings::currencies::Currencies;
+use crate::datatypes::data_type::DataType;
+use crate::datatypes::element::Element;
+use crate::primitives::decimal::DecimalType;
+use serde::{Deserialize, Serialize};
+/// Money
+///
+/// Money Type: An amount of economic utility in some recognized currency.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/Money
+/// - Version: 5.0.0
+/// - Kind: complex-type
+/// - Type: Money
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DataType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Money {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DataType,
+    /// Numerical value (with implicit precision)
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// ISO 4217 Currency Code
+    pub currency: Option<Currencies>,
+    /// Extension element for the 'currency' primitive field. Contains metadata and extensions.
+    pub _currency: Option<Element>,
+}
+
+impl Default for Money {
+    fn default() -> Self {
+        Self {
+            base: DataType::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            currency: Default::default(),
+            _currency: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::Invariant::new(
+                "ele-1",
+                rh_foundation::Severity::Error,
+                "All FHIR elements must have a @value or children",
+                "hasValue() or (children().count() > id.count())",
+            ),
+            rh_foundation::Invariant::new(
+                "ext-1",
+                rh_foundation::Severity::Error,
+                "Must have either extensions or value[x], not both",
+                "extension.exists() != value.exists()",
+            ),
+        ]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![rh_foundation::ElementBinding::new(
+            "Money.currency",
+            rh_foundation::BindingStrength::Required,
+            "http://hl7.org/fhir/ValueSet/currencies|5.0.0",
+        )
+        .with_description("A code indicating the currency, taken from ISO 4217.")]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Money.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Money.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Money.value", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Money.currency", 0, Some(1)),
+        ]
+    });
+
+impl crate::validation::ValidatableResource for Money {
+    fn resource_type(&self) -> &'static str {
+        "Money"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Money")
+    }
+}

@@ -1,0 +1,909 @@
+use crate::bindings::request_intent::RequestIntent;
+use crate::bindings::request_priority::RequestPriority;
+use crate::bindings::request_status::RequestStatus;
+use crate::datatypes::annotation::Annotation;
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::codeable_reference::CodeableReference;
+use crate::datatypes::element::Element;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::period::Period;
+use crate::datatypes::quantity::Quantity;
+use crate::datatypes::range::Range;
+use crate::datatypes::reference::Reference;
+use crate::datatypes::timing::Timing;
+use crate::primitives::boolean::BooleanType;
+use crate::primitives::date_time::DateTimeType;
+use crate::primitives::integer::IntegerType;
+use crate::primitives::string::StringType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// DeviceRequest
+///
+/// Represents a request a device to be provided to a specific patient. The device may be an implantable device to be subsequently implanted, or an external assistive device, such as a walker, to be delivered and subsequently be used.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DeviceRequest
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: DeviceRequest
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceRequest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// External Request identifier
+    pub identifier: Option<Vec<Identifier>>,
+    /// Instantiates FHIR protocol or definition
+    #[serde(rename = "instantiatesCanonical")]
+    pub instantiates_canonical: Option<Vec<StringType>>,
+    /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_instantiatesCanonical")]
+    pub _instantiates_canonical: Option<Element>,
+    /// Instantiates external protocol or definition
+    #[serde(rename = "instantiatesUri")]
+    pub instantiates_uri: Option<Vec<StringType>>,
+    /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_instantiatesUri")]
+    pub _instantiates_uri: Option<Element>,
+    /// What request fulfills
+    #[serde(rename = "basedOn")]
+    pub based_on: Option<Vec<Reference>>,
+    /// What request replaces
+    pub replaces: Option<Vec<Reference>>,
+    /// Identifier of composite request
+    #[serde(rename = "groupIdentifier")]
+    pub group_identifier: Option<Identifier>,
+    /// draft | active | on-hold | revoked | completed | entered-in-error | unknown
+    pub status: Option<RequestStatus>,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// proposal | plan | directive | order | original-order | reflex-order | filler-order | instance-order | option
+    pub intent: RequestIntent,
+    /// Extension element for the 'intent' primitive field. Contains metadata and extensions.
+    pub _intent: Option<Element>,
+    /// routine | urgent | asap | stat
+    pub priority: Option<RequestPriority>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
+    /// True if the request is to stop or not to start using the device
+    #[serde(rename = "doNotPerform")]
+    pub do_not_perform: Option<BooleanType>,
+    /// Extension element for the 'doNotPerform' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_doNotPerform")]
+    pub _do_not_perform: Option<Element>,
+    /// Device requested
+    ///
+    /// Binding: example (Codes for devices that can be requested.)
+    ///
+    /// Available values:
+    /// - `528391`: Blood Pressure Cuff
+    /// - `528404`: Body Composition Analyzer
+    /// - `528425`: Cardiovascular Device
+    /// - `528402`: Coagulation meter
+    /// - `528409`: Continuous Glucose Monitor
+    /// - `528390`: Electro cardiograph
+    /// - `528457`: Generic 20601 Device
+    /// - `528401`: Glucose Monitor
+    /// - `528455`: Independent Activity/Living Hub
+    /// - `528403`: Insulin Pump
+    /// - ... and 18 more values
+    pub code: CodeableReference,
+    /// Quantity of devices to supply
+    pub quantity: Option<IntegerType>,
+    /// Extension element for the 'quantity' primitive field. Contains metadata and extensions.
+    pub _quantity: Option<Element>,
+    /// Device details
+    pub parameter: Option<Vec<DeviceRequestParameter>>,
+    /// Focus of request
+    pub subject: Reference,
+    /// Encounter motivating request
+    pub encounter: Option<Reference>,
+    /// Desired time or schedule for use (dateTime)
+    #[serde(rename = "occurrenceDateTime")]
+    pub occurrence_date_time: Option<DateTimeType>,
+    /// Desired time or schedule for use (Period)
+    #[serde(rename = "occurrencePeriod")]
+    pub occurrence_period: Option<Period>,
+    /// Desired time or schedule for use (Timing)
+    #[serde(rename = "occurrenceTiming")]
+    pub occurrence_timing: Option<Timing>,
+    /// When recorded
+    #[serde(rename = "authoredOn")]
+    pub authored_on: Option<DateTimeType>,
+    /// Extension element for the 'authoredOn' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_authoredOn")]
+    pub _authored_on: Option<Element>,
+    /// Who/what submitted the device request
+    pub requester: Option<Reference>,
+    /// Requested Filler
+    pub performer: Option<CodeableReference>,
+    /// Coded/Linked Reason for request
+    ///
+    /// Binding: example (Diagnosis or problem codes justifying the reason for requesting the device.)
+    ///
+    /// Available values:
+    /// - `160245001`: No current problems or disability
+    pub reason: Option<Vec<CodeableReference>>,
+    /// PRN status of request
+    #[serde(rename = "asNeeded")]
+    pub as_needed: Option<BooleanType>,
+    /// Extension element for the 'asNeeded' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_asNeeded")]
+    pub _as_needed: Option<Element>,
+    /// Device usage reason
+    #[serde(rename = "asNeededFor")]
+    pub as_needed_for: Option<CodeableConcept>,
+    /// Associated insurance coverage
+    pub insurance: Option<Vec<Reference>>,
+    /// Additional clinical information
+    #[serde(rename = "supportingInfo")]
+    pub supporting_info: Option<Vec<Reference>>,
+    /// Notes or comments
+    pub note: Option<Vec<Annotation>>,
+    /// Request provenance
+    #[serde(rename = "relevantHistory")]
+    pub relevant_history: Option<Vec<Reference>>,
+}
+/// DeviceRequest nested structure for the 'parameter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceRequestParameter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Device detail
+    ///
+    /// Binding: example (A code that identifies the device detail.)
+    pub code: Option<CodeableConcept>,
+    /// Value of detail (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: Option<CodeableConcept>,
+    /// Value of detail (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// Value of detail (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Option<Range>,
+    /// Value of detail (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+}
+
+impl Default for DeviceRequest {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            identifier: Default::default(),
+            instantiates_canonical: Default::default(),
+            _instantiates_canonical: Default::default(),
+            instantiates_uri: Default::default(),
+            _instantiates_uri: Default::default(),
+            based_on: Default::default(),
+            replaces: Default::default(),
+            group_identifier: Default::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            intent: RequestIntent::default(),
+            _intent: Default::default(),
+            priority: Default::default(),
+            _priority: Default::default(),
+            do_not_perform: Default::default(),
+            _do_not_perform: Default::default(),
+            code: CodeableReference::default(),
+            quantity: Default::default(),
+            _quantity: Default::default(),
+            parameter: Default::default(),
+            subject: Reference::default(),
+            encounter: Default::default(),
+            occurrence_date_time: Default::default(),
+            occurrence_period: Default::default(),
+            occurrence_timing: Default::default(),
+            authored_on: Default::default(),
+            _authored_on: Default::default(),
+            requester: Default::default(),
+            performer: Default::default(),
+            reason: Default::default(),
+            as_needed: Default::default(),
+            _as_needed: Default::default(),
+            as_needed_for: Default::default(),
+            insurance: Default::default(),
+            supporting_info: Default::default(),
+            note: Default::default(),
+            relevant_history: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceRequestParameter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_boolean: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().ofType(canonical) | %resource.descendants().ofType(uri) | %resource.descendants().ofType(url))) or descendants().where(reference = '#').exists() or descendants().where(ofType(canonical) = '#').exists() or descendants().where(ofType(canonical) = '#').exists()).not()).trace('unmatched', id).empty()"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.intent",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-intent|5.0.0",
+            )
+            .with_description("The kind of diagnostic request."),
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.language",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/all-languages|5.0.0",
+            )
+            .with_description("IETF language tag for a human language"),
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.priority",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-priority|5.0.0",
+            )
+            .with_description(
+                "Identifies the level of importance to be assigned to actioning the request.",
+            ),
+            rh_foundation::ElementBinding::new(
+                "DeviceRequest.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/request-status|5.0.0",
+            )
+            .with_description("Codes representing the status of the request."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("DeviceRequest.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.contained", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.extension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.instantiatesCanonical", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.instantiatesUri", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.basedOn", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.replaces", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.groupIdentifier", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.status", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.intent", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.priority", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.doNotPerform", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.code", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.quantity", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "DeviceRequest.parameter.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.parameter.value[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.subject", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.occurrence[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.authoredOn", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.requester", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.reason", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.asNeeded", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.asNeededFor", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("DeviceRequest.insurance", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.supportingInfo", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.note", 0, None),
+            rh_foundation::ElementCardinality::new("DeviceRequest.relevantHistory", 0, None),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for DeviceRequest {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for DeviceRequest {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for DeviceRequest {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for DeviceRequest {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for DeviceRequest {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for DeviceRequest {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::device_request::DeviceRequestAccessors for DeviceRequest {
+    fn identifier(&self) -> &[Identifier] {
+        self.identifier.as_deref().unwrap_or(&[])
+    }
+    fn instantiates_canonical(&self) -> &[StringType] {
+        self.instantiates_canonical.as_deref().unwrap_or(&[])
+    }
+    fn instantiates_uri(&self) -> &[StringType] {
+        self.instantiates_uri.as_deref().unwrap_or(&[])
+    }
+    fn based_on(&self) -> &[Reference] {
+        self.based_on.as_deref().unwrap_or(&[])
+    }
+    fn replaces(&self) -> &[Reference] {
+        self.replaces.as_deref().unwrap_or(&[])
+    }
+    fn group_identifier(&self) -> Option<Identifier> {
+        self.group_identifier.clone()
+    }
+    fn status(&self) -> Option<RequestStatus> {
+        self.status.clone()
+    }
+    fn intent(&self) -> RequestIntent {
+        self.intent.clone()
+    }
+    fn priority(&self) -> Option<RequestPriority> {
+        self.priority.clone()
+    }
+    fn do_not_perform(&self) -> Option<BooleanType> {
+        self.do_not_perform
+    }
+    fn code(&self) -> CodeableReference {
+        self.code.clone()
+    }
+    fn quantity(&self) -> Option<IntegerType> {
+        self.quantity
+    }
+    fn parameter(&self) -> &[DeviceRequestParameter] {
+        self.parameter.as_deref().unwrap_or(&[])
+    }
+    fn subject(&self) -> Reference {
+        self.subject.clone()
+    }
+    fn encounter(&self) -> Option<Reference> {
+        self.encounter.clone()
+    }
+    fn authored_on(&self) -> Option<DateTimeType> {
+        self.authored_on.clone()
+    }
+    fn requester(&self) -> Option<Reference> {
+        self.requester.clone()
+    }
+    fn performer(&self) -> Option<CodeableReference> {
+        self.performer.clone()
+    }
+    fn reason(&self) -> &[CodeableReference] {
+        self.reason.as_deref().unwrap_or(&[])
+    }
+    fn as_needed(&self) -> Option<BooleanType> {
+        self.as_needed
+    }
+    fn as_needed_for(&self) -> Option<CodeableConcept> {
+        self.as_needed_for.clone()
+    }
+    fn insurance(&self) -> &[Reference] {
+        self.insurance.as_deref().unwrap_or(&[])
+    }
+    fn supporting_info(&self) -> &[Reference] {
+        self.supporting_info.as_deref().unwrap_or(&[])
+    }
+    fn note(&self) -> &[Annotation] {
+        self.note.as_deref().unwrap_or(&[])
+    }
+    fn relevant_history(&self) -> &[Reference] {
+        self.relevant_history.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::device_request::DeviceRequestMutators for DeviceRequest {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_identifier(self, value: Vec<Identifier>) -> Self {
+        let mut resource = self.clone();
+        resource.identifier = Some(value);
+        resource
+    }
+    fn add_identifier(self, item: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
+        let mut resource = self.clone();
+        resource.instantiates_canonical = Some(value);
+        resource
+    }
+    fn add_instantiates_canonical(self, item: String) -> Self {
+        let mut resource = self.clone();
+        resource
+            .instantiates_canonical
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_instantiates_uri(self, value: Vec<String>) -> Self {
+        let mut resource = self.clone();
+        resource.instantiates_uri = Some(value);
+        resource
+    }
+    fn add_instantiates_uri(self, item: String) -> Self {
+        let mut resource = self.clone();
+        resource
+            .instantiates_uri
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_based_on(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.based_on = Some(value);
+        resource
+    }
+    fn add_based_on(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_replaces(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.replaces = Some(value);
+        resource
+    }
+    fn add_replaces(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_group_identifier(self, value: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.group_identifier = Some(value);
+        resource
+    }
+    fn set_status(self, value: RequestStatus) -> Self {
+        let mut resource = self.clone();
+        resource.status = Some(value);
+        resource
+    }
+    fn set_intent(self, value: RequestIntent) -> Self {
+        let mut resource = self.clone();
+        resource.intent = value;
+        resource
+    }
+    fn set_priority(self, value: RequestPriority) -> Self {
+        let mut resource = self.clone();
+        resource.priority = Some(value);
+        resource
+    }
+    fn set_do_not_perform(self, value: bool) -> Self {
+        let mut resource = self.clone();
+        resource.do_not_perform = Some(value);
+        resource
+    }
+    fn set_code(self, value: CodeableReference) -> Self {
+        let mut resource = self.clone();
+        resource.code = value;
+        resource
+    }
+    fn set_quantity(self, value: i32) -> Self {
+        let mut resource = self.clone();
+        resource.quantity = Some(value);
+        resource
+    }
+    fn set_parameter(self, value: Vec<DeviceRequestParameter>) -> Self {
+        let mut resource = self.clone();
+        resource.parameter = Some(value);
+        resource
+    }
+    fn add_parameter(self, item: DeviceRequestParameter) -> Self {
+        let mut resource = self.clone();
+        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_subject(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.subject = value;
+        resource
+    }
+    fn set_encounter(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.encounter = Some(value);
+        resource
+    }
+    fn set_authored_on(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.authored_on = Some(value);
+        resource
+    }
+    fn set_requester(self, value: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.requester = Some(value);
+        resource
+    }
+    fn set_performer(self, value: CodeableReference) -> Self {
+        let mut resource = self.clone();
+        resource.performer = Some(value);
+        resource
+    }
+    fn set_reason(self, value: Vec<CodeableReference>) -> Self {
+        let mut resource = self.clone();
+        resource.reason = Some(value);
+        resource
+    }
+    fn add_reason(self, item: CodeableReference) -> Self {
+        let mut resource = self.clone();
+        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_as_needed(self, value: bool) -> Self {
+        let mut resource = self.clone();
+        resource.as_needed = Some(value);
+        resource
+    }
+    fn set_as_needed_for(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.as_needed_for = Some(value);
+        resource
+    }
+    fn set_insurance(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.insurance = Some(value);
+        resource
+    }
+    fn add_insurance(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_supporting_info(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.supporting_info = Some(value);
+        resource
+    }
+    fn add_supporting_info(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource
+            .supporting_info
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_note(self, value: Vec<Annotation>) -> Self {
+        let mut resource = self.clone();
+        resource.note = Some(value);
+        resource
+    }
+    fn add_note(self, item: Annotation) -> Self {
+        let mut resource = self.clone();
+        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_relevant_history(self, value: Vec<Reference>) -> Self {
+        let mut resource = self.clone();
+        resource.relevant_history = Some(value);
+        resource
+    }
+    fn add_relevant_history(self, item: Reference) -> Self {
+        let mut resource = self.clone();
+        resource
+            .relevant_history
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_occurrence(&self) -> bool {
+        self.occurrence_date_time.is_some()
+            || self.occurrence_period.is_some()
+            || self.occurrence_timing.is_some()
+    }
+    fn has_identifier(&self) -> bool {
+        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_instantiates_canonical(&self) -> bool {
+        self.instantiates_canonical
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+    fn has_instantiates_uri(&self) -> bool {
+        self.instantiates_uri
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+    fn has_based_on(&self) -> bool {
+        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_replaces(&self) -> bool {
+        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_group_identifier(&self) -> bool {
+        self.group_identifier.is_some()
+    }
+    fn has_status(&self) -> bool {
+        self.status.is_some()
+    }
+    fn has_intent(&self) -> bool {
+        true
+    }
+    fn has_priority(&self) -> bool {
+        self.priority.is_some()
+    }
+    fn has_do_not_perform(&self) -> bool {
+        self.do_not_perform.is_some()
+    }
+    fn has_code(&self) -> bool {
+        true
+    }
+    fn has_quantity(&self) -> bool {
+        self.quantity.is_some()
+    }
+    fn has_parameter(&self) -> bool {
+        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_subject(&self) -> bool {
+        true
+    }
+    fn has_encounter(&self) -> bool {
+        self.encounter.is_some()
+    }
+    fn has_authored_on(&self) -> bool {
+        self.authored_on.is_some()
+    }
+    fn has_requester(&self) -> bool {
+        self.requester.is_some()
+    }
+    fn has_performer(&self) -> bool {
+        self.performer.is_some()
+    }
+    fn has_reason(&self) -> bool {
+        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_as_needed(&self) -> bool {
+        self.as_needed.is_some()
+    }
+    fn has_as_needed_for(&self) -> bool {
+        self.as_needed_for.is_some()
+    }
+    fn has_insurance(&self) -> bool {
+        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_supporting_info(&self) -> bool {
+        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_note(&self) -> bool {
+        self.note.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_relevant_history(&self) -> bool {
+        self.relevant_history
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for DeviceRequest {
+    fn resource_type(&self) -> &'static str {
+        "DeviceRequest"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/DeviceRequest")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::device_request::{
+    DeviceRequestAccessors, DeviceRequestExistence, DeviceRequestMutators,
+};

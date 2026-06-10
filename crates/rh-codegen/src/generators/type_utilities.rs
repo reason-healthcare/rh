@@ -357,6 +357,7 @@ impl TypeUtilities {
                         _ => RustType::String, // Default fallback for unknown system types
                     }
                 }
+                (_, "integer64", _) => RustType::Custom("Integer64Type".to_string()),
                 (_, code, _) => RustType::Custom(crate::naming::Naming::to_rust_identifier(code)),
             };
             Ok(rust_type)

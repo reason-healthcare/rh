@@ -1,0 +1,1641 @@
+use crate::bindings::fhir_types::FhirTypes;
+use crate::bindings::publication_status::PublicationStatus;
+use crate::datatypes::backbone_element::BackboneElement;
+use crate::datatypes::codeable_concept::CodeableConcept;
+use crate::datatypes::coding::Coding;
+use crate::datatypes::contact_detail::ContactDetail;
+use crate::datatypes::element::Element;
+use crate::datatypes::expression::Expression;
+use crate::datatypes::identifier::Identifier;
+use crate::datatypes::period::Period;
+use crate::datatypes::reference::Reference;
+use crate::datatypes::related_artifact::RelatedArtifact;
+use crate::datatypes::usage_context::UsageContext;
+use crate::primitives::boolean::BooleanType;
+use crate::primitives::date::DateType;
+use crate::primitives::date_time::DateTimeType;
+use crate::primitives::string::StringType;
+use crate::resources::domain_resource::DomainResource;
+use serde::{Deserialize, Serialize};
+/// Measure
+///
+/// The Measure resource provides the definition of a quality measure.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/Measure
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: Measure
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/DomainResource
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Measure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: DomainResource,
+    /// Canonical identifier for this measure, represented as a URI (globally unique)
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Additional identifier for the measure
+    pub identifier: Option<Vec<Identifier>>,
+    /// Business version of the measure
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// How to compare versions (string)
+    #[serde(rename = "versionAlgorithmString")]
+    pub version_algorithm_string: Option<StringType>,
+    /// How to compare versions (Coding)
+    #[serde(rename = "versionAlgorithmCoding")]
+    pub version_algorithm_coding: Option<Coding>,
+    /// Name for this measure (computer friendly)
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Name for this measure (human friendly)
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// Subordinate title of the measure
+    pub subtitle: Option<StringType>,
+    /// Extension element for the 'subtitle' primitive field. Contains metadata and extensions.
+    pub _subtitle: Option<Element>,
+    /// draft | active | retired | unknown
+    pub status: PublicationStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// For testing purposes, not real usage
+    pub experimental: Option<BooleanType>,
+    /// Extension element for the 'experimental' primitive field. Contains metadata and extensions.
+    pub _experimental: Option<Element>,
+    /// E.g. Patient, Practitioner, RelatedPerson, Organization, Location, Device (CodeableConcept)
+    #[serde(rename = "subjectCodeableConcept")]
+    pub subject_codeable_concept: Option<CodeableConcept>,
+    /// E.g. Patient, Practitioner, RelatedPerson, Organization, Location, Device (Reference)
+    #[serde(rename = "subjectReference")]
+    pub subject_reference: Option<Reference>,
+    /// Population basis
+    pub basis: Option<FhirTypes>,
+    /// Extension element for the 'basis' primitive field. Contains metadata and extensions.
+    pub _basis: Option<Element>,
+    /// Date last changed
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Name of the publisher/steward (organization or individual)
+    pub publisher: Option<StringType>,
+    /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
+    pub _publisher: Option<Element>,
+    /// Contact details for the publisher
+    pub contact: Option<Vec<ContactDetail>>,
+    /// Natural language description of the measure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The context that the content is intended to support
+    #[serde(rename = "useContext")]
+    pub use_context: Option<Vec<UsageContext>>,
+    /// Intended jurisdiction for measure (if applicable)
+    ///
+    /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
+    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    /// Why this measure is defined
+    pub purpose: Option<StringType>,
+    /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
+    pub _purpose: Option<Element>,
+    /// Describes the clinical usage of the measure
+    pub usage: Option<StringType>,
+    /// Extension element for the 'usage' primitive field. Contains metadata and extensions.
+    pub _usage: Option<Element>,
+    /// Use and/or publishing restrictions
+    pub copyright: Option<StringType>,
+    /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
+    pub _copyright: Option<Element>,
+    /// Copyright holder and year(s)
+    #[serde(rename = "copyrightLabel")]
+    pub copyright_label: Option<StringType>,
+    /// Extension element for the 'copyrightLabel' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_copyrightLabel")]
+    pub _copyright_label: Option<Element>,
+    /// When the measure was approved by publisher
+    #[serde(rename = "approvalDate")]
+    pub approval_date: Option<DateType>,
+    /// Extension element for the 'approvalDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_approvalDate")]
+    pub _approval_date: Option<Element>,
+    /// When the measure was last reviewed by the publisher
+    #[serde(rename = "lastReviewDate")]
+    pub last_review_date: Option<DateType>,
+    /// Extension element for the 'lastReviewDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lastReviewDate")]
+    pub _last_review_date: Option<Element>,
+    /// When the measure is expected to be used
+    #[serde(rename = "effectivePeriod")]
+    pub effective_period: Option<Period>,
+    /// The category of the measure, such as Education, Treatment, Assessment, etc
+    ///
+    /// Binding: example (High-level categorization of the definition, used for searching, sorting, and filtering.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/definition-topic
+    pub topic: Option<Vec<CodeableConcept>>,
+    /// Who authored the content
+    pub author: Option<Vec<ContactDetail>>,
+    /// Who edited the content
+    pub editor: Option<Vec<ContactDetail>>,
+    /// Who reviewed the content
+    pub reviewer: Option<Vec<ContactDetail>>,
+    /// Who endorsed the content
+    pub endorser: Option<Vec<ContactDetail>>,
+    /// Additional documentation, citations, etc
+    #[serde(rename = "relatedArtifact")]
+    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    /// Logic used by the measure
+    pub library: Option<Vec<StringType>>,
+    /// Extension element for the 'library' primitive field. Contains metadata and extensions.
+    pub _library: Option<Element>,
+    /// Disclaimer for use of the measure or its referenced content
+    pub disclaimer: Option<StringType>,
+    /// Extension element for the 'disclaimer' primitive field. Contains metadata and extensions.
+    pub _disclaimer: Option<Element>,
+    /// proportion | ratio | continuous-variable | cohort
+    ///
+    /// Binding: extensible (The scoring type of the measure.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/measure-scoring
+    pub scoring: Option<CodeableConcept>,
+    /// What units?
+    ///
+    /// Binding: example (No description)
+    ///
+    /// Available values:
+    /// - `1`: Default units
+    /// - `/1000.d`: per 1000 patient days
+    #[serde(rename = "scoringUnit")]
+    pub scoring_unit: Option<CodeableConcept>,
+    /// opportunity | all-or-nothing | linear | weighted
+    ///
+    /// Binding: extensible (The composite scoring method of the measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/composite-measure-scoring
+    #[serde(rename = "compositeScoring")]
+    pub composite_scoring: Option<CodeableConcept>,
+    /// process | outcome | structure | patient-reported-outcome | composite
+    ///
+    /// Binding: extensible (The type of measure (includes codes from 2.16.840.1.113883.1.11.20368).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// How risk adjustment is applied for this measure
+    #[serde(rename = "riskAdjustment")]
+    pub risk_adjustment: Option<StringType>,
+    /// Extension element for the 'riskAdjustment' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_riskAdjustment")]
+    pub _risk_adjustment: Option<Element>,
+    /// How is rate aggregation performed for this measure
+    #[serde(rename = "rateAggregation")]
+    pub rate_aggregation: Option<StringType>,
+    /// Extension element for the 'rateAggregation' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_rateAggregation")]
+    pub _rate_aggregation: Option<Element>,
+    /// Detailed description of why the measure exists
+    pub rationale: Option<StringType>,
+    /// Extension element for the 'rationale' primitive field. Contains metadata and extensions.
+    pub _rationale: Option<Element>,
+    /// Summary of clinical guidelines
+    #[serde(rename = "clinicalRecommendationStatement")]
+    pub clinical_recommendation_statement: Option<StringType>,
+    /// Extension element for the 'clinicalRecommendationStatement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_clinicalRecommendationStatement")]
+    pub _clinical_recommendation_statement: Option<Element>,
+    /// increase | decrease
+    #[serde(rename = "improvementNotation")]
+    pub improvement_notation: Option<CodeableConcept>,
+    /// Defined terms used in the measure documentation
+    pub term: Option<Vec<MeasureTerm>>,
+    /// Additional guidance for implementers (deprecated)
+    pub guidance: Option<StringType>,
+    /// Extension element for the 'guidance' primitive field. Contains metadata and extensions.
+    pub _guidance: Option<Element>,
+    /// Population criteria group
+    pub group: Option<Vec<MeasureGroup>>,
+    /// What other data should be reported with the measure
+    #[serde(rename = "supplementalData")]
+    pub supplemental_data: Option<Vec<MeasureSupplementaldata>>,
+}
+/// Measure nested structure for the 'group' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Population criteria
+    pub population: Option<Vec<MeasureGroupPopulation>>,
+    /// Stratifier criteria for the measure
+    pub stratifier: Option<Vec<MeasureGroupStratifier>>,
+    /// Unique id for group in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the group
+    ///
+    /// Binding: example (Example of measure groups.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-group-example
+    pub code: Option<CodeableConcept>,
+    /// Summary description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// process | outcome | structure | patient-reported-outcome | composite
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-type
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<CodeableConcept>>,
+    /// E.g. Patient, Practitioner, RelatedPerson, Organization, Location, Device (CodeableConcept)
+    #[serde(rename = "subjectCodeableConcept")]
+    pub subject_codeable_concept: Option<CodeableConcept>,
+    /// E.g. Patient, Practitioner, RelatedPerson, Organization, Location, Device (Reference)
+    #[serde(rename = "subjectReference")]
+    pub subject_reference: Option<Reference>,
+    /// Population basis
+    pub basis: Option<FhirTypes>,
+    /// Extension element for the 'basis' primitive field. Contains metadata and extensions.
+    pub _basis: Option<Element>,
+    /// proportion | ratio | continuous-variable | cohort
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/measure-scoring
+    pub scoring: Option<CodeableConcept>,
+    /// What units?
+    ///
+    /// Binding: example (No description)
+    ///
+    /// Available values:
+    /// - `1`: Default units
+    /// - `/1000.d`: per 1000 patient days
+    #[serde(rename = "scoringUnit")]
+    pub scoring_unit: Option<CodeableConcept>,
+    /// How is rate aggregation performed for this measure
+    #[serde(rename = "rateAggregation")]
+    pub rate_aggregation: Option<StringType>,
+    /// Extension element for the 'rateAggregation' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_rateAggregation")]
+    pub _rate_aggregation: Option<Element>,
+    /// increase | decrease
+    #[serde(rename = "improvementNotation")]
+    pub improvement_notation: Option<CodeableConcept>,
+    /// Logic used by the measure group
+    pub library: Option<Vec<StringType>>,
+    /// Extension element for the 'library' primitive field. Contains metadata and extensions.
+    pub _library: Option<Element>,
+}
+/// Measure nested structure for the 'supplementalData' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureSupplementaldata {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for supplementalData in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the supplemental data
+    ///
+    /// Binding: example (Meaning of the supplemental data.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-supplemental-data-example
+    pub code: Option<CodeableConcept>,
+    /// supplemental-data | risk-adjustment-factor
+    ///
+    /// Binding: extensible (The intended usage for supplemental data elements in the measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-data-usage
+    pub usage: Option<Vec<CodeableConcept>>,
+    /// The human readable description of this supplemental data
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Expression describing additional data to be reported
+    pub criteria: Expression,
+}
+/// Measure nested structure for the 'term' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureTerm {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What term?
+    ///
+    /// Binding: example (Codeable representations of measure definition terms.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-definition-example
+    pub code: Option<CodeableConcept>,
+    /// Meaning of the term
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+}
+/// MeasureGroup nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for population in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this population criteria
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The criteria that defines this population
+    pub criteria: Option<Expression>,
+    /// A group resource that defines this population
+    #[serde(rename = "groupDefinition")]
+    pub group_definition: Option<Reference>,
+    /// Which population
+    #[serde(rename = "inputPopulationId")]
+    pub input_population_id: Option<StringType>,
+    /// Extension element for the 'inputPopulationId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_inputPopulationId")]
+    pub _input_population_id: Option<Element>,
+    /// Aggregation method for a measure score (e.g. sum, average, median, minimum, maximum, count)
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-aggregate-method
+    #[serde(rename = "aggregateMethod")]
+    pub aggregate_method: Option<CodeableConcept>,
+}
+/// MeasureGroupStratifier nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifierComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for stratifier component in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the stratifier component
+    ///
+    /// Binding: example (Meaning of the stratifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier component
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Component of how the measure should be stratified
+    pub criteria: Option<Expression>,
+    /// A group resource that defines this population
+    #[serde(rename = "groupDefinition")]
+    pub group_definition: Option<Reference>,
+}
+/// MeasureGroup nested structure for the 'stratifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupStratifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Unique id for stratifier in measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// Meaning of the stratifier
+    ///
+    /// Binding: example (Meaning of the stratifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this stratifier
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How the measure should be stratified
+    pub criteria: Option<Expression>,
+    /// A group resource that defines this population
+    #[serde(rename = "groupDefinition")]
+    pub group_definition: Option<Reference>,
+}
+
+impl Default for Measure {
+    fn default() -> Self {
+        Self {
+            base: DomainResource::default(),
+            url: Default::default(),
+            _url: Default::default(),
+            identifier: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            version_algorithm_string: Default::default(),
+            version_algorithm_coding: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            subtitle: Default::default(),
+            _subtitle: Default::default(),
+            status: PublicationStatus::default(),
+            _status: Default::default(),
+            experimental: Default::default(),
+            _experimental: Default::default(),
+            subject_codeable_concept: Default::default(),
+            subject_reference: Default::default(),
+            basis: Default::default(),
+            _basis: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            publisher: Default::default(),
+            _publisher: Default::default(),
+            contact: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            use_context: Default::default(),
+            jurisdiction: Default::default(),
+            purpose: Default::default(),
+            _purpose: Default::default(),
+            usage: Default::default(),
+            _usage: Default::default(),
+            copyright: Default::default(),
+            _copyright: Default::default(),
+            copyright_label: Default::default(),
+            _copyright_label: Default::default(),
+            approval_date: Default::default(),
+            _approval_date: Default::default(),
+            last_review_date: Default::default(),
+            _last_review_date: Default::default(),
+            effective_period: Default::default(),
+            topic: Default::default(),
+            author: Default::default(),
+            editor: Default::default(),
+            reviewer: Default::default(),
+            endorser: Default::default(),
+            related_artifact: Default::default(),
+            library: Default::default(),
+            _library: Default::default(),
+            disclaimer: Default::default(),
+            _disclaimer: Default::default(),
+            scoring: Default::default(),
+            scoring_unit: Default::default(),
+            composite_scoring: Default::default(),
+            type_: Default::default(),
+            risk_adjustment: Default::default(),
+            _risk_adjustment: Default::default(),
+            rate_aggregation: Default::default(),
+            _rate_aggregation: Default::default(),
+            rationale: Default::default(),
+            _rationale: Default::default(),
+            clinical_recommendation_statement: Default::default(),
+            _clinical_recommendation_statement: Default::default(),
+            improvement_notation: Default::default(),
+            term: Default::default(),
+            guidance: Default::default(),
+            _guidance: Default::default(),
+            group: Default::default(),
+            supplemental_data: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            population: Default::default(),
+            stratifier: Default::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            subject_codeable_concept: Default::default(),
+            subject_reference: Default::default(),
+            basis: Default::default(),
+            _basis: Default::default(),
+            scoring: Default::default(),
+            scoring_unit: Default::default(),
+            rate_aggregation: Default::default(),
+            _rate_aggregation: Default::default(),
+            improvement_notation: Default::default(),
+            library: Default::default(),
+            _library: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureSupplementaldata {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            usage: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureTerm {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+            group_definition: Default::default(),
+            input_population_id: Default::default(),
+            _input_population_id: Default::default(),
+            aggregate_method: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupStratifierComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+            group_definition: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupStratifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
+            group_definition: Default::default(),
+        }
+    }
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("cnl-0", rh_foundation::Severity::Warning, "Name should be usable as an identifier for the module by machine processing applications such as code generation", "name.exists() implies name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')"),
+    rh_foundation::Invariant::new("cnl-1", rh_foundation::Severity::Warning, "URL should not contain | or # - these characters make processing canonical references problematic", "exists() implies matches('^[^|# ]+$')"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+    rh_foundation::Invariant::new("mea-1", rh_foundation::Severity::Error, "Stratifier SHALL be either a single criteria or a set of criteria components", "group.stratifier.all((code | description | criteria).exists() xor component.exists())"),
+    rh_foundation::Invariant::new("mea-2", rh_foundation::Severity::Warning, "Link ids should be 255 characters or less", "$this.length() <= 255"),
+    rh_foundation::Invariant::new("mea-3", rh_foundation::Severity::Warning, "Link ids should be 255 characters or less", "$this.length() <= 255"),
+    rh_foundation::Invariant::new("mea-4", rh_foundation::Severity::Warning, "Link ids should be 255 characters or less", "$this.length() <= 255"),
+    rh_foundation::Invariant::new("mea-5", rh_foundation::Severity::Warning, "Link ids should be 255 characters or less", "$this.length() <= 255"),
+    rh_foundation::Invariant::new("mea-6", rh_foundation::Severity::Warning, "Link ids should be 255 characters or less", "$this.length() <= 255"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::ElementBinding::new("Measure.basis", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/fhir-types|5.0.0"),
+    rh_foundation::ElementBinding::new("Measure.group.basis", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/fhir-types|5.0.0"),
+    rh_foundation::ElementBinding::new("Measure.group.improvementNotation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-improvement-notation|5.0.0"),
+    rh_foundation::ElementBinding::new("Measure.improvementNotation", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/measure-improvement-notation|5.0.0").with_description("Observation values that indicate what change in a measurement value or score is indicative of an improvement in the measured item or scored issue."),
+    rh_foundation::ElementBinding::new("Measure.language", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/all-languages|5.0.0").with_description("IETF language tag for a human language"),
+    rh_foundation::ElementBinding::new("Measure.status", rh_foundation::BindingStrength::Required, "http://hl7.org/fhir/ValueSet/publication-status|5.0.0").with_description("The lifecycle status of an artifact."),
+]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("Measure.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.contained", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.url", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.identifier", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.version", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.versionAlgorithm[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.name", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.title", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.subtitle", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.experimental", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.basis", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.date", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.publisher", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.contact", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.useContext", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.jurisdiction", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.purpose", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.usage", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.copyright", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.copyrightLabel", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.approvalDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.lastReviewDate", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.effectivePeriod", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.topic", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.author", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.editor", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.reviewer", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.endorser", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.relatedArtifact", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.library", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.disclaimer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.scoring", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.scoringUnit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.compositeScoring", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.type", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.riskAdjustment", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.rateAggregation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.rationale", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.clinicalRecommendationStatement",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.improvementNotation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.term", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.term.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.term.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.term.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.term.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.term.definition", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.guidance", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.extension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.linkId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.description", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.type", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.subject[x]", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.basis", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.scoring", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.scoringUnit", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.rateAggregation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.improvementNotation", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.library", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.population", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.population.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.population.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.population.linkId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.population.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.population.criteria", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.groupDefinition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.inputPopulationId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.population.aggregateMethod",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.linkId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.criteria", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.groupDefinition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.group.stratifier.component", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.id",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.extension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.linkId",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.code",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.criteria",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new(
+                "Measure.group.stratifier.component.groupDefinition",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData", 0, None),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.extension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.supplementalData.modifierExtension",
+                0,
+                None,
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.linkId", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.code", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.usage", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "Measure.supplementalData.description",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("Measure.supplementalData.criteria", 1, Some(1)),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for Measure {
+    fn id(&self) -> Option<String> {
+        self.base.base.id.clone()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.base.meta.clone()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.base.implicit_rules.clone()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.base.language.clone()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for Measure {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.id = Some(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.meta = Some(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.implicit_rules = Some(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base.base.language = Some(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for Measure {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceAccessors for Measure {
+    fn text(&self) -> Option<crate::datatypes::narrative::Narrative> {
+        self.base.text.clone()
+    }
+    fn contained(&self) -> &[crate::resources::resource::Resource] {
+        self.base.contained.as_deref().unwrap_or(&[])
+    }
+    fn extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.extension.as_deref().unwrap_or(&[])
+    }
+    fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
+        self.base.modifier_extension.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceMutators for Measure {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_text(self, value: crate::datatypes::narrative::Narrative) -> Self {
+        let mut resource = self.clone();
+        resource.base.text = Some(value);
+        resource
+    }
+    fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
+        let mut resource = self.clone();
+        resource.base.contained = Some(value);
+        resource
+    }
+    fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .contained
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.extension = Some(value);
+        resource
+    }
+    fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
+        let mut resource = self.clone();
+        resource.base.modifier_extension = Some(value);
+        resource
+    }
+    fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
+        let mut resource = self.clone();
+        resource
+            .base
+            .modifier_extension
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::domain_resource::DomainResourceExistence for Measure {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+}
+
+impl crate::traits::measure::MeasureAccessors for Measure {
+    fn url(&self) -> Option<StringType> {
+        self.url.clone()
+    }
+    fn identifier(&self) -> &[Identifier] {
+        self.identifier.as_deref().unwrap_or(&[])
+    }
+    fn version(&self) -> Option<StringType> {
+        self.version.clone()
+    }
+    fn name(&self) -> Option<StringType> {
+        self.name.clone()
+    }
+    fn title(&self) -> Option<StringType> {
+        self.title.clone()
+    }
+    fn subtitle(&self) -> Option<StringType> {
+        self.subtitle.clone()
+    }
+    fn status(&self) -> PublicationStatus {
+        self.status.clone()
+    }
+    fn experimental(&self) -> Option<BooleanType> {
+        self.experimental
+    }
+    fn basis(&self) -> Option<FhirTypes> {
+        self.basis.clone()
+    }
+    fn date(&self) -> Option<DateTimeType> {
+        self.date.clone()
+    }
+    fn publisher(&self) -> Option<StringType> {
+        self.publisher.clone()
+    }
+    fn contact(&self) -> &[ContactDetail] {
+        self.contact.as_deref().unwrap_or(&[])
+    }
+    fn description(&self) -> Option<StringType> {
+        self.description.clone()
+    }
+    fn use_context(&self) -> &[UsageContext] {
+        self.use_context.as_deref().unwrap_or(&[])
+    }
+    fn jurisdiction(&self) -> &[CodeableConcept] {
+        self.jurisdiction.as_deref().unwrap_or(&[])
+    }
+    fn purpose(&self) -> Option<StringType> {
+        self.purpose.clone()
+    }
+    fn usage(&self) -> Option<StringType> {
+        self.usage.clone()
+    }
+    fn copyright(&self) -> Option<StringType> {
+        self.copyright.clone()
+    }
+    fn copyright_label(&self) -> Option<StringType> {
+        self.copyright_label.clone()
+    }
+    fn approval_date(&self) -> Option<DateType> {
+        self.approval_date.clone()
+    }
+    fn last_review_date(&self) -> Option<DateType> {
+        self.last_review_date.clone()
+    }
+    fn effective_period(&self) -> Option<Period> {
+        self.effective_period.clone()
+    }
+    fn topic(&self) -> &[CodeableConcept] {
+        self.topic.as_deref().unwrap_or(&[])
+    }
+    fn author(&self) -> &[ContactDetail] {
+        self.author.as_deref().unwrap_or(&[])
+    }
+    fn editor(&self) -> &[ContactDetail] {
+        self.editor.as_deref().unwrap_or(&[])
+    }
+    fn reviewer(&self) -> &[ContactDetail] {
+        self.reviewer.as_deref().unwrap_or(&[])
+    }
+    fn endorser(&self) -> &[ContactDetail] {
+        self.endorser.as_deref().unwrap_or(&[])
+    }
+    fn related_artifact(&self) -> &[RelatedArtifact] {
+        self.related_artifact.as_deref().unwrap_or(&[])
+    }
+    fn library(&self) -> &[StringType] {
+        self.library.as_deref().unwrap_or(&[])
+    }
+    fn disclaimer(&self) -> Option<StringType> {
+        self.disclaimer.clone()
+    }
+    fn scoring(&self) -> Option<CodeableConcept> {
+        self.scoring.clone()
+    }
+    fn scoring_unit(&self) -> Option<CodeableConcept> {
+        self.scoring_unit.clone()
+    }
+    fn composite_scoring(&self) -> Option<CodeableConcept> {
+        self.composite_scoring.clone()
+    }
+    fn type_(&self) -> &[CodeableConcept] {
+        self.type_.as_deref().unwrap_or(&[])
+    }
+    fn risk_adjustment(&self) -> Option<StringType> {
+        self.risk_adjustment.clone()
+    }
+    fn rate_aggregation(&self) -> Option<StringType> {
+        self.rate_aggregation.clone()
+    }
+    fn rationale(&self) -> Option<StringType> {
+        self.rationale.clone()
+    }
+    fn clinical_recommendation_statement(&self) -> Option<StringType> {
+        self.clinical_recommendation_statement.clone()
+    }
+    fn improvement_notation(&self) -> Option<CodeableConcept> {
+        self.improvement_notation.clone()
+    }
+    fn term(&self) -> &[MeasureTerm] {
+        self.term.as_deref().unwrap_or(&[])
+    }
+    fn guidance(&self) -> Option<StringType> {
+        self.guidance.clone()
+    }
+    fn group(&self) -> &[MeasureGroup] {
+        self.group.as_deref().unwrap_or(&[])
+    }
+    fn supplemental_data(&self) -> &[MeasureSupplementaldata] {
+        self.supplemental_data.as_deref().unwrap_or(&[])
+    }
+}
+
+impl crate::traits::measure::MeasureMutators for Measure {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_url(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.url = Some(value);
+        resource
+    }
+    fn set_identifier(self, value: Vec<Identifier>) -> Self {
+        let mut resource = self.clone();
+        resource.identifier = Some(value);
+        resource
+    }
+    fn add_identifier(self, item: Identifier) -> Self {
+        let mut resource = self.clone();
+        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_version(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.version = Some(value);
+        resource
+    }
+    fn set_name(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.name = Some(value);
+        resource
+    }
+    fn set_title(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.title = Some(value);
+        resource
+    }
+    fn set_subtitle(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.subtitle = Some(value);
+        resource
+    }
+    fn set_status(self, value: PublicationStatus) -> Self {
+        let mut resource = self.clone();
+        resource.status = value;
+        resource
+    }
+    fn set_experimental(self, value: bool) -> Self {
+        let mut resource = self.clone();
+        resource.experimental = Some(value);
+        resource
+    }
+    fn set_basis(self, value: FhirTypes) -> Self {
+        let mut resource = self.clone();
+        resource.basis = Some(value);
+        resource
+    }
+    fn set_date(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.date = Some(value);
+        resource
+    }
+    fn set_publisher(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.publisher = Some(value);
+        resource
+    }
+    fn set_contact(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.contact = Some(value);
+        resource
+    }
+    fn add_contact(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_description(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.description = Some(value);
+        resource
+    }
+    fn set_use_context(self, value: Vec<UsageContext>) -> Self {
+        let mut resource = self.clone();
+        resource.use_context = Some(value);
+        resource
+    }
+    fn add_use_context(self, item: UsageContext) -> Self {
+        let mut resource = self.clone();
+        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.jurisdiction = Some(value);
+        resource
+    }
+    fn add_jurisdiction(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource
+            .jurisdiction
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_purpose(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.purpose = Some(value);
+        resource
+    }
+    fn set_usage(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.usage = Some(value);
+        resource
+    }
+    fn set_copyright(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.copyright = Some(value);
+        resource
+    }
+    fn set_copyright_label(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.copyright_label = Some(value);
+        resource
+    }
+    fn set_approval_date(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.approval_date = Some(value);
+        resource
+    }
+    fn set_last_review_date(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.last_review_date = Some(value);
+        resource
+    }
+    fn set_effective_period(self, value: Period) -> Self {
+        let mut resource = self.clone();
+        resource.effective_period = Some(value);
+        resource
+    }
+    fn set_topic(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.topic = Some(value);
+        resource
+    }
+    fn add_topic(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.topic.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_author(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.author = Some(value);
+        resource
+    }
+    fn add_author(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_editor(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.editor = Some(value);
+        resource
+    }
+    fn add_editor(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.reviewer = Some(value);
+        resource
+    }
+    fn add_reviewer(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
+        let mut resource = self.clone();
+        resource.endorser = Some(value);
+        resource
+    }
+    fn add_endorser(self, item: ContactDetail) -> Self {
+        let mut resource = self.clone();
+        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
+        let mut resource = self.clone();
+        resource.related_artifact = Some(value);
+        resource
+    }
+    fn add_related_artifact(self, item: RelatedArtifact) -> Self {
+        let mut resource = self.clone();
+        resource
+            .related_artifact
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+    fn set_library(self, value: Vec<String>) -> Self {
+        let mut resource = self.clone();
+        resource.library = Some(value);
+        resource
+    }
+    fn add_library(self, item: String) -> Self {
+        let mut resource = self.clone();
+        resource.library.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_disclaimer(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.disclaimer = Some(value);
+        resource
+    }
+    fn set_scoring(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.scoring = Some(value);
+        resource
+    }
+    fn set_scoring_unit(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.scoring_unit = Some(value);
+        resource
+    }
+    fn set_composite_scoring(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.composite_scoring = Some(value);
+        resource
+    }
+    fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
+        let mut resource = self.clone();
+        resource.type_ = Some(value);
+        resource
+    }
+    fn add_type_(self, item: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_risk_adjustment(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.risk_adjustment = Some(value);
+        resource
+    }
+    fn set_rate_aggregation(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.rate_aggregation = Some(value);
+        resource
+    }
+    fn set_rationale(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.rationale = Some(value);
+        resource
+    }
+    fn set_clinical_recommendation_statement(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.clinical_recommendation_statement = Some(value);
+        resource
+    }
+    fn set_improvement_notation(self, value: CodeableConcept) -> Self {
+        let mut resource = self.clone();
+        resource.improvement_notation = Some(value);
+        resource
+    }
+    fn set_term(self, value: Vec<MeasureTerm>) -> Self {
+        let mut resource = self.clone();
+        resource.term = Some(value);
+        resource
+    }
+    fn add_term(self, item: MeasureTerm) -> Self {
+        let mut resource = self.clone();
+        resource.term.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_guidance(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.guidance = Some(value);
+        resource
+    }
+    fn set_group(self, value: Vec<MeasureGroup>) -> Self {
+        let mut resource = self.clone();
+        resource.group = Some(value);
+        resource
+    }
+    fn add_group(self, item: MeasureGroup) -> Self {
+        let mut resource = self.clone();
+        resource.group.get_or_insert_with(Vec::new).push(item);
+        resource
+    }
+    fn set_supplemental_data(self, value: Vec<MeasureSupplementaldata>) -> Self {
+        let mut resource = self.clone();
+        resource.supplemental_data = Some(value);
+        resource
+    }
+    fn add_supplemental_data(self, item: MeasureSupplementaldata) -> Self {
+        let mut resource = self.clone();
+        resource
+            .supplemental_data
+            .get_or_insert_with(Vec::new)
+            .push(item);
+        resource
+    }
+}
+
+impl crate::traits::measure::MeasureExistence for Measure {
+    fn has_id(&self) -> bool {
+        self.base.base.id.is_some()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.base.meta.is_some()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.base.implicit_rules.is_some()
+    }
+    fn has_language(&self) -> bool {
+        self.base.base.language.is_some()
+    }
+    fn has_text(&self) -> bool {
+        self.base.text.is_some()
+    }
+    fn has_contained(&self) -> bool {
+        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+    }
+    fn has_extension(&self) -> bool {
+        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+    }
+    fn has_modifier_extension(&self) -> bool {
+        self.base
+            .modifier_extension
+            .as_ref()
+            .is_some_and(|m| !m.is_empty())
+    }
+    fn has_subject(&self) -> bool {
+        self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
+    }
+    fn has_url(&self) -> bool {
+        self.url.is_some()
+    }
+    fn has_identifier(&self) -> bool {
+        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_version(&self) -> bool {
+        self.version.is_some()
+    }
+    fn has_name(&self) -> bool {
+        self.name.is_some()
+    }
+    fn has_title(&self) -> bool {
+        self.title.is_some()
+    }
+    fn has_subtitle(&self) -> bool {
+        self.subtitle.is_some()
+    }
+    fn has_status(&self) -> bool {
+        true
+    }
+    fn has_experimental(&self) -> bool {
+        self.experimental.is_some()
+    }
+    fn has_basis(&self) -> bool {
+        self.basis.is_some()
+    }
+    fn has_date(&self) -> bool {
+        self.date.is_some()
+    }
+    fn has_publisher(&self) -> bool {
+        self.publisher.is_some()
+    }
+    fn has_contact(&self) -> bool {
+        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_description(&self) -> bool {
+        self.description.is_some()
+    }
+    fn has_use_context(&self) -> bool {
+        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_jurisdiction(&self) -> bool {
+        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_purpose(&self) -> bool {
+        self.purpose.is_some()
+    }
+    fn has_usage(&self) -> bool {
+        self.usage.is_some()
+    }
+    fn has_copyright(&self) -> bool {
+        self.copyright.is_some()
+    }
+    fn has_copyright_label(&self) -> bool {
+        self.copyright_label.is_some()
+    }
+    fn has_approval_date(&self) -> bool {
+        self.approval_date.is_some()
+    }
+    fn has_last_review_date(&self) -> bool {
+        self.last_review_date.is_some()
+    }
+    fn has_effective_period(&self) -> bool {
+        self.effective_period.is_some()
+    }
+    fn has_topic(&self) -> bool {
+        self.topic.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_author(&self) -> bool {
+        self.author.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_editor(&self) -> bool {
+        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_reviewer(&self) -> bool {
+        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_endorser(&self) -> bool {
+        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_related_artifact(&self) -> bool {
+        self.related_artifact
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+    fn has_library(&self) -> bool {
+        self.library.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_disclaimer(&self) -> bool {
+        self.disclaimer.is_some()
+    }
+    fn has_scoring(&self) -> bool {
+        self.scoring.is_some()
+    }
+    fn has_scoring_unit(&self) -> bool {
+        self.scoring_unit.is_some()
+    }
+    fn has_composite_scoring(&self) -> bool {
+        self.composite_scoring.is_some()
+    }
+    fn has_type_(&self) -> bool {
+        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_risk_adjustment(&self) -> bool {
+        self.risk_adjustment.is_some()
+    }
+    fn has_rate_aggregation(&self) -> bool {
+        self.rate_aggregation.is_some()
+    }
+    fn has_rationale(&self) -> bool {
+        self.rationale.is_some()
+    }
+    fn has_clinical_recommendation_statement(&self) -> bool {
+        self.clinical_recommendation_statement.is_some()
+    }
+    fn has_improvement_notation(&self) -> bool {
+        self.improvement_notation.is_some()
+    }
+    fn has_term(&self) -> bool {
+        self.term.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_guidance(&self) -> bool {
+        self.guidance.is_some()
+    }
+    fn has_group(&self) -> bool {
+        self.group.as_ref().is_some_and(|v| !v.is_empty())
+    }
+    fn has_supplemental_data(&self) -> bool {
+        self.supplemental_data
+            .as_ref()
+            .is_some_and(|v| !v.is_empty())
+    }
+}
+
+impl crate::validation::ValidatableResource for Measure {
+    fn resource_type(&self) -> &'static str {
+        "Measure"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/Measure")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::measure::{MeasureAccessors, MeasureExistence, MeasureMutators};

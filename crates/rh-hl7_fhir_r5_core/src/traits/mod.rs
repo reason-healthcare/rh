@@ -1,0 +1,251 @@
+//! FHIR traits for common functionality
+//!
+//! This module contains traits that define common interfaces for FHIR types.
+
+// Placeholder traits - these would be generated based on FHIR structure definitions
+
+/// Trait for types that have extensions
+pub trait HasExtensions {
+    /// Get the extensions for this type
+    fn extensions(&self) -> &[crate::datatypes::extension::Extension];
+}
+
+/// Trait for FHIR resources
+pub trait Resource {
+    /// Get the resource type name
+    fn resource_type(&self) -> &'static str;
+
+    /// Get the logical id of this resource
+    fn id(&self) -> Option<&str>;
+
+    /// Get the metadata about this resource
+    fn meta(&self) -> Option<&crate::datatypes::meta::Meta>;
+}
+
+/// Trait for domain resources (resources that can have narrative)
+pub trait DomainResource: Resource + HasExtensions {
+    /// Get the narrative text for this domain resource
+    fn narrative(&self) -> Option<&crate::datatypes::narrative::Narrative>;
+}
+pub mod account;
+pub mod activity_definition;
+pub mod actor_definition;
+pub mod actualgroup;
+pub mod administrable_product_definition;
+pub mod adverse_event;
+pub mod allergy_intolerance;
+pub mod appointment;
+pub mod appointment_response;
+pub mod artifact_assessment;
+pub mod audit_event;
+pub mod basic;
+pub mod batch_bundle;
+pub mod batch_response_bundle;
+pub mod binary;
+pub mod biologically_derived_product;
+pub mod biologically_derived_product_dispense;
+pub mod bmi;
+pub mod body_structure;
+pub mod bodyheight;
+pub mod bodytemp;
+pub mod bodyweight;
+pub mod bp;
+pub mod bundle;
+pub mod canonical_resource;
+pub mod capability_statement;
+pub mod care_plan;
+pub mod care_team;
+pub mod catalog;
+pub mod cdshooksguidanceresponse;
+pub mod cdshooksrequestorchestration;
+pub mod cdshooksserviceplandefinition;
+pub mod charge_item;
+pub mod charge_item_definition;
+pub mod cholesterol;
+pub mod citation;
+pub mod claim;
+pub mod claim_response;
+pub mod clinical_impression;
+pub mod clinical_use_definition;
+pub mod clinicaldocument;
+pub mod code_system;
+pub mod communication;
+pub mod communication_request;
+pub mod compartment_definition;
+pub mod composition;
+pub mod computableplandefinition;
+pub mod computablevalueset;
+pub mod concept_map;
+pub mod condition;
+pub mod condition_definition;
+pub mod consent;
+pub mod contract;
+pub mod coverage;
+pub mod coverage_eligibility_request;
+pub mod coverage_eligibility_response;
+pub mod cqllibrary;
+pub mod detected_issue;
+pub mod device;
+pub mod device_association;
+pub mod device_definition;
+pub mod device_dispense;
+pub mod device_metric;
+pub mod device_request;
+pub mod device_usage;
+pub mod devicemetricobservation;
+pub mod diagnostic_report;
+pub mod document_bundle;
+pub mod document_reference;
+pub mod domain_resource;
+pub mod ebmrecommendation;
+pub mod elmlibrary;
+pub mod encounter;
+pub mod encounter_history;
+pub mod endpoint;
+pub mod enrollment_request;
+pub mod enrollment_response;
+pub mod episode_of_care;
+pub mod event_definition;
+pub mod evidence;
+pub mod evidence_report;
+pub mod evidence_variable;
+pub mod executablevalueset;
+pub mod explanation_of_benefit;
+pub mod family_member_history;
+pub mod familymemberhistory_genetic;
+pub mod fhirpathlibrary;
+pub mod flag;
+pub mod formulary_item;
+pub mod genomic_study;
+pub mod goal;
+pub mod graph_definition;
+pub mod group;
+pub mod groupdefinition;
+pub mod guidance_response;
+pub mod hdlcholesterol;
+pub mod headcircum;
+pub mod healthcare_service;
+pub mod heartrate;
+pub mod history_bundle;
+pub mod imaging_selection;
+pub mod imaging_study;
+pub mod immunization;
+pub mod immunization_evaluation;
+pub mod immunization_recommendation;
+pub mod implementation_guide;
+pub mod ingredient;
+pub mod insurance_plan;
+pub mod inventory_item;
+pub mod inventory_report;
+pub mod invoice;
+pub mod ldlcholesterol;
+pub mod library;
+pub mod linkage;
+pub mod lipidprofile;
+pub mod list;
+pub mod location;
+pub mod logiclibrary;
+pub mod manufactured_item_definition;
+pub mod measure;
+pub mod measure_report;
+pub mod medication;
+pub mod medication_administration;
+pub mod medication_dispense;
+pub mod medication_knowledge;
+pub mod medication_request;
+pub mod medication_statement;
+pub mod medicinal_product_definition;
+pub mod message_definition;
+pub mod message_header;
+pub mod metadata_resource;
+pub mod modelinfolibrary;
+pub mod moduledefinitionlibrary;
+pub mod molecular_sequence;
+pub mod naming_system;
+pub mod nutrition_intake;
+pub mod nutrition_order;
+pub mod nutrition_product;
+pub mod observation;
+pub mod observation_definition;
+pub mod operation_definition;
+pub mod operation_outcome;
+pub mod organization;
+pub mod organization_affiliation;
+pub mod oxygensat;
+pub mod packaged_product_definition;
+pub mod parameters;
+pub mod patient;
+pub mod payment_notice;
+pub mod payment_reconciliation;
+pub mod permission;
+pub mod person;
+pub mod plan_definition;
+pub mod practitioner;
+pub mod practitioner_role;
+pub mod procedure;
+pub mod provenance;
+pub mod provenance_relevant_history;
+pub mod publishableactivitydefinition;
+pub mod publishablecodesystem;
+pub mod publishableconceptmap;
+pub mod publishablelibrary;
+pub mod publishablemeasure;
+pub mod publishablenamingsystem;
+pub mod publishableplandefinition;
+pub mod publishablevalueset;
+pub mod questionnaire;
+pub mod questionnaire_response;
+pub mod regulated_authorization;
+pub mod related_person;
+pub mod request_orchestration;
+pub mod requirements;
+pub mod research_study;
+pub mod research_subject;
+pub mod resource;
+pub mod resprate;
+pub mod risk_assessment;
+pub mod schedule;
+pub mod search_parameter;
+pub mod search_set_bundle;
+pub mod service_request;
+pub mod shareableactivitydefinition;
+pub mod shareablecodesystem;
+pub mod shareableconceptmap;
+pub mod shareablelibrary;
+pub mod shareablemeasure;
+pub mod shareablenamingsystem;
+pub mod shareableplandefinition;
+pub mod shareabletestscript;
+pub mod shareablevalueset;
+pub mod slot;
+pub mod specimen;
+pub mod specimen_definition;
+pub mod structure_definition;
+pub mod structure_map;
+pub mod subscription;
+pub mod subscription_notification_bundle;
+pub mod subscription_status;
+pub mod subscription_topic;
+pub mod substance;
+pub mod substance_definition;
+pub mod substance_nucleic_acid;
+pub mod substance_polymer;
+pub mod substance_protein;
+pub mod substance_reference_information;
+pub mod substance_source_material;
+pub mod supply_delivery;
+pub mod supply_request;
+pub mod task;
+pub mod terminology_capabilities;
+pub mod test_plan;
+pub mod test_report;
+pub mod test_script;
+pub mod transaction_bundle;
+pub mod transaction_response_bundle;
+pub mod transport;
+pub mod triglyceride;
+pub mod value_set;
+pub mod verification_result;
+pub mod vision_prescription;
+pub mod vitalsigns;
+pub mod vitalspanel;

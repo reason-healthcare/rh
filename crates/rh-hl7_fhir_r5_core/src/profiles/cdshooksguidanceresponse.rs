@@ -1,0 +1,197 @@
+use crate::resources::guidance_response::GuidanceResponse;
+use serde::{Deserialize, Serialize};
+/// C D S  Hooks  Guidance Response
+///
+/// Defines a GuidanceResponse that represents the response container for a CDS Hooks response
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/cdshooksguidanceresponse
+/// - Version: 5.0.0
+/// - Kind: resource
+/// - Type: GuidanceResponse
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/GuidanceResponse
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Cdshooksguidanceresponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: GuidanceResponse,
+}
+
+/// FHIR invariants for this resource/datatype
+///
+/// These constraints are defined in the FHIR specification and must be validated
+/// when creating or modifying instances of this type.
+pub static INVARIANTS: once_cell::sync::Lazy<Vec<rh_foundation::Invariant>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+    rh_foundation::Invariant::new("dom-2", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL NOT contain nested Resources", "contained.contained.empty()"),
+    rh_foundation::Invariant::new("dom-3", rh_foundation::Severity::Error, "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource", "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().ofType(canonical) | %resource.descendants().ofType(uri) | %resource.descendants().ofType(url))) or descendants().where(reference = '#').exists() or descendants().where(ofType(canonical) = '#').exists() or descendants().where(ofType(canonical) = '#').exists()).not()).trace('unmatched', id).empty()"),
+    rh_foundation::Invariant::new("dom-4", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated", "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()"),
+    rh_foundation::Invariant::new("dom-5", rh_foundation::Severity::Error, "If a resource is contained in another resource, it SHALL NOT have a security label", "contained.meta.security.empty()"),
+    rh_foundation::Invariant::new("dom-6", rh_foundation::Severity::Warning, "A resource should have narrative for robust management", "text.`div`.exists()"),
+    rh_foundation::Invariant::new("ele-1", rh_foundation::Severity::Error, "All FHIR elements must have a @value or children", "hasValue() or (children().count() > id.count())"),
+    rh_foundation::Invariant::new("ext-1", rh_foundation::Severity::Error, "Must have either extensions or value[x], not both", "extension.exists() != value.exists()"),
+]
+    });
+
+/// FHIR required bindings for this resource/datatype
+///
+/// These bindings define which ValueSets must be used for coded elements.
+/// Only 'required' strength bindings are included (extensible/preferred are not enforced).
+pub static BINDINGS: once_cell::sync::Lazy<Vec<rh_foundation::ElementBinding>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementBinding::new(
+                "GuidanceResponse.language",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/all-languages|5.0.0",
+            )
+            .with_description("IETF language tag for a human language"),
+            rh_foundation::ElementBinding::new(
+                "GuidanceResponse.status",
+                rh_foundation::BindingStrength::Required,
+                "http://hl7.org/fhir/ValueSet/guidance-response-status|5.0.0",
+            )
+            .with_description("The status of a guidance response."),
+        ]
+    });
+
+/// FHIR cardinality constraints for this resource/datatype
+///
+/// These define the minimum and maximum occurrences allowed for each element.
+pub static CARDINALITIES: once_cell::sync::Lazy<Vec<rh_foundation::ElementCardinality>> =
+    once_cell::sync::Lazy::new(|| {
+        vec![
+            rh_foundation::ElementCardinality::new("GuidanceResponse", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.id", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.meta", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.implicitRules", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.language", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.text", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.contained", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.extension", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.extension", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.modifierExtension", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "GuidanceResponse.requestIdentifier",
+                1,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.identifier", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.module[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.module[x]", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.status", 1, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.subject", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.encounter", 0, Some(1)),
+            rh_foundation::ElementCardinality::new(
+                "GuidanceResponse.occurrenceDateTime",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.performer", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.reason", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.note", 0, None),
+            rh_foundation::ElementCardinality::new(
+                "GuidanceResponse.evaluationMessage",
+                0,
+                Some(1),
+            ),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.outputParameters", 0, Some(1)),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.result", 0, None),
+            rh_foundation::ElementCardinality::new("GuidanceResponse.dataRequirement", 0, None),
+        ]
+    });
+
+// Trait implementations
+impl crate::traits::resource::ResourceAccessors for Cdshooksguidanceresponse {
+    fn id(&self) -> Option<String> {
+        self.base.id()
+    }
+    fn meta(&self) -> Option<crate::datatypes::meta::Meta> {
+        self.base.meta()
+    }
+    fn implicit_rules(&self) -> Option<String> {
+        self.base.implicit_rules()
+    }
+    fn language(&self) -> Option<String> {
+        self.base.language()
+    }
+}
+
+impl crate::traits::resource::ResourceMutators for Cdshooksguidanceresponse {
+    fn new() -> Self {
+        Self::default()
+    }
+    fn set_id(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base = resource.base.set_id(value);
+        resource
+    }
+    fn set_meta(self, value: crate::datatypes::meta::Meta) -> Self {
+        let mut resource = self.clone();
+        resource.base = resource.base.set_meta(value);
+        resource
+    }
+    fn set_implicit_rules(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base = resource.base.set_implicit_rules(value);
+        resource
+    }
+    fn set_language(self, value: String) -> Self {
+        let mut resource = self.clone();
+        resource.base = resource.base.set_language(value);
+        resource
+    }
+}
+
+impl crate::traits::resource::ResourceExistence for Cdshooksguidanceresponse {
+    fn has_id(&self) -> bool {
+        self.base.has_id()
+    }
+    fn has_meta(&self) -> bool {
+        self.base.has_meta()
+    }
+    fn has_implicit_rules(&self) -> bool {
+        self.base.has_implicit_rules()
+    }
+    fn has_language(&self) -> bool {
+        self.base.has_language()
+    }
+}
+
+impl crate::traits::cdshooksguidanceresponse::CdshooksguidanceresponseMutators
+    for Cdshooksguidanceresponse
+{
+    fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl crate::validation::ValidatableResource for Cdshooksguidanceresponse {
+    fn resource_type(&self) -> &'static str {
+        "GuidanceResponse"
+    }
+
+    fn invariants() -> &'static [rh_foundation::Invariant] {
+        &INVARIANTS
+    }
+
+    fn bindings() -> &'static [rh_foundation::ElementBinding] {
+        &BINDINGS
+    }
+
+    fn cardinalities() -> &'static [rh_foundation::ElementCardinality] {
+        &CARDINALITIES
+    }
+
+    fn profile_url() -> Option<&'static str> {
+        Some("http://hl7.org/fhir/StructureDefinition/cdshooksguidanceresponse")
+    }
+}
+
+// Re-export traits for convenient importing
+// This allows users to just import the resource module and get all associated traits
+pub use crate::traits::cdshooksguidanceresponse::{
+    CdshooksguidanceresponseAccessors, CdshooksguidanceresponseExistence,
+    CdshooksguidanceresponseMutators,
+};
