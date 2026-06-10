@@ -30,6 +30,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 VALIDATOR_CARGO = ROOT / "crates/rh-validator/Cargo.toml"
 CLI_CARGO = ROOT / "apps/rh-cli/Cargo.toml"
+PACKAGER_CARGO = ROOT / "crates/rh-packager/Cargo.toml"
+
+# Crates whose path-dep on rh-validator must be updated when validator is bumped
+VALIDATOR_DEPENDENTS = [CLI_CARGO, PACKAGER_CARGO]
 
 # Crates that inherit from [workspace.package] (for display only)
 WORKSPACE_CRATES = [
@@ -120,22 +124,23 @@ def bump_validator(new_version):
         rel = VALIDATOR_CARGO.relative_to(ROOT)
         changes.append(f"  {str(rel):<36} {old_version} -> {new_version}")
 
-    # 2. Update the rh-validator path dep entry in apps/rh-cli/Cargo.toml
-    content = CLI_CARGO.read_text()
-    lines = content.splitlines(keepends=True)
-    new_lines = []
-    modified = False
-    for line in lines:
-        if 'path = ' in line and 'rh-validator' in line and f'version = "{old_version}"' in line:
-            new_line = line.replace(f'version = "{old_version}"', f'version = "{new_version}"')
-            new_lines.append(new_line)
-            modified = True
-        else:
-            new_lines.append(line)
-    if modified:
-        CLI_CARGO.write_text("".join(new_lines))
-        rel = CLI_CARGO.relative_to(ROOT)
-        changes.append(f"  {str(rel):<36} {old_version} -> {new_version}  (rh-validator dep)")
+    # 2. Update the rh-validator path dep entry in all dependents
+    for dep_cargo in VALIDATOR_DEPENDENTS:
+        content = dep_cargo.read_text()
+        lines = content.splitlines(keepends=True)
+        new_lines = []
+        modified = False
+        for line in lines:
+            if 'path = ' in line and 'rh-validator' in line and f'version = "{old_version}"' in line:
+                new_line = line.replace(f'version = "{old_version}"', f'version = "{new_version}"')
+                new_lines.append(new_line)
+                modified = True
+            else:
+                new_lines.append(line)
+        if modified:
+            dep_cargo.write_text("".join(new_lines))
+            rel = dep_cargo.relative_to(ROOT)
+            changes.append(f"  {str(rel):<36} {old_version} -> {new_version}  (rh-validator dep)")
 
     return changes
 

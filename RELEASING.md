@@ -33,9 +33,11 @@ rh-foundation
     ↓
 rh-hl7-fhir-r4-core  rh-codegen  rh-cql  rh-fsh
     ↓
-rh-fhirpath  rh-vcl  rh-packager
+rh-fhirpath  rh-vcl
     ↓
 rh-validator
+    ↓
+rh-packager
     ↓
 rh-cli
 ```
@@ -59,7 +61,7 @@ just show-versions
 Bump all crates to the same version in one command:
 
 ```bash
-just bump-version 0.2.0-beta.1
+just bump-version 0.3.0-beta.1
 ```
 
 This updates the workspace version, `rh-validator`'s standalone version, and all internal path dependency version specifiers across every crate.
@@ -96,8 +98,8 @@ cargo publish --dry-run -p rh-cql
 cargo publish --dry-run -p rh-fsh
 cargo publish --dry-run -p rh-fhirpath
 cargo publish --dry-run -p rh-vcl
-cargo publish --dry-run -p rh-packager
 cargo publish --dry-run -p rh-validator
+cargo publish --dry-run -p rh-packager
 cargo publish --dry-run -p rh-cli
 ```
 
@@ -106,10 +108,15 @@ All invocations must exit 0 before proceeding.
 ### 5. Commit and tag the release
 
 ```bash
-git add Cargo.toml crates/*/Cargo.toml apps/*/Cargo.toml
+git add Cargo.toml Cargo.lock crates/*/Cargo.toml apps/*/Cargo.toml
 git commit -m "chore: bump versions to 0.x.0-beta.N"
 git tag v0.x.0-beta.N
 git push origin main --tags
+```
+
+Pushing the tag triggers the `release.yml` workflow, which builds binaries for all platforms and creates a **draft** GitHub Release. Once all build jobs succeed, review and publish the draft at:
+```
+https://github.com/reason-healthcare/rh/releases
 ```
 
 ### 6. Publish to crates.io
@@ -128,10 +135,12 @@ sleep 30
 
 cargo publish -p rh-fhirpath
 cargo publish -p rh-vcl
-cargo publish -p rh-packager
 sleep 30
 
 cargo publish -p rh-validator
+sleep 30
+
+cargo publish -p rh-packager
 sleep 30
 
 cargo publish -p rh-cli
