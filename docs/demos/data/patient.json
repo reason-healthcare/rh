@@ -1,0 +1,33 @@
+{
+  "resourceType": "Patient",
+  "id": "devdays-demo",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+  },
+  "identifier": [
+    {
+      "system": "http://example.org/mrn",
+      "value": "MRN-20251101"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "van der Berg",
+      "given": ["Pieter", "Jan"]
+    },
+    {
+      "use": "nickname",
+      "given": ["Pete"]
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1988-11-01",
+  "address": [
+    {
+      "use": "home",
+      "city": "Amsterdam",
+      "country": "NL"
+    }
+  ]
+}
