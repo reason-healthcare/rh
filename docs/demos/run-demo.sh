@@ -191,19 +191,27 @@ demo_8() {
   banner "Demo 8 — Composability: pipes and JSON output"
   echo ""
 
-  cmd "rh fsh compile data/demo-profiles.fsh | rh validate resource"
-  $RH fsh compile "$DATA/demo-profiles.fsh" 2>/dev/null \
-    | $RH validate resource 2>/dev/null || true
-  echo ""
-
+  # Pipe a FHIR resource directly from a shell string into the validator
   cmd "echo '{\"resourceType\":\"Patient\",\"id\":\"inline\"}' | rh validate resource"
   echo '{"resourceType":"Patient","id":"inline"}' \
     | $RH validate resource 2>/dev/null || true
   echo ""
 
-  cmd "rh validate resource -i data/patient.json -f json | jq '.issues | length'"
+  # jq-style: extract issue count from JSON output
+  cmd "rh validate resource -i data/patient.json -f json | python3 -c 'import sys,json; d=json.load(sys.stdin); print(\"issues:\", len(d[\"issues\"]))'"
   $RH validate resource -i "$DATA/patient.json" -f json 2>/dev/null \
-    | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('issues',[])))"
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print('issues:', len(d['issues']))"
+  echo ""
+
+  # Pipe FHIRPath JSON output onward
+  cmd "rh fhirpath eval 'Patient.id' -d data/patient.json -f json | python3 -m json.tool"
+  $RH fhirpath eval 'Patient.id' -d "$DATA/patient.json" -f json 2>/dev/null \
+    | python3 -m json.tool
+  echo ""
+
+  # Batch validate from stdin
+  cmd "head -5 data/patients-1000.ndjson | rh validate batch"
+  head -5 "$DATA/patients-1000.ndjson" | $RH validate batch 2>/dev/null
   echo ""
   echo "${GREEN}${BOLD}  Compose rh with any Unix tool: jq, awk, xargs, CI pipelines.${RESET}"
 }

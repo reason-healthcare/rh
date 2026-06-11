@@ -2,9 +2,8 @@
   "resourceType": "Patient",
   "id": "invalid-demo",
   "name": [
-    {
-      "use": "official"
-    }
+    {}
   ],
-  "gender": "unknown-value"
+  "birthDate": "not-a-real-date",
+  "deceased": { "foo": "bar" }
 }
