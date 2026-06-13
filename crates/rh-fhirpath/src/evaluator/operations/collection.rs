@@ -491,7 +491,8 @@ impl CollectionEvaluator {
         }
     }
 
-    /// Check if all items in collection are true (boolean true values only)
+    /// Check if all items in collection are true (boolean true values only).
+    /// Per spec, evaluation is undefined (returns empty) if any item is not boolean.
     pub fn all_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allTrue() is true
@@ -505,7 +506,8 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(false) => {
                                 return Ok(FhirPathValue::Boolean(false))
                             }
-                            _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not true
+                            FhirPathValue::Empty => {} // empty item is not true → handled below
+                            _ => return Ok(FhirPathValue::Empty), // Non-boolean → undefined
                         }
                     }
                     Ok(FhirPathValue::Boolean(true))
@@ -513,7 +515,8 @@ impl CollectionEvaluator {
             }
             value => match value {
                 FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
-                _ => Ok(FhirPathValue::Boolean(false)),
+                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(false)),
+                _ => Ok(FhirPathValue::Empty), // Non-boolean → undefined
             },
         }
     }

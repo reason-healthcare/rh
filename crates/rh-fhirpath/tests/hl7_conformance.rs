@@ -36,7 +36,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "LowBoundary::LowBoundaryDecimal11",
     "LowBoundary::LowBoundaryDecimal15",
     "Precision::PrecisionDecimal",
-    "from-Zulip::from-zulip-2",
     "polymorphics::testPolymorphicsB",
     "testCombine()::testCombine1",
     "testDollar::testDollarOrderNotAllowed",

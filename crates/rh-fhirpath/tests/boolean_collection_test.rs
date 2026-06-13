@@ -41,10 +41,10 @@ fn test_all_true_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Test allTrue() on collection with non-boolean values
+    // Test allTrue() on collection with non-boolean values → undefined (Empty) per spec
     let expr = parser.parse("(true | 1 | true).allTrue()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
+    assert!(matches!(result, FhirPathValue::Empty));
 
     // Test allTrue() on empty collection
     let expr = parser.parse("{}.allTrue()").unwrap();
