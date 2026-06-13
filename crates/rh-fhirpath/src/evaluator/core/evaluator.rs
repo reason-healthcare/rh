@@ -485,6 +485,10 @@ impl FhirPathEvaluator {
     }
 
     /// sort(key-expression...) — sort by one or more key expressions.
+    /// A key expression wrapped in unary `-` means sort DESCENDING by the inner
+    /// expression (rather than actually negating the value). This allows
+    /// `sort(-$this)` for descending numeric sorts and `sort(-family)` for
+    /// descending string sorts without raising a type error.
     fn evaluate_sort_by_expression(
         &self,
         target: &FhirPathValue,
@@ -497,24 +501,36 @@ impl FhirPathEvaluator {
             other => return Ok(other.clone()),
         };
 
+        // For each key expression, determine direction and the inner expression.
+        let key_specs: Vec<(bool, &Expression)> = parameters
+            .iter()
+            .map(|p| match p {
+                Expression::Polarity {
+                    operator: PolarityOperator::Minus,
+                    operand,
+                } => (true, operand.as_ref()),
+                other => (false, other),
+            })
+            .collect();
+
         // Build (item, key_tuple) pairs
-        let mut keyed: Vec<(FhirPathValue, Vec<FhirPathValue>)> = Vec::new();
+        let mut keyed: Vec<(FhirPathValue, Vec<(bool, FhirPathValue)>)> = Vec::new();
         for item in &items {
             let item_ctx = context.with_this_value(item.clone());
             let mut keys = Vec::new();
-            for param in parameters {
-                let key = self.evaluate_expression(param, &item_ctx)?;
-                keys.push(key);
+            for (descending, expr) in &key_specs {
+                let key = self.evaluate_expression(expr, &item_ctx)?;
+                keys.push((*descending, key));
             }
             keyed.push((item.clone(), keys));
         }
 
         keyed.sort_by(|(_, ka), (_, kb)| {
-            for (a, b) in ka.iter().zip(kb.iter()) {
+            for ((desc, a), (_, b)) in ka.iter().zip(kb.iter()) {
                 let ord =
                     crate::evaluator::functions::collection_functions::compare_for_sort_pub(a, b);
                 if ord != std::cmp::Ordering::Equal {
-                    return ord;
+                    return if *desc { ord.reverse() } else { ord };
                 }
             }
             std::cmp::Ordering::Equal
