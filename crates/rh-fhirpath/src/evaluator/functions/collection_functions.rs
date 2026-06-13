@@ -282,3 +282,119 @@ pub fn register_control_flow_functions(functions: &mut HashMap<String, FhirPathF
         }),
     );
 }
+
+pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunction>) {
+    // sort([expression]) — sort a collection, ascending by value or by expression
+    // Argument-less form sorts scalars; $this-expression form sorts by a key.
+    // NOTE: this is the 0- or 1-argument FunctionRef; the special-form variant
+    // with $this expressions is handled via the aggregation dispatch. The
+    // version registered here handles the common 0-argument case.
+    functions.insert(
+        "sort".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            let items: Vec<FhirPathValue> = match target {
+                FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+                FhirPathValue::Collection(v) => v.clone(),
+                other => return Ok(other.clone()),
+            };
+            let mut sorted = items;
+            sorted.sort_by(|a, b| compare_for_sort(a, b));
+            if sorted.is_empty() {
+                Ok(FhirPathValue::Empty)
+            } else if sorted.len() == 1 {
+                Ok(sorted.into_iter().next().unwrap())
+            } else {
+                Ok(FhirPathValue::Collection(sorted))
+            }
+        }),
+    );
+
+    // type() — returns a TypeSpecifier object with namespace and name fields
+    functions.insert(
+        "type".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            let (namespace, name) = fhirpath_type_of(target);
+            Ok(FhirPathValue::Object(serde_json::json!({
+                "namespace": namespace,
+                "name": name
+            })))
+        }),
+    );
+
+    // comparable(other) — true when both values can be compared via UCUM
+    // For simplicity, we return true when both are quantities and share base unit.
+    functions.insert(
+        "comparable".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            let other = params.first().unwrap_or(&FhirPathValue::Empty);
+            Ok(FhirPathValue::Boolean(are_comparable(target, other)))
+        }),
+    );
+}
+
+fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
+    use FhirPathValue::*;
+    match (a, b) {
+        (Boolean(x), Boolean(y)) => x.cmp(y),
+        (Integer(x), Integer(y)) | (Long(x), Long(y)) => x.cmp(y),
+        (Integer(x), Long(y)) | (Long(x), Integer(y)) => x.cmp(y),
+        (Number(x), Number(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+        (Integer(x), Number(y)) | (Long(x), Number(y)) => (*x as f64).partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+        (Number(x), Integer(y)) | (Number(x), Long(y)) => x.partial_cmp(&(*y as f64)).unwrap_or(std::cmp::Ordering::Equal),
+        (String(x), String(y)) | (Date(x), Date(y)) | (DateTime(x), DateTime(y)) | (Time(x), Time(y)) => x.cmp(y),
+        _ => std::cmp::Ordering::Equal,
+    }
+}
+
+fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
+    match v {
+        FhirPathValue::Object(json) => {
+            // FHIR resources carry their type in resourceType.
+            if let Some(rt) = json.get("resourceType").and_then(|r| r.as_str()) {
+                return ("FHIR".to_string(), rt.to_string());
+            }
+            ("FHIR".to_string(), "Any".to_string())
+        }
+        other => {
+            let name = match other {
+                FhirPathValue::Boolean(_) => "Boolean",
+                FhirPathValue::String(_) => "String",
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_) => "Integer",
+                FhirPathValue::Number(_) => "Decimal",
+                FhirPathValue::Date(_) => "Date",
+                FhirPathValue::DateTime(_) => "DateTime",
+                FhirPathValue::Time(_) => "Time",
+                FhirPathValue::Quantity { .. } => "Quantity",
+                _ => "Any",
+            };
+            ("System".to_string(), name.to_string())
+        }
+    }
+}
+
+/// UCUM base-unit classification for `comparable()`.
+/// Two quantities are comparable when they share the same dimension.
+fn ucum_dimension(unit: &str) -> Option<&'static str> {
+    match unit {
+        "m" | "cm" | "mm" | "km" | "in" | "ft" | "yd" | "[in_i]" => Some("length"),
+        "kg" | "g" | "mg" | "lb" | "oz" => Some("mass"),
+        "s" | "ms" | "min" | "h" | "d" | "wk" | "mo" | "a" => Some("time"),
+        "L" | "mL" | "dL" => Some("volume"),
+        "Pa" | "kPa" | "mm[Hg]" => Some("pressure"),
+        _ => None,
+    }
+}
+
+fn are_comparable(a: &FhirPathValue, b: &FhirPathValue) -> bool {
+    match (a, b) {
+        (FhirPathValue::Quantity { unit: ua, .. }, FhirPathValue::Quantity { unit: ub, .. }) => {
+            let ua_str = ua.as_deref().unwrap_or("");
+            let ub_str = ub.as_deref().unwrap_or("");
+            match (ucum_dimension(ua_str), ucum_dimension(ub_str)) {
+                (Some(da), Some(db)) => da == db,
+                _ => ua == ub,
+            }
+        }
+        _ => false,
+    }
+}

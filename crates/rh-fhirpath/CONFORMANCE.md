@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-12 (wave 3: toDecimal, encode/decode/escape/unescape, numeric equality)
+**Last updated**: 2026-06-12 (wave 4: sort, aggregate/$total, type(), comparable, string empty-propagation)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-12, wave 3)
+### 1.1 Current results (2026-06-12, wave 4)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 658 | 70.4% |
-| Wrong answer | 120 | 12.8% |
+| Pass | 694 | 74.2% |
+| Wrong answer | 122 | 13.0% |
 | Parse error | 61 | 6.5% |
-| Eval error | 95 | 10.2% |
+| Eval error | 57 | 6.1% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -58,6 +58,8 @@ History:
 | 2026-06-12 | 616 (65.9%) | 128 | 61 | 129 | Wave 2: `lowBoundary()`/`highBoundary()`/`precision()` implemented (45 eval errors fixed). 6 baseline additions: trailing-zero decimal literals lose precision in `f64` (needs a decimal type — see plan 5.3 stage 2), plus 3 suite `±0.0`-boundary cases with non-floor/ceil rounding. |
 
 | 2026-06-12 | 658 (70.4%) | 120 | 61 | 95 | Wave 3: `toDecimal()`/`convertsToDecimal()`, `encode()`/`decode()` (base64/urlbase64/hex), `escape()`/`unescape()` (html/json), cross-type numeric equality fix (`1 = 1.0`). 8 wrong answers removed from baseline. |
+
+| 2026-06-12 | 694 (74.2%) | 122 | 61 | 57 | Wave 4: `sort()`, `aggregate()`/`$total`, `type()` (System + FHIR resource names), `comparable()`, string empty-propagation (`{}.startsWith()` etc.). FHIR primitive type tracking deferred (`testType9/10`). |
 
 ### 1.2 Regression policy
 

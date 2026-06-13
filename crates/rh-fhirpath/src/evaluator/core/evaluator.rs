@@ -211,6 +211,7 @@ impl FhirPathEvaluator {
                     "is" => self.evaluate_is_function(target, parameters, context),
                     "as" => self.evaluate_as_function(target, parameters, context),
                     "trace" => self.evaluate_trace_function(target, parameters, context),
+                    "aggregate" => self.evaluate_aggregate_function(target, parameters, context),
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -233,9 +234,13 @@ impl FhirPathEvaluator {
             Invocation::Index => Err(FhirPathError::EvaluationError {
                 message: "$index not implemented yet".to_string(),
             }),
-            Invocation::Total => Err(FhirPathError::EvaluationError {
-                message: "$total not implemented yet".to_string(),
-            }),
+            Invocation::Total => {
+                if let Some(total) = &context.total_value {
+                    Ok(total.clone())
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
         }
     }
 
@@ -743,6 +748,40 @@ impl FhirPathEvaluator {
         };
 
         TypeEvaluator::evaluate_type_operation(target, &TypeOperator::As, &type_specifier)
+    }
+
+    /// `aggregate(expression [, init])` — fold a collection using `$this`
+    /// (current item) and `$total` (accumulator).
+    fn evaluate_aggregate_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.is_empty() || parameters.len() > 2 {
+            return Err(FhirPathError::FunctionError {
+                message: "aggregate() requires 1–2 parameters: expression [, init]".to_string(),
+            });
+        }
+        let expr = &parameters[0];
+        let init = if parameters.len() == 2 {
+            self.evaluate_expression(&parameters[1], context)?
+        } else {
+            FhirPathValue::Empty
+        };
+
+        let items: Vec<FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Empty => return Ok(init),
+            other => vec![other.clone()],
+        };
+
+        let mut total = init;
+        for item in items {
+            let iter_ctx = context.with_aggregate_vars(item, total);
+            total = self.evaluate_expression(expr, &iter_ctx)?;
+        }
+        Ok(total)
     }
 }
 

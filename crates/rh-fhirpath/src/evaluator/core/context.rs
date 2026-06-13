@@ -22,6 +22,8 @@ pub struct EvaluationContext {
     pub current: Value,
     /// Current FhirPathValue for $this context variable
     pub this_value: Option<FhirPathValue>,
+    /// Running accumulator for `aggregate()` — the `$total` variable.
+    pub total_value: Option<FhirPathValue>,
     /// External constants
     pub constants: HashMap<String, FhirPathValue>,
     /// Trace logs collected during evaluation
@@ -35,6 +37,7 @@ impl EvaluationContext {
             current: resource.clone(),
             root: resource,
             this_value: None,
+            total_value: None,
             constants: HashMap::new(),
             trace_logs: Rc::new(RefCell::new(Vec::new())),
         }
@@ -66,6 +69,7 @@ impl EvaluationContext {
             root: self.root.clone(),
             current,
             this_value: self.this_value.clone(),
+            total_value: self.total_value.clone(),
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }
@@ -77,6 +81,23 @@ impl EvaluationContext {
             root: self.root.clone(),
             current: this_value.to_json(),
             this_value: Some(this_value),
+            total_value: self.total_value.clone(),
+            constants: self.constants.clone(),
+            trace_logs: self.trace_logs.clone(),
+        }
+    }
+
+    /// Create a new context with both $this and $total set (for aggregate()).
+    pub fn with_aggregate_vars(
+        &self,
+        this_value: FhirPathValue,
+        total_value: FhirPathValue,
+    ) -> Self {
+        Self {
+            root: self.root.clone(),
+            current: this_value.to_json(),
+            this_value: Some(this_value),
+            total_value: Some(total_value),
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }

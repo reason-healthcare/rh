@@ -78,6 +78,9 @@ impl FunctionRegistry {
 
         // Boundary/precision functions (precision, lowBoundary, highBoundary)
         boundary_functions::register_boundary_functions(&mut self.functions);
+
+        // Sort, type(), comparable()
+        collection_functions::register_sort_type_functions(&mut self.functions);
     }
 
     /// Register extension functions from the extension system
