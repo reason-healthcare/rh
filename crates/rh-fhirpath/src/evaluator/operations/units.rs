@@ -251,24 +251,10 @@ impl UnitConverter {
                 from_base_factor: 1.0 / 604800.0,
             },
         );
-        unit_mappings.insert(
-            "mo".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 2629746.0, // Average month in seconds
-                from_base_factor: 1.0 / 2629746.0,
-            },
-        );
-        unit_mappings.insert(
-            "a".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 31556952.0, // Average year in seconds
-                from_base_factor: 1.0 / 31556952.0,
-            },
-        );
+        // UCUM 'mo' (mean month = 30.44 days) and 'a' (mean year = 365.25 days)
+        // are intentionally NOT registered here. FHIRPath treats them as
+        // incompatible with the calendar durations 'month'/'year' — comparing
+        // `1 'mo' = 1 month` is undefined (empty) per the HL7 conformance suite.
 
         // FHIRPath calendar-duration names — same factors as their UCUM
         // counterparts so `7 days = 1 week`, `7 days = 1 'wk'`, etc. work.

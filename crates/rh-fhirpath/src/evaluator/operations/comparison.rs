@@ -126,6 +126,46 @@ impl ComparisonEvaluator {
             return Ok(FhirPathValue::Empty);
         }
 
+        // Quantities with incompatible units: `=`/`!=` return empty (undefined),
+        // `~`/`!~` return false/true (not equivalent).
+        if let (
+            FhirPathValue::Quantity {
+                value: v1,
+                unit: u1,
+            },
+            FhirPathValue::Quantity {
+                value: v2,
+                unit: u2,
+            },
+        ) = (left, right)
+        {
+            use crate::evaluator::operations::units::UnitConverter;
+            let converter = UnitConverter::new();
+            match converter.compare_quantities(*v1, u1, *v2, u2) {
+                Ok(0) => {
+                    return Ok(FhirPathValue::Boolean(matches!(
+                        operator,
+                        EqualityOperator::Equal | EqualityOperator::Equivalent
+                    )))
+                }
+                Ok(_) => {
+                    return Ok(FhirPathValue::Boolean(matches!(
+                        operator,
+                        EqualityOperator::NotEqual | EqualityOperator::NotEquivalent
+                    )))
+                }
+                Err(_) => {
+                    return Ok(match operator {
+                        EqualityOperator::Equal | EqualityOperator::NotEqual => {
+                            FhirPathValue::Empty
+                        }
+                        EqualityOperator::Equivalent => FhirPathValue::Boolean(false),
+                        EqualityOperator::NotEquivalent => FhirPathValue::Boolean(true),
+                    })
+                }
+            }
+        }
+
         let result = match operator {
             EqualityOperator::Equal => FhirPathValue::equals_static(left, right),
             EqualityOperator::NotEqual => !FhirPathValue::equals_static(left, right),
