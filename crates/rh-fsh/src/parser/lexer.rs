@@ -100,6 +100,21 @@ pub fn identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
     Ok((input, id.fragment().to_string()))
 }
 
+/// Parse a reference to a named definition: a canonical URL (`http://…`,
+/// `https://…`, `urn:…`), an `$alias`, or a bare identifier. Used wherever
+/// FSH allows "name or url" (bindings, `contains`, `from valueset`, …).
+pub fn name_or_url(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let frag = input.fragment();
+    if frag.starts_with("http://") || frag.starts_with("https://") || frag.starts_with("urn:") {
+        let (input, url) = take_while1(|c: char| {
+            !c.is_whitespace() && c != '(' && c != ')' && c != ',' && c != '"'
+        })(input)?;
+        Ok((input, url.fragment().to_string()))
+    } else {
+        alias_name(input)
+    }
+}
+
 /// Parse an FSH alias name: optional `$` prefix followed by an identifier
 pub fn alias_name(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, dollar) = opt(char('$'))(input)?;
@@ -511,17 +526,30 @@ fn parse_ratio(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
 }
 
 fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
-    let (input, val) = decimal(input)?;
+    // The value may be a decimal or a plain integer (`85 'kg'` is valid FSH).
+    let (input, val) = alt((decimal, map(integer, |i| i as f64)))(input)?;
     let (input, _) = take_while1(|c| c == ' ' || c == '\t')(input)?;
-    // unit can be quoted or bare
+    // unit is a single-quoted UCUM code (`'kg'`), a double-quoted string, or
+    // a bare calendar unit (`1 year`); a bare unit must not swallow trailing
+    // syntax like `(exactly)`. Quotes are stripped here so exporters see the
+    // raw unit code.
     let (input, unit) = alt((
+        single_quoted_string,
         quoted_string,
         map(
-            take_while1(|c: char| !c.is_whitespace() && c != '\n'),
+            take_while1(|c: char| !c.is_whitespace() && c != '\n' && c != '(' && c != ')'),
             |s: Span<'_>| s.fragment().to_string(),
         ),
     ))(input)?;
     Ok((input, FshValue::Quantity { value: val, unit }))
+}
+
+/// Parse a single-quoted UCUM unit code like `'kg'`, returning the inner code.
+fn single_quoted_string(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, _) = char('\'')(input)?;
+    let (input, unit) = take_while(|c| c != '\'' && c != '\n')(input)?;
+    let (input, _) = char('\'')(input)?;
+    Ok((input, unit.fragment().to_string()))
 }
 
 fn parse_reference(input: Span<'_>) -> IResult<Span<'_>, FshValue> {

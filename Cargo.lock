@@ -1968,6 +1968,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "nom",
+ "quick-xml",
  "regex",
  "rh-foundation",
  "rh-hl7-fhir-r4-core",

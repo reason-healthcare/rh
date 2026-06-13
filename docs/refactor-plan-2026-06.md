@@ -10,7 +10,7 @@
 |---|---|---|
 | WS0 Hygiene | ✅ done (2026-06-12) | 0.4: ffq **deleted** (not gated) — it depended on a nonexistent `rh-ffq` crate and could never compile. 0.5: `clippy::unwrap_used` deferred until WS1 (1.1) / WS4 (4.6) unwrap cleanups land, since `just lint` runs `-D warnings`; `unsafe_code = "forbid"` + `clippy.all = "warn"` are in place. |
 | WS1 Foundation | ✅ done (2026-06-12) | 1.1: audit found all remaining unwraps were test-only; added `#![cfg_attr(not(test), warn(clippy::unwrap_used))]` guard. 1.4: `generate_snapshot` now returns `Arc<Snapshot>` (28 ns cache hits vs deep clone); bench at `benches/snapshot.rs` (cold 600-element merge ~424 µs). 1.5: merger uses borrowed `Cow` index — no upfront clones of base elements or key strings. 1.7: packager's foundation `http` feature + tokio dep were entirely unused — **removed** rather than feature-gated. **Bonus fix:** `StructureDefinition.base_definition` was missing `#[serde(rename = "baseDefinition")]` — profiles loaded from real FHIR JSON silently lost their base and produced differential-only snapshots; fixed + regression test. |
-| WS2 Conformance | ⬜ not started | |
+| WS2 Conformance | 🔶 partial (2026-06-12) | **Done:** 2.1 HL7 FHIRPath suite vendored (937 cases) + harness `tests/hl7_conformance.rs` with summary JSON; baseline 564/935 pass (60.3%). Gate deviation: 120 baseline wrong answers made "zero wrong answers" impossible day-one — harness enforces a **shrink-only known-wrong-answers baseline** instead (no new wrong answers, stale entries must be removed). 2.2 CONFORMANCE.md + SPEC_COVERAGE.md created. 2.8 68 FSH parser unit tests added — found & fixed 3 real parser bugs: URLs truncated at `http` in bindings/`contains`/`from valueset`; integer-valued quantities (`85 'kg'`) dropped their unit; single-quoted UCUM units kept their quotes. 2.10 was a stale audit claim — `parse_vcl_expression` exists and all README symbols verified present; no changes needed. **Remaining:** 2.3 (FHIRPath function waves a–e), 2.4–2.7 (CQL operators/burn-down/ELM diff), 2.9 (SUSHI corpus ≥60 + FSH CONFORMANCE.md). |
 | WS3 CLI | ⬜ not started | |
 | WS4 Codegen | ⬜ not started | |
 | WS5 Performance | ⬜ not started | |
@@ -135,9 +135,11 @@ Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and 
 
 ---
 
-## 5. WS2 — Conformance Harnesses (size: M-L, 1–2 weeks)
+## 5. WS2 — Conformance Harnesses (size: M-L, 1–2 weeks) 🔶 PARTIAL
 
 Independent of WS1/WS3. Must land **before** WS5 perf work (regression safety net).
+
+**Status 2026-06-12:** 2.1 ✅ · 2.2 ✅ · 2.8 ✅ · 2.10 ✅ (no-op, stale audit claim) · 2.3 / 2.4–2.7 / 2.9 remaining (multi-PR implementation waves; the FHIRPath regression net required by WS5 is in place). See Progress Tracking for details.
 
 ### 5.1 FHIRPath: adopt the official HL7 test suite (the big gap)
 rh-cql already demonstrates the target pattern: vendored official suite + categorized results (pass / compile-error / eval-error / skipped) + CI assertion of no wrong-answer regressions + `CONFORMANCE.md`. Replicate exactly for FHIRPath.
