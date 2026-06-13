@@ -109,9 +109,15 @@ No dependencies. Everything else builds on this. All tasks (0.1–0.6) completed
 
 ---
 
+<<<<<<< HEAD
 ## 4. WS1 — rh-foundation Hardening & Performance (size: M, 3–5 days) ✅ COMPLETED
 
 Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and WS6 (WASM story). All tasks (1.1–1.8) completed 2026-06-12; `just check` green. See Progress Tracking for details and the bonus `baseDefinition` serde fix.
+=======
+## 4. WS1 — rh-foundation Hardening & Performance (size: M, 3–5 days)
+
+Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and WS6 (WASM story).
+>>>>>>> a37d2c8 (fix: workspace hygiene & critical fixes (refactor plan WS0))
 
 ### 4.1 API & error hardening
 | # | Task | Files | Acceptance criteria |
@@ -135,12 +141,19 @@ Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and 
 
 ---
 
+<<<<<<< HEAD
 ## 5. WS2 — Conformance Harnesses (size: M-L, 1–2 weeks) 🔶 PARTIAL (near completion)
 
 Independent of WS1/WS3. Must land **before** WS5 perf work (regression safety net).
 
 **Status 2026-06-14:** 2.1 ✅ · 2.2 ✅ · 2.4 ✅ · 2.5 ✅ · 2.6 ✅ (waves 1–2 done; further skip burn-down remaining) · 2.7 ✅ (fixed-corpus Java-vs-Rust metadata diff documented and tested) · 2.8 ✅ · 2.9 ✅ · 2.10 ✅ (no-op, stale audit claim) · 2.3 waves 1–31 done; sub-waves remaining (primitive extension siblings, strict polymorphic invalids, collection semantics, decimal boundary precision, `conformsTo()`, unary plus parsing, explicit primitive choice strictness). WS5 regression net is in place at 913/935 (97.6%). See Progress Tracking for details.
 
+=======
+## 5. WS2 — Conformance Harnesses (size: M-L, 1–2 weeks)
+
+Independent of WS1/WS3. Must land **before** WS5 perf work (regression safety net).
+
+>>>>>>> a37d2c8 (fix: workspace hygiene & critical fixes (refactor plan WS0))
 ### 5.1 FHIRPath: adopt the official HL7 test suite (the big gap)
 rh-cql already demonstrates the target pattern: vendored official suite + categorized results (pass / compile-error / eval-error / skipped) + CI assertion of no wrong-answer regressions + `CONFORMANCE.md`. Replicate exactly for FHIRPath.
 
@@ -189,6 +202,7 @@ Every subcommand MUST satisfy:
 ### 6.2 Tasks
 | # | Task | Files | Acceptance criteria |
 |---|---|---|---|
+<<<<<<< HEAD
 | 3.1 | ✅ Implement the output framework: envelope types, `ExitCode`, format negotiation, TTY/color detection, `--quiet/--verbose/--color/--format` as global clap args. | `apps/rh-cli/src/main.rs`, new `apps/rh-cli/src/output.rs` | Unit tests for envelope serialization; `rh --help` shows globals |
 | 3.2 | ✅ Migrate each subcommand to the contract, one PR per command, in this order (most-broken first): `validate` (prose+JSON mixing at validator.rs:444–476,524–529; no `-o`), `fsh` (per-resource println), `download` (`list` human-only), `codegen` (no manifest output — add `--format json` emitting generated-files manifest), `cql`, `fhirpath`, `vcl`, `snapshot` (implement or remove declared-but-unimplemented `diff`/`validate` at snapshot.rs:196,201), `package`. | `apps/rh-cli/src/<command>.rs` | Per command: stdout is pure data; stderr-only logs; exit codes per contract; `--format json` round-trips through `jq` |
 | 3.3 | ✅ Extract REPLs to library crates behind a `repl` feature (rustyline dep moves there): `cql.rs:1190+` → `rh-cql::repl`, `fhirpath.rs:225+` → `rh-fhirpath::repl`, `vcl.rs:235+` → `rh-vcl::repl`. Create one shared REPL scaffold (readline loop, history, `:commands`) in `rh-foundation::cli::repl` to kill the 4-way duplication. | CLI command files + 3 crates + foundation | CLI command modules shrink to thin dispatch (<150 lines each); REPL behavior unchanged (manual check) |
@@ -196,6 +210,15 @@ Every subcommand MUST satisfy:
 | 3.5 | ✅ Differentiated errors: keep anyhow at the edge but downcast library errors to map exit codes; print errors as `error: <message>` on stderr, and in JSON envelope when `--format json`. | `apps/rh-cli/src/main.rs:93–143` | Integration tests assert exit codes 0/1/2/3/4 |
 | 3.6 | ✅ CLI integration tests for ALL 9 commands (assert_cmd + predicates; currently only cql + validator): golden help text, exit codes, JSON schema validation of envelopes, stdin piping (`echo ... \| rh fhirpath eval -`). | `apps/rh-cli/tests/` | Every command has ≥4 integration tests incl. one stdin pipe test |
 | 3.7 | ✅ Sync `apps/rh-cli/README.md`: document `download list`, `fsh parse`/`tank`, snapshot subcommands, new globals, exit codes, env vars (`NO_COLOR`, `RUST_LOG`); add an "Agent usage" section showing `--format json` + `jq` recipes. | `apps/rh-cli/README.md` | README commands == `rh --help` output (script-checked, see 8.5) |
+=======
+| 3.1 | Implement the output framework: envelope types, `ExitCode`, format negotiation, TTY/color detection, `--quiet/--verbose/--color/--format` as global clap args. | `apps/rh-cli/src/main.rs`, new `apps/rh-cli/src/output.rs` | Unit tests for envelope serialization; `rh --help` shows globals |
+| 3.2 | Migrate each subcommand to the contract, one PR per command, in this order (most-broken first): `validate` (prose+JSON mixing at validator.rs:444–476,524–529; no `-o`), `fsh` (per-resource println), `download` (`list` human-only), `codegen` (no manifest output — add `--format json` emitting generated-files manifest), `cql`, `fhirpath`, `vcl`, `snapshot` (implement or remove declared-but-unimplemented `diff`/`validate` at snapshot.rs:196,201), `package`. | `apps/rh-cli/src/<command>.rs` | Per command: stdout is pure data; stderr-only logs; exit codes per contract; `--format json` round-trips through `jq` |
+| 3.3 | Extract REPLs to library crates behind a `repl` feature (rustyline dep moves there): `cql.rs:1190+` → `rh-cql::repl`, `fhirpath.rs:225+` → `rh-fhirpath::repl`, `vcl.rs:235+` → `rh-vcl::repl`. Create one shared REPL scaffold (readline loop, history, `:commands`) in `rh-foundation::cli::repl` to kill the 4-way duplication. | CLI command files + 3 crates + foundation | CLI command modules shrink to thin dispatch (<150 lines each); REPL behavior unchanged (manual check) |
+| 3.4 | Move CLI-resident logic to crates: validator output formatting (validator.rs:400–700) → `rh-validator::report` module (human + JSON renderers); `expand_home_dir`, `parse_package_spec` (snapshot.rs) → `rh-foundation`. | as listed | No business logic >50 lines in any CLI module |
+| 3.5 | Differentiated errors: keep anyhow at the edge but downcast library errors to map exit codes; print errors as `error: <message>` on stderr, and in JSON envelope when `--format json`. | `apps/rh-cli/src/main.rs:93–143` | Integration tests assert exit codes 0/1/2/3/4 |
+| 3.6 | CLI integration tests for ALL 9 commands (assert_cmd + predicates; currently only cql + validator): golden help text, exit codes, JSON schema validation of envelopes, stdin piping (`echo ... \| rh fhirpath eval -`). | `apps/rh-cli/tests/` | Every command has ≥4 integration tests incl. one stdin pipe test |
+| 3.7 | Sync `apps/rh-cli/README.md`: document `download list`, `fsh parse`/`tank`, snapshot subcommands, new globals, exit codes, env vars (`NO_COLOR`, `RUST_LOG`); add an "Agent usage" section showing `--format json` + `jq` recipes. | `apps/rh-cli/README.md` | README commands == `rh --help` output (script-checked, see 8.5) |
+>>>>>>> a37d2c8 (fix: workspace hygiene & critical fixes (refactor plan WS0))
 
 ---
 

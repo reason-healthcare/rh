@@ -54,7 +54,6 @@ wasm-bindgen-test = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"
-quick-xml = { workspace = true }
 
 [lints]
 workspace = true
