@@ -695,18 +695,15 @@ mod tests {
         let parsed = parser.parse("%resource.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
+        // Choice-type access (`Observation.value` → valueQuantity) returns a
+        // typed Quantity so `is(Quantity)` / `as(Quantity)` / member access
+        // on `.value` and `.unit` all work per the FHIRPath spec.
         match result {
-            FhirPathValue::Object(obj) => {
-                assert_eq!(
-                    obj.get("value").unwrap(),
-                    &serde_json::Value::Number(serde_json::Number::from_f64(150.0).unwrap())
-                );
-                assert_eq!(
-                    obj.get("unit").unwrap(),
-                    &serde_json::Value::String("mmHg".to_string())
-                );
+            FhirPathValue::Quantity { value, unit } => {
+                assert_eq!(value, 150.0);
+                assert_eq!(unit.as_deref(), Some("mmHg"));
             }
-            _ => panic!("Expected Object value for valueQuantity"),
+            other => panic!("Expected Quantity for valueQuantity, got {other:?}"),
         }
 
         // Test accessing nested field through choice type

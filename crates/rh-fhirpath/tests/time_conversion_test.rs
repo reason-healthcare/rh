@@ -201,14 +201,19 @@ fn test_time_conversion_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Test time format edge cases
+    // Time format requires zero-padded two-digit components per the FHIRPath
+    // grammar — single-digit shorthand like '0:0:0' is rejected.
     let expr = parser.parse("'0:0:0'.convertsToTime()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Boolean(false));
+
+    let expr = parser.parse("'00:00:00'.convertsToTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    let expr = parser.parse("'0:0:0'.toTime()").unwrap();
+    let expr = parser.parse("'00:00:00'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T0:0:0".to_string()));
+    assert_eq!(result, FhirPathValue::Time("T00:00:00".to_string()));
 
     // Test fractional seconds variations
     let expr = parser.parse("'12:30:45.1'.convertsToTime()").unwrap();
@@ -223,10 +228,11 @@ fn test_time_conversion_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Test invalid fractional seconds (too many digits)
+    // The FHIRPath grammar permits any number of fractional digits, so a
+    // four-digit fractional component is a valid Time.
     let expr = parser.parse("'12:30:45.1234'.convertsToTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    assert_eq!(result, FhirPathValue::Boolean(true));
 }
 
 #[test]

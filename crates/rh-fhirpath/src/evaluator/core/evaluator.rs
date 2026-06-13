@@ -279,24 +279,30 @@ impl FhirPathEvaluator {
                 } else {
                     // Check for FHIR choice type polymorphic access (e.g., value[x])
                     if let Some(obj_map) = obj.as_object() {
-                        // Look for fields that start with the member name (e.g., "value" matches "valueBoolean")
                         for (key, value) in obj_map {
-                            if key.starts_with(member) && key.len() > member.len() {
-                                // Check if the next character after the member name is uppercase
-                                // This ensures "value" matches "valueBoolean" but not "valueFoo" with lowercase
-                                if let Some(next_char) = key.chars().nth(member.len()) {
-                                    if next_char.is_uppercase() {
-                                        // Apply metadata typing for choice types too
-                                        if let Some(ref rt) = resource_type {
-                                            return Ok(
-                                                crate::evaluator::metadata::apply_fhir_typing(
-                                                    value, rt, key,
-                                                ),
-                                            );
-                                        }
-                                        return Ok(FhirPathValue::from_json(value));
-                                    }
+                            // "value" matches "valueBoolean" / "valueQuantity" etc.,
+                            // but not "valueFoo" with lowercase next char.
+                            if key.starts_with(member)
+                                && key.len() > member.len()
+                                && key
+                                    .chars()
+                                    .nth(member.len())
+                                    .is_some_and(|c| c.is_uppercase())
+                            {
+                                let suffix = &key[member.len()..];
+                                // For complex-type suffixes (Quantity, etc.) build the
+                                // matching FhirPathValue variant directly so downstream
+                                // `is(Quantity)`/`as(Quantity)`/`.unit` work. For
+                                // primitive suffixes the metadata-typing path handles it.
+                                if let Some(typed) = construct_typed_choice_value(suffix, value) {
+                                    return Ok(typed);
                                 }
+                                if let Some(ref rt) = resource_type {
+                                    return Ok(crate::evaluator::metadata::apply_fhir_typing(
+                                        value, rt, key,
+                                    ));
+                                }
+                                return Ok(FhirPathValue::from_json(value));
                             }
                         }
                     }
@@ -328,6 +334,17 @@ impl FhirPathEvaluator {
                     Ok(FhirPathValue::Collection(result_items))
                 }
             }
+            // `Quantity.value` / `.unit` member access per FHIR data model —
+            // matches what the suite expects after choice-type access
+            // promotes `valueQuantity` to a typed Quantity.
+            FhirPathValue::Quantity { value, unit } => match member {
+                "value" => Ok(FhirPathValue::Number(*value)),
+                "unit" => Ok(unit
+                    .as_ref()
+                    .map(|u| FhirPathValue::String(u.clone()))
+                    .unwrap_or(FhirPathValue::Empty)),
+                _ => Ok(FhirPathValue::Empty),
+            },
             _ => Ok(FhirPathValue::Empty),
         }
     }
@@ -788,6 +805,41 @@ impl FhirPathEvaluator {
 impl Default for FhirPathEvaluator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Build a typed `FhirPathValue` for a FHIR choice-type field based on the
+/// type suffix of its JSON key (e.g. `valueQuantity` → suffix "Quantity").
+///
+/// Returns `Some(typed)` for suffixes that map onto a concrete FhirPathValue
+/// variant and whose JSON shape matches; `None` to let the caller fall back
+/// to metadata-driven typing.
+fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Option<FhirPathValue> {
+    use serde_json::Value;
+    match suffix {
+        "Quantity" | "Age" | "Distance" | "Duration" | "Count" | "Money" => {
+            let obj = value.as_object()?;
+            let num = obj.get("value")?.as_f64()?;
+            let unit = obj
+                .get("unit")
+                .and_then(Value::as_str)
+                .or_else(|| obj.get("code").and_then(Value::as_str))
+                .map(str::to_string);
+            Some(FhirPathValue::Quantity { value: num, unit })
+        }
+        "Boolean" => value.as_bool().map(FhirPathValue::Boolean),
+        "Integer" | "UnsignedInt" | "PositiveInt" => value.as_i64().map(FhirPathValue::Integer),
+        "Decimal" => value.as_f64().map(FhirPathValue::Number),
+        "String" | "Code" | "Uri" | "Url" | "Canonical" | "Oid" | "Id" | "Markdown"
+        | "Base64Binary" => value.as_str().map(|s| FhirPathValue::String(s.to_string())),
+        "Date" => value.as_str().map(|s| FhirPathValue::Date(s.to_string())),
+        "DateTime" | "Instant" => value
+            .as_str()
+            .map(|s| FhirPathValue::DateTime(s.to_string())),
+        "Time" => value.as_str().map(|s| FhirPathValue::Time(s.to_string())),
+        // Complex types not yet modelled: CodeableConcept, Coding, Reference,
+        // Identifier, etc. Caller falls back to metadata/JSON-object handling.
+        _ => None,
     }
 }
 

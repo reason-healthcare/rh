@@ -1,6 +1,7 @@
 //! Conversion function registration for FHIRPath
 
 use crate::error::*;
+use crate::evaluator::operations::temporal::parse_temporal;
 use crate::evaluator::types::FhirPathValue;
 use regex::Regex;
 use std::collections::HashMap;
@@ -959,174 +960,97 @@ fn converts_to_quantity(
 
 /// Helper function to validate date string format (YYYY-MM-DD)
 fn is_valid_date_string(s: &str) -> bool {
-    // Basic validation for YYYY-MM-DD format
-    if s.len() < 8 || s.len() > 10 {
+    // Per FHIRPath spec, Date accepts YYYY, YYYY-MM, or YYYY-MM-DD. Delegates
+    // to the temporal parser to cover all three precisions plus value-range
+    // validation (month 1-12, day 1-31).
+    let Some(parts) = parse_temporal(s) else {
+        return false;
+    };
+    // Must not be a Time-only or DateTime-with-time string.
+    if s.contains('T') || parts.hour.is_some() || parts.year.is_none() {
         return false;
     }
-
-    // Check for basic date pattern
-    let parts: Vec<&str> = s.split('-').collect();
-    if parts.len() != 3 {
-        return false;
-    }
-
-    // Validate year (4 digits)
-    if parts[0].len() != 4 || !parts[0].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-
-    // Validate month (1-12)
-    if parts[1].is_empty() || parts[1].len() > 2 || !parts[1].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(month) = parts[1].parse::<u32>() {
-        if !(1..=12).contains(&month) {
+    if let Some(m) = parts.month {
+        if !(1..=12).contains(&m) {
             return false;
         }
-    } else {
-        return false;
     }
-
-    // Validate day (1-31, basic check)
-    if parts[2].is_empty() || parts[2].len() > 2 || !parts[2].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(day) = parts[2].parse::<u32>() {
-        if !(1..=31).contains(&day) {
+    if let Some(d) = parts.day {
+        if !(1..=31).contains(&d) {
             return false;
         }
-    } else {
-        return false;
     }
-
     true
 }
 
-/// Helper function to validate datetime string format
+/// Per FHIRPath spec, DateTime accepts partial-precision shapes (year alone,
+/// year-month, full date, and the date plus any prefix of `T[hh[:mm[:ss[.fff]]][TZ]]`).
 fn is_valid_datetime_string(s: &str) -> bool {
-    // Basic validation for ISO 8601 datetime format
-    if !s.contains('T') {
+    let Some(parts) = parse_temporal(s) else {
         return false;
-    }
-
-    let parts: Vec<&str> = s.split('T').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-
-    // Validate date part
-    if !is_valid_date_string(parts[0]) {
-        return false;
-    }
-
-    // Basic time validation (HH:MM:SS or HH:MM:SS.sss with optional timezone)
-    let time_part = parts[1];
-    if time_part.is_empty() {
-        return false;
-    }
-
-    // Remove timezone info for basic validation
-    let time_only = if let Some(tz_pos) = time_part.find(&['+', '-', 'Z'][..]) {
-        &time_part[..tz_pos]
-    } else {
-        time_part
     };
-
-    // Split by colon to get time components
-    let time_components: Vec<&str> = time_only.split(':').collect();
-    if time_components.len() < 2 || time_components.len() > 3 {
+    if parts.year.is_none() {
         return false;
     }
-
-    // Validate hour (00-23)
-    if time_components[0].len() != 2 || !time_components[0].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(hour) = time_components[0].parse::<u32>() {
-        if hour > 23 {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    // Validate minute (00-59)
-    if time_components[1].len() != 2 || !time_components[1].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(minute) = time_components[1].parse::<u32>() {
-        if minute > 59 {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    // Validate seconds if present (00-59, may include decimal)
-    if time_components.len() == 3 {
-        let seconds_part = time_components[2];
-        if seconds_part.is_empty() {
-            return false;
-        }
-
-        // Handle decimal seconds
-        let seconds_str = if let Some(dot_pos) = seconds_part.find('.') {
-            &seconds_part[..dot_pos]
-        } else {
-            seconds_part
-        };
-
-        if seconds_str.len() != 2 || !seconds_str.chars().all(|c| c.is_ascii_digit()) {
-            return false;
-        }
-        if let Ok(seconds) = seconds_str.parse::<u32>() {
-            if seconds > 59 {
-                return false;
-            }
-        } else {
+    if let Some(m) = parts.month {
+        if !(1..=12).contains(&m) {
             return false;
         }
     }
-
+    if let Some(d) = parts.day {
+        if !(1..=31).contains(&d) {
+            return false;
+        }
+    }
+    if let Some(h) = parts.hour {
+        if h > 23 {
+            return false;
+        }
+    }
+    if let Some(m) = parts.minute {
+        if m > 59 {
+            return false;
+        }
+    }
+    if let Some(sec) = parts.second {
+        if sec > 59 {
+            return false;
+        }
+    }
     true
 }
 
-/// Validate if a string represents a valid time format
+/// Per FHIRPath spec, Time accepts hh, hh:mm, hh:mm:ss, or hh:mm:ss.fff.
+/// Storage form has a leading T; user-supplied strings often do not, so we
+/// normalise before delegating to the temporal parser.
 fn is_valid_time_string(s: &str) -> bool {
-    // Remove leading 'T' if present for validation
-    let time_str = s.strip_prefix('T').unwrap_or(s);
-
-    // Time format: HH:MM:SS or HH:MM:SS.sss
-    let time_regex =
-        Regex::new(r"^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])(\.\d{1,3})?$").unwrap();
-
-    if !time_regex.is_match(time_str) {
+    let with_t = if s.starts_with('T') {
+        s.to_string()
+    } else {
+        format!("T{s}")
+    };
+    let Some(parts) = parse_temporal(&with_t) else {
+        return false;
+    };
+    if parts.hour.is_none() {
         return false;
     }
-
-    // Additional validation for actual time values
-    let parts: Vec<&str> = time_str.split(':').collect();
-    if parts.len() < 3 {
-        return false;
+    if let Some(h) = parts.hour {
+        if h > 23 {
+            return false;
+        }
     }
-
-    let hour: u8 = match parts[0].parse() {
-        Ok(h) => h,
-        Err(_) => return false,
-    };
-    let minute: u8 = match parts[1].parse() {
-        Ok(m) => m,
-        Err(_) => return false,
-    };
-
-    // Parse seconds (might have fractional part)
-    let second_str = parts[2];
-    let second: f64 = match second_str.parse() {
-        Ok(s) => s,
-        Err(_) => return false,
-    };
-
-    hour <= 23 && minute <= 59 && second < 60.0
+    if let Some(m) = parts.minute {
+        if m > 59 {
+            return false;
+        }
+    }
+    if let Some(sec) = parts.second {
+        if sec > 59 {
+            return false;
+        }
+    }
+    true
 }
 
 /// Extract time part from datetime string
