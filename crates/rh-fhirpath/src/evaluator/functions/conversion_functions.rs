@@ -108,6 +108,59 @@ pub fn register_conversion_functions(functions: &mut HashMap<String, FhirPathFun
             converts_to_quantity(target, params.first())
         }),
     );
+
+    // toDecimal() function
+    functions.insert(
+        "toDecimal".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| to_decimal(target)),
+    );
+
+    // convertsToDecimal() function
+    functions.insert(
+        "convertsToDecimal".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| converts_to_decimal(target)),
+    );
+}
+
+/// Convert a value to Decimal according to the FHIRPath specification.
+fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    match value {
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) => {
+            if items.len() == 1 {
+                to_decimal(&items[0])
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        FhirPathValue::Number(n) => Ok(FhirPathValue::Number(*n)),
+        FhirPathValue::Integer(i) | FhirPathValue::Long(i) => Ok(FhirPathValue::Number(*i as f64)),
+        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Number(if *b { 1.0 } else { 0.0 })),
+        FhirPathValue::String(s) => {
+            let decimal_re = Regex::new(r"^[+-]?\d+(\.\d+)?$").expect("static regex");
+            if decimal_re.is_match(s.trim()) {
+                match s.trim().parse::<f64>() {
+                    Ok(n) => Ok(FhirPathValue::Number(n)),
+                    Err(_) => Ok(FhirPathValue::Empty),
+                }
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        _ => Ok(FhirPathValue::Empty),
+    }
+}
+
+/// Check whether a value is convertible to Decimal.
+fn converts_to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    match value {
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) if items.len() != 1 => Ok(FhirPathValue::Empty),
+        other => match to_decimal(other)? {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+            _ => Ok(FhirPathValue::Boolean(true)),
+        },
+    }
 }
 
 /// Convert a value to Boolean according to FHIRPath specification

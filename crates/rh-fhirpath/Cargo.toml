@@ -30,6 +30,7 @@ serde_json = { workspace = true }
 nom = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
+base64 = { workspace = true }
 
 # FHIR type metadata
 rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.0-beta.2" }

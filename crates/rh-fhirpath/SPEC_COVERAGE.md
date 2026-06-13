@@ -59,7 +59,8 @@ wrong answers · ❌ not implemented.
 
 1. ~~Parser: comments, backtick identifiers, unicode escapes~~ ✅ done 2026-06-12.
 2. ~~`lowBoundary()`/`highBoundary()`/`precision()`~~ ✅ done 2026-06-12 (f64 caveat).
-3. `aggregate()`, `defineVariable()`, `sort()`.
+3. ~~String `encode/decode/escape/unescape`, `convertsToDecimal`~~ ✅ done 2026-06-12.
+4. `aggregate()`, `defineVariable()`, `sort()`.
 4. String `encode/decode/escape/unescape`, `convertsToDecimal`.
 5. Choice-type polymorphism for `is`/`as`/`ofType` on FHIR resources.
 6. Partial-precision date/time semantics (empty-returning comparisons).

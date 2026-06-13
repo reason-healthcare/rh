@@ -45,6 +45,13 @@ impl FhirPathValue {
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => a == b,
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
             (FhirPathValue::Long(a), FhirPathValue::Long(b)) => a == b,
+            // Cross-type numeric equality: 1 = 1.0 is true per spec
+            (FhirPathValue::Integer(a), FhirPathValue::Long(b))
+            | (FhirPathValue::Long(a), FhirPathValue::Integer(b)) => a == b,
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b))
+            | (FhirPathValue::Long(a), FhirPathValue::Number(b)) => *a as f64 == *b,
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b))
+            | (FhirPathValue::Number(a), FhirPathValue::Long(b)) => *a == *b as f64,
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,

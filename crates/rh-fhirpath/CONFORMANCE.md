@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-12 (wave 2: lowBoundary/highBoundary/precision)
+**Last updated**: 2026-06-12 (wave 3: toDecimal, encode/decode/escape/unescape, numeric equality)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-12, wave 2)
+### 1.1 Current results (2026-06-12, wave 3)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 616 | 65.9% |
-| Wrong answer | 128 | 13.7% |
+| Pass | 658 | 70.4% |
+| Wrong answer | 120 | 12.8% |
 | Parse error | 61 | 6.5% |
-| Eval error | 129 | 13.8% |
+| Eval error | 95 | 10.2% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -56,6 +56,8 @@ History:
 | 2026-06-12 | 564 (60.3%) | 120 | 79 | 171 | Harness introduction baseline |
 | 2026-06-12 | 576 (61.6%) | 123 | 61 | 174 | Parser wave 1: `//` and `/* */` comments, backtick identifiers, string escapes incl. `\uXXXX`. 3 cases moved from parse-error to wrong-answer (now parse, eval gaps exposed), 1 to eval-error; `testLiteralUnicode` fixed. |
 | 2026-06-12 | 616 (65.9%) | 128 | 61 | 129 | Wave 2: `lowBoundary()`/`highBoundary()`/`precision()` implemented (45 eval errors fixed). 6 baseline additions: trailing-zero decimal literals lose precision in `f64` (needs a decimal type — see plan 5.3 stage 2), plus 3 suite `±0.0`-boundary cases with non-floor/ceil rounding. |
+
+| 2026-06-12 | 658 (70.4%) | 120 | 61 | 95 | Wave 3: `toDecimal()`/`convertsToDecimal()`, `encode()`/`decode()` (base64/urlbase64/hex), `escape()`/`unescape()` (html/json), cross-type numeric equality fix (`1 = 1.0`). 8 wrong answers removed from baseline. |
 
 ### 1.2 Regression policy
 
