@@ -339,9 +339,16 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
         (Integer(x), Integer(y)) | (Long(x), Long(y)) => x.cmp(y),
         (Integer(x), Long(y)) | (Long(x), Integer(y)) => x.cmp(y),
         (Number(x), Number(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
-        (Integer(x), Number(y)) | (Long(x), Number(y)) => (*x as f64).partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
-        (Number(x), Integer(y)) | (Number(x), Long(y)) => x.partial_cmp(&(*y as f64)).unwrap_or(std::cmp::Ordering::Equal),
-        (String(x), String(y)) | (Date(x), Date(y)) | (DateTime(x), DateTime(y)) | (Time(x), Time(y)) => x.cmp(y),
+        (Integer(x), Number(y)) | (Long(x), Number(y)) => (*x as f64)
+            .partial_cmp(y)
+            .unwrap_or(std::cmp::Ordering::Equal),
+        (Number(x), Integer(y)) | (Number(x), Long(y)) => x
+            .partial_cmp(&(*y as f64))
+            .unwrap_or(std::cmp::Ordering::Equal),
+        (String(x), String(y))
+        | (Date(x), Date(y))
+        | (DateTime(x), DateTime(y))
+        | (Time(x), Time(y)) => x.cmp(y),
         _ => std::cmp::Ordering::Equal,
     }
 }

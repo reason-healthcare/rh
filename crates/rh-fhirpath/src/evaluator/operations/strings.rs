@@ -5,7 +5,6 @@ use crate::evaluator::types::FhirPathValue;
 pub struct StringEvaluator;
 
 impl StringEvaluator {
-
     /// Propagate FHIRPath empty collections: empty.anything() = empty.
     fn is_empty(v: &FhirPathValue) -> bool {
         match v {
@@ -81,8 +80,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         prefix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(prefix) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(prefix) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -110,8 +113,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         suffix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(suffix) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(suffix) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -140,8 +147,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(substring) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -173,8 +184,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(substring) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -206,7 +221,9 @@ impl StringEvaluator {
         pattern: &FhirPathValue,
         replacement: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -246,7 +263,9 @@ impl StringEvaluator {
         regex_pattern: &FhirPathValue,
         substitution: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -397,8 +416,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         pattern: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(pattern) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(pattern) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -434,8 +457,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         pattern: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(pattern) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(pattern) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -473,8 +500,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) { return Ok(FhirPathValue::Empty); }
-        if Self::is_empty(substring) { return Ok(FhirPathValue::Empty); }
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
