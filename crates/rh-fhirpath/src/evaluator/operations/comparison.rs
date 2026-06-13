@@ -206,9 +206,88 @@ impl ComparisonEvaluator {
         Ok(FhirPathValue::Boolean(result))
     }
 
-    /// Check if two values are equivalent (more lenient than equal)
+    /// Check if two values are equivalent (more lenient than equal). Per
+    /// FHIRPath §6.1.5: strings ignore case and collapse runs of whitespace;
+    /// decimals match at the precision of the less-precise input; collections
+    /// match as multisets (order-insensitive); otherwise it's strict equality.
     pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
-        // For now, same as equal - can be extended for type coercion
-        FhirPathValue::equals_static(left, right)
+        use FhirPathValue::*;
+        match (left, right) {
+            (String(a), String(b)) => string_equivalent(a, b),
+            (Number(a), Number(b)) => numbers_equivalent(*a, *b),
+            (Integer(a), Number(b)) | (Long(a), Number(b)) => numbers_equivalent(*a as f64, *b),
+            (Number(a), Integer(b)) | (Number(a), Long(b)) => numbers_equivalent(*a, *b as f64),
+            (Collection(a), Collection(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut matched = vec![false; b.len()];
+                for x in a {
+                    let mut found = false;
+                    for (j, y) in b.iter().enumerate() {
+                        if !matched[j] && Self::values_equivalent(x, y) {
+                            matched[j] = true;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        return false;
+                    }
+                }
+                true
+            }
+            _ => FhirPathValue::equals_static(left, right),
+        }
+    }
+}
+
+/// Whitespace-collapsing case-insensitive string equivalence per FHIRPath
+/// §6.1.5. Sequences of whitespace (Unicode space, tab, CR, LF) collapse to
+/// a single space, leading/trailing whitespace is trimmed, and the comparison
+/// is ASCII case-insensitive.
+fn string_equivalent(a: &str, b: &str) -> bool {
+    let na = normalize_for_equivalence(a);
+    let nb = normalize_for_equivalence(b);
+    na == nb
+}
+
+fn normalize_for_equivalence(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut prev_ws = true; // leading whitespace gets trimmed via this guard
+    for c in s.chars() {
+        if c.is_whitespace() {
+            if !prev_ws {
+                out.push(' ');
+                prev_ws = true;
+            }
+        } else {
+            out.extend(c.to_lowercase());
+            prev_ws = false;
+        }
+    }
+    if out.ends_with(' ') {
+        out.pop();
+    }
+    out
+}
+
+/// Decimal equivalence: round both operands to the smaller fractional-digit
+/// precision and compare. `1.2 / 1.8 ~ 0.67` succeeds because 0.666… rounded
+/// to two digits equals 0.67.
+fn numbers_equivalent(a: f64, b: f64) -> bool {
+    if a == b {
+        return true;
+    }
+    let precision = fractional_digits(b);
+    let scale = 10f64.powi(precision as i32);
+    (a * scale).round() == (b * scale).round()
+}
+
+fn fractional_digits(n: f64) -> u8 {
+    let s = format!("{n}");
+    match s.split_once('.') {
+        Some((_, frac)) => frac.len().min(15) as u8,
+        None => 0,
     }
 }

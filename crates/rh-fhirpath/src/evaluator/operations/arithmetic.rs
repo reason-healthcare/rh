@@ -154,7 +154,16 @@ impl ArithmeticEvaluator {
                     unit: Some(unit_str),
                 },
             ) => {
-                if let Ok(precision) = Self::parse_precision_unit(unit_str) {
+                // Per FHIRPath spec, UCUM `mo` and `a` (mean month/year — 30.44 and
+                // 365.25 days) are ambiguous for calendar Date arithmetic and must
+                // produce an execution error.
+                if matches!(unit_str.as_str(), "mo" | "a") {
+                    Err(FhirPathError::EvaluationError {
+                        message: format!(
+                            "UCUM duration '{unit_str}' is ambiguous for Date arithmetic"
+                        ),
+                    })
+                } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
                     Self::add_precision_to_date(date_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -169,7 +178,16 @@ impl ArithmeticEvaluator {
                 },
                 FhirPathValue::Date(date_str),
             ) => {
-                if let Ok(precision) = Self::parse_precision_unit(unit_str) {
+                // Per FHIRPath spec, UCUM `mo` and `a` (mean month/year — 30.44 and
+                // 365.25 days) are ambiguous for calendar Date arithmetic and must
+                // produce an execution error.
+                if matches!(unit_str.as_str(), "mo" | "a") {
+                    Err(FhirPathError::EvaluationError {
+                        message: format!(
+                            "UCUM duration '{unit_str}' is ambiguous for Date arithmetic"
+                        ),
+                    })
+                } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
                     Self::add_precision_to_date(date_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -996,17 +1014,20 @@ impl ArithmeticEvaluator {
         Ok(FhirPathValue::DateTime(result_str))
     }
 
-    /// Parse a precision unit from a string
+    /// Parse a precision unit from a string. Accepts both FHIRPath calendar-
+    /// duration names (`year`, `months`, etc.) and the UCUM abbreviations
+    /// used in quoted-unit quantity literals (`a`, `mo`, `wk`, `d`, `h`,
+    /// `min`, `s`, `ms`).
     fn parse_precision_unit(unit_str: &str) -> Result<DateTimePrecision, FhirPathError> {
         match unit_str {
-            "year" | "years" => Ok(DateTimePrecision::Year),
-            "month" | "months" => Ok(DateTimePrecision::Month),
-            "week" | "weeks" => Ok(DateTimePrecision::Week),
-            "day" | "days" => Ok(DateTimePrecision::Day),
-            "hour" | "hours" => Ok(DateTimePrecision::Hour),
-            "minute" | "minutes" => Ok(DateTimePrecision::Minute),
-            "second" | "seconds" => Ok(DateTimePrecision::Second),
-            "millisecond" | "milliseconds" => Ok(DateTimePrecision::Millisecond),
+            "year" | "years" | "a" => Ok(DateTimePrecision::Year),
+            "month" | "months" | "mo" => Ok(DateTimePrecision::Month),
+            "week" | "weeks" | "wk" => Ok(DateTimePrecision::Week),
+            "day" | "days" | "d" => Ok(DateTimePrecision::Day),
+            "hour" | "hours" | "h" => Ok(DateTimePrecision::Hour),
+            "minute" | "minutes" | "min" => Ok(DateTimePrecision::Minute),
+            "second" | "seconds" | "s" => Ok(DateTimePrecision::Second),
+            "millisecond" | "milliseconds" | "ms" => Ok(DateTimePrecision::Millisecond),
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Unknown precision unit: {unit_str}"),
             }),

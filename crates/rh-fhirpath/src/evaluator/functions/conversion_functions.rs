@@ -637,21 +637,19 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::Long(l) => Ok(FhirPathValue::String(l.to_string())),
 
         FhirPathValue::Number(n) => {
-            // Format number without unnecessary trailing zeros
-            let formatted = if n.fract() == 0.0 {
-                format!("{n:.0}")
+            // FHIRPath Decimal.toString() preserves the decimal point so that
+            // 1.0 → "1.0" — required to distinguish Decimal from Integer in
+            // string form. Trailing zeros past the first are still trimmed.
+            let mut s = format!("{n}");
+            if !s.contains('.') {
+                s.push_str(".0");
             } else {
-                // Remove trailing zeros but keep at least one decimal place if needed
-                let mut formatted = format!("{n}");
-                if formatted.contains('.') {
-                    formatted = formatted.trim_end_matches('0').to_string();
-                    if formatted.ends_with('.') {
-                        formatted.push('0');
-                    }
+                s = s.trim_end_matches('0').to_string();
+                if s.ends_with('.') {
+                    s.push('0');
                 }
-                formatted
-            };
-            Ok(FhirPathValue::String(formatted))
+            }
+            Ok(FhirPathValue::String(s))
         }
 
         FhirPathValue::Date(d) => Ok(FhirPathValue::String(d.clone())),
@@ -669,6 +667,12 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         }
 
         FhirPathValue::Quantity { value, unit } => match unit {
+            // Calendar-duration words are emitted unquoted (`1 week`),
+            // while UCUM codes are quoted (`1 'kg'`). The set tracks the
+            // FHIRPath calendar-duration vocabulary plus their plurals.
+            Some(u) if is_calendar_duration_unit(u) => {
+                Ok(FhirPathValue::String(format!("{value} {u}")))
+            }
             Some(u) => Ok(FhirPathValue::String(format!("{value} '{u}'"))),
             None => Ok(FhirPathValue::String(value.to_string())),
         },
@@ -825,53 +829,27 @@ fn to_quantity(
             })
         }
 
-        FhirPathValue::Integer(i) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
+        // Numeric and Boolean conversions get the default UCUM unit "1"
+        // when no explicit unit is supplied — per FHIRPath §6.3 toQuantity().
+        FhirPathValue::Integer(i) => Ok(FhirPathValue::Quantity {
+            value: *i as f64,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-            Ok(FhirPathValue::Quantity {
-                value: *i as f64,
-                unit: target_unit,
-            })
-        }
+        FhirPathValue::Number(n) => Ok(FhirPathValue::Quantity {
+            value: *n,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-        FhirPathValue::Number(n) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
+        FhirPathValue::Long(l) => Ok(FhirPathValue::Quantity {
+            value: *l as f64,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-            Ok(FhirPathValue::Quantity {
-                value: *n,
-                unit: target_unit,
-            })
-        }
-
-        FhirPathValue::Long(l) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
-
-            Ok(FhirPathValue::Quantity {
-                value: *l as f64,
-                unit: target_unit,
-            })
-        }
+        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Quantity {
+            value: if *b { 1.0 } else { 0.0 },
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
         FhirPathValue::String(s) => {
             // Try to parse as a quantity string or as a number
@@ -891,19 +869,11 @@ fn to_quantity(
                     unit: target_unit,
                 })
             } else if let Ok(value) = s.parse::<f64>() {
-                // Parse as a plain number
-                let target_unit = if let Some(unit_param) = unit_param {
-                    match unit_param {
-                        FhirPathValue::String(u) => Some(u.clone()),
-                        _ => None, // Invalid unit parameter
-                    }
-                } else {
-                    None
-                };
-
+                // Plain numeric string — defaults to UCUM unit "1" like the
+                // direct numeric-input path does.
                 Ok(FhirPathValue::Quantity {
                     value,
-                    unit: target_unit,
+                    unit: Some(quantity_unit_or_default(unit_param)),
                 })
             } else {
                 // Not convertible
@@ -941,8 +911,11 @@ fn converts_to_quantity(
             Ok(FhirPathValue::Boolean(true))
         }
 
-        FhirPathValue::Integer(_) | FhirPathValue::Number(_) | FhirPathValue::Long(_) => {
-            // Numeric types are always convertible to quantity
+        FhirPathValue::Integer(_)
+        | FhirPathValue::Number(_)
+        | FhirPathValue::Long(_)
+        | FhirPathValue::Boolean(_) => {
+            // Numeric and Boolean inputs convert via the default unit "1".
             Ok(FhirPathValue::Boolean(true))
         }
 
@@ -1082,17 +1055,14 @@ fn extract_time_from_datetime(dt: &str) -> Option<String> {
 /// Parse a string that might represent a quantity (e.g., "5 'mg'", "10.5'kg'")
 /// Returns (value, unit) if successful
 fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
-    // Try to parse as "value 'unit'" or "value'unit'" format
     let s = s.trim();
 
-    // Look for quote patterns
+    // Quoted UCUM unit form: "value 'unit'" or "value'unit'"
     if let Some(quote_start) = s.find('\'') {
         if let Some(quote_end) = s.rfind('\'') {
             if quote_start < quote_end {
-                // Extract the value part
                 let value_str = s[..quote_start].trim();
                 let unit_str = &s[quote_start + 1..quote_end];
-
                 if let Ok(value) = value_str.parse::<f64>() {
                     let unit = if unit_str.is_empty() {
                         None
@@ -1105,5 +1075,49 @@ fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
         }
     }
 
+    // Unquoted calendar-duration form: "value day" / "value weeks" etc.
+    if let Some(sep) = s.find(char::is_whitespace) {
+        let value_str = s[..sep].trim();
+        let unit_str = s[sep..].trim();
+        if !unit_str.is_empty() && is_calendar_duration_unit(unit_str) {
+            if let Ok(value) = value_str.parse::<f64>() {
+                return Some((value, Some(unit_str.to_string())));
+            }
+        }
+    }
+
     None
+}
+
+/// Read the unit-argument for `toQuantity(unit)`, defaulting to the UCUM
+/// "no unit" code `'1'` when no argument is supplied — per FHIRPath §6.3.
+fn quantity_unit_or_default(unit_param: Option<&FhirPathValue>) -> String {
+    match unit_param {
+        Some(FhirPathValue::String(u)) => u.clone(),
+        _ => "1".to_string(),
+    }
+}
+
+/// FHIRPath calendar-duration vocabulary (used by Quantity.toString to decide
+/// whether the unit gets quoted). Both singular and plural forms accepted.
+fn is_calendar_duration_unit(u: &str) -> bool {
+    matches!(
+        u,
+        "year"
+            | "years"
+            | "month"
+            | "months"
+            | "week"
+            | "weeks"
+            | "day"
+            | "days"
+            | "hour"
+            | "hours"
+            | "minute"
+            | "minutes"
+            | "second"
+            | "seconds"
+            | "millisecond"
+            | "milliseconds"
+    )
 }
