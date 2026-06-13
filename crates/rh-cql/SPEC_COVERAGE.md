@@ -48,13 +48,14 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Type / Conversion | 20 | 16/20 | 16/20 | 20/20 | 16/20 | 16 | 80% |
 | Terminology | 9 | 0/9 | 0/9 | 9/9 | 9/9 | 9 | 100% |
 | Clinical | 8 | 0/8 | 8/8 | 8/8 | 8/8 | 8 | 100% |
-| Error | 1 | 0/1 | 0/1 | 0/1 | 0/1 | 0 | 0% |
-| **Total** | **175** | | | | | **169** | **97%** |
+| Error | 1 | 0/1 | 1/1 | 1/1 | 1/1 | 1 | 100% |
+| **Total** | **175** | | | | | **170** | **97%** |
 
 > Counts apply to the **source stage only** (➖ not counted as either present or absent).  
 > **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.  
 > Last updated: wave-2 (2026-03-09) — added Precision, LowBoundary, HighBoundary, TimeOfDay, Size, Product, GeometricMean, fixed Coalesce list-overload, registered aggregate/nullological semantic signatures.
 > 2026-06-12 — clinical age operators complete: `AgeIn<unit>[At]` (patient context) and `CalculateAgeIn<unit>[At]` (explicit birthDate); Clinical 0% → 100%, total 161 → 169 (97%).
+> 2026-06-12 (wave 2) — task 2.5: Ratio literals (`1 'mg' : 2 'mL'`, `1:128`) parse/emit/eval end-to-end; ELM `Quantity`/`Ratio` nodes evaluate; `ToRatio`, 1-arg `Combine`, `Message` (Error severity raises, others log via `tracing`), `Children`, `Descendants` implemented via FunctionRef dispatch. Error category 0% → 100%; total 170/175.
 
 ---
 
@@ -490,13 +491,10 @@ implemented** in `rh-cql` at any pipeline stage:
 - **Children / Descendents** — FHIR model navigation nodes
 
 ### Medium Priority
-- **Combine** — list-to-string with separator; no semantic signature yet
 - **ForEach / Filter** — query-internal only; no top-level semantic wiring
 - **Expand** — no semantic signature
 
 ### Low Priority (clinical context-dependent)
-- **Message** — CQL error/trace operator
-- **ToRatio** — ratio conversion from string
 
 ### Wave-3 improvements (functional but non-canonical)
 - **Precision / LowBoundary / HighBoundary** — eval routes via `FunctionRef` instead of canonical ELM emit node; no `elm::Expression::Precision/LowBoundary/HighBoundary` variants exist yet

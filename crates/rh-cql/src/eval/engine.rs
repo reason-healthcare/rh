@@ -256,6 +256,47 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 Ok(val)
             }
 
+            Expression::Quantity(q) => Ok(match q.value {
+                Some(value) => Value::Quantity(crate::eval::value::CqlQuantity {
+                    value,
+                    unit: q.unit.clone().unwrap_or_else(|| "1".to_string()),
+                }),
+                None => Value::Null,
+            }),
+
+            Expression::Ratio(r) => {
+                let num = self.eval_expr_opt(r.numerator.as_deref())?;
+                let den = self.eval_expr_opt(r.denominator.as_deref())?;
+                let to_q = |v: Value| match v {
+                    Value::Quantity(q) => Some(q),
+                    Value::Integer(i) => Some(crate::eval::value::CqlQuantity {
+                        value: i as f64,
+                        unit: "1".to_string(),
+                    }),
+                    Value::Long(i) => Some(crate::eval::value::CqlQuantity {
+                        value: i as f64,
+                        unit: "1".to_string(),
+                    }),
+                    Value::Decimal(d) => Some(crate::eval::value::CqlQuantity {
+                        value: d,
+                        unit: "1".to_string(),
+                    }),
+                    _ => None,
+                };
+                if matches!(num, Value::Null) || matches!(den, Value::Null) {
+                    return Ok(Value::Null);
+                }
+                match (to_q(num), to_q(den)) {
+                    (Some(numerator), Some(denominator)) => Ok(Value::Ratio {
+                        numerator,
+                        denominator,
+                    }),
+                    _ => Err(EvalError::General(
+                        "Ratio: operands must be quantities".to_string(),
+                    )),
+                }
+            }
+
             // ----- References -----
             Expression::ExpressionRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");

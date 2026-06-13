@@ -236,10 +236,115 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         ("Precision", [v]) => eval_precision(v),
         ("LowBoundary", [v, prec]) => eval_low_boundary(v, prec),
         ("HighBoundary", [v, prec]) => eval_high_boundary(v, prec),
+        // String combine without separator (the 2-arg form is emitted as an
+        // ELM Combine node; the 1-arg overload arrives as a FunctionRef)
+        ("Combine", [list]) => combine(list, None),
+        ("ToRatio", [v]) => to_ratio(v),
+        // Tree navigation
+        ("Children", [v]) => children(v),
+        ("Descendants", [v]) => descendants(v),
+        // Errors & messaging
+        ("Message", [source, condition, code, severity, message]) => {
+            eval_message(source, condition, code, severity, message)
+        }
         _ => Err(EvalError::General(format!(
             "evaluate_elm: unknown FunctionRef '{name}' with {} arg(s)",
             args.len()
         ))),
+    }
+}
+
+/// `Children(x)` — the immediate child values of a structured value: tuple
+/// field values, or the children of each element for a list. Non-structured
+/// values have no children.
+fn children(v: &Value) -> Result<Value, EvalError> {
+    match v {
+        Value::Null => Ok(Value::Null),
+        Value::Tuple(fields) => Ok(Value::List(fields.values().cloned().collect())),
+        Value::List(items) => {
+            let mut out = Vec::new();
+            for item in items {
+                match children(item)? {
+                    Value::List(cs) => out.extend(cs),
+                    Value::Null => {}
+                    other => out.push(other),
+                }
+            }
+            Ok(Value::List(out))
+        }
+        _ => Ok(Value::List(Vec::new())),
+    }
+}
+
+/// `Descendants(x)` — all descendant values of a structured value
+/// (children, recursively).
+fn descendants(v: &Value) -> Result<Value, EvalError> {
+    fn collect(v: &Value, out: &mut Vec<Value>) {
+        match v {
+            Value::Tuple(fields) => {
+                for child in fields.values() {
+                    out.push(child.clone());
+                    collect(child, out);
+                }
+            }
+            Value::List(items) => {
+                for item in items {
+                    collect(item, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    match v {
+        Value::Null => Ok(Value::Null),
+        other => {
+            let mut out = Vec::new();
+            collect(other, &mut out);
+            Ok(Value::List(out))
+        }
+    }
+}
+
+/// `Message(source, condition, code, severity, message)` — when `condition`
+/// is true, reports a message at the given severity ('Trace', 'Message',
+/// 'Warning', or 'Error'; 'Error' raises a runtime error). Returns `source`.
+fn eval_message(
+    source: &Value,
+    condition: &Value,
+    code: &Value,
+    severity: &Value,
+    message: &Value,
+) -> Result<Value, EvalError> {
+    if !matches!(condition, Value::Boolean(true)) {
+        return Ok(source.clone());
+    }
+
+    let as_text = |v: &Value| -> String {
+        match v {
+            Value::String(s) => s.clone(),
+            Value::Null => String::new(),
+            other => format!("{other:?}"),
+        }
+    };
+    let code_text = as_text(code);
+    let message_text = as_text(message);
+    let severity_text = match severity {
+        Value::String(s) => s.as_str(),
+        _ => "Message",
+    };
+
+    match severity_text {
+        "Error" => Err(EvalError::General(format!(
+            "Message error [{code_text}]: {message_text}"
+        ))),
+        "Warning" => {
+            tracing::warn!("CQL Message [{code_text}]: {message_text}");
+            Ok(source.clone())
+        }
+        _ => {
+            tracing::info!("CQL {severity_text} [{code_text}]: {message_text}");
+            Ok(source.clone())
+        }
     }
 }
 

@@ -1398,8 +1398,9 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_datetime_literal_expr,
             parse_time_literal_expr,
             parse_date_literal_expr,
+            parse_ratio_literal_expr, // 1 'mg' : 2 'mL' style (before quantity)
             parse_duration_quantity_expr, // 30 days style
-            parse_quantity_literal_expr,  // 5 'mg' style
+            parse_quantity_literal_expr, // 5 'mg' style
             parse_long_literal_expr,
             parse_decimal_literal_expr,
             parse_integer_literal_expr,

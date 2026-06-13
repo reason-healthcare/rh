@@ -141,7 +141,10 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
         Value::Date(d) => Ok(Value::String(d.to_string())),
         Value::DateTime(dt) => Ok(Value::String(dt.to_string())),
         Value::Time(t) => Ok(Value::String(t.to_string())),
-        Value::Quantity(q) => Ok(Value::String(q.to_string())),
+        // HL7 suite (CqlStringOperatorsTest/QuantityToString) expects
+        // `ToString(125 'cm')` to yield `'125cm'` — value directly followed
+        // by the unit, no space or quotes.
+        Value::Quantity(q) => Ok(Value::String(format!("{}{}", q.value, q.unit))),
         _ => Err(err("ToString", "cannot convert to String")),
     }
 }
@@ -416,6 +419,32 @@ pub fn to_quantity(v: &Value) -> Result<Value, EvalError> {
             Ok(Value::Null)
         }
         _ => Err(err("ToQuantity", "cannot convert to Quantity")),
+    }
+}
+
+/// `ToRatio` — converts a String of the form `"<quantity>:<quantity>"`
+/// (e.g. `"1.0 'mg':2.0 'mL'"`) to a `Ratio`. Returns null for malformed input.
+pub fn to_ratio(v: &Value) -> Result<Value, EvalError> {
+    null1!(v);
+    match v {
+        Value::Ratio { .. } => Ok(v.clone()),
+        Value::String(s) => {
+            // Split on the ':' that separates the two quantities. A ':' can
+            // not appear inside a quantity literal, so a plain split is safe.
+            let Some((num_str, den_str)) = s.split_once(':') else {
+                return Ok(Value::Null);
+            };
+            let num = to_quantity(&Value::String(num_str.trim().to_string()))?;
+            let den = to_quantity(&Value::String(den_str.trim().to_string()))?;
+            match (num, den) {
+                (Value::Quantity(numerator), Value::Quantity(denominator)) => Ok(Value::Ratio {
+                    numerator,
+                    denominator,
+                }),
+                _ => Ok(Value::Null),
+            }
+        }
+        _ => Err(err("ToRatio", "cannot convert to Ratio")),
     }
 }
 
