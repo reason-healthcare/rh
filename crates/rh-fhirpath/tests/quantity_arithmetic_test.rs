@@ -234,13 +234,15 @@ mod quantity_tests {
             panic!("Expected Quantity result, got: {result:?}");
         }
 
-        // Same units divide to dimensionless number
+        // Same units divide to a dimensionless Quantity with unit "1"
+        // per the UCUM spec, which FHIRPath inherits.
         let expr = parser.parse("10'kg' / 5'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        if let FhirPathValue::Number(ratio) = result {
-            assert_eq!(ratio, 2.0);
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("1"));
         } else {
-            panic!("Expected Number result, got: {result:?}");
+            panic!("Expected Quantity{{1.0, '1'}}, got: {result:?}");
         }
 
         // Division by zero

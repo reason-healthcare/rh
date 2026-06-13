@@ -258,6 +258,39 @@ impl UnitConverter {
             },
         );
 
+        // FHIRPath calendar-duration names — same factors as their UCUM
+        // counterparts so `7 days = 1 week`, `7 days = 1 'wk'`, etc. work.
+        let cal_pairs: &[(&str, f64)] = &[
+            ("millisecond", 0.001),
+            ("milliseconds", 0.001),
+            ("second", 1.0),
+            ("seconds", 1.0),
+            ("minute", 60.0),
+            ("minutes", 60.0),
+            ("hour", 3600.0),
+            ("hours", 3600.0),
+            ("day", 86400.0),
+            ("days", 86400.0),
+            ("week", 604800.0),
+            ("weeks", 604800.0),
+            // month/year use UCUM mean values for comparison purposes only.
+            ("month", 2629746.0),
+            ("months", 2629746.0),
+            ("year", 31556952.0),
+            ("years", 31556952.0),
+        ];
+        for (name, factor) in cal_pairs {
+            unit_mappings.insert(
+                name.to_string(),
+                UnitMapping {
+                    quantity_type: QuantityType::Time,
+                    base_unit: "s".to_string(),
+                    to_base_factor: *factor,
+                    from_base_factor: 1.0 / factor,
+                },
+            );
+        }
+
         // Pressure units (base: Pascal)
         unit_mappings.insert(
             "Pa".to_string(),
@@ -596,10 +629,15 @@ impl UnitConverter {
         let (left_base, _) = self.to_base_unit(left_value, left_unit)?;
         let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
 
-        // Divide the base values - result is dimensionless when same units
         let result = left_base / right_base;
 
-        Ok(FhirPathValue::Number(result))
+        // Same-dimension division is dimensionless. Return a Quantity with
+        // unit "1" (the UCUM "no unit" code) per the FHIRPath/UCUM spec so
+        // `1 'm' / 1 'm' = 1 '1'` compares correctly.
+        Ok(FhirPathValue::Quantity {
+            value: result,
+            unit: Some("1".to_string()),
+        })
     }
 }
 
@@ -669,14 +707,15 @@ mod tests {
     fn test_division() {
         let converter = UnitConverter::new();
 
-        // Test same units division (should result in dimensionless)
+        // Test same units division — result is dimensionless with unit "1".
         let result = converter
             .divide_quantities(10.0, &Some("kg".to_string()), 5.0, &Some("kg".to_string()))
             .unwrap();
-        if let FhirPathValue::Number(ratio) = result {
-            assert_eq!(ratio, 2.0);
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("1"));
         } else {
-            panic!("Expected Number result");
+            panic!("Expected Quantity result with unit '1', got {result:?}");
         }
     }
 

@@ -228,6 +228,29 @@ impl ComparisonEvaluator {
             (Number(a), Number(b)) => numbers_equivalent(*a, *b),
             (Integer(a), Number(b)) | (Long(a), Number(b)) => numbers_equivalent(*a as f64, *b),
             (Number(a), Integer(b)) | (Number(a), Long(b)) => numbers_equivalent(*a, *b as f64),
+            (
+                Quantity {
+                    value: va,
+                    unit: ua,
+                },
+                Quantity {
+                    value: vb,
+                    unit: ub,
+                },
+            ) => {
+                // Use the unit converter so cross-unit equivalence works, then
+                // apply the FHIRPath §6.5 precision rule: compare at the
+                // significant-digit precision of the less-precise value.
+                use crate::evaluator::operations::units::UnitConverter;
+                let converter = UnitConverter::new();
+                let Ok((base_a, _)) = converter.to_base_unit(*va, ua) else {
+                    return false;
+                };
+                let Ok((base_b, _)) = converter.to_base_unit(*vb, ub) else {
+                    return false;
+                };
+                quantity_equivalent(base_a, base_b)
+            }
             (Collection(a), Collection(b)) => {
                 if a.len() != b.len() {
                     return false;
@@ -301,6 +324,38 @@ fn fractional_digits(n: f64) -> u8 {
         Some((_, frac)) => frac.len().min(15) as u8,
         None => 0,
     }
+}
+
+/// Quantity equivalence: compare base values at the precision of the less
+/// precise input. Per FHIRPath §6.5.5, trailing zeros after the decimal point
+/// are significant, but for inter-unit equivalence the common approach is to
+/// round to the smaller number of significant figures.
+fn quantity_equivalent(a: f64, b: f64) -> bool {
+    if (a - b).abs() < f64::EPSILON {
+        return true;
+    }
+    let prec = significant_figures(a).min(significant_figures(b));
+    if prec == 0 {
+        return (a - b).abs() < 1.0;
+    }
+    let scale = 10f64.powi(prec as i32 - 1 - a.abs().log10().floor() as i32);
+    (a * scale).round() == (b * scale).round()
+}
+
+/// Count significant figures in a floating-point value.
+fn significant_figures(n: f64) -> i32 {
+    if n == 0.0 {
+        return 1;
+    }
+    let s = format!("{}", n.abs());
+    // Strip leading zeros and decimal point to count significant digits.
+    let digits: String = s
+        .chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect::<String>()
+        .trim_start_matches('0')
+        .to_string();
+    digits.len().max(1) as i32
 }
 
 /// Coerce a value to a known boolean for three-valued logic. Returns `None`
