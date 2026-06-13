@@ -73,6 +73,8 @@ impl FhirPathParser {
 
     /// Parse a FHIRPath expression from a string
     pub fn parse(&self, input: &str) -> FhirPathResult<FhirPathExpression> {
+        let stripped = strip_comments(input)?;
+        let input = stripped.as_str();
         match parse_expression(input.trim()) {
             Ok((remaining, expr)) => {
                 let remaining = remaining.trim();
@@ -99,6 +101,63 @@ impl Default for FhirPathParser {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Remove `//` line comments and `/* */` block comments, preserving the
+/// contents of string literals (`'…'`) and delimited identifiers (`` `…` ``).
+fn strip_comments(input: &str) -> FhirPathResult<String> {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        match c {
+            '\'' | '`' => {
+                let delim = c;
+                out.push(c);
+                let mut escaped = false;
+                for (_, sc) in chars.by_ref() {
+                    out.push(sc);
+                    if escaped {
+                        escaped = false;
+                    } else if sc == '\\' && delim == '\'' {
+                        escaped = true;
+                    } else if sc == delim {
+                        break;
+                    }
+                }
+            }
+            '/' if matches!(chars.peek(), Some((_, '/'))) => {
+                // line comment — skip to end of line (keep the newline)
+                for (_, sc) in chars.by_ref() {
+                    if sc == '\n' {
+                        out.push('\n');
+                        break;
+                    }
+                }
+            }
+            '/' if matches!(chars.peek(), Some((_, '*'))) => {
+                chars.next(); // consume '*'
+                let mut closed = false;
+                let mut prev_star = false;
+                for (_, sc) in chars.by_ref() {
+                    if prev_star && sc == '/' {
+                        closed = true;
+                        break;
+                    }
+                    prev_star = sc == '*';
+                }
+                if !closed {
+                    return Err(FhirPathError::SyntaxError {
+                        line: 1,
+                        column: i,
+                        message: "Unterminated block comment".to_string(),
+                    });
+                }
+                out.push(' ');
+            }
+            _ => out.push(c),
+        }
+    }
+    Ok(out)
 }
 
 // Whitespace handling
@@ -465,9 +524,60 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
 // Parse string literal
 fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('\'')(input)?;
-    let (input, content) = take_while(|c| c != '\'')(input)?;
-    let (input, _) = char('\'')(input)?;
-    Ok((input, Literal::String(content.to_string())))
+    let mut out = String::new();
+    let mut chars = input.char_indices();
+    loop {
+        match chars.next() {
+            Some((end, '\'')) => {
+                return Ok((&input[end + 1..], Literal::String(out)));
+            }
+            Some((_, '\\')) => match chars.next() {
+                Some((_, 'n')) => out.push('\n'),
+                Some((_, 'r')) => out.push('\r'),
+                Some((_, 't')) => out.push('\t'),
+                Some((_, 'f')) => out.push('\u{c}'),
+                Some((_, '\\')) => out.push('\\'),
+                Some((_, '/')) => out.push('/'),
+                Some((_, '\'')) => out.push('\''),
+                Some((_, '"')) => out.push('"'),
+                Some((_, '`')) => out.push('`'),
+                Some((start, 'u')) => {
+                    // \uXXXX — exactly four hex digits
+                    let hex: String = input[start + 1..].chars().take(4).collect();
+                    if hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                        if let Some(c) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32)
+                        {
+                            out.push(c);
+                            for _ in 0..4 {
+                                chars.next();
+                            }
+                            continue;
+                        }
+                    }
+                    // Not a valid unicode escape — keep verbatim.
+                    out.push('\\');
+                    out.push('u');
+                }
+                Some((_, other)) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        nom::error::ErrorKind::Char,
+                    )))
+                }
+            },
+            Some((_, c)) => out.push(c),
+            None => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    nom::error::ErrorKind::Char,
+                )))
+            }
+        }
+    }
 }
 
 // Parse number literal
@@ -692,6 +802,16 @@ fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
 
 // Parse identifier - simplified version
 fn parse_identifier(input: &str) -> IResult<&str, String> {
+    // Delimited identifier: `div`, `name with spaces`
+    if let Some(rest) = input.strip_prefix('`') {
+        if let Some(end) = rest.find('`') {
+            return Ok((&rest[end + 1..], rest[..end].to_string()));
+        }
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    }
     let (input, ident) = recognize(tuple((
         alt((alpha1, recognize(char('_')))),
         opt(take_while1(|c: char| c.is_alphanumeric() || c == '_')),

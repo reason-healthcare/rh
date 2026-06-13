@@ -12,9 +12,9 @@ wrong answers · ❌ not implemented.
 |---|---|---|
 | Path navigation, indexers | ✅ | |
 | Literals (boolean, string, integer, decimal, date, dateTime, time, quantity) | 🟡 | Partial-precision dates (`@2015`, `@2015-02`) and some quantity literals misbehave |
-| Comments `//`, `/* */` | ❌ | Parser rejects; 7 suite failures |
-| Backtick identifiers `` `given` `` | ❌ | Parser gap |
-| String escapes (`e`, …) | 🟡 | Unicode escapes not decoded |
+| Comments `//`, `/* */` | ✅ | Stripped by preprocessor (2026-06-12) |
+| Backtick identifiers `` `given` `` | ✅ | (2026-06-12) |
+| String escapes | ✅ | Full escape set incl. `\uXXXX` (2026-06-12) |
 | Environment variables (`%resource`, `%context`) | 🟡 | `%vs-*`/`%ext-*` not supported |
 
 ## Operators
@@ -57,8 +57,7 @@ wrong answers · ❌ not implemented.
 
 ## Implementation priority (refactor plan task 2.3)
 
-1. Parser: comments, backtick identifiers, unicode escapes — cheap, fixes ~12
-   cases and unblocks others.
+1. ~~Parser: comments, backtick identifiers, unicode escapes~~ ✅ done 2026-06-12.
 2. `lowBoundary()`/`highBoundary()`/`precision()` — 57 cases.
 3. `aggregate()`, `defineVariable()`, `sort()`.
 4. String `encode/decode/escape/unescape`, `convertsToDecimal`.
