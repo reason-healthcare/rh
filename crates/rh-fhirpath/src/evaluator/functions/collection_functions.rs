@@ -298,7 +298,7 @@ pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunc
                 other => return Ok(other.clone()),
             };
             let mut sorted = items;
-            sorted.sort_by(|a, b| compare_for_sort(a, b));
+            sorted.sort_by(compare_for_sort);
             if sorted.is_empty() {
                 Ok(FhirPathValue::Empty)
             } else if sorted.len() == 1 {
