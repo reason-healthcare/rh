@@ -89,6 +89,24 @@ impl ComparisonEvaluator {
             }
         }
 
+        // Per spec §6.5.1: `=` and `!=` propagate empty (unknown) when either
+        // operand is the empty collection; `~` and `!~` do not.
+        fn is_empty_collection(v: &FhirPathValue) -> bool {
+            match v {
+                FhirPathValue::Empty => true,
+                FhirPathValue::Collection(c) => c.is_empty(),
+                _ => false,
+            }
+        }
+        if (is_empty_collection(left) || is_empty_collection(right))
+            && matches!(
+                operator,
+                EqualityOperator::Equal | EqualityOperator::NotEqual
+            )
+        {
+            return Ok(FhirPathValue::Empty);
+        }
+
         let result = match operator {
             EqualityOperator::Equal => FhirPathValue::equals_static(left, right),
             EqualityOperator::NotEqual => !FhirPathValue::equals_static(left, right),
@@ -142,14 +160,23 @@ impl ComparisonEvaluator {
         Ok(FhirPathValue::Boolean(result))
     }
 
-    /// Evaluate AND operation
+    /// Evaluate AND operation with three-valued logic (§6.5):
+    /// false AND anything → false; true AND empty → empty; empty AND empty → empty.
     pub fn evaluate_and(
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let left_bool = left.to_boolean();
-        let right_bool = right.to_boolean();
-        Ok(FhirPathValue::Boolean(left_bool && right_bool))
+        let lk = bool_three_valued(left);
+        let rk = bool_three_valued(right);
+        let result = match (lk, rk) {
+            (Some(false), _) | (_, Some(false)) => Some(false),
+            (Some(true), Some(true)) => Some(true),
+            _ => None,
+        };
+        Ok(match result {
+            Some(b) => FhirPathValue::Boolean(b),
+            None => FhirPathValue::Empty,
+        })
     }
 
     /// Evaluate implies operation

@@ -274,14 +274,21 @@ fn test_comparison_edge_cases() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_test_context();
 
-    // Empty vs non-empty comparisons
+    // Per FHIRPath spec: `=` and `!=` with an empty operand yield the empty
+    // collection (unknown), not a Boolean.
     let expr = parser.parse("{} = {}").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(true)));
+    assert!(
+        matches!(result, FhirPathValue::Empty),
+        "expected Empty, got {result:?}"
+    );
 
     let expr = parser.parse("{} != {}").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
+    assert!(
+        matches!(result, FhirPathValue::Empty),
+        "expected Empty, got {result:?}"
+    );
 
     // Empty vs value - might return Empty instead of Boolean(false)
     let expr = parser.parse("nonexistent = 'value'").unwrap();
