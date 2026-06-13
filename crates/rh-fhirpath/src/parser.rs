@@ -215,8 +215,8 @@ fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_type_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("and")), parse_type_expression))(input)?;
+    let (input, first) = parse_equality_expression(input)?;
+    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression))(input)?;
 
     Ok((
         input,
@@ -227,9 +227,9 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse type expressions (is, as)
+// Parse type expressions (is, as) — binds tighter than *, between unary and *
 fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_equality_expression(input)?;
+    let (input, first) = parse_unary_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("is"), tag("as")))),
         parse_type_specifier,
@@ -317,10 +317,10 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse inequality expressions (<, <=, >, >=)
 fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_additive_expression(input)?;
+    let (input, first) = parse_union_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("<="), tag(">="), tag("<"), tag(">")))),
-        parse_additive_expression,
+        parse_union_expression,
     )))(input)?;
 
     Ok((
@@ -370,10 +370,10 @@ fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_unary_expression(input)?;
+    let (input, first) = parse_type_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
-        parse_unary_expression,
+        parse_type_expression,
     )))(input)?;
 
     Ok((
@@ -404,14 +404,14 @@ fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
                 operand: Box::new(expr),
             }
         }),
-        parse_union_expression,
+        parse_invocation_expression,
     ))(input)
 }
 
-// Parse union expressions
+// Parse union expressions — binds tighter than < but looser than +
 fn parse_union_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_invocation_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('|')), parse_invocation_expression))(input)?;
+    let (input, first) = parse_additive_expression(input)?;
+    let (input, rest) = many0(preceded(ws(char('|')), parse_additive_expression))(input)?;
 
     Ok((
         input,
