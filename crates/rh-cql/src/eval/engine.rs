@@ -1345,37 +1345,54 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         Ok(out)
     }
 
-    /// Evaluate CQL age functions (AgeInYears, AgeInYearsAt, etc.).
-    ///
-    /// These functions implicitly reference the Patient context to obtain a
-    /// birthDate and then compute a duration.  Returns `None` if `name` is not
-    /// a recognised age function.
+    /// Evaluate CQL age functions: `AgeIn<unit>[At]` (implicit patient
+    /// birthDate from context) and `CalculateAgeIn<unit>[At]` (explicit
+    /// birthDate argument). Returns `None` if `name` is not a recognised age
+    /// function.
     fn eval_age_function(&self, name: &str, args: &[Value]) -> Option<Result<Value, EvalError>> {
-        let unit = match name {
-            "AgeInYears" | "AgeInYearsAt" => "year",
-            "AgeInMonths" | "AgeInMonthsAt" => "month",
-            "AgeInWeeks" | "AgeInWeeksAt" => "week",
-            "AgeInDays" | "AgeInDaysAt" => "day",
-            "AgeInHours" | "AgeInHoursAt" => "hour",
-            "AgeInMinutes" | "AgeInMinutesAt" => "minute",
-            "AgeInSeconds" | "AgeInSecondsAt" => "second",
+        let explicit_birth = name.starts_with("CalculateAgeIn");
+        let unit_part = name
+            .strip_prefix("CalculateAgeIn")
+            .or_else(|| name.strip_prefix("AgeIn"))?;
+        let unit = match unit_part.strip_suffix("At").unwrap_or(unit_part) {
+            "Years" => "year",
+            "Months" => "month",
+            "Weeks" => "week",
+            "Days" => "day",
+            "Hours" => "hour",
+            "Minutes" => "minute",
+            "Seconds" => "second",
             _ => return None,
         };
+        let at_variant = unit_part.ends_with("At");
 
-        // Extract birthDate from the Patient context value.
-        let birth_raw = match &self.ctx.context_value {
-            Some(Value::Tuple(fields)) => {
-                match fields.get("birthDate").or_else(|| fields.get("birthdate")) {
-                    Some(v) => v.clone(),
-                    None => return Some(Ok(Value::Null)),
+        let birth_raw = if explicit_birth {
+            // CalculateAgeIn<unit>[At]: birthDate is the first argument.
+            match args.first() {
+                Some(v) => v.clone(),
+                None => {
+                    return Some(Err(EvalError::General(format!(
+                        "{name}: expected a birthDate argument"
+                    ))))
                 }
             }
-            _ => return Some(Ok(Value::Null)),
+        } else {
+            // AgeIn<unit>[At]: birthDate comes from the Patient context.
+            match &self.ctx.context_value {
+                Some(Value::Tuple(fields)) => {
+                    match fields.get("birthDate").or_else(|| fields.get("birthdate")) {
+                        Some(v) => v.clone(),
+                        None => return Some(Ok(Value::Null)),
+                    }
+                }
+                _ => return Some(Ok(Value::Null)),
+            }
         };
 
         // Convert a string birthDate (e.g. "1970-01-01") to Value::Date.
         let birth_val = match birth_raw {
-            Value::Date(_) => birth_raw,
+            Value::Date(_) | Value::DateTime(_) => birth_raw,
+            Value::Null => return Some(Ok(Value::Null)),
             ref s @ Value::String(_) => match to_date(s) {
                 Ok(v) => v,
                 Err(e) => return Some(Err(e)),
@@ -1383,13 +1400,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             _ => return Some(Ok(Value::Null)),
         };
 
-        // AgeInXxxAt(date) uses the supplied date; AgeInXxx() uses today.
-        let ref_val = if name.ends_with("At") {
-            match args.first() {
+        // The `At` variants use the supplied as-of date; otherwise today.
+        let ref_val = if at_variant {
+            let as_of_index = usize::from(explicit_birth);
+            match args.get(as_of_index) {
                 Some(v) => v.clone(),
                 None => {
                     return Some(Err(EvalError::General(format!(
-                        "{name}: expected 1 argument"
+                        "{name}: expected an as-of date argument"
                     ))))
                 }
             }

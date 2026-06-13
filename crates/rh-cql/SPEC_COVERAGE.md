@@ -47,13 +47,14 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | Aggregate | 12 | 0/12 | 12/12 | 12/12 | 12/12 | 12 | 100% |
 | Type / Conversion | 20 | 16/20 | 16/20 | 20/20 | 16/20 | 16 | 80% |
 | Terminology | 9 | 0/9 | 0/9 | 9/9 | 9/9 | 9 | 100% |
-| Clinical | 8 | 0/8 | 0/8 | 0/8 | 0/8 | 0 | 0% |
+| Clinical | 8 | 0/8 | 8/8 | 8/8 | 8/8 | 8 | 100% |
 | Error | 1 | 0/1 | 0/1 | 0/1 | 0/1 | 0 | 0% |
-| **Total** | **175** | | | | | **161** | **92%** |
+| **Total** | **175** | | | | | **169** | **97%** |
 
 > Counts apply to the **source stage only** (➖ not counted as either present or absent).  
 > **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.  
 > Last updated: wave-2 (2026-03-09) — added Precision, LowBoundary, HighBoundary, TimeOfDay, Size, Product, GeometricMean, fixed Coalesce list-overload, registered aggregate/nullological semantic signatures.
+> 2026-06-12 — clinical age operators complete: `AgeIn<unit>[At]` (patient context) and `CalculateAgeIn<unit>[At]` (explicit birthDate); Clinical 0% → 100%, total 161 → 169 (97%).
 
 ---
 
@@ -331,7 +332,7 @@ All are emitted and evaluated as ELM-level expressions, with no dedicated parse-
 | ConceptRef | `"concept-id"` | ➖ | ❌ | ✅ | ✅ | `Expression::ConceptRef` |
 | ValueSetRef | `"ValueSet"` | ➖ | ❌ | ✅ | ✅ | `Expression::ValueSetRef` |
 | CodeSystemRef | `"CodeSystem"` | ➖ | ❌ | ✅ | ✅ | `Expression::CodeSystemRef` |
-| CalculateAge¹ | *(clinical)* | ➖ | ❌ | ❌ | ❌ | See §13 Clinical |
+| CalculateAge¹ | *(clinical)* | ➖ | ✅ | ✅ | ✅ | See §13 Clinical |
 
 ---
 
@@ -339,18 +340,23 @@ All are emitted and evaluated as ELM-level expressions, with no dedicated parse-
 
 *Spec ref: §9.12*
 
-These operators depend on FHIR Patient context and are not yet implemented.
+All age operators evaluate end-to-end (2026-06-12): the `AgeIn<unit>[At]`
+forms read `birthDate` from the Patient context value; the
+`CalculateAgeIn<unit>[At]` forms take an explicit birthDate argument. Routed
+through `FunctionRef` (no dedicated ELM `CalculateAge`/`CalculateAgeAt` emit
+nodes yet — same non-canonical pattern as Precision/LowBoundary/HighBoundary).
+Covered by `tests/clinical_age_operators_test.rs`.
 
 | Operator | CQL Syntax | Parse | Semantic | Emit | Eval | Notes |
 |----------|-----------|-------|----------|------|------|-------|
-| CalculateAge | `AgeInYears()` etc. | ➖ | ❌ | ❌ | ❌ | Requires patient context |
-| CalculateAgeAt | `AgeInYearsAt(date)` | ➖ | ❌ | ❌ | ❌ | Requires patient context |
-| AgeInYears | `AgeInYears()` | ➖ | ❌ | ❌ | ❌ | |
-| AgeInMonths | `AgeInMonths()` | ➖ | ❌ | ❌ | ❌ | |
-| AgeInWeeks | `AgeInWeeks()` | ➖ | ❌ | ❌ | ❌ | |
-| AgeInDays | `AgeInDays()` | ➖ | ❌ | ❌ | ❌ | |
-| AgeInHours | `AgeInHours()` | ➖ | ❌ | ❌ | ❌ | |
-| AgeInMinutes | `AgeInMinutes()` | ➖ | ❌ | ❌ | ❌ | |
+| CalculateAge | `CalculateAgeInYears(birthDate)` etc. | ➖ | ✅ | ✅ | ✅ | Explicit birthDate argument |
+| CalculateAgeAt | `CalculateAgeInYearsAt(birthDate, asOf)` | ➖ | ✅ | ✅ | ✅ | Explicit birthDate argument |
+| AgeInYears | `AgeInYears()` | ➖ | ✅ | ✅ | ✅ | birthDate from patient context |
+| AgeInMonths | `AgeInMonths()` | ➖ | ✅ | ✅ | ✅ | |
+| AgeInWeeks | `AgeInWeeks()` | ➖ | ✅ | ✅ | ✅ | |
+| AgeInDays | `AgeInDays()` | ➖ | ✅ | ✅ | ✅ | |
+| AgeInHours | `AgeInHours()` | ➖ | ✅ | ✅ | ✅ | |
+| AgeInMinutes | `AgeInMinutes()` | ➖ | ✅ | ✅ | ✅ | |
 
 ---
 
@@ -489,7 +495,6 @@ implemented** in `rh-cql` at any pipeline stage:
 - **Expand** — no semantic signature
 
 ### Low Priority (clinical context-dependent)
-- **CalculateAge / AgeIn\*** — require patient birthDate context
 - **Message** — CQL error/trace operator
 - **ToRatio** — ratio conversion from string
 
