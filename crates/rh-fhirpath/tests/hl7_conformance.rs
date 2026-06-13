@@ -68,7 +68,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testType::testType9",
     "testTypes::testStringQuantityMonthLiteralToQuantity",
     "testTypes::testStringQuantityYearLiteralToQuantity",
-    "testVariables::testVariables4",
     "testWhere::testWhere2",
     "testWhere::testWhere4",
 ];
