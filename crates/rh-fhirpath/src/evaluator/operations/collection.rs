@@ -763,8 +763,31 @@ impl CollectionEvaluator {
         true_result: &FhirPathValue,
         otherwise_result: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
-        // Evaluate the criterion for truthiness
-        let is_truthy = criterion.to_boolean();
+        // Per spec §6.9: the criterion must evaluate to a single Boolean (or
+        // empty, which is treated as false). A non-Boolean singleton is a
+        // semantic error; a multi-item collection is an execution error.
+        let effective_criterion = match criterion {
+            FhirPathValue::Collection(items) if items.len() == 1 => &items[0],
+            FhirPathValue::Collection(items) if items.is_empty() => &FhirPathValue::Empty,
+            FhirPathValue::Collection(_) => {
+                return Err(FhirPathError::EvaluationError {
+                    message:
+                        "iif() criterion must be a single Boolean; got a multi-item collection"
+                            .to_string(),
+                });
+            }
+            other => other,
+        };
+
+        let is_truthy = match effective_criterion {
+            FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::Empty => false,
+            other => {
+                return Err(FhirPathError::TypeError {
+                    message: format!("iif() criterion must be Boolean, got {other:?}"),
+                });
+            }
+        };
 
         if is_truthy {
             Ok(true_result.clone())

@@ -111,46 +111,44 @@ fn test_iif_with_non_boolean_conditions() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_iif_test_context();
 
-    // Test with non-zero integer (truthy)
+    // Per the FHIRPath spec, iif() criterion must be Boolean or empty.
+    // Non-boolean scalar inputs are TypeError.
+
+    // Integer criterion → TypeError
     let expr = parser
         .parse("''.iif(testValues.nonZeroInt, results.success, results.failure)")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for integer criterion");
 
-    // Test with zero integer (truthy in FHIRPath)
+    // Zero integer criterion → TypeError
     let expr = parser
         .parse("''.iif(testValues.zeroInt, results.success, results.failure)")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS"); // Zero is truthy in FHIRPath
-    } else {
-        panic!("Expected string result");
-    }
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for integer criterion");
 
-    // Test with non-empty string (truthy)
+    // String criterion → TypeError
     let expr = parser
         .parse("''.iif(testValues.nonEmptyString, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for string criterion");
+
+    // Empty string criterion → TypeError
+    let expr = parser
+        .parse("''.iif(testValues.emptyString, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for string criterion");
+
+    // Boolean-returning expression → fine
+    let expr = parser
+        .parse("''.iif(testValues.nonZeroInt > 0, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
-
-    // Test with empty string (truthy in FHIRPath)
-    let expr = parser
-        .parse("''.iif(testValues.emptyString, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS"); // Empty string is truthy in FHIRPath
     } else {
         panic!("Expected string result");
     }
@@ -162,24 +160,35 @@ fn test_iif_with_collection_conditions() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_iif_test_context();
 
-    // Test with non-empty array (truthy)
+    // Per the FHIRPath spec, iif() criterion must be a single Boolean or empty.
+    // Multi-item collection criterion is an EvaluationError.
     let expr = parser
         .parse("''.iif(testValues.nonEmptyArray, results.success, results.failure)")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(
+        result.is_err(),
+        "Expected EvaluationError for multi-item collection criterion"
+    );
 
-    // Test with empty array (falsy)
+    // Empty array → treated as empty → false → returns otherwise-result
     let expr = parser
         .parse("''.iif(testValues.emptyArray, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "FAILURE");
+    } else {
+        panic!("Expected string result");
+    }
+
+    // exists() on a non-empty array → Boolean(true) → fine
+    let expr = parser
+        .parse("''.iif(testValues.nonEmptyArray.exists(), results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::String(s) = result {
+        assert_eq!(s, "SUCCESS");
     } else {
         panic!("Expected string result");
     }

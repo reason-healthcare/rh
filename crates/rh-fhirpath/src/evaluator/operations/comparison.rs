@@ -365,7 +365,7 @@ fn quantity_equivalent(a: f64, b: f64) -> bool {
     if prec == 0 {
         return (a - b).abs() < 1.0;
     }
-    let scale = 10f64.powi(prec as i32 - 1 - a.abs().log10().floor() as i32);
+    let scale = 10f64.powi(prec - 1 - a.abs().log10().floor() as i32);
     (a * scale).round() == (b * scale).round()
 }
 

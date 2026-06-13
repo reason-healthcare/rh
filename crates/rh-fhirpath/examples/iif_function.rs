@@ -122,30 +122,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("2. FHIRPath Truthiness Behavior:");
     println!("{}", "-".repeat(50));
 
+    // Per the FHIRPath spec, iif() criterion must be a Boolean or empty;
+    // non-boolean inputs are a type error. These examples show boolean
+    // conversions used as criteria.
     let truthiness_examples = vec![
         (
-            "''.iif(testData.conditions.positiveInt, 'TRUTHY', 'FALSY')",
-            "Positive integer (truthy)",
+            "''.iif(testData.conditions.positiveInt > 0, 'TRUTHY', 'FALSY')",
+            "Positive integer comparison → true",
         ),
         (
-            "''.iif(testData.conditions.zeroInt, 'TRUTHY', 'FALSY')",
-            "Zero integer (truthy in FHIRPath)",
+            "''.iif(testData.conditions.zeroInt = 0, 'TRUTHY', 'FALSY')",
+            "Zero integer equality → true",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyString, 'TRUTHY', 'FALSY')",
-            "Non-empty string (truthy)",
+            "''.iif(testData.conditions.nonEmptyString.length() > 0, 'TRUTHY', 'FALSY')",
+            "Non-empty string length check → true",
         ),
         (
-            "''.iif(testData.conditions.emptyString, 'TRUTHY', 'FALSY')",
-            "Empty string (truthy in FHIRPath)",
+            "''.iif(testData.conditions.emptyString.empty(), 'TRUTHY', 'FALSY')",
+            "Empty string detection → true",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyArray, 'TRUTHY', 'FALSY')",
-            "Non-empty array (truthy)",
+            "''.iif(testData.conditions.nonEmptyArray.exists(), 'TRUTHY', 'FALSY')",
+            "Non-empty array exists() → true",
         ),
         (
-            "''.iif(testData.conditions.emptyArray, 'TRUTHY', 'FALSY')",
-            "Empty array (falsy)",
+            "''.iif(testData.conditions.emptyArray.empty(), 'TRUTHY', 'FALSY')",
+            "Empty array empty() → true",
         ),
     ];
 
