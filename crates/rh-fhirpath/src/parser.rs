@@ -657,53 +657,155 @@ fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
     Ok((input, Literal::Date(date_str)))
 }
 
-// Parse datetime literal (@YYYY-MM-DDTHH:mm:ss or @YYYY-MM-DDTHH:mm:ssZ or @YYYY-MM-DDTHH:mm:ss+HH:mm)
+// Parse datetime literal — partial-precision per FHIRPath spec:
+//   DATETIME: '@' DATE 'T' (TIME TZ?)?
+//   DATE:     YYYY ('-' MM ('-' DD)?)?
+//   TIME:     hh (':' mm (':' ss ('.' fff)?)?)?
+//   TZ:       'Z' | ('+'|'-') HH ':' MM
+// Examples accepted: @2015T, @2015-02T, @2015-02-04T, @2014-01-01T08,
+// @2018-03-01T10:30, @2012-04-15T15:30:31.0, @1973-12-25T00:00:00.000+10:00
 fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('@')(input)?;
     let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, month) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, day) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('T')(input)?;
-    let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
 
-    // Optional timezone information
-    let (input, timezone) = opt(alt((
-        recognize(char('Z')),
-        recognize(tuple((
-            alt((char('+'), char('-'))),
+    // Optional month, then optional day (only after month).
+    let (input, month) = opt(preceded(
+        char('-'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+    ))(input)?;
+    let (input, day) = if month.is_some() {
+        opt(preceded(
+            char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-            char(':'),
-            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))),
-    )))(input)?;
-
-    let datetime_str = if let Some(tz) = timezone {
-        format!("{year}-{month}-{day}T{hour}:{minute}:{second}{tz}")
+        ))(input)?
     } else {
-        format!("{year}-{month}-{day}T{hour}:{minute}:{second}")
+        (input, None)
     };
 
-    Ok((input, Literal::DateTime(datetime_str)))
+    // The 'T' is what distinguishes a DateTime from a Date literal.
+    let (input, _) = char('T')(input)?;
+
+    // Optional time: hh, optional :mm, optional :ss, optional .fff (each gated on its predecessor).
+    let (input, hour) = opt(take_while_m_n(2, 2, |c: char| c.is_ascii_digit()))(input)?;
+    let (input, minute) = if hour.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, second) = if minute.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, fraction) = if second.is_some() {
+        opt(preceded(
+            char('.'),
+            take_while1(|c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+
+    // Optional timezone — only valid once we have at least an hour.
+    let (input, timezone) = if hour.is_some() {
+        opt(alt((
+            recognize(char('Z')),
+            recognize(tuple((
+                alt((char('+'), char('-'))),
+                take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+                char(':'),
+                take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+            ))),
+        )))(input)?
+    } else {
+        (input, None)
+    };
+
+    let mut s = String::with_capacity(32);
+    s.push_str(year);
+    if let Some(m) = month {
+        s.push('-');
+        s.push_str(m);
+    }
+    if let Some(d) = day {
+        s.push('-');
+        s.push_str(d);
+    }
+    s.push('T');
+    if let Some(h) = hour {
+        s.push_str(h);
+    }
+    if let Some(m) = minute {
+        s.push(':');
+        s.push_str(m);
+    }
+    if let Some(sec) = second {
+        s.push(':');
+        s.push_str(sec);
+    }
+    if let Some(f) = fraction {
+        s.push('.');
+        s.push_str(f);
+    }
+    if let Some(tz) = timezone {
+        s.push_str(tz);
+    }
+
+    Ok((input, Literal::DateTime(s)))
 }
 
-// Parse time literal (@Thh:mm:ss)
+// Parse time literal — partial-precision per FHIRPath spec:
+//   TIME_LITERAL: '@' 'T' TIME
+//   TIME:         hh (':' mm (':' ss ('.' fff)?)?)?
+// Examples accepted: @T14, @T10:30, @T10:30:00, @T10:30:00.000
 fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('@')(input)?;
     let (input, _) = char('T')(input)?;
     let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, minute) = opt(preceded(
+        char(':'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+    ))(input)?;
+    let (input, second) = if minute.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, fraction) = if second.is_some() {
+        opt(preceded(
+            char('.'),
+            take_while1(|c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
 
-    let time_str = format!("T{hour}:{minute}:{second}");
-    Ok((input, Literal::Time(time_str)))
+    let mut s = String::with_capacity(16);
+    s.push('T');
+    s.push_str(hour);
+    if let Some(m) = minute {
+        s.push(':');
+        s.push_str(m);
+    }
+    if let Some(sec) = second {
+        s.push(':');
+        s.push_str(sec);
+    }
+    if let Some(f) = fraction {
+        s.push('.');
+        s.push_str(f);
+    }
+
+    Ok((input, Literal::Time(s)))
 }
 
 // Parse quantity literal (number followed by single-quoted unit)

@@ -152,6 +152,37 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testVariables::testVariables4",
     "testWhere::testWhere2",
     "testWhere::testWhere4",
+    // --- 2.3 wave 5: partial-precision datetime/time parser (added 2026-06-13).
+    // Parser fix unlocked these tests (previously parse_error); the eval side
+    // does not yet implement (a) mixed-precision DateTime comparison spec
+    // (returning empty when precisions differ), (b) timezone-aware DateTime
+    // equality (same instant in different TZ), or (c) DateTime arithmetic
+    // preserving sub-second precision. Eval semantics is the next sub-wave.
+    "testEquality::testEquality21",
+    "testEquivalent::testEquivalent17",
+    "testGreaterThan::testGreaterThan24",
+    "testGreaterThan::testGreaterThan25",
+    "testGreatorOrEqual::testGreatorOrEqual24",
+    "testGreatorOrEqual::testGreatorOrEqual25",
+    "testGreatorOrEqual::testGreatorOrEqual26",
+    "testGreatorOrEqual::testGreatorOrEqual27",
+    "testLessOrEqual::testLessOrEqual24",
+    "testLessOrEqual::testLessOrEqual25",
+    "testLessThan::testLessThan24",
+    "testLessThan::testLessThan25",
+    "testLessThan::testLessThan26",
+    "testLessThan::testLessThan27",
+    "testLiterals::testLiteralDateTimeTZEqualTrue",
+    "testLiterals::testLiteralDateTimeTZGreater",
+    "testLiterals::testLiteralDateTimeTZLess",
+    "testNEquality::testNEquality15",
+    "testNotEquivalent::testNotEquivalent17",
+    "testPlus::testPlusDate3",
+    "testPlus::testPlusDate4",
+    "testPlus::testPlusDate5",
+    "testPlus::testPlusDate6",
+    "testPlus::testPlusDate7",
+    "testPlus::testPlusDate8",
 ];
 
 #[derive(Debug, Clone)]
