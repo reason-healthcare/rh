@@ -60,8 +60,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testObservations::testPolymorphismIsA3",
     "testPrecedence::testPrecedence3",
     "testPrecedence::testPrecedence4",
-    "testRepeat::testRepeat1",
-    "testRepeat::testRepeat5",
     "testType::testType10",
     "testType::testType12",
     // Patient.active.is(System.Boolean).not() expects FHIR.boolean to be

@@ -89,38 +89,14 @@ fn test_repeat_simple_hierarchy() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_hierarchy_context();
 
-    // Find all organizations (starting with root and following parent relationships)
+    // repeat() returns only projected items (NOT the initial input).
+    // organizations.first() = org1 object (no `organizations` sub-field) → repeat returns Empty.
     let expr = parser
         .parse("organizations.first().repeat(organizations)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-
-    if let FhirPathValue::Collection(items) = result {
-        // Should include multiple organizations from the repeated traversal
-        assert!(!items.is_empty());
-
-        let org_ids: Vec<String> = items
-            .iter()
-            .filter_map(|item| {
-                if let FhirPathValue::Object(obj) = item {
-                    obj.get("id").and_then(|v| {
-                        if let serde_json::Value::String(s) = v {
-                            Some(s.clone())
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        // We should at least have the first organization
-        assert!(org_ids.contains(&"org1".to_string())); // Root
-    } else {
-        panic!("Expected collection result, got: {result:?}");
-    }
+    // org objects have no `organizations` field, so projection yields nothing new.
+    assert!(matches!(result, FhirPathValue::Empty));
 }
 
 #[test]
@@ -134,8 +110,9 @@ fn test_repeat_tree_traversal() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Collection(items) = result {
-        // Should include root node + all children at all levels
-        assert_eq!(items.len(), 6); // node1, node2, node3, node4, node5, node6
+        // repeat() returns projected items only (NOT the initial node1).
+        // node1 → children [node2, node5]; node2 → [node3, node4]; node5 → [node6]
+        assert_eq!(items.len(), 5); // node2, node5, node3, node4, node6
 
         let node_ids: Vec<String> = items
             .iter()
@@ -154,7 +131,7 @@ fn test_repeat_tree_traversal() {
             })
             .collect();
 
-        assert!(node_ids.contains(&"node1".to_string())); // root
+        assert!(!node_ids.contains(&"node1".to_string())); // root excluded
         assert!(node_ids.contains(&"node2".to_string())); // child1
         assert!(node_ids.contains(&"node3".to_string())); // grandchild1
         assert!(node_ids.contains(&"node4".to_string())); // grandchild2
@@ -175,22 +152,10 @@ fn test_repeat_with_primitive_values() {
         "numbers": [1, 2, 3]
     }));
 
-    // Get numbers repeatedly (should just return same numbers since no expansion)
+    // repeat() projects items; integers have no `numbers` field → Empty result
     let expr = parser.parse("numbers.repeat(numbers)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-
-    if let FhirPathValue::Collection(items) = result {
-        // Should contain the numbers (may have duplicates filtered out)
-        assert!(items.len() >= 3); // At least the original numbers
-
-        // Check that we have some numbers
-        let has_numbers = items
-            .iter()
-            .any(|item| matches!(item, FhirPathValue::Integer(_)));
-        assert!(has_numbers, "Expected to find some numeric values");
-    } else {
-        panic!("Expected collection result, got: {result:?}");
-    }
+    assert!(matches!(result, FhirPathValue::Empty));
 }
 
 #[test]
@@ -204,7 +169,7 @@ fn test_repeat_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Empty));
 
-    // Single item with no expansion
+    // Single item with empty children: no projected items → Empty
     let context = EvaluationContext::new(json!({
         "item": {
             "id": "single",
@@ -214,18 +179,7 @@ fn test_repeat_edge_cases() {
 
     let expr = parser.parse("item.repeat(children)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-
-    // Should return a collection with just the original item since children is empty
-    if let FhirPathValue::Collection(items) = result {
-        assert_eq!(items.len(), 1);
-        if let FhirPathValue::Object(obj) = &items[0] {
-            assert_eq!(obj.get("id").unwrap(), &json!("single"));
-        } else {
-            panic!("Expected object in collection");
-        }
-    } else {
-        panic!("Expected collection result, got: {result:?}");
-    }
+    assert!(matches!(result, FhirPathValue::Empty));
 }
 
 #[test]
@@ -253,8 +207,9 @@ fn test_repeat_cycle_detection() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Collection(items) = result {
-        // Should contain A, B, C (following next chain until null)
-        assert!(!items.is_empty());
+        // repeat() returns projected items only (A excluded since it's the input).
+        // A.next = B, B.next = C, C.next = null → result = [B, C]
+        assert_eq!(items.len(), 2);
 
         let node_ids: Vec<String> = items
             .iter()
@@ -273,7 +228,9 @@ fn test_repeat_cycle_detection() {
             })
             .collect();
 
-        assert!(node_ids.contains(&"A".to_string()));
+        assert!(!node_ids.contains(&"A".to_string())); // initial excluded
+        assert!(node_ids.contains(&"B".to_string()));
+        assert!(node_ids.contains(&"C".to_string()));
     } else {
         panic!("Expected collection result, got: {result:?}");
     }
@@ -312,8 +269,9 @@ fn test_repeat_with_multiple_paths() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Collection(items) = result {
-        // Should contain: root, path1, path2, leaf1, leaf2, leaf3
-        assert_eq!(items.len(), 6);
+        // repeat() returns projected items (root excluded). root → [path1, path2],
+        // path1 → [leaf1, leaf2], path2 → [leaf3] → total 5 items.
+        assert_eq!(items.len(), 5);
 
         let node_ids: Vec<String> = items
             .iter()
@@ -332,7 +290,7 @@ fn test_repeat_with_multiple_paths() {
             })
             .collect();
 
-        assert!(node_ids.contains(&"root".to_string()));
+        assert!(!node_ids.contains(&"root".to_string())); // initial excluded
         assert!(node_ids.contains(&"path1".to_string()));
         assert!(node_ids.contains(&"path2".to_string()));
         assert!(node_ids.contains(&"leaf1".to_string()));
@@ -381,7 +339,9 @@ fn test_repeat_combined_with_other_functions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Collection(items) = result {
-        assert_eq!(items.len(), 6);
+        // nodes.repeat(children) = [node2,node5,node3,node4,node6] (5 items, root excluded)
+        // .select(value) gives each node's value string
+        assert_eq!(items.len(), 5);
 
         let values: Vec<String> = items
             .iter()
@@ -394,7 +354,8 @@ fn test_repeat_combined_with_other_functions() {
             })
             .collect();
 
-        assert!(values.contains(&"root".to_string()));
+        // root (node1) is excluded; only children are projected
+        assert!(!values.contains(&"root".to_string()));
         assert!(values.contains(&"child1".to_string()));
         assert!(values.contains(&"child2".to_string()));
         assert!(values.contains(&"grandchild1".to_string()));
@@ -404,10 +365,10 @@ fn test_repeat_combined_with_other_functions() {
         panic!("Expected collection result, got: {result:?}");
     }
 
-    // Count all nodes using repeat
+    // Count all projected nodes using repeat (5, not 6)
     let expr = parser.parse("nodes.repeat(children).count()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Integer(6)));
+    assert!(matches!(result, FhirPathValue::Integer(5)));
 
     // Check if any node has specific value using repeat
     let expr = parser

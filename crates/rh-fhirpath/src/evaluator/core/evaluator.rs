@@ -771,8 +771,10 @@ impl FhirPathEvaluator {
             }
         }
 
-        // Add the initial collection to results
-        all_results.extend(current_collection.clone());
+        // Per FHIRPath spec, repeat() returns only the projected items (not the
+        // initial input). We keep the initial collection in `current_collection`
+        // to start projecting, but `all_results` starts empty.
+        let mut seen: Vec<FhirPathValue> = current_collection.clone();
 
         loop {
             let mut next_collection = Vec::new();
@@ -788,25 +790,20 @@ impl FhirPathEvaluator {
                 match projection_result {
                     FhirPathValue::Collection(items) => {
                         for new_item in items {
-                            // Only add items that haven't been seen before
-                            if !all_results
+                            if !seen
                                 .iter()
-                                .any(|existing| FhirPathValue::equals_static(existing, &new_item))
+                                .any(|e| FhirPathValue::equals_static(e, &new_item))
                             {
+                                seen.push(new_item.clone());
                                 next_collection.push(new_item.clone());
                                 all_results.push(new_item);
                             }
                         }
                     }
-                    FhirPathValue::Empty => {
-                        // Don't add empty values
-                    }
+                    FhirPathValue::Empty => {}
                     value => {
-                        // Only add items that haven't been seen before
-                        if !all_results
-                            .iter()
-                            .any(|existing| FhirPathValue::equals_static(existing, &value))
-                        {
+                        if !seen.iter().any(|e| FhirPathValue::equals_static(e, &value)) {
+                            seen.push(value.clone());
                             next_collection.push(value.clone());
                             all_results.push(value);
                         }
