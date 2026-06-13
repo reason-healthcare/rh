@@ -103,7 +103,8 @@ impl TypeEvaluator {
 
     /// Check if a value matches a given type
     fn value_matches_type(value: &FhirPathValue, type_name: &str) -> FhirPathResult<bool> {
-        match type_name.to_lowercase().as_str() {
+        let lookup = type_name.to_lowercase();
+        match lookup.as_str() {
             // Basic types
             "boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
             "string" => Ok(matches!(value, FhirPathValue::String(_))),
@@ -136,9 +137,27 @@ impl TypeEvaluator {
             "system.time" => Ok(matches!(value, FhirPathValue::Time(_))),
             "system.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
 
+            // FHIR primitives: same FhirPathValue variants — the engine does
+            // not yet track FHIR vs System provenance, so distinguishing
+            // `Patient.active.is(System.Boolean)` from `is(FHIR.boolean)`
+            // requires the typed-primitive refactor still outstanding.
+            "fhir.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
+            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => {
+                Ok(matches!(value, FhirPathValue::Integer(_)))
+            }
+            "fhir.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
+            "fhir.string" | "fhir.code" | "fhir.uri" | "fhir.url" | "fhir.canonical"
+            | "fhir.oid" | "fhir.uuid" | "fhir.id" | "fhir.markdown" | "fhir.base64binary" => {
+                Ok(matches!(value, FhirPathValue::String(_)))
+            }
+            "fhir.date" => Ok(matches!(value, FhirPathValue::Date(_))),
+            "fhir.datetime" | "fhir.instant" => Ok(matches!(value, FhirPathValue::DateTime(_))),
+            "fhir.time" => Ok(matches!(value, FhirPathValue::Time(_))),
+            "fhir.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
+
             // Handle collections recursively - check if all items match the type
-            type_name if type_name.ends_with("[]") => {
-                let element_type = &type_name[..type_name.len() - 2];
+            lookup if lookup.ends_with("[]") => {
+                let element_type = &lookup[..lookup.len() - 2];
                 match value {
                     FhirPathValue::Collection(items) => {
                         for item in items {
@@ -152,18 +171,18 @@ impl TypeEvaluator {
                 }
             }
 
-            // Fallback for unknown types
+            // Fallback: FHIR resource types — strip an optional `fhir.` namespace
+            // prefix and compare against the resource's `resourceType` field.
+            // E.g. `Patient.is(FHIR.Patient)` matches via the resource type.
             _ => {
-                // Check for FHIR resource types by examining the resourceType field
+                let resource_name = lookup.strip_prefix("fhir.").unwrap_or(&lookup);
                 if let FhirPathValue::Object(obj) = value {
                     if let Some(resource_type) = obj.get("resourceType") {
                         if let Some(resource_type_str) = resource_type.as_str() {
-                            return Ok(resource_type_str.eq_ignore_ascii_case(type_name));
+                            return Ok(resource_type_str.eq_ignore_ascii_case(resource_name));
                         }
                     }
                 }
-
-                // For unknown types, return false
                 Ok(false)
             }
         }

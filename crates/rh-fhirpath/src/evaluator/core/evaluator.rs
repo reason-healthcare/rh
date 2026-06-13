@@ -663,29 +663,10 @@ impl FhirPathEvaluator {
             });
         }
 
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "ofType() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "ofType")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_of_type(target, &type_specifier)
     }
 
@@ -701,30 +682,10 @@ impl FhirPathEvaluator {
                     .to_string(),
             });
         }
-
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "is() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "is")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_type_operation(target, &TypeOperator::Is, &type_specifier)
     }
 
@@ -740,31 +701,31 @@ impl FhirPathEvaluator {
                     .to_string(),
             });
         }
-
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "as() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "as")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_type_operation(target, &TypeOperator::As, &type_specifier)
+    }
+
+    /// Resolve the type-name argument for `is()` / `as()` / `ofType()`.
+    /// Accepts a simple identifier, a qualified chain like `System.Boolean`,
+    /// or a String literal.
+    fn resolve_type_argument(
+        &self,
+        param: &Expression,
+        context: &EvaluationContext,
+        fn_name: &str,
+    ) -> FhirPathResult<String> {
+        if let Some(qualified) = extract_qualified_type_name(param) {
+            return Ok(qualified);
+        }
+        match self.evaluate_expression(param, context)? {
+            FhirPathValue::String(s) => Ok(s),
+            _ => Err(FhirPathError::FunctionError {
+                message: format!("{fn_name}() function requires a type specifier as parameter"),
+            }),
+        }
     }
 
     /// `aggregate(expression [, init])` — fold a collection using `$this`
@@ -805,6 +766,39 @@ impl FhirPathEvaluator {
 impl Default for FhirPathEvaluator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Extract a qualified type name (e.g. "System.Boolean", "FHIR.Patient") from
+/// the parameter expression of `is()` / `as()` / `ofType()`.
+///
+/// Matches a simple member chain like `System.Boolean`, `FHIR.Patient`, or
+/// `FHIR.\`Patient\`` (delimited identifier). Returns the joined name —
+/// "System.Boolean" — which downstream `TypeEvaluator::value_matches_type`
+/// can compare case-insensitively.
+fn extract_qualified_type_name(expr: &Expression) -> Option<String> {
+    let mut parts = Vec::new();
+    collect_member_chain(expr, &mut parts)?;
+    Some(parts.join("."))
+}
+
+fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> {
+    match expr {
+        Expression::Term(Term::Invocation(Invocation::Member(name))) => {
+            out.push(name.clone());
+            Some(())
+        }
+        Expression::Invocation { left, invocation } => {
+            collect_member_chain(left, out)?;
+            match invocation {
+                Invocation::Member(name) => {
+                    out.push(name.clone());
+                    Some(())
+                }
+                _ => None,
+            }
+        }
+        _ => None,
     }
 }
 
