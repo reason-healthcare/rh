@@ -41,7 +41,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testDollar::testDollarOrderNotAllowed",
     "testExtension::testExtension1",
     "testIif::testIif10",
-    "testIndexer::testIndexer2",
     "testInheritance::testFHIRPathAsFunction11",
     "testInheritance::testFHIRPathAsFunction13",
     "testInheritance::testFHIRPathAsFunction15",
@@ -67,8 +66,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testType::testType9",
     "testTypes::testStringQuantityMonthLiteralToQuantity",
     "testTypes::testStringQuantityYearLiteralToQuantity",
-    "testWhere::testWhere2",
-    "testWhere::testWhere4",
 ];
 
 #[derive(Debug, Clone)]

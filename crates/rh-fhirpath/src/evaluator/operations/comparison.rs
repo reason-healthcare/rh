@@ -109,6 +109,23 @@ impl ComparisonEvaluator {
             return Ok(FhirPathValue::Empty);
         }
 
+        // Singleton unwrapping per FHIRPath §6.1: a 1-item collection is
+        // treated as its contained scalar for equality purposes.
+        let mut left_unwrapped: Option<FhirPathValue> = None;
+        let mut right_unwrapped: Option<FhirPathValue> = None;
+        let left = unwrap_singleton(left, &mut left_unwrapped);
+        let right = unwrap_singleton(right, &mut right_unwrapped);
+
+        // Re-check empty after unwrapping (e.g. Collection([Empty]) → Empty)
+        if (is_empty_collection(left) || is_empty_collection(right))
+            && matches!(
+                operator,
+                EqualityOperator::Equal | EqualityOperator::NotEqual
+            )
+        {
+            return Ok(FhirPathValue::Empty);
+        }
+
         let result = match operator {
             EqualityOperator::Equal => FhirPathValue::equals_static(left, right),
             EqualityOperator::NotEqual => !FhirPathValue::equals_static(left, right),
@@ -376,6 +393,22 @@ fn significant_figures(n: f64) -> i32 {
         .trim_start_matches('0')
         .to_string();
     digits.len().max(1) as i32
+}
+
+/// If `v` is a single-item collection, write its content into `buf` and return
+/// a reference to `buf`; otherwise return `v` unchanged. This implements the
+/// FHIRPath singleton-equivalence rule for equality operators.
+fn unwrap_singleton<'a>(
+    v: &'a FhirPathValue,
+    buf: &'a mut Option<FhirPathValue>,
+) -> &'a FhirPathValue {
+    if let FhirPathValue::Collection(items) = v {
+        if items.len() == 1 {
+            *buf = Some(items[0].clone());
+            return buf.as_ref().unwrap();
+        }
+    }
+    v
 }
 
 /// Coerce a value to a known boolean for three-valued logic. Returns `None`
