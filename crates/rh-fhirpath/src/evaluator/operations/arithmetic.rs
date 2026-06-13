@@ -6,6 +6,25 @@ use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
 
+/// Split a datetime literal into its `(base, tz_suffix)` components.
+///
+/// Recognises `Z`, `+HH:MM`, and `-HH:MM` suffixes; everything else is treated
+/// as the base. Used to preserve the original timezone marker through datetime
+/// arithmetic without losing sub-second precision.
+fn split_datetime_tz(s: &str) -> (&str, &str) {
+    if let Some(base) = s.strip_suffix('Z') {
+        return (base, "Z");
+    }
+    if s.len() >= 6 {
+        let tail = &s[s.len() - 6..];
+        let head = tail.as_bytes()[0];
+        if (head == b'+' || head == b'-') && tail.as_bytes()[3] == b':' {
+            return (&s[..s.len() - 6], tail);
+        }
+    }
+    (s, "")
+}
+
 /// Arithmetic operations handler
 pub struct ArithmeticEvaluator;
 
@@ -886,33 +905,20 @@ impl ArithmeticEvaluator {
         precision: &DateTimePrecision,
         count: i64,
     ) -> FhirPathResult<FhirPathValue> {
-        // Parse datetime - handle timezone
-        let datetime = if let Some(base_str) = datetime_str.strip_suffix('Z') {
-            // Try parsing with milliseconds first, then fall back to seconds only
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        } else if datetime_str.contains('+')
-            || datetime_str.len() > 19 && datetime_str.chars().nth(19) == Some('-')
-        {
-            // Has timezone offset - extract base datetime part
-            let base_str = &datetime_str[..19];
-            // Try parsing with milliseconds first, then fall back to seconds only
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        } else {
-            // No timezone - try parsing with milliseconds first, then fall back
-            NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        };
+        // Split off the timezone marker (Z, +HH:MM, or -HH:MM) so the base
+        // string starts with `YYYY-MM-DDTHH:MM:SS[.fff]` and nothing more.
+        let (base_str, tz_str) = split_datetime_tz(datetime_str);
+        let has_fraction = base_str
+            .find('T')
+            .is_some_and(|t| base_str[t..].contains('.'));
+
+        // %.f accepts any number of fractional digits; if absent, we fall back
+        // to second-precision parse. Either way the input is fully consumed.
+        let datetime = NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.f")
+            .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
+            .map_err(|_| FhirPathError::EvaluationError {
+                message: format!("Invalid datetime format: {datetime_str}"),
+            })?;
 
         let new_datetime = match precision {
             DateTimePrecision::Year => {
@@ -979,19 +985,14 @@ impl ArithmeticEvaluator {
                 })?,
         };
 
-        // Preserve timezone if present
-        let result_str = if datetime_str.ends_with('Z') {
-            format!("{}Z", new_datetime.format("%Y-%m-%dT%H:%M:%S"))
-        } else if datetime_str.contains('+') {
-            let tz_part = &datetime_str[datetime_str.find('+').unwrap()..];
-            format!("{}{}", new_datetime.format("%Y-%m-%dT%H:%M:%S"), tz_part)
-        } else if datetime_str.len() > 19 && datetime_str.chars().nth(19) == Some('-') {
-            let tz_part = &datetime_str[19..];
-            format!("{}{}", new_datetime.format("%Y-%m-%dT%H:%M:%S"), tz_part)
+        // Preserve original sub-second precision (3-digit millisecond format
+        // when input had any fractional component) and the timezone marker.
+        let body = if has_fraction {
+            new_datetime.format("%Y-%m-%dT%H:%M:%S%.3f").to_string()
         } else {
             new_datetime.format("%Y-%m-%dT%H:%M:%S").to_string()
         };
-
+        let result_str = format!("{body}{tz_str}");
         Ok(FhirPathValue::DateTime(result_str))
     }
 
