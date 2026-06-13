@@ -336,6 +336,23 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
         Value::Time(t) => Ok(Value::Time(t.clone())),
         Value::String(s) => {
             let s = s.trim().trim_start_matches('T');
+            // Strip trailing timezone (Z or ±HH:MM) before parsing
+            let s = if let Some(stripped) = s.strip_suffix('Z') {
+                stripped
+            } else if s.len() > 6 {
+                if let Some(pos) = s[1..].rfind(['+', '-']) {
+                    let pos = pos + 1;
+                    if s.len() - pos >= 5 {
+                        &s[..pos]
+                    } else {
+                        s
+                    }
+                } else {
+                    s
+                }
+            } else {
+                s
+            };
             if let Some(t) = parse_time_str(s) {
                 Ok(Value::Time(t))
             } else {
@@ -360,10 +377,13 @@ fn parse_time_str(s: &str) -> Option<CqlTime> {
     let (second, millisecond) = if parts.len() >= 3 {
         let sec_str = parts[2];
         if let Some(dot) = sec_str.find('.') {
-            (
-                sec_str[..dot].parse::<u8>().ok(),
-                sec_str[dot + 1..].parse::<u32>().ok(),
-            )
+            let ms_raw = &sec_str[dot + 1..];
+            // Right-pad to 3 digits: "9" → 900ms, "99" → 990ms, "999" → 999ms
+            let ms_val = {
+                let padded = format!("{:0<3}", ms_raw);
+                padded.get(..3).and_then(|p| p.parse::<u32>().ok())
+            };
+            (sec_str[..dot].parse::<u8>().ok(), ms_val)
         } else {
             (sec_str.parse::<u8>().ok(), None)
         }

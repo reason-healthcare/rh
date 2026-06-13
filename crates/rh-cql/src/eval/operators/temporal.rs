@@ -1028,6 +1028,18 @@ pub fn same_or_after(a: &Value, b: &Value, precision: Option<&str>) -> Result<Va
     })
 }
 
+/// Return `true` iff `a` is strictly before `b` at the given precision.
+pub fn before(a: &Value, b: &Value, precision: Option<&str>) -> Result<Value, EvalError> {
+    null2!(a, b);
+    temporal_compare(a, b, precision, "Before", |ord| ord == Ordering::Less)
+}
+
+/// Return `true` iff `a` is strictly after `b` at the given precision.
+pub fn after(a: &Value, b: &Value, precision: Option<&str>) -> Result<Value, EvalError> {
+    null2!(a, b);
+    temporal_compare(a, b, precision, "After", |ord| ord == Ordering::Greater)
+}
+
 // ---------------------------------------------------------------------------
 // Duration calculations (9.13)
 // ---------------------------------------------------------------------------
@@ -1546,6 +1558,100 @@ fn compare_times_at_precision(
     }
 }
 
+/// (year, month, day, hour, minute, second, millisecond) in i64-friendly form.
+type DateTimeComponents = (
+    i32,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+);
+
+/// Normalize a `CqlDateTime` to UTC by subtracting its timezone offset.
+/// Only normalizes when `offset_seconds` is known; otherwise returns local components.
+fn datetime_to_utc_tuple(dt: &CqlDateTime) -> DateTimeComponents {
+    let offset = dt.offset_seconds.unwrap_or(0);
+    let hour = dt.hour.map(|h| h as i64);
+    let minute = dt.minute.map(|m| m as i64);
+    let second = dt.second.map(|s| s as i64);
+    let millisecond = dt.millisecond.map(|ms| ms as i64);
+
+    // Only normalize when offset is non-zero and we have at least hour precision
+    if offset == 0 || hour.is_none() {
+        return (
+            dt.year,
+            dt.month.map(|m| m as i64),
+            dt.day.map(|d| d as i64),
+            hour,
+            minute,
+            second,
+            millisecond,
+        );
+    }
+
+    // Convert to total seconds since some reference, subtract offset, convert back
+    let day_val = dt.day.unwrap_or(1) as i64;
+    let month_val = dt.month.unwrap_or(1) as i64;
+    let hour_val = hour.unwrap_or(0);
+    let minute_val = minute.unwrap_or(0);
+    let second_val = second.unwrap_or(0);
+
+    let total_seconds = hour_val * 3600 + minute_val * 60 + second_val - offset as i64;
+
+    // Adjust day-level overflow/underflow
+    let extra_days = total_seconds.div_euclid(86400);
+    let rem = total_seconds.rem_euclid(86400);
+    let new_hour = rem / 3600;
+    let new_minute = (rem % 3600) / 60;
+    let new_second = rem % 60;
+    let new_day = day_val + extra_days;
+
+    // For simplicity, only adjust year if day-level adjustment stays within ±1 day of month bounds
+    // (more complex multi-month rollover is uncommon in tests)
+    let (adj_year, adj_month, adj_day) = adjust_date(dt.year, month_val as u8, new_day);
+
+    (
+        adj_year,
+        dt.month.map(|_| adj_month as i64),
+        dt.day.map(|_| adj_day),
+        Some(new_hour),
+        dt.minute.map(|_| new_minute),
+        dt.second.map(|_| new_second),
+        millisecond,
+    )
+}
+
+/// Adjust a (year, month, raw_day) where raw_day may be ≤0 or > days_in_month.
+fn adjust_date(year: i32, month: u8, raw_day: i64) -> (i32, u8, i64) {
+    let mut y = year;
+    let mut m = month;
+    let mut d = raw_day;
+    loop {
+        if d < 1 {
+            if m == 1 {
+                y -= 1;
+                m = 12;
+            } else {
+                m -= 1;
+            }
+            d += days_in_month(y, m) as i64;
+        } else if d > days_in_month(y, m) as i64 {
+            d -= days_in_month(y, m) as i64;
+            if m == 12 {
+                y += 1;
+                m = 1;
+            } else {
+                m += 1;
+            }
+        } else {
+            break;
+        }
+    }
+    (y, m, d)
+}
+
 fn compare_datetimes_at_precision(
     a: &CqlDateTime,
     b: &CqlDateTime,
@@ -1557,6 +1663,39 @@ fn compare_datetimes_at_precision(
         Some(p) => datetime_precision_level(p)
             .ok_or_else(|| err(op, &format!("invalid precision '{p}' for DateTime")))?,
     };
+
+    // Normalize to UTC when both operands carry explicit timezone offsets.
+    // This ensures `@2012-03-10T10:00:00+07:00 before hour of @2012-03-10T10:00:00+06:00`
+    // correctly normalizes before comparing.
+    let (ay, amo, ad, ah, amin, asec, ams) =
+        if a.offset_seconds.is_some() && b.offset_seconds.is_some() {
+            datetime_to_utc_tuple(a)
+        } else {
+            (
+                a.year,
+                a.month.map(|m| m as i64),
+                a.day.map(|d| d as i64),
+                a.hour.map(|h| h as i64),
+                a.minute.map(|m| m as i64),
+                a.second.map(|s| s as i64),
+                a.millisecond.map(|ms| ms as i64),
+            )
+        };
+    let (by, bmo, bd, bh, bmin, bsec, bms) =
+        if a.offset_seconds.is_some() && b.offset_seconds.is_some() {
+            datetime_to_utc_tuple(b)
+        } else {
+            (
+                b.year,
+                b.month.map(|m| m as i64),
+                b.day.map(|d| d as i64),
+                b.hour.map(|h| h as i64),
+                b.minute.map(|m| m as i64),
+                b.second.map(|s| s as i64),
+                b.millisecond.map(|ms| ms as i64),
+            )
+        };
+
     macro_rules! cmp_opt_field {
         ($fa:expr, $fb:expr, $level:expr) => {
             match ($fa, $fb) {
@@ -1571,19 +1710,19 @@ fn compare_datetimes_at_precision(
             }
         };
     }
-    let ord = a.year.cmp(&b.year);
+    let ord = ay.cmp(&by);
     if ord != Ordering::Equal || max_level == 0 {
         return Ok(Some(ord));
     }
-    cmp_opt_field!(a.month, b.month, 1);
-    cmp_opt_field!(a.day, b.day, 2);
-    cmp_opt_field!(a.hour, b.hour, 3);
-    cmp_opt_field!(a.minute, b.minute, 4);
-    cmp_opt_field!(a.second, b.second, 5);
-    match (a.millisecond, b.millisecond) {
+    cmp_opt_field!(amo, bmo, 1);
+    cmp_opt_field!(ad, bd, 2);
+    cmp_opt_field!(ah, bh, 3);
+    cmp_opt_field!(amin, bmin, 4);
+    cmp_opt_field!(asec, bsec, 5);
+    match (ams, bms) {
         (None, None) => Ok(Some(Ordering::Equal)),
         (None, Some(_)) | (Some(_), None) => Ok(None),
-        (Some(ams), Some(bms)) => Ok(Some(ams.cmp(&bms))),
+        (Some(ams_v), Some(bms_v)) => Ok(Some(ams_v.cmp(&bms_v))),
     }
 }
 

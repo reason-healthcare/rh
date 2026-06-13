@@ -39,7 +39,8 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rh_cql::{
-    compile_with_model, evaluate_elm, CqlDateTime, EvalContextBuilder, FixedClock, Value,
+    compile_with_model, evaluate_elm, CqlDate, CqlDateTime, CqlTime, EvalContextBuilder,
+    FixedClock, Value,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -197,6 +198,9 @@ enum ExpectedValue {
     Integer(i64),
     Decimal(f64),
     Str(String),
+    Date(CqlDate),
+    DateTime(CqlDateTime),
+    Time(CqlTime),
     /// Output format not yet supported by this runner (skip the test).
     Unsupported(String),
 }
@@ -272,13 +276,22 @@ fn parse_expected(raw: &str) -> ExpectedValue {
         return ExpectedValue::Unsupported(format!("List: {s}"));
     }
 
-    // Skip Date/DateTime/Time literals
-    if s.starts_with('@')
-        || s.starts_with("DateTime(")
-        || s.starts_with("Date(")
-        || s.starts_with("Time(")
-    {
-        return ExpectedValue::Unsupported(format!("Temporal: {s}"));
+    // Power() arithmetic expressions used as expected values for large literals
+    // e.g. "Power(10,9)" = 1e9, "Power(2,30)-1+Power(2,30)" = 2147483647
+    if s.contains("Power(") {
+        if let Some(ev) = eval_power_expr(s) {
+            return ev;
+        }
+        return ExpectedValue::Unsupported(format!("Power expr eval failed: {s}"));
+    }
+
+    // Parse @YYYY-MM-DDTHH:MM:SS (DateTime), @YYYY-MM-DD (Date), @THH:MM:SS (Time)
+    if let Some(tail) = s.strip_prefix('@') {
+        return parse_temporal_literal(tail);
+    }
+    // DateTime()/Date()/Time() constructor outputs — skip (rare)
+    if s.starts_with("DateTime(") || s.starts_with("Date(") || s.starts_with("Time(") {
+        return ExpectedValue::Unsupported(format!("Temporal constructor: {s}"));
     }
 
     // Skip Interval/Tuple literals
@@ -306,7 +319,240 @@ fn parse_expected(raw: &str) -> ExpectedValue {
         return ExpectedValue::Decimal(f);
     }
 
+    // Simple arithmetic expressions like "42-42", "42.0-42.0", "1~1" etc.
+    // The HL7 test suite uses these as expected values for boundary literals.
+    if let Some(ev) = eval_simple_arithmetic(s) {
+        return ev;
+    }
+
     ExpectedValue::Unsupported(format!("unknown format: {s}"))
+}
+
+/// Evaluate a `Power(base, exp)` expected-output expression to a numeric value.
+///
+/// The HL7 CQL test suite expresses large/boundary literals as arithmetic on
+/// `Power()` calls.  We evaluate these to produce an `ExpectedValue` that can
+/// be compared against the engine's result.
+fn eval_power_expr(s: &str) -> Option<ExpectedValue> {
+    let is_decimal_expr = s.contains('.');
+    let total = eval_power_terms(s)?;
+    if is_decimal_expr || total.fract() != 0.0 {
+        Some(ExpectedValue::Decimal(total))
+    } else {
+        Some(ExpectedValue::Integer(total as i64))
+    }
+}
+
+/// Evaluate a sequence of `Power(b,e)` terms joined by `+` / `-` operators.
+/// The leading sign (if any) is treated as the sign of the first term.
+fn eval_power_terms(s: &str) -> Option<f64> {
+    let mut acc = 0.0f64;
+    let mut pos = 0usize;
+    let bytes = s.as_bytes();
+    // `pending_sign` accumulates the sign for the next term
+    let mut pending_sign = 1.0f64;
+
+    while pos < bytes.len() {
+        // Skip whitespace
+        while pos < bytes.len() && bytes[pos] == b' ' {
+            pos += 1;
+        }
+        if pos >= bytes.len() {
+            break;
+        }
+
+        // Read sign characters (could be +/- before Power or a number)
+        while pos < bytes.len() && (bytes[pos] == b'+' || bytes[pos] == b'-') {
+            if bytes[pos] == b'-' {
+                pending_sign *= -1.0;
+            }
+            pos += 1;
+            while pos < bytes.len() && bytes[pos] == b' ' {
+                pos += 1;
+            }
+        }
+        if pos >= bytes.len() {
+            break;
+        }
+
+        let term_val = if s[pos..].starts_with("Power(") {
+            let inner_start = pos + 6;
+            let close = s[inner_start..].find(')')? + inner_start;
+            let inner = &s[inner_start..close];
+            let comma = inner.find(',')?;
+            let base: f64 = inner[..comma].trim().parse().ok()?;
+            let exp: f64 = inner[comma + 1..].trim().parse().ok()?;
+            pos = close + 1;
+            base.powf(exp)
+        } else {
+            // Plain number: read until next +/- that isn't part of an exponent
+            let start = pos;
+            // Move past the number characters (digits, dot, exponent)
+            while pos < bytes.len() && !matches!(bytes[pos], b'+' | b'-') {
+                pos += 1;
+            }
+            let num_str = s[start..pos].trim();
+            num_str.parse::<f64>().ok()?
+        };
+
+        acc += pending_sign * term_val;
+
+        // Skip whitespace
+        while pos < bytes.len() && bytes[pos] == b' ' {
+            pos += 1;
+        }
+
+        // Reset pending_sign for the next term; read the operator
+        pending_sign = 1.0;
+        if pos < bytes.len() {
+            if bytes[pos] == b'-' {
+                pending_sign = -1.0;
+            }
+            pos += 1; // consume the operator
+        }
+    }
+    Some(acc)
+}
+
+/// Evaluate simple two-operand arithmetic expected values used in HL7 tests.
+///
+/// Handles `a-b`, `a+b` (where `a` and `b` are numeric literals), and the
+/// CQL equivalence operator `a~b` (returns Bool).
+fn eval_simple_arithmetic(s: &str) -> Option<ExpectedValue> {
+    let is_decimal = s.contains('.');
+    // `~` is CQL "equivalent-to" — for simple integer cases, `1~1` = true, `1~0` = false
+    if let Some(pos) = s.find('~') {
+        let a: f64 = s[..pos].trim().parse().ok()?;
+        let b: f64 = s[pos + 1..].trim().parse().ok()?;
+        return Some(ExpectedValue::Bool((a - b).abs() < 1e-9));
+    }
+    // Look for a binary `+` or `-` operator that isn't a leading sign.
+    // Strategy: find the LAST `+` or `-` that follows at least one digit.
+    let bytes = s.as_bytes();
+    let mut op_pos = None;
+    for i in 1..bytes.len() {
+        if (bytes[i] == b'+' || bytes[i] == b'-') && bytes[i - 1].is_ascii_digit() {
+            op_pos = Some(i);
+            break;
+        }
+    }
+    let pos = op_pos?;
+    let a: f64 = s[..pos].trim().parse().ok()?;
+    let b: f64 = s[pos + 1..].trim().parse().ok()?;
+    let result = if bytes[pos] == b'-' { a - b } else { a + b };
+    if is_decimal || result.fract() != 0.0 {
+        Some(ExpectedValue::Decimal(result))
+    } else {
+        Some(ExpectedValue::Integer(result as i64))
+    }
+}
+
+/// Parse a temporal literal string (after the leading `@` has been removed).
+///
+/// Handles: `YYYY[-MM[-DD[THH[:MM[:SS[.mmm]]]]]]` (DateTime/Date) and
+/// `THH[:MM[:SS[.mmm]]]` (Time).
+fn parse_temporal_literal(s: &str) -> ExpectedValue {
+    if let Some(time_part) = s.strip_prefix('T') {
+        // Time literal
+        return parse_time_str(time_part);
+    }
+    // Date or DateTime
+    if let Some(t_pos) = s.find('T') {
+        // DateTime
+        let date_str = &s[..t_pos];
+        let time_str = &s[t_pos + 1..];
+        let date_parts: Vec<&str> = date_str.splitn(3, '-').collect();
+        let year = match date_parts.first().and_then(|y| y.parse::<i32>().ok()) {
+            Some(y) => y,
+            None => return ExpectedValue::Unsupported(format!("bad DateTime year: {s}")),
+        };
+        let month = date_parts.get(1).and_then(|m| m.parse::<u8>().ok());
+        let day = date_parts.get(2).and_then(|d| d.parse::<u8>().ok());
+        // Parse time part (strip trailing timezone for now)
+        let (time_core, offset_seconds) = strip_tz(time_str);
+        let time_parts: Vec<&str> = time_core.splitn(3, ':').collect();
+        let hour = time_parts.first().and_then(|h| h.parse::<u8>().ok());
+        let minute = time_parts.get(1).and_then(|m| m.parse::<u8>().ok());
+        let (second, millisecond) = if let Some(sec_ms) = time_parts.get(2) {
+            let parts: Vec<&str> = sec_ms.splitn(2, '.').collect();
+            let sec = parts.first().and_then(|s| s.parse::<u8>().ok());
+            let ms = parts.get(1).and_then(|ms_str| {
+                let padded = format!("{:0<3}", ms_str);
+                padded.get(..3).and_then(|p| p.parse::<u32>().ok())
+            });
+            (sec, ms)
+        } else {
+            (None, None)
+        };
+        ExpectedValue::DateTime(CqlDateTime {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            millisecond,
+            offset_seconds,
+        })
+    } else {
+        // Date only
+        let parts: Vec<&str> = s.splitn(3, '-').collect();
+        let year = match parts.first().and_then(|y| y.parse::<i32>().ok()) {
+            Some(y) => y,
+            None => return ExpectedValue::Unsupported(format!("bad Date year: {s}")),
+        };
+        let month = parts.get(1).and_then(|m| m.parse::<u8>().ok());
+        let day = parts.get(2).and_then(|d| d.parse::<u8>().ok());
+        ExpectedValue::Date(CqlDate { year, month, day })
+    }
+}
+
+fn parse_time_str(s: &str) -> ExpectedValue {
+    let (core, _tz) = strip_tz(s);
+    let parts: Vec<&str> = core.splitn(3, ':').collect();
+    let hour = match parts.first().and_then(|h| h.parse::<u8>().ok()) {
+        Some(h) => h,
+        None => return ExpectedValue::Unsupported(format!("bad Time: {s}")),
+    };
+    let minute = parts.get(1).and_then(|m| m.parse::<u8>().ok());
+    let (second, millisecond) = if let Some(sec_ms) = parts.get(2) {
+        let p: Vec<&str> = sec_ms.splitn(2, '.').collect();
+        let sec = p.first().and_then(|s| s.parse::<u8>().ok());
+        let ms = p.get(1).and_then(|ms_str| {
+            let padded = format!("{:0<3}", ms_str);
+            padded.get(..3).and_then(|p| p.parse::<u32>().ok())
+        });
+        (sec, ms)
+    } else {
+        (None, None)
+    };
+    ExpectedValue::Time(CqlTime {
+        hour,
+        minute,
+        second,
+        millisecond,
+    })
+}
+
+/// Strip trailing timezone suffix (`+HH:MM`, `-HH:MM`, `Z`) and return (core, offset_seconds).
+fn strip_tz(s: &str) -> (&str, Option<i32>) {
+    if let Some(core) = s.strip_suffix('Z') {
+        return (core, Some(0));
+    }
+    // Look for last +/- that is a timezone marker (after at least HH:MM in the string)
+    if s.len() > 6 {
+        if let Some(pos) = s[1..].rfind(['+', '-']) {
+            let pos = pos + 1; // adjust for the slice offset
+            let tz_str = &s[pos..];
+            if tz_str.len() >= 5 {
+                let sign: i32 = if s.as_bytes()[pos] == b'+' { 1 } else { -1 };
+                if let (Ok(h), Ok(m)) = (tz_str[1..3].parse::<i32>(), tz_str[4..6].parse::<i32>()) {
+                    return (&s[..pos], Some(sign * (h * 3600 + m * 60)));
+                }
+            }
+        }
+    }
+    (s, None)
 }
 
 /// Skip heuristic for the CQL expression itself.
@@ -364,6 +610,25 @@ fn values_match(actual: &Value, expected: &ExpectedValue) -> bool {
         }
         (Value::Decimal(a), ExpectedValue::Integer(e)) => (*a - *e as f64).abs() < 1e-9,
         (Value::String(a), ExpectedValue::Str(e)) => a == e,
+        // Temporal comparisons
+        (Value::Date(a), ExpectedValue::Date(e)) => {
+            a.year == e.year && a.month == e.month && a.day == e.day
+        }
+        (Value::DateTime(a), ExpectedValue::DateTime(e)) => {
+            a.year == e.year
+                && a.month == e.month
+                && a.day == e.day
+                && a.hour == e.hour
+                && a.minute == e.minute
+                && a.second == e.second
+                && a.millisecond == e.millisecond
+        }
+        (Value::Time(a), ExpectedValue::Time(e)) => {
+            a.hour == e.hour
+                && a.minute == e.minute
+                && a.second == e.second
+                && a.millisecond == e.millisecond
+        }
         _ => false,
     }
 }

@@ -1199,6 +1199,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::same_or_after(&a, &b, tb.precision.as_deref())
             }
+            Expression::Before(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first())?;
+                let b = self.eval_expr_opt(tb.operand.get(1))?;
+                super::operators::before(&a, &b, tb.precision.as_deref())
+            }
+            Expression::After(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first())?;
+                let b = self.eval_expr_opt(tb.operand.get(1))?;
+                super::operators::after(&a, &b, tb.precision.as_deref())
+            }
             Expression::DurationBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
@@ -1212,6 +1222,50 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     &b,
                     tb.precision.as_deref().unwrap_or("day"),
                 )
+            }
+
+            // ----- Date/Time constructors -----
+            Expression::DateTime(e) => {
+                let year = self.eval_expr_opt(e.year.as_deref())?;
+                let month = self.eval_expr_opt(e.month.as_deref())?;
+                let day = self.eval_expr_opt(e.day.as_deref())?;
+                let hour = self.eval_expr_opt(e.hour.as_deref())?;
+                let minute = self.eval_expr_opt(e.minute.as_deref())?;
+                let second = self.eval_expr_opt(e.second.as_deref())?;
+                let millisecond = self.eval_expr_opt(e.millisecond.as_deref())?;
+                let tz = self.eval_expr_opt(e.timezone_offset.as_deref())?;
+                datetime_construct(
+                    &year,
+                    Some(&month),
+                    Some(&day),
+                    Some(&hour),
+                    Some(&minute),
+                    Some(&second),
+                    Some(&millisecond),
+                    Some(&tz),
+                )
+            }
+            Expression::Date(e) => {
+                let year = self.eval_expr_opt(e.year.as_deref())?;
+                let month = self.eval_expr_opt(e.month.as_deref())?;
+                let day = self.eval_expr_opt(e.day.as_deref())?;
+                date_construct(&year, Some(&month), Some(&day))
+            }
+            Expression::Time(e) => {
+                let hour = self.eval_expr_opt(e.hour.as_deref())?;
+                let minute = self.eval_expr_opt(e.minute.as_deref())?;
+                let second = self.eval_expr_opt(e.second.as_deref())?;
+                let ms = self.eval_expr_opt(e.millisecond.as_deref())?;
+                time_construct(&hour, Some(&minute), Some(&second), Some(&ms))
+            }
+            Expression::DateTimeComponentFrom(e) => {
+                let value = self.eval_expr_opt(e.operand.as_deref())?;
+                let component = e
+                    .precision
+                    .as_deref()
+                    .unwrap_or("year")
+                    .to_ascii_lowercase();
+                date_time_component(&value, &component)
             }
 
             // ----- Interval: proper / expand / size -----
