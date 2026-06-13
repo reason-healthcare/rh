@@ -11,7 +11,7 @@ This project uses [just](https://github.com/casey/just) as the primary task runn
 ```
 
 This will:
-- Verify Rust installation (>= 1.70.0)
+- Verify Rust installation (>= 1.91.0, the workspace MSRV)
 - Install development tools (clippy, rustfmt, cargo-audit, cargo-watch, cargo-nextest)
 - Run initial formatting and checks
 

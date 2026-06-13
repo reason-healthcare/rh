@@ -52,3 +52,6 @@ wasm-bindgen-test = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[lints]
+workspace = true

@@ -9,7 +9,7 @@
 
 **Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extensible. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: composable commands, strong UX, and automation-friendly output.
 
-Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Three crates (`rh-foundation`, `rh-fhirpath`, `rh-vcl`) also support **WebAssembly** targets for browser and embedded use cases.
+Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Two crates (`rh-fhirpath`, `rh-vcl`) also support **WebAssembly** targets for browser and embedded use cases.
 
 ## Install
 
@@ -37,7 +37,7 @@ Other install methods (pre-built binaries from GitHub Releases) are documented i
 | ✅ | [rh-packager](crates/rh-packager/README.md) | FHIR Package assembler with built-in processors (snapshot, validate, CQL, FSH) |
 | ✅ | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, and source maps |
 | ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md) | **Generated** R4 FHIR types for Rust (1,388 public types) |
-| 🔜 | rh-hl7_fhir_r5_core | **Generated** R5 FHIR for Rust |
+| ✅ | [rh-hl7_fhir_r5_core](crates/rh-hl7_fhir_r5_core/README.md) | **Generated** R5 FHIR types for Rust |
 | 🔜 | rh-hl7_fhir_r6_core | **Generated** R6 FHIR for Rust |
 
 ## Quick Start

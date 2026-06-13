@@ -1987,6 +1987,7 @@ dependencies = [
  "anyhow",
  "console_error_panic_hook",
  "flate2",
+ "parking_lot",
  "reqwest",
  "serde",
  "serde_json",
@@ -2018,6 +2019,17 @@ dependencies = [
 
 [[package]]
 name = "rh-hl7-fhir-r4-core"
+version = "0.2.0-beta.2"
+dependencies = [
+ "once_cell",
+ "phf",
+ "rh-foundation",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rh-hl7-fhir-r5-core"
 version = "0.2.0-beta.2"
 dependencies = [
  "once_cell",

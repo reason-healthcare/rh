@@ -59,6 +59,9 @@ pulldown-cmark = "0.12"
 # Base64 encoding for CQL/ELM content in Library resources
 base64 = "0.22"
 
+# Synchronization primitives (poison-free locks)
+parking_lot = "0.12"
+
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -69,6 +72,13 @@ rustyline = "13.0"
 # Development dependencies
 criterion = "0.5"
 walkdir = "2"
+
+# Workspace-wide lints, inherited via `[lints] workspace = true` in every member
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
 
 # Workspace-wide package metadata
 [workspace.package]

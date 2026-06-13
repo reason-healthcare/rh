@@ -43,3 +43,6 @@ path = "src/bin/test_parse.rs"
 
 [features]
 default = []
+
+[lints]
+workspace = true

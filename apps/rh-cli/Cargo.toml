@@ -51,3 +51,6 @@ tempfile = "3.13"
 # pkg-config cannot locate a musl-compatible OpenSSL on the CI runner.
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
+
+[lints]
+workspace = true
