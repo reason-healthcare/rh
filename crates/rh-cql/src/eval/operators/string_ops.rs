@@ -57,7 +57,13 @@ pub fn combine(list: &Value, separator: Option<&Value>) -> Result<Value, EvalErr
 ///
 /// Returns `Null` if either argument is `Null`.
 pub fn split(s: &Value, separator: &Value) -> Result<Value, EvalError> {
-    null2!(s, separator);
+    if matches!(s, Value::Null) {
+        return Ok(Value::Null);
+    }
+    // Per CQL spec §19.25: Split(str, null) returns { str }
+    if matches!(separator, Value::Null) {
+        return Ok(Value::List(vec![s.clone()]));
+    }
     match (s, separator) {
         (Value::String(str_val), Value::String(sep)) => {
             let parts: Vec<Value> = str_val
@@ -572,13 +578,15 @@ mod tests {
 
     #[test]
     fn split_null_propagates() {
+        // Null string propagates
         assert_eq!(
             split(&Value::Null, &Value::String(",".into())).unwrap(),
             Value::Null
         );
+        // Null separator: per CQL spec §19.25, returns {str} (original string in a list)
         assert_eq!(
             split(&Value::String("a,b".into()), &Value::Null).unwrap(),
-            Value::Null
+            Value::List(vec![Value::String("a,b".into())])
         );
     }
 }

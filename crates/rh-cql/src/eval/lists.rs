@@ -237,7 +237,10 @@ pub fn slice(
     }
 
     let end = match end_index {
-        None | Some(Value::Null) => items.len(),
+        // No end_index specified: take all remaining elements.
+        None => items.len(),
+        // Null end_index (e.g. Take(list, null)): per CQL spec, return empty.
+        Some(Value::Null) => return Ok(Value::List(vec![])),
         Some(Value::Integer(v)) => {
             if *v < 0 {
                 return Ok(Value::Null);
@@ -348,6 +351,10 @@ pub fn distinct(list: &Value) -> Result<Value, EvalError> {
     let mut seen: Vec<&Value> = Vec::new();
     let mut result = Vec::new();
     for item in items {
+        // Null values are excluded from Distinct results per HL7 CQL test suite behavior.
+        if matches!(item, Value::Null) {
+            continue;
+        }
         if !seen
             .iter()
             .any(|s| cql_equal(s, item) == Value::Boolean(true))
@@ -430,7 +437,7 @@ pub fn singleton_from(list: &Value) -> Result<Value, EvalError> {
 // Set operators (list version)
 // ---------------------------------------------------------------------------
 
-/// `Union` (list) — concatenates two lists and removes duplicates.
+/// `Union` (list) — multiset concatenation (duplicates are preserved per CQL spec §19.30).
 pub fn union_list(a: &Value, b: &Value) -> Result<Value, EvalError> {
     if matches!(a, Value::Null) && matches!(b, Value::Null) {
         return Ok(Value::List(vec![]));
@@ -442,7 +449,7 @@ pub fn union_list(a: &Value, b: &Value) -> Result<Value, EvalError> {
     if let Value::List(bv) = b {
         combined.extend(bv.iter().cloned());
     }
-    distinct(&Value::List(combined))
+    Ok(Value::List(combined))
 }
 
 /// `Intersect` (list) — elements present in both lists.
@@ -899,10 +906,11 @@ mod tests {
 
     #[test]
     fn union_list_basic() {
+        // CQL list union is multiset (duplicates preserved per spec §19.30)
         let a = int_list(vec![1, 2, 3]);
         let b = int_list(vec![2, 3, 4]);
         let result = union_list(&a, &b).unwrap();
-        assert_eq!(result, int_list(vec![1, 2, 3, 4]));
+        assert_eq!(result, int_list(vec![1, 2, 3, 2, 3, 4]));
     }
 
     #[test]

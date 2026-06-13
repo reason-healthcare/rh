@@ -443,6 +443,33 @@ fn parse_return_clause(input: Span<'_>) -> IResult<Span<'_>, ReturnClause> {
 fn parse_sort_clause(input: Span<'_>) -> IResult<Span<'_>, SortClause> {
     let (input, _) = ws(keyword("sort"))(input)?;
     let (input, _) = opt(keyword("by"))(input)?;
+
+    // `sort desc` / `sort asc` without a `by` clause: direction-only sort by value.
+    let (input_after_dir, dir_only) = opt(ws(alt((
+        value(
+            SortDirection::Ascending,
+            alt((keyword("asc"), keyword("ascending"))),
+        ),
+        value(
+            SortDirection::Descending,
+            alt((keyword("desc"), keyword("descending"))),
+        ),
+    ))))(input)?;
+
+    if let Some(dir) = dir_only {
+        // Direction-only: sort by element value, no expression.
+        return Ok((
+            input_after_dir,
+            SortClause {
+                items: vec![SortItem {
+                    expression: Box::new(Expression::Literal(crate::parser::ast::Literal::Null)),
+                    direction: dir,
+                }],
+                location: None,
+            },
+        ));
+    }
+
     let (input, items) = separated_list1(ws(char(',')), parse_sort_item)(input)?;
 
     Ok((
