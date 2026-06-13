@@ -195,7 +195,7 @@ fn boundary_datetime(s: &str, digits: i64, high: bool) -> FhirPathResult<FhirPat
 
     let tz = tz.unwrap_or(if high { "-12:00" } else { "+14:00" });
     let time = match digits {
-        d if d <= 10 => format!("{hour}"),
+        d if d <= 10 => hour.to_string(),
         d if d <= 12 => format!("{hour}:{minute}"),
         d if d <= 14 => format!("{hour}:{minute}:{sec}"),
         _ => format!("{hour}:{minute}:{sec}.{ms}"),
