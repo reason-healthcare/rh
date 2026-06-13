@@ -8,16 +8,21 @@ pub struct MathEvaluator;
 
 impl MathEvaluator {
     /// Absolute value function - abs()
-    /// Returns the absolute value of a number
+    /// Returns the absolute value of a number or Quantity.
     pub fn abs(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(n.abs())),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Number(n.abs())),
+            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
+                value: value.abs(),
+                unit: unit.clone(),
+            }),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) => {
                 if items.len() == 1 {
                     Self::abs(&items[0])
                 } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Err(FhirPathError::TypeError {
                         message: "abs() can only be applied to a single numeric value".to_string(),
@@ -55,16 +60,17 @@ impl MathEvaluator {
     }
 
     /// Exponential function - exp()
-    /// Returns e raised to the power of the input
+    /// Returns e raised to the power of the input. Propagates empty.
     pub fn exp(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Number((*n as f64).exp())),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Number(n.exp())),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) => {
                 if items.len() == 1 {
                     Self::exp(&items[0])
                 } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Err(FhirPathError::TypeError {
                         message: "exp() can only be applied to a single numeric value".to_string(),
@@ -172,6 +178,11 @@ impl MathEvaluator {
 
         let result = base_num.powf(exp_num);
 
+        // Invalid result (e.g. sqrt of negative) → empty per spec
+        if result.is_nan() {
+            return Ok(FhirPathValue::Empty);
+        }
+
         // If the result is a whole number and both inputs were integers, return an integer
         if result.fract() == 0.0
             && Self::is_integer_value(target)
@@ -230,23 +241,20 @@ impl MathEvaluator {
     }
 
     /// Square root function - sqrt()
-    /// Returns the square root of the input
+    /// Returns the square root of the input. Returns empty for negative inputs
+    /// per the FHIRPath spec (undefined result → propagate empty).
     pub fn sqrt(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => {
                 if *n < 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "sqrt() requires a non-negative number".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number((*n as f64).sqrt()))
                 }
             }
             FhirPathValue::Number(n) => {
                 if *n < 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "sqrt() requires a non-negative number".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(n.sqrt()))
                 }
@@ -416,8 +424,11 @@ mod tests {
             FhirPathValue::Number(1.5)
         );
 
-        // Test error for negative number
-        assert!(MathEvaluator::sqrt(&FhirPathValue::Integer(-1)).is_err());
+        // Negative number → empty per spec
+        assert_eq!(
+            MathEvaluator::sqrt(&FhirPathValue::Integer(-1)).unwrap(),
+            FhirPathValue::Empty
+        );
     }
 
     #[test]

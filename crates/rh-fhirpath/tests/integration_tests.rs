@@ -506,9 +506,8 @@ mod tests {
 
         match result {
             FhirPathValue::Collection(items) => {
-                // Should contain all given names and family names
-                assert!(items.len() >= 5); // At least John, William, Johnny, Smith, Smith
-                                           // Verify some expected values are present
+                // | is set union (deduplicating): John, William, Johnny, Smith (4 unique)
+                assert!(items.len() >= 4);
                 assert!(items.contains(&FhirPathValue::String("John".to_string())));
                 assert!(items.contains(&FhirPathValue::String("Smith".to_string())));
             }

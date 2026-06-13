@@ -212,6 +212,12 @@ impl FhirPathEvaluator {
                     "as" => self.evaluate_as_function(target, parameters, context),
                     "trace" => self.evaluate_trace_function(target, parameters, context),
                     "aggregate" => self.evaluate_aggregate_function(target, parameters, context),
+                    "exists" if !parameters.is_empty() => {
+                        self.evaluate_exists_with_criterion(target, parameters, context)
+                    }
+                    "all" if !parameters.is_empty() => {
+                        self.evaluate_all_with_criterion(target, parameters, context)
+                    }
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -418,6 +424,62 @@ impl FhirPathEvaluator {
                 }
             }
         }
+    }
+
+    /// exists(criterion) — returns true if any element satisfies the criterion.
+    fn evaluate_exists_with_criterion(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "exists() accepts at most one parameter (criterion)".to_string(),
+            });
+        }
+        let criterion = &parameters[0];
+        let items: Vec<&FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(false)),
+            v => vec![v],
+        };
+        for item in items {
+            let item_ctx = context.with_this_value(item.clone());
+            let result = self.evaluate_expression(criterion, &item_ctx)?;
+            if result.is_truthy() {
+                return Ok(FhirPathValue::Boolean(true));
+            }
+        }
+        Ok(FhirPathValue::Boolean(false))
+    }
+
+    /// all(criterion) — returns true if every element satisfies the criterion.
+    fn evaluate_all_with_criterion(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "all() requires exactly one parameter (criterion)".to_string(),
+            });
+        }
+        let criterion = &parameters[0];
+        let items: Vec<&FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(true)),
+            v => vec![v],
+        };
+        for item in items {
+            let item_ctx = context.with_this_value(item.clone());
+            let result = self.evaluate_expression(criterion, &item_ctx)?;
+            if !result.is_truthy() {
+                return Ok(FhirPathValue::Boolean(false));
+            }
+        }
+        Ok(FhirPathValue::Boolean(true))
     }
 
     /// Evaluate select function that transforms collection items using projection expressions

@@ -12,32 +12,37 @@ impl CollectionEvaluator {
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let mut result = Vec::new();
+        let mut result: Vec<FhirPathValue> = Vec::new();
+
+        let push_dedup = |result: &mut Vec<FhirPathValue>, v: FhirPathValue| {
+            if !result
+                .iter()
+                .any(|existing| FhirPathValue::equals_static(existing, &v))
+            {
+                result.push(v);
+            }
+        };
 
         // Add items from left operand
         match left {
             FhirPathValue::Collection(items) => {
-                result.extend(items.clone());
+                for item in items {
+                    push_dedup(&mut result, item.clone());
+                }
             }
-            FhirPathValue::Empty => {
-                // Don't add anything
-            }
-            value => {
-                result.push(value.clone());
-            }
+            FhirPathValue::Empty => {}
+            value => push_dedup(&mut result, value.clone()),
         }
 
-        // Add items from right operand
+        // Add items from right operand, deduplicating against result so far
         match right {
             FhirPathValue::Collection(items) => {
-                result.extend(items.clone());
+                for item in items {
+                    push_dedup(&mut result, item.clone());
+                }
             }
-            FhirPathValue::Empty => {
-                // Don't add anything
-            }
-            value => {
-                result.push(value.clone());
-            }
+            FhirPathValue::Empty => {}
+            value => push_dedup(&mut result, value.clone()),
         }
 
         if result.is_empty() {

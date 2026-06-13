@@ -6,6 +6,27 @@ use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
 
+/// Round the result of decimal arithmetic to the number of fractional digits
+/// of the less-precise input. This compensates for f64 rounding artefacts
+/// when both inputs have a small, well-defined precision (e.g. `1.8 - 1.2 →
+/// 0.5999…` rounds to `0.6` because both inputs have 1 decimal place).
+fn round_to_decimal_precision(result: f64, a: f64, b: f64) -> f64 {
+    let prec = decimal_places(a).min(decimal_places(b));
+    if prec == 0 {
+        return result;
+    }
+    let scale = 10f64.powi(prec as i32);
+    (result * scale).round() / scale
+}
+
+fn decimal_places(n: f64) -> u8 {
+    let s = format!("{n}");
+    match s.split_once('.') {
+        Some((_, frac)) => frac.trim_end_matches('0').len().min(15) as u8,
+        None => 0,
+    }
+}
+
 /// Split a datetime literal into its `(base, tz_suffix)` components.
 ///
 /// Recognises `Z`, `+HH:MM`, and `-HH:MM` suffixes; everything else is treated
@@ -356,9 +377,9 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 Ok(FhirPathValue::Integer(a - b))
             }
-            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
-                Ok(FhirPathValue::Number(a - b))
-            }
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => Ok(FhirPathValue::Number(
+                round_to_decimal_precision(a - b, *a, *b),
+            )),
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 Ok(FhirPathValue::Number(*a as f64 - b))
             }
@@ -581,9 +602,7 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     // Division always returns a Number (float) in FHIRPath
                     Ok(FhirPathValue::Number(*a as f64 / *b as f64))
@@ -591,27 +610,21 @@ impl ArithmeticEvaluator {
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a / b))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(*a as f64 / b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a / *b as f64))
                 }
@@ -628,11 +641,8 @@ impl ArithmeticEvaluator {
             // Number/Integer divided by Quantity (result is different unit)
             (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 if *value == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
-                    // Dividing by dimensionless quantity
                     Ok(FhirPathValue::Number(n / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -643,11 +653,8 @@ impl ArithmeticEvaluator {
             }
             (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 if *value == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
-                    // Dividing by dimensionless quantity
                     Ok(FhirPathValue::Number((*i as f64) / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -684,36 +691,28 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer(a / b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((a / b).trunc() as i64))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((*a as f64 / b).trunc() as i64))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((a / *b as f64).trunc() as i64))
                 }
@@ -732,36 +731,32 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer(a % b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(a % b))
+                    Ok(FhirPathValue::Number(round_to_decimal_precision(
+                        a % b,
+                        *a,
+                        *b,
+                    )))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(*a as f64 % b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a % *b as f64))
                 }

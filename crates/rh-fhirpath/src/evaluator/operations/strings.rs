@@ -19,6 +19,9 @@ impl StringEvaluator {
     pub fn length(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.len() as i64)),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.len() == 1 => Self::length(&items[0]),
             _ => Err(FhirPathError::TypeError {
                 message: "length() can only be called on String values".to_string(),
             }),
@@ -245,6 +248,9 @@ impl StringEvaluator {
             }
         };
 
+        if Self::is_empty(pattern) || Self::is_empty(replacement) {
+            return Ok(FhirPathValue::Empty);
+        }
         let pattern_str = match pattern {
             FhirPathValue::String(s) => s,
             _ => {
@@ -353,6 +359,9 @@ impl StringEvaluator {
     pub fn trim(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::String(s.trim().to_string())),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.len() == 1 => Self::trim(&items[0]),
             _ => Err(FhirPathError::TypeError {
                 message: "trim() can only be called on String values".to_string(),
             }),

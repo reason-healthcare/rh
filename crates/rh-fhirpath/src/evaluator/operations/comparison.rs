@@ -13,12 +13,14 @@ use crate::evaluator::types::FhirPathValue;
 pub struct ComparisonEvaluator;
 
 /// Extract a temporal-parts view from any temporal-valued FhirPathValue.
-/// Returns None for non-temporal values or unparseable strings.
+/// Also handles String values that parse as dates/datetimes (e.g. FHIR period
+/// start/end fields accessed without typed metadata).
 fn try_temporal(v: &FhirPathValue) -> Option<TemporalParts> {
     match v {
         FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => {
             parse_temporal(s)
         }
+        FhirPathValue::String(s) => parse_temporal(s),
         _ => None,
     }
 }
@@ -179,41 +181,32 @@ impl ComparisonEvaluator {
         })
     }
 
-    /// Evaluate implies operation
-    /// If left is true, return boolean evaluation of right
-    /// If left is false, return true
-    /// If left is empty and right evaluates to true, return true, otherwise return empty
+    /// Evaluate implies per three-valued logic (§6.5.7):
+    /// | left  | right | result |
+    /// |-------|-------|--------|
+    /// | true  | true  | true   |
+    /// | true  | false | false  |
+    /// | true  | {}    | {}     |
+    /// | false | *     | true   |
+    /// | {}    | true  | true   |
+    /// | {}    | other | {}     |
     pub fn evaluate_implies(
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        match left {
-            FhirPathValue::Boolean(true) => {
-                // If left is true, return the boolean evaluation of the right operand
-                Ok(FhirPathValue::Boolean(right.to_boolean()))
-            }
-            FhirPathValue::Boolean(false) => {
-                // If left is false, return true
-                Ok(FhirPathValue::Boolean(true))
-            }
-            FhirPathValue::Empty => {
-                // If left is empty, return true if right evaluates to true, otherwise return empty
-                if right.to_boolean() {
-                    Ok(FhirPathValue::Boolean(true))
-                } else {
-                    Ok(FhirPathValue::Empty)
-                }
-            }
-            _ => {
-                // For other values, convert left to boolean and apply the logic
-                let left_bool = left.to_boolean();
-                if left_bool {
-                    Ok(FhirPathValue::Boolean(right.to_boolean()))
-                } else {
-                    Ok(FhirPathValue::Boolean(true))
-                }
-            }
-        }
+        let lk = bool_three_valued(left);
+        let rk = bool_three_valued(right);
+        let result = match (lk, rk) {
+            (Some(false), _) => Some(true),
+            (Some(true), Some(r)) => Some(r),
+            (Some(true), None) => None,
+            (None, Some(true)) => Some(true),
+            (None, _) => None,
+        };
+        Ok(match result {
+            Some(b) => FhirPathValue::Boolean(b),
+            None => FhirPathValue::Empty,
+        })
     }
 
     /// Evaluate or/xor operations per FHIRPath three-valued logic (§6.5):
