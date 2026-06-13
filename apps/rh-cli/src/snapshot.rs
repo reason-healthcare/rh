@@ -137,7 +137,7 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
     info!("Generating snapshot...");
     let snapshot = generator.generate_snapshot(&args.profile_url)?;
 
-    let output = serde_json::to_string_pretty(&snapshot)?;
+    let output = serde_json::to_string_pretty(&*snapshot)?;
 
     if let Some(output_path) = args.output {
         std::fs::write(&output_path, output)?;

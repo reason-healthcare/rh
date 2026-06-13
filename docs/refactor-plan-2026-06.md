@@ -9,7 +9,7 @@
 | Workstream | Status | Notes |
 |---|---|---|
 | WS0 Hygiene | ✅ done (2026-06-12) | 0.4: ffq **deleted** (not gated) — it depended on a nonexistent `rh-ffq` crate and could never compile. 0.5: `clippy::unwrap_used` deferred until WS1 (1.1) / WS4 (4.6) unwrap cleanups land, since `just lint` runs `-D warnings`; `unsafe_code = "forbid"` + `clippy.all = "warn"` are in place. |
-| WS1 Foundation | ⬜ not started | |
+| WS1 Foundation | ✅ done (2026-06-12) | 1.1: audit found all remaining unwraps were test-only; added `#![cfg_attr(not(test), warn(clippy::unwrap_used))]` guard. 1.4: `generate_snapshot` now returns `Arc<Snapshot>` (28 ns cache hits vs deep clone); bench at `benches/snapshot.rs` (cold 600-element merge ~424 µs). 1.5: merger uses borrowed `Cow` index — no upfront clones of base elements or key strings. 1.7: packager's foundation `http` feature + tokio dep were entirely unused — **removed** rather than feature-gated. **Bonus fix:** `StructureDefinition.base_definition` was missing `#[serde(rename = "baseDefinition")]` — profiles loaded from real FHIR JSON silently lost their base and produced differential-only snapshots; fixed + regression test. |
 | WS2 Conformance | ⬜ not started | |
 | WS3 CLI | ⬜ not started | |
 | WS4 Codegen | ⬜ not started | |
@@ -109,9 +109,9 @@ No dependencies. Everything else builds on this. All tasks (0.1–0.6) completed
 
 ---
 
-## 4. WS1 — rh-foundation Hardening & Performance (size: M, 3–5 days)
+## 4. WS1 — rh-foundation Hardening & Performance (size: M, 3–5 days) ✅ COMPLETED
 
-Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and WS6 (WASM story).
+Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and WS6 (WASM story). All tasks (1.1–1.8) completed 2026-06-12; `just check` green. See Progress Tracking for details and the bonus `baseDefinition` serde fix.
 
 ### 4.1 API & error hardening
 | # | Task | Files | Acceptance criteria |

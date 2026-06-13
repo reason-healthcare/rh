@@ -1986,6 +1986,7 @@ version = "0.2.0-beta.2"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
+ "criterion",
  "flate2",
  "parking_lot",
  "reqwest",
@@ -2057,7 +2058,6 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror",
- "tokio",
  "toml",
  "tracing",
  "walkdir",

@@ -22,7 +22,6 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-tokio = { workspace = true }
 chrono = { workspace = true }
 tar = { workspace = true }
 flate2 = { workspace = true }
@@ -43,7 +42,7 @@ tempfile = "3"
 walkdir = { workspace = true }
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2", features = ["http"] }
+rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2" }
 rh-validator = { path = "../rh-validator", version = "0.2.0-beta.2" }
 rh-cql = { path = "../rh-cql", version = "0.2.0-beta.2" }
 rh-fsh = { path = "../rh-fsh", version = "0.2.0-beta.2" }
