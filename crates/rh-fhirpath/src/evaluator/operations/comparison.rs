@@ -189,21 +189,32 @@ impl ComparisonEvaluator {
         }
     }
 
-    /// Evaluate or/xor operations
+    /// Evaluate or/xor operations per FHIRPath three-valued logic (§6.5):
+    /// * `or`: false or empty → empty; true or anything → true.
+    /// * `xor`: empty operand → empty result (always — XOR has no short-circuit
+    ///   that resolves with an unknown side).
     pub fn evaluate_or(
         left: &FhirPathValue,
         operator: &OrOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let left_bool = left.to_boolean();
-        let right_bool = right.to_boolean();
-
+        let left_known = bool_three_valued(left);
+        let right_known = bool_three_valued(right);
         let result = match operator {
-            OrOperator::Or => left_bool || right_bool,
-            OrOperator::Xor => left_bool ^ right_bool,
+            OrOperator::Or => match (left_known, right_known) {
+                (Some(true), _) | (_, Some(true)) => Some(true),
+                (Some(false), Some(false)) => Some(false),
+                _ => None,
+            },
+            OrOperator::Xor => match (left_known, right_known) {
+                (Some(a), Some(b)) => Some(a ^ b),
+                _ => None,
+            },
         };
-
-        Ok(FhirPathValue::Boolean(result))
+        Ok(match result {
+            Some(b) => FhirPathValue::Boolean(b),
+            None => FhirPathValue::Empty,
+        })
     }
 
     /// Check if two values are equivalent (more lenient than equal). Per
@@ -289,5 +300,18 @@ fn fractional_digits(n: f64) -> u8 {
     match s.split_once('.') {
         Some((_, frac)) => frac.len().min(15) as u8,
         None => 0,
+    }
+}
+
+/// Coerce a value to a known boolean for three-valued logic. Returns `None`
+/// for the empty collection (which represents "unknown" per the FHIRPath
+/// spec) and `Some(b)` for a concrete Boolean.
+fn bool_three_valued(v: &FhirPathValue) -> Option<bool> {
+    match v {
+        FhirPathValue::Boolean(b) => Some(*b),
+        FhirPathValue::Empty => None,
+        FhirPathValue::Collection(items) if items.is_empty() => None,
+        FhirPathValue::Collection(items) if items.len() == 1 => bool_three_valued(&items[0]),
+        _ => Some(v.to_boolean()),
     }
 }
