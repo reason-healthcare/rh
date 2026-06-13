@@ -11,6 +11,7 @@
 //! - Type functions (is, as - backward compatibility)
 
 pub mod boolean_functions;
+pub mod boundary_functions;
 pub mod collection_functions;
 pub mod conversion_functions;
 pub mod datetime_functions;
@@ -74,6 +75,9 @@ impl FunctionRegistry {
 
         // Boolean functions (not, etc.)
         boolean_functions::register_boolean_functions(&mut self.functions);
+
+        // Boundary/precision functions (precision, lowBoundary, highBoundary)
+        boundary_functions::register_boundary_functions(&mut self.functions);
     }
 
     /// Register extension functions from the extension system

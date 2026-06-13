@@ -48,7 +48,7 @@ wrong answers · ❌ not implemented.
 | `aggregate` | ❌ | Not implemented |
 | `defineVariable` | ❌ | Not implemented |
 | `sort` | ❌ | Not implemented (10 cases; R5/2.0 addition) |
-| `lowBoundary` / `highBoundary` / `precision` | ❌ | Not implemented (57 cases — largest single gap) |
+| `lowBoundary` / `highBoundary` / `precision` | 🟡 | Implemented (2026-06-12); trailing-zero decimal literals limited by `f64` representation |
 | Type reflection (`type()`) | ❌ | Not implemented (13+ cases) |
 | `comparable` | ❌ | Not implemented |
 | `conformsTo` | ❌ | Not implemented (needs validator hook) |
@@ -58,7 +58,7 @@ wrong answers · ❌ not implemented.
 ## Implementation priority (refactor plan task 2.3)
 
 1. ~~Parser: comments, backtick identifiers, unicode escapes~~ ✅ done 2026-06-12.
-2. `lowBoundary()`/`highBoundary()`/`precision()` — 57 cases.
+2. ~~`lowBoundary()`/`highBoundary()`/`precision()`~~ ✅ done 2026-06-12 (f64 caveat).
 3. `aggregate()`, `defineVariable()`, `sort()`.
 4. String `encode/decode/escape/unescape`, `convertsToDecimal`.
 5. Choice-type polymorphism for `is`/`as`/`ofType` on FHIR resources.

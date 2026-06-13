@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-12 (parser wave 1: comments, delimited identifiers, string escapes)
+**Last updated**: 2026-06-12 (wave 2: lowBoundary/highBoundary/precision)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-12, parser wave 1)
+### 1.1 Current results (2026-06-12, wave 2)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 576 | 61.6% |
-| Wrong answer | 123 | 13.2% |
+| Pass | 616 | 65.9% |
+| Wrong answer | 128 | 13.7% |
 | Parse error | 61 | 6.5% |
-| Eval error | 174 | 18.6% |
+| Eval error | 129 | 13.8% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -55,6 +55,7 @@ History:
 |---|---|---|---|---|---|
 | 2026-06-12 | 564 (60.3%) | 120 | 79 | 171 | Harness introduction baseline |
 | 2026-06-12 | 576 (61.6%) | 123 | 61 | 174 | Parser wave 1: `//` and `/* */` comments, backtick identifiers, string escapes incl. `\uXXXX`. 3 cases moved from parse-error to wrong-answer (now parse, eval gaps exposed), 1 to eval-error; `testLiteralUnicode` fixed. |
+| 2026-06-12 | 616 (65.9%) | 128 | 61 | 129 | Wave 2: `lowBoundary()`/`highBoundary()`/`precision()` implemented (45 eval errors fixed). 6 baseline additions: trailing-zero decimal literals lose precision in `f64` (needs a decimal type — see plan 5.3 stage 2), plus 3 suite `±0.0`-boundary cases with non-floor/ceil rounding. |
 
 ### 1.2 Regression policy
 
@@ -86,7 +87,6 @@ successful **non-empty** result as a wrong answer.
 
 | Cluster | Cases | Notes |
 |---|---|---|
-| `lowBoundary()`/`highBoundary()`/`precision()` | 57 | Functions not implemented |
 | `convertsToDecimal()`/`toDecimal()` edge cases | 22 | Unknown function + partial semantics |
 | `sort()` | 10 | Not implemented |
 | `encode()`/`decode()`/`escape()`/`unescape()` | 12 | Not implemented |
