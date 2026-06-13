@@ -332,6 +332,11 @@ pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunc
     );
 }
 
+/// Public alias for use by the evaluator's expression-based sort.
+pub fn compare_for_sort_pub(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
+    compare_for_sort(a, b)
+}
+
 fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
     use FhirPathValue::*;
     match (a, b) {

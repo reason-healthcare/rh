@@ -212,6 +212,10 @@ impl FhirPathEvaluator {
                     "as" => self.evaluate_as_function(target, parameters, context),
                     "trace" => self.evaluate_trace_function(target, parameters, context),
                     "aggregate" => self.evaluate_aggregate_function(target, parameters, context),
+                    "iif" => self.evaluate_iif_lazy(target, parameters, context),
+                    "sort" if !parameters.is_empty() => {
+                        self.evaluate_sort_by_expression(target, parameters, context)
+                    }
                     "exists" if !parameters.is_empty() => {
                         self.evaluate_exists_with_criterion(target, parameters, context)
                     }
@@ -423,6 +427,106 @@ impl FhirPathEvaluator {
                     Ok(FhirPathValue::Empty)
                 }
             }
+        }
+    }
+
+    /// iif(criterion, true-result[, otherwise-result]) with lazy evaluation.
+    /// Evaluates criterion first; only evaluates the selected branch.
+    fn evaluate_iif_lazy(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() < 2 || parameters.len() > 3 {
+            return Err(FhirPathError::FunctionError {
+                message: "iif() requires 2 or 3 parameters".to_string(),
+            });
+        }
+
+        // Set the receiver as the evaluation focus (both $this and current).
+        // This matches FHIRPath semantics: x.iif(criterion, t, f) evaluates
+        // criterion/t/f with x as the focus. When iif has no explicit receiver
+        // the target is the root context object, so focus = root (correct).
+        let iif_ctx = context.with_this_value(target.clone());
+        let criterion_val = self.evaluate_expression(&parameters[0], &iif_ctx)?;
+
+        let effective = match &criterion_val {
+            FhirPathValue::Collection(items) if items.len() == 1 => items[0].clone(),
+            FhirPathValue::Collection(items) if items.is_empty() => FhirPathValue::Empty,
+            FhirPathValue::Collection(_) => {
+                return Err(FhirPathError::EvaluationError {
+                    message:
+                        "iif() criterion must be a single Boolean; got a multi-item collection"
+                            .to_string(),
+                });
+            }
+            other => other.clone(),
+        };
+
+        let is_truthy = match effective {
+            FhirPathValue::Boolean(b) => b,
+            FhirPathValue::Empty => false,
+            other => {
+                return Err(FhirPathError::TypeError {
+                    message: format!("iif() criterion must be Boolean, got {other:?}"),
+                });
+            }
+        };
+
+        // Lazy: only evaluate the selected branch.
+        if is_truthy {
+            self.evaluate_expression(&parameters[1], &iif_ctx)
+        } else if let Some(otherwise) = parameters.get(2) {
+            self.evaluate_expression(otherwise, &iif_ctx)
+        } else {
+            Ok(FhirPathValue::Empty)
+        }
+    }
+
+    /// sort(key-expression...) — sort by one or more key expressions.
+    fn evaluate_sort_by_expression(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        let items: Vec<FhirPathValue> = match target {
+            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(v) => v.clone(),
+            other => return Ok(other.clone()),
+        };
+
+        // Build (item, key_tuple) pairs
+        let mut keyed: Vec<(FhirPathValue, Vec<FhirPathValue>)> = Vec::new();
+        for item in &items {
+            let item_ctx = context.with_this_value(item.clone());
+            let mut keys = Vec::new();
+            for param in parameters {
+                let key = self.evaluate_expression(param, &item_ctx)?;
+                keys.push(key);
+            }
+            keyed.push((item.clone(), keys));
+        }
+
+        keyed.sort_by(|(_, ka), (_, kb)| {
+            for (a, b) in ka.iter().zip(kb.iter()) {
+                let ord =
+                    crate::evaluator::functions::collection_functions::compare_for_sort_pub(a, b);
+                if ord != std::cmp::Ordering::Equal {
+                    return ord;
+                }
+            }
+            std::cmp::Ordering::Equal
+        });
+
+        let sorted: Vec<FhirPathValue> = keyed.into_iter().map(|(item, _)| item).collect();
+        if sorted.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else if sorted.len() == 1 {
+            Ok(sorted.into_iter().next().unwrap())
+        } else {
+            Ok(FhirPathValue::Collection(sorted))
         }
     }
 

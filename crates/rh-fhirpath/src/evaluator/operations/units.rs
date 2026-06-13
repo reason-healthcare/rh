@@ -89,6 +89,18 @@ impl UnitConverter {
                 from_base_factor: 1.0 / 453.592,
             },
         );
+        // UCUM avoirdupois pound and common display aliases
+        for alias in ["[lb_av]", "lbs", "lbs."] {
+            unit_mappings.insert(
+                alias.to_string(),
+                UnitMapping {
+                    quantity_type: QuantityType::Mass,
+                    base_unit: "g".to_string(),
+                    to_base_factor: 453.592,
+                    from_base_factor: 1.0 / 453.592,
+                },
+            );
+        }
 
         // Length units (base: meter)
         unit_mappings.insert(

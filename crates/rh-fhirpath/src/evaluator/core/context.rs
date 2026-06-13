@@ -87,6 +87,20 @@ impl EvaluationContext {
         }
     }
 
+    /// Create a new context with `$this` set but `current` left unchanged.
+    /// Use this for iif(), where parameters must resolve root paths (e.g.
+    /// `testData.foo`) while $this should still reflect the iif receiver.
+    pub fn with_this_only(&self, this_value: FhirPathValue) -> Self {
+        Self {
+            root: self.root.clone(),
+            current: self.current.clone(),
+            this_value: Some(this_value),
+            total_value: self.total_value.clone(),
+            constants: self.constants.clone(),
+            trace_logs: self.trace_logs.clone(),
+        }
+    }
+
     /// Create a new context with both $this and $total set (for aggregate()).
     pub fn with_aggregate_vars(
         &self,

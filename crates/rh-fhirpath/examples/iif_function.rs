@@ -91,19 +91,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let basic_examples = vec![
         (
-            "''.iif(testData.conditions.trueBool, testData.messages.success, testData.messages.failure)",
+            "iif(testData.conditions.trueBool, testData.messages.success, testData.messages.failure)",
             "True boolean condition",
         ),
         (
-            "''.iif(testData.conditions.falseBool, testData.messages.success, testData.messages.failure)",
+            "iif(testData.conditions.falseBool, testData.messages.success, testData.messages.failure)",
             "False boolean condition",
         ),
         (
-            "''.iif(testData.conditions.trueBool, testData.messages.success)",
+            "iif(testData.conditions.trueBool, testData.messages.success)",
             "True condition without otherwise-result",
         ),
         (
-            "''.iif(testData.conditions.falseBool, testData.messages.success)",
+            "iif(testData.conditions.falseBool, testData.messages.success)",
             "False condition without otherwise-result (returns empty)",
         ),
     ];
@@ -127,27 +127,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // conversions used as criteria.
     let truthiness_examples = vec![
         (
-            "''.iif(testData.conditions.positiveInt > 0, 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.positiveInt > 0, 'TRUTHY', 'FALSY')",
             "Positive integer comparison → true",
         ),
         (
-            "''.iif(testData.conditions.zeroInt = 0, 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.zeroInt = 0, 'TRUTHY', 'FALSY')",
             "Zero integer equality → true",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyString.length() > 0, 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.nonEmptyString.length() > 0, 'TRUTHY', 'FALSY')",
             "Non-empty string length check → true",
         ),
         (
-            "''.iif(testData.conditions.emptyString.empty(), 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.emptyString.empty(), 'TRUTHY', 'FALSY')",
             "Empty string detection → true",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyArray.exists(), 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.nonEmptyArray.exists(), 'TRUTHY', 'FALSY')",
             "Non-empty array exists() → true",
         ),
         (
-            "''.iif(testData.conditions.emptyArray.empty(), 'TRUTHY', 'FALSY')",
+            "iif(testData.conditions.emptyArray.empty(), 'TRUTHY', 'FALSY')",
             "Empty array empty() → true",
         ),
     ];
@@ -168,19 +168,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let conditional_examples = vec![
         (
-            "''.iif(5 > 3, 'Five is greater', 'Five is not greater')",
+            "iif(5 > 3, 'Five is greater', 'Five is not greater')",
             "Simple numeric comparison",
         ),
         (
-            "''.iif('hello'.length() > 0, 'Has content', 'Empty')",
+            "iif('hello'.length() > 0, 'Has content', 'Empty')",
             "String length check",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyArray.count() > 2, 'Many items', 'Few items')",
+            "iif(testData.conditions.nonEmptyArray.count() > 2, 'Many items', 'Few items')",
             "Collection count check",
         ),
         (
-            "''.iif(testData.conditions.nonEmptyArray.exists(), testData.conditions.nonEmptyArray.first(), 'None')",
+            "iif(testData.conditions.nonEmptyArray.exists(), testData.conditions.nonEmptyArray.first(), 'None')",
             "Existence-based value retrieval",
         ),
     ];
@@ -201,19 +201,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let math_examples = vec![
         (
-            "''.iif(10 div 3 = 3, 'Integer division works', 'Math error')",
+            "iif(10 div 3 = 3, 'Integer division works', 'Math error')",
             "Integer division check",
         ),
         (
-            "''.iif('FHIRPath'.startsWith('FHIR'), 'FHIR prefix found', 'Different prefix')",
+            "iif('FHIRPath'.startsWith('FHIR'), 'FHIR prefix found', 'Different prefix')",
             "String prefix check",
         ),
         (
-            "''.iif(testData.conditions.positiveInt + 8 = 50, 'Sum is 50', testData.conditions.positiveInt + 8)",
+            "iif(testData.conditions.positiveInt + 8 = 50, 'Sum is 50', testData.conditions.positiveInt + 8)",
             "Mathematical expression in condition",
         ),
         (
-            "''.iif('test'.upper() = 'TEST', 'Case conversion works', 'Case issue')",
+            "iif('test'.upper() = 'TEST', 'Case conversion works', 'Case issue')",
             "String transformation check",
         ),
     ];
@@ -242,7 +242,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Empty collection check",
         ),
         (
-            "''.iif('test string'.length() > 5, 'Long string', 'Short string')",
+            "iif('test string'.length() > 5, 'Long string', 'Short string')",
             "String length categorization",
         ),
     ];
@@ -263,11 +263,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let nested_examples = vec![
         (
-            "''.iif(5 > 3, ''.iif(2 + 2 = 4, 'Both true', 'Math wrong'), 'First false')",
+            "iif(5 > 3, iif(2 + 2 = 4, 'Both true', 'Math wrong'), 'First false')",
             "Nested iif with mathematical conditions",
         ),
         (
-            "''.iif(entry.resource.count() > 1, 'Multiple resources', 'Single resource')",
+            "iif(entry.resource.count() > 1, 'Multiple resources', 'Single resource')",
             "Simple resource count check",
         ),
     ];
@@ -288,19 +288,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let return_type_examples = vec![
         (
-            "''.iif(testData.conditions.trueBool, testData.conditions.positiveInt, testData.conditions.zeroInt)",
+            "iif(testData.conditions.trueBool, testData.conditions.positiveInt, testData.conditions.zeroInt)",
             "Returning integers",
         ),
         (
-            "''.iif(testData.conditions.trueBool, testData.conditions.trueBool, testData.conditions.falseBool)",
+            "iif(testData.conditions.trueBool, testData.conditions.trueBool, testData.conditions.falseBool)",
             "Returning booleans",
         ),
         (
-            "''.iif(testData.conditions.trueBool, testData.conditions.nonEmptyArray, testData.conditions.emptyArray)",
+            "iif(testData.conditions.trueBool, testData.conditions.nonEmptyArray, testData.conditions.emptyArray)",
             "Returning arrays/collections",
         ),
         (
-            "''.iif(testData.conditions.trueBool, entry.resource.first(), 'No resource')",
+            "iif(testData.conditions.trueBool, entry.resource.first(), 'No resource')",
             "Returning FHIR resources",
         ),
     ];
@@ -321,15 +321,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let clinical_examples = vec![
         (
-            "''.iif(entry.resource.count() > 0, 'Resources available for processing', 'No resources found')",
+            "iif(entry.resource.count() > 0, 'Resources available for processing', 'No resources found')",
             "Resource availability check",
         ),
         (
-            "''.iif(entry.resource.count() = 4, 'Expected resource count', 'Unexpected count')",
+            "iif(entry.resource.count() = 4, 'Expected resource count', 'Unexpected count')",
             "Resource count validation",
         ),
         (
-            "''.iif('hello world'.contains('world'), 'Contains world', 'Missing world')",
+            "iif('hello world'.contains('world'), 'Contains world', 'Missing world')",
             "Text content validation",
         ),
     ];
