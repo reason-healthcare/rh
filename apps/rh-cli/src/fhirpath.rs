@@ -336,7 +336,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
     println!("Test Results: {passed} passed, {failed} failed");
 
     if failed > 0 {
-        std::process::exit(1);
+        crate::output::ExitCode::ValidationFailure.exit();
     }
 
     Ok(())

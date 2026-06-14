@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use tracing::error;
 
 mod codegen;
 mod cql;
@@ -13,7 +12,7 @@ mod snapshot;
 mod validator;
 mod vcl;
 
-use output::{ColorMode, ExitCode, OutputContext, OutputFormat};
+use output::{error_envelope, ColorMode, EnvelopeError, ExitCode, OutputContext, OutputFormat};
 
 /// rh - Unified CLI for FHIR processing tools
 ///
@@ -138,7 +137,19 @@ async fn main() -> Result<()> {
     };
 
     if let Err(e) = result {
-        error!("{e}");
+        // Print `error: <message>` to stderr (no tracing timestamp/level prefix)
+        eprintln!("error: {e}");
+        // When JSON format is active, also emit an error envelope to stdout
+        // so machine consumers always get a parseable response.
+        if output_ctx.is_json() {
+            let env = error_envelope(
+                vec![EnvelopeError::new("operational_error", e.to_string())],
+                "rh",
+            );
+            if let Ok(json) = serde_json::to_string_pretty(&env) {
+                println!("{json}");
+            }
+        }
         ExitCode::OperationalError.exit();
     }
 
