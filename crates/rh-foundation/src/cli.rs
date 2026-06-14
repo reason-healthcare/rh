@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fs;
 use std::io::{self, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Reads input from a file, inline string, or stdin.
 ///
@@ -264,6 +264,32 @@ pub fn exit_if(condition: bool, code: i32) {
     }
 }
 
+pub fn expand_home_dir(path: &Path) -> Result<PathBuf> {
+    let path_str = path.to_string_lossy();
+    if let Some(stripped) = path_str.strip_prefix("~/") {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map_err(|_| FoundationError::Config {
+                message: "Could not determine home directory".to_string(),
+            })?;
+        Ok(PathBuf::from(home).join(stripped))
+    } else {
+        Ok(path.to_path_buf())
+    }
+}
+
+pub fn parse_package_spec(spec: &str) -> Result<(String, String)> {
+    let parts: Vec<&str> = spec.split('@').collect();
+    if parts.len() != 2 {
+        return Err(FoundationError::Config {
+            message: format!(
+                "Invalid package specification: {spec}. Expected format: package@version"
+            ),
+        });
+    }
+    Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +312,27 @@ mod tests {
         );
 
         assert!("invalid".parse::<OutputFormat>().is_err());
+    }
+
+    #[test]
+    fn test_expand_home_dir() {
+        let path = PathBuf::from("~/some/dir");
+        let expanded = expand_home_dir(&path).unwrap();
+        assert!(!expanded.to_string_lossy().starts_with('~'));
+        assert!(expanded.to_string_lossy().ends_with("some/dir"));
+
+        let path = PathBuf::from("/absolute/path");
+        let expanded = expand_home_dir(&path).unwrap();
+        assert_eq!(expanded, PathBuf::from("/absolute/path"));
+    }
+
+    #[test]
+    fn test_parse_package_spec() {
+        let (name, version) = parse_package_spec("hl7.fhir.r4.core@4.0.1").unwrap();
+        assert_eq!(name, "hl7.fhir.r4.core");
+        assert_eq!(version, "4.0.1");
+
+        assert!(parse_package_spec("invalid").is_err());
     }
 
     #[test]

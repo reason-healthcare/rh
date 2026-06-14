@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use rh_foundation::cli::{expand_home_dir, parse_package_spec};
 use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tracing::{error, info};
 
 use crate::output::{ExitCode, Format, OutputContext};
@@ -250,24 +251,4 @@ async fn handle_validate(_args: ValidateArgs, ctx: &OutputContext) -> Result<Exi
         }
     }
     Ok(ExitCode::OperationalError)
-}
-
-fn parse_package_spec(spec: &str) -> Result<(String, String)> {
-    let parts: Vec<&str> = spec.split('@').collect();
-    if parts.len() != 2 {
-        anyhow::bail!("Invalid package specification: {spec}. Expected format: package@version");
-    }
-    Ok((parts[0].to_string(), parts[1].to_string()))
-}
-
-fn expand_home_dir(path: &Path) -> Result<PathBuf> {
-    let path_str = path.to_string_lossy();
-    if let Some(stripped) = path_str.strip_prefix("~/") {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .map_err(|_| anyhow::anyhow!("Could not determine home directory"))?;
-        Ok(PathBuf::from(home).join(stripped))
-    } else {
-        Ok(path.to_path_buf())
-    }
 }
